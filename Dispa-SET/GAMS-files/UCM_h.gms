@@ -22,7 +22,6 @@ $set InputFileName Inputs.gdx
 *Definition of   sets and parameters
 *===============================================================================
 SETS
-c                Countries
 mk               Markets
 n                Nodes
 l                Lines
@@ -41,7 +40,6 @@ z(h)             Subset of all simulated hours
 *$if %LookAhead%==0 SET i   TimeStep    /1*24/ ;
 
 
-Alias(c,cc);
 Alias(mk,mkmk);
 Alias(n,nn);
 Alias(l,ll);
@@ -126,7 +124,6 @@ PowerMustRun(u,h)                [MW]    Minimum power output
 
 $gdxin %inputfilename%
 
-$LOAD c
 $LOAD mk
 $LOAD n
 $LOAD l
@@ -184,7 +181,6 @@ $LOAD TimeUpMinimum
 ;
 
 Display
-c,
 mk,
 n,
 l,
