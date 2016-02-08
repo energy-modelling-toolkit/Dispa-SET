@@ -2,31 +2,23 @@
 # -*- coding: utf-8 -*-
 
 #######################################################################################################################
-############################################ Optimization ############################################################
+############################################ Dispa-SET: main model ####################################################
 #######################################################################################################################
 
+# This worksheet contains the two main function to solve the Dispa-SET optimization problem.
+# 
+# The DispaSolve function defines the rolling horizon optimization ans saves the results in a single variable
+#
+# The DispOptim function translates the dispaset data format into the pyomo format and defines the pyomo optimization problem.
+
 __author__ = 'Sylvain Quoilin'
-
-
-# Install the following packages to use coopr
-# - Pip: "python setup.py install" (cd pathname of the directory of pip)
-# - Coopr: "pip install Coopr"
-
-# Install Python Optimization Modeling Objects
-# Pyomo: "python setup.py install" (cd pathname of the directory of pyomo)
-
-# Install the Cplex solver:
-# Cplex:" (cd pathname: C:\Program Files (x86)\IBM\ILOG\CPLEX_Studio1261\cplex\python\2.7\x86_win32)
-
-
-
 
 import sys
 from pyomo.environ import *
 import numpy as np
 import pandas as pd
 import pickle
-from DispaTools import *
+from DispaTools import pyomo_format,pyomo_to_pandas
 
 
 
@@ -35,7 +27,7 @@ def  DispOptim(sets,parameters):
     model = ConcreteModel()
 
 #######################################################################################################################
-############################################ Rename Parameters ########################################################
+############################################ Definition of the sets ###################################################
 #######################################################################################################################
 
     # Assign all sets to the pyomo model (to be changed using real Pyomo sets!!)
@@ -62,7 +54,7 @@ def  DispOptim(sets,parameters):
 
 
 ########################################################################################################################
-############################################# Definition of Parameters #################################################
+######################################### Definition of the Parameters #################################################
 ########################################################################################################################
 
     model.LoadMaximum = Param(sets['u'],sets['h'],initialize=params['LoadMaximum'])          # [%] Availability factor
@@ -118,7 +110,6 @@ def  DispOptim(sets,parameters):
 ########################################################################################################################
 ##########################################  Definition of variables ####################################################
 ########################################################################################################################
-
 
     # a) Binary Variables:
     #model.Committed = Var(sets['h'],sets['u'],within = PositiveReals,bounds=(0,1))                   # [n.a.] Unit committed at hour h {1 0}
@@ -613,6 +604,13 @@ def  DispOptim(sets,parameters):
     return model
 
 
+
+
+
+#######################################################################################################################
+############################### Main wrapper (rolling horizon optimization) ###########################################
+#######################################################################################################################
+
 def DispaSolve(sets,parameters):
     # Initialize the results dictionnary:
     results = {}
@@ -806,13 +804,16 @@ def DispaSolve(sets,parameters):
     #            results[v.name] = pd.DataFrame(index=index_all)
     #        
     
-    
-    
         # Clearing the optimization variables for this time horizon
         del opt,parameters_sliced,sets_sliced
     
     return results
 
+
+
+#######################################################################################################################
+###################################### Testing ########################################################################
+#######################################################################################################################
 
 # Testing the above functions with a generic input:
 

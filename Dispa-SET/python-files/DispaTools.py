@@ -3,13 +3,14 @@ __author__ = 'Sylvain Quoilin (sylvain.quoilin@ec.europa.eu)'
 
 import os
 import sys
-import pandas as pd
 import numpy as np
 
 
 # Function converting a pyomo variable or parameter into a pandas dataframe.
 # The variable must 2-dimensional and the sets must be provided
 def pyomo_to_pandas(sets,var):
+    import pandas as pd 
+    
     if len(sets) != var.dim():
         sys.exit('The number of provided set lists (' + str(len(sets)) + ') does not match the dimensions of the variable (' + str(var.dim()) + ')')
     if var.dim() == 1:
@@ -32,7 +33,7 @@ def pyomo_to_pandas(sets,var):
         return []
 
 # Function that flattens the multidimensional dispaset input data into the pyomo format: a dicitonary with a tuple and the parameter value. 
-# The tuple contains the string of the corresponding set values
+# The tuple contains the strings of the corresponding set values
 def pyomo_format(sets,param):
     param_new = {}
     ndims = len(param['sets'])
@@ -116,7 +117,7 @@ def append_to_dict(k,source,destination):
         else:
             destination[key]=[source[key][k]]
 
-# Load a particular variable from the DispaSET input data structure:
+# Load a particular variable from the DispaSET input data structure v2.0 (Obsolete for v2.1 onwards):
 def load_var(input,string):
     out = []
     for var in input:
@@ -124,7 +125,7 @@ def load_var(input,string):
             out = var['val']
     return out
 
-# Load a particular set from the DispaSET input data structure:
+# Load a particular set from the DispaSET input data structure (Obsolete for v2.1 onwards):
 def load_set(input,string,set_name):
     out = []
     for i in input:
@@ -137,6 +138,8 @@ def load_set(input,string,set_name):
 # Function that loads a csv sheet into a panda variable and saves it in a separate path. If the saved variable is newer
 # than the sheet, do no load the sheet again.
 def load_csv_to_pd(path_csv,file_csv,path_pandas,file_pandas):
+    import pandas as pd
+    
     filepath_csv = os.path.join(path_csv,file_csv)
     filepath_pandas = os.path.join(path_pandas,file_pandas)
     if not os.path.isdir(path_pandas):
@@ -155,6 +158,8 @@ def load_csv_to_pd(path_csv,file_csv,path_pandas,file_pandas):
 # Function that loads an xls sheet into a panda variable and saves it in a separate path. If the saved variable is newer
 # than the sheet, do no load the sheet again.
 def load_xl_to_pd(path_excel,file_excel,sheet_excel,path_pandas,file_pandas,header=0):
+    import pandas as pd    
+    
     filepath_excel = os.path.join(path_excel,file_excel)
     filepath_pandas = os.path.join(path_pandas,file_pandas)
     if not os.path.isdir(path_pandas):
@@ -176,6 +181,7 @@ def load_xl_to_pd(path_excel,file_excel,sheet_excel,path_pandas,file_pandas,head
 # AdditionalArrays: list of arrays to be merged. Number of rows must be equal to the number of plants. The merged values are a weighted average of the original values with respect to capacities
 # Nslices: number slices used to fingerprint each power plant characteristics. slices in the power plant data to categorize them  (fewer slices involves that the plants will be aggregated more easily)
 def clustering(plants,AdditionalArrays=[],Nslices=20):
+    import pandas as pd
     
     # Checking the the required columns are present in the input pandas dataframe:
     required_inputs = ['Unit','PowerCapacity','PartLoadMin','RampUpRate','RampDownRate','StartUpTime','MinUpTime','MinDownTime','NoLoadCost','StartUpCost','Efficiency']   

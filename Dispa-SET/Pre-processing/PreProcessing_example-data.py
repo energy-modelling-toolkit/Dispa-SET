@@ -13,8 +13,9 @@ __author__ = 'Sylvain Quoilin <sylvain.quoilin@ec.europa.eu>'
 import sys
 sys.path.append('../python-files')
 
-import DispaSET_io_data
-from DispaTools import *
+from DispaSET_io_data import write_toexcel,write_variables
+from DispaTools import load_csv_to_pd,clustering
+import pandas as pd
 import numpy as np
 import os
 import shutil
@@ -219,14 +220,14 @@ Pmax_wind = wind_data[:,2]
 solar_data[0:4451,0] = solar_data[0:4451,1]             # Day ahead values are not available for the first month, we take the morning predictions
 AF_sol_15min = solar_data[:,2]/solar_data[:,4]          # Availability factor is obtained by dividing by the historical installed capacity of VRE:
 
-Psol_z1 = Pcap_sol_z1*AF_sol_15min
-Psol_z2 = Pcap_sol_z2*AF_sol_15min
+#Psol_z1 = Pcap_sol_z1*AF_sol_15min
+#Psol_z2 = Pcap_sol_z2*AF_sol_15min
 
 # Wind generation
 AF_wind_15min = wind_data[:,1]/wind_data[:,2]
 
-Pwind_z1 = Pcap_wind_z1*AF_wind_15min
-Pwind_z2 = Pcap_wind_z2*AF_wind_15min
+#Pwind_z1 = Pcap_wind_z1*AF_wind_15min
+#Pwind_z2 = Pcap_wind_z2*AF_wind_15min
 
 # Water generation
 # The water data include the hydro storage in turbine mode.
@@ -636,7 +637,7 @@ parameters['Config'] = {'sets':['x_config','y_config'],'val':values}
 list_vars = []
 gdx_out = "../GAMS-files/Inputs.gdx"
 if write_gdx:
-    DispaSET_io_data.write_variables(gams_dir,gdx_out,[sets,parameters],format='2.1.1')
+    write_variables(gams_dir,gdx_out,[sets,parameters],format='2.1.1')
 
 ###################################################################################################################
 #####################################   Simulation Environment     ################################################
@@ -662,7 +663,7 @@ if write_gdx:
 shutil.copy('../GAMS-files/makeGDX.bat',os.path.join(sim,'makeGDX.bat'))
 
 if write_excel:
-    DispaSET_io_data.write_toexcel(sim,[sets,parameters],format='2.1.1')
+    write_toexcel(sim,[sets,parameters],format='2.1.1')
     
 if write_pickle:
     import cPickle

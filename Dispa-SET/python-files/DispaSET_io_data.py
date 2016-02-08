@@ -1,12 +1,14 @@
-# This function writes each variable to a gdx file. Variable types are limited to sets and parameters
+# Collection of functions to write Dispa-SET input data to a gdx file and/or to a simulation directory
+# with one excel file per parameter.
+
 __author__ = 'Sylvain Quoilin (sylvain.quoilin@ec.europa.eu)'
 
 import numpy as np
 import os
 import sys
-from gdxcc import *   
+ 
 
-# Function that reduces the length of the keys to be written to 64 (max admissible length for GAMMS):
+# Function that reduces the length of the keys to be written to 64 (max admissible length for GAMS):
 def shrink_to_64(list_keys):
     for i in range(len(list_keys)):
         key = list_keys[i]
@@ -17,6 +19,8 @@ def shrink_to_64(list_keys):
 
 # Function that writes a variable (either set or parameter) to the gdxHandle:
 def insert_symbol(gdxHandle,variable):
+
+    from gdxcc import *  
 
     domains = []                # Domains contains the names of the input sets for the parameter (empty for a set)
     description = None          # Describes the variable being written (to be added)
@@ -91,6 +95,8 @@ def insert_symbol(gdxHandle,variable):
 
 def insert_symbol_21(gdxHandle,variable):
 
+    from gdxcc import *  
+
     domains = []                # Domains contains the names of the input sets for the parameter (empty for a set)
     description = None          # Describes the variable being written (to be added)
 
@@ -157,6 +163,8 @@ def insert_symbol_21(gdxHandle,variable):
 
 def insert_symbols_211(gdxHandle,sets,parameters):
 
+    from gdxcc import *  
+    
     # Check array sizes for parameters:
     for p in parameters:
         variable = parameters[p]
@@ -216,7 +224,8 @@ def insert_symbols_211(gdxHandle,sets,parameters):
 
 # Function that reads all the variables (in list_vars) and inserts them one by one into gdx_out:
 def write_variables(gams_dir,gdx_out,list_vars,format='2.0'):
-    
+
+    from gdxcc import *  
     #Check gams_dir:
     if not os.path.isdir(gams_dir):
         sys.exit('Could not find the specific gams directory' + gams_dir)
@@ -259,8 +268,8 @@ def write_toexcel(xls_out,list_vars,format='2.1',firstrow=7):
     
     if format == '2.1':
         print 'Using data format version 2.1'
-        config = load_var(list_vars,'Config')
         from DispaTools import load_var
+        config = load_var(list_vars,'Config')
     elif format == '2.1.1':
         print 'Using data format version 2.1.1'       
         config = list_vars[1]['Config']['val']
