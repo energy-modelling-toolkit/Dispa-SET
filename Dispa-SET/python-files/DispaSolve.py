@@ -5,11 +5,9 @@
 ############################################ Dispa-SET: main model ####################################################
 #######################################################################################################################
 
-# This worksheet contains the two main function to solve the Dispa-SET optimization problem.
-# 
-# The DispaSolve function defines the rolling horizon optimization ans saves the results in a single variable
-#
-# The DispOptim function translates the dispaset data format into the pyomo format and defines the pyomo optimization problem.
+'''
+This worksheet contains the two main function to solve the Dispa-SET optimization problem.
+'''
 
 __author__ = 'Sylvain Quoilin'
 
@@ -17,12 +15,23 @@ import sys
 from pyomo.environ import *
 import numpy as np
 import pandas as pd
-import pickle
 from DispaTools import pyomo_format,pyomo_to_pandas
 
 
 
 def  DispOptim(sets,parameters):
+    '''
+    This is the main optimization function of Dispaset. 
+    Two operation are performed:
+    1. Translation of the dispaset data format into the pyomo format
+    2. Definition of the Pyomo optimization model as a ConcreteModel and solving
+    
+    :param sets: Dictionary containing the sets (defined as a list of strings or integegers)
+    :param parameters: Dictionary containing the parameters of the optimization problem (in the DispaSET 2.1.1 format)
+    
+    :return: The Pyomo optimization model including the solution
+    '''
+    
     # Definition of model:
     model = ConcreteModel()
 
@@ -539,13 +548,7 @@ def  DispOptim(sets,parameters):
 ######################################## Definition of model ##########################################################
 #######################################################################################################################
 
-    # initialize the solver / solver manager.
-    solver = SolverFactory("cplex")
-#    opt = solver
-    if solver is None:
-        print "A CPLEX solver is not available on this machine."
-        sys.exit(1)
-    solver_manager = SolverManagerFactory("serial") #serial
+  
     #solver_manager = SolverManagerFactory("pyro") #parallel
 
     model.EQ_Objective_Function = Objective(rule=EQ_Objective_function)
@@ -597,7 +600,14 @@ def  DispOptim(sets,parameters):
     model.EQ_Force_DeCommitment = Constraint(model.u,model.h,rule=EQ_Force_DeCommitment)
     model.EQ_LoadShedding = Constraint(model.n,model.h,rule =EQ_LoadShedding)
 
-
+  # initialize the solver / solver manager.
+    solver = SolverFactory("cplex")
+#    opt = solver
+    if solver is None:
+        print "A CPLEX solver is not available on this machine."
+        sys.exit(1)
+    solver_manager = SolverManagerFactory("serial") #serial
+    
     results = solver.solve(model,options_string="mipgap=0.05",tee=True)
     model.solutions.load_from(results)
 
@@ -612,6 +622,18 @@ def  DispOptim(sets,parameters):
 #######################################################################################################################
 
 def DispaSolve(sets,parameters):
+    '''
+    The DispaSolve function defines the rolling horizon optimization and saves each result variable in a pandas dataframe
+    The definition of the rolling horizon must be included into the DispaSET Config parameter'
+    
+    :param sets: Dictionary containing the sets (defined as a list of strings or integers)
+    :param parameters: Dictionary containing the parameters of the optimization problem (in the DispaSET 2.1.1 format)
+    
+    :return: Dictionary of pandas dataframes with the optimization variables
+    '''    
+    
+    
+    
     # Initialize the results dictionnary:
     results = {}
     
@@ -810,14 +832,3 @@ def DispaSolve(sets,parameters):
     return results
 
 
-
-#######################################################################################################################
-###################################### Testing ########################################################################
-#######################################################################################################################
-
-# Testing the above functions with a generic input:
-
-# Load parameter lists and loop:
-[sets, parameters] = pickle.load(open('../Simulation/Inputs.p','rb'))
-
-results = DispaSolve(sets,parameters)

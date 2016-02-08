@@ -68,14 +68,14 @@ d_start = 1
 h_start = 0    # Hours are defined from 0 to 23
 
 # Number of hours to be simulated:
-Ndays = 10
+Ndays = 9
 Nhours = 24*Ndays
 
 # Cropping interval: DispaSET can be instructed to simulate only a subset of the provided data
 # These parameters define the number of days to crop at the beginning and at the end. 
 # Set to 0 to simulate the whole period.
-cropping_beginning = 1
-cropping_end = 1
+cropping_beginning = 0
+cropping_end = 0
 
 # Length and look ahead period of rolling horizon (in days):
 RollingHorizon_length = 3

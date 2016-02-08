@@ -1,20 +1,20 @@
 
---- Job UCM_h.gms Start 02/05/16 14:23:58 24.3.3 r48116 WIN-VS8 x86 32bit/MS Windows
+--- Job UCM_h.gms Start 02/08/16 15:27:20 24.3.3 r48116 WIN-VS8 x86 32bit/MS Windows
 GAMS 24.3.3   Copyright (C) 1987-2014 GAMS Development. All rights reserved
 Licensee: DG Joint Research Centre                       W141202:1041CO-WIN
           European Commission                                        DC9812
 --- Starting compilation
 --- UCM_h.gms(127) 2 Mb
---- GDXin=E:\svn\dispaset-joinup\Simulation\Inputs.gdx
---- UCM_h.gms(978) 4 Mb
---- Starting execution: elapsed 0:00:00.010
---- UCM_h.gms(824) 5 Mb
+--- GDXin=E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+--- UCM_h.gms(976) 4 Mb
+--- Starting execution: elapsed 0:00:00.020
+--- UCM_h.gms(822) 5 Mb
 --- Generating MIP model UCM_SIMPLE
---- UCM_h.gms(842) 15 Mb
+--- UCM_h.gms(840) 15 Mb
 --- LOOPS FOR/WHILE = 1
----   45,736 rows  44,257 columns  205,445 non-zeroes
----   4,416 discrete-columns
---- Executing CPLEX: elapsed 0:00:00.621
+---   47,176 rows  47,137 columns  210,005 non-zeroes
+---   4,704 discrete-columns
+--- Executing CPLEX: elapsed 0:00:00.681
 
 IBM ILOG CPLEX   24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
 --- GAMS/Cplex licensed for continuous and discrete problems.
@@ -22,128 +22,120 @@ Cplex 12.6.0.1
 
 Reading data...
 Starting Cplex...
-Space for names approximately 4.37 Mb
+Space for names approximately 4.22 Mb
 Use option 'names no' to turn use of names off
 Tried aggregator 2 times.
-MIP Presolve eliminated 19482 rows and 26314 columns.
-MIP Presolve modified 15556 coefficients.
+MIP Presolve eliminated 20592 rows and 28499 columns.
+MIP Presolve modified 15459 coefficients.
 Aggregator did 481 substitutions.
-Reduced MIP has 25773 rows, 17462 columns, and 108609 nonzeros.
+Reduced MIP has 26103 rows, 18157 columns, and 109582 nonzeros.
 Reduced MIP has 3480 binaries, 0 generals, 0 SOSs, and 0 indicators.
-Presolve time = 0.22 sec. (134.38 ticks)
-Found incumbent of value 2.4036854e+010 after 0.32 sec. (177.41 ticks)
-Probing time = 0.01 sec. (5.41 ticks)
+Presolve time = 0.24 sec. (136.22 ticks)
+Found incumbent of value 3.0744840e+010 after 0.33 sec. (180.16 ticks)
+Probing fixed 0 vars, tightened 388 bounds.
+Probing time = 0.06 sec. (10.01 ticks)
 Tried aggregator 1 time.
-MIP Presolve modified 1242 coefficients.
-Reduced MIP has 25773 rows, 17462 columns, and 108609 nonzeros.
+MIP Presolve eliminated 10 rows and 5 columns.
+MIP Presolve modified 2587 coefficients.
+Reduced MIP has 26093 rows, 18152 columns, and 109558 nonzeros.
 Reduced MIP has 3480 binaries, 0 generals, 0 SOSs, and 0 indicators.
-Presolve time = 0.11 sec. (52.70 ticks)
-Probing fixed 0 vars, tightened 471 bounds.
-Probing time = 0.03 sec. (8.92 ticks)
-Clique table members: 1536.
+Presolve time = 0.19 sec. (54.09 ticks)
+Probing time = 0.03 sec. (5.87 ticks)
+Clique table members: 1550.
 MIP emphasis: balance optimality and feasibility.
 MIP search method: dynamic search.
 Parallel mode: none, using 1 thread.
 Tried aggregator 1 time.
-LP Presolve eliminated 571 rows and 762 columns.
+LP Presolve eliminated 570 rows and 762 columns.
 Aggregator did 288 substitutions.
-Reduced LP has 24914 rows, 16412 columns, and 105559 nonzeros.
-Presolve time = 0.03 sec. (20.96 ticks)
+Reduced LP has 25235 rows, 17102 columns, and 106510 nonzeros.
+Presolve time = 0.04 sec. (21.04 ticks)
 Initializing dual steep norms . . .
 
 Iteration log . . .
-Iteration:     1   Dual objective     =        598459.056026
+Iteration:     1   Dual objective     =        340044.512912
+Iteration:   349   Dual objective     =      32046960.287444
+Iteration:   685   Dual objective     =      32594180.798623
+Iteration:  1063   Dual objective     =      33241752.915996
+Iteration:  1382   Dual objective     =      33550993.909485
 Perturbation started.
-Iteration:   404   Dual objective     =      15461058.534631
-Iteration:   878   Dual objective     =      15480018.777018
-Iteration:  1452   Dual objective     =      15480097.158389
-Iteration:  1910   Dual objective     =      15480097.158701
-Iteration:  2292   Dual objective     =      15480097.158988
-Iteration:  2771   Dual objective     =      15480144.189288
-Iteration:  3222   Dual objective     =      15480206.268529
-Iteration:  3602   Dual objective     =      15480748.369431
-Iteration:  3931   Dual objective     =      15481506.055584
+Iteration:  1717   Dual objective     =      33977823.439385
+Iteration:  2286   Dual objective     =      33977823.439671
+Iteration:  2601   Dual objective     =      33977823.439825
+Iteration:  2991   Dual objective     =      33977823.440022
+Iteration:  3461   Dual objective     =      33977823.440282
+Iteration:  3955   Dual objective     =      33977823.440560
+Iteration:  4425   Dual objective     =      33983824.910703
+Iteration:  4780   Dual objective     =      34038020.203165
 Removing perturbation.
 Initializing dual steep norms . . .
-Root relaxation solution time = 0.37 sec. (191.01 ticks)
+Root relaxation solution time = 0.51 sec. (238.45 ticks)
 
         Nodes                                         Cuts/
    Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
 
-*     0+    0                      2.40369e+010        0.0000     4190  100.00%
-Found incumbent of value 2.4036854e+010 after 0.93 sec. (468.39 ticks)
-      0     0  1.54816e+007   446  2.40369e+010  1.54816e+007     4190   99.94%
-*     0+    0                      6.88719e+007  1.54816e+007     4190   77.52%
-Found incumbent of value 6.8871860e+007 after 1.08 sec. (569.26 ticks)
-      0     0  1.54822e+007   184  6.88719e+007     Cuts: 452     5485   77.52%
-*     0+    0                      2.21380e+007  1.54822e+007     5485   30.07%
-Found incumbent of value 2.2137976e+007 after 1.71 sec. (1000.42 ticks)
-      0     0  1.54822e+007   223  2.21380e+007     Cuts: 698     6940   30.07%
-      0     0  1.54822e+007   113  2.21380e+007      Cuts: 87     7888   30.07%
-*     0+    0                      1.82179e+007  1.54822e+007     7888   15.02%
-Found incumbent of value 1.8217886e+007 after 3.21 sec. (2447.27 ticks)
-*     0+    0                      1.66762e+007  1.54822e+007     7888    7.16%
-Found incumbent of value 1.6676199e+007 after 3.29 sec. (2489.89 ticks)
-*     0+    0                      1.66208e+007  1.54822e+007     7888    6.85%
-Found incumbent of value 1.6620789e+007 after 3.29 sec. (2505.12 ticks)
-      0     0  1.54822e+007   173  1.66208e+007     Cuts: 427     8995    6.85%
-*     0+    0                      1.66116e+007  1.54822e+007     8995    6.80%
-Found incumbent of value 1.6611636e+007 after 4.29 sec. (3477.83 ticks)
-*     0+    0                      1.55074e+007  1.54822e+007     8995    0.16%
-Found incumbent of value 1.5507411e+007 after 4.44 sec. (3618.59 ticks)
+*     0+    0                      3.07348e+010        0.0000     5030  100.00%
+Found incumbent of value 3.0734840e+010 after 1.22 sec. (519.45 ticks)
+      0     0  3.40480e+007    85  3.07348e+010  3.40480e+007     5030   99.89%
+*     0+    0                      3.61554e+007  3.40480e+007     5030    5.83%
+Found incumbent of value 3.6155439e+007 after 1.35 sec. (607.13 ticks)
+      0     0  3.40595e+007    56  3.61554e+007     Cuts: 243     5720    5.80%
+*     0+    0                      3.51383e+007  3.40595e+007     5720    3.07%
+Found incumbent of value 3.5138267e+007 after 1.82 sec. (908.96 ticks)
 
-GUB cover cuts applied:  7
-Clique cuts applied:  5
-Cover cuts applied:  134
-Implied bound cuts applied:  97
-Flow cuts applied:  43
-Mixed integer rounding cuts applied:  199
-Zero-half cuts applied:  75
-Gomory fractional cuts applied:  15
+Cover cuts applied:  14
+Implied bound cuts applied:  31
+Flow cuts applied:  22
+Mixed integer rounding cuts applied:  28
+Zero-half cuts applied:  4
+Gomory fractional cuts applied:  23
 
 Root node processing (before b&c):
-  Real time             =    4.44 sec. (3622.48 ticks)
+  Real time             =    1.82 sec. (911.64 ticks)
 Sequential b&c:
   Real time             =    0.00 sec. (0.00 ticks)
                           ------------
-Total (root+branch&cut) =    4.44 sec. (3622.48 ticks)
+Total (root+branch&cut) =    1.82 sec. (911.64 ticks)
 MIP status(102): integer optimal, tolerance
-Cplex Time: 4.45sec (det. 3622.61 ticks)
+Cplex Time: 1.82sec (det. 911.78 ticks)
 Fixing integer variables, and solving final LP...
 Tried aggregator 1 time.
-LP Presolve eliminated 42796 rows and 39618 columns.
-Aggregator did 544 substitutions.
-Reduced LP has 2396 rows, 4095 columns, and 8765 nonzeros.
-Presolve time = 0.04 sec. (26.66 ticks)
+LP Presolve eliminated 43084 rows and 40455 columns.
+Aggregator did 831 substitutions.
+Reduced LP has 3261 rows, 5851 columns, and 12213 nonzeros.
+Presolve time = 0.08 sec. (28.65 ticks)
 Initializing dual steep norms . . .
 
 Iteration log . . .
-Iteration:     1   Dual objective     =       8932478.726682
-Iteration:   256   Dual objective     =      15473921.158561
+Iteration:     1   Dual objective     =      14428411.805983
+Iteration:   225   Dual objective     =      33842177.375049
+Iteration:   400   Dual objective     =      34487948.157203
+Iteration:   552   Dual objective     =      34732134.237959
+Iteration:   693   Dual objective     =      34906760.250362
 Fixed MIP status(1): optimal
-Cplex Time: 0.08sec (det. 50.09 ticks)
+Cplex Time: 0.13sec (det. 65.26 ticks)
 
 Solution satisfies tolerances.
 
-MIP Solution:     15507411.161107    (8995 iterations, 0 nodes)
-Final Solve:      15507411.161104    (398 iterations)
+MIP Solution:     35138266.886639    (5720 iterations, 0 nodes)
+Final Solve:      35138266.886639    (768 iterations)
 
-Best possible:    15482178.251735
-Absolute gap:        25232.909372
-Relative gap:            0.001627
+Best possible:    34059533.559862
+Absolute gap:      1078733.326777
+Relative gap:            0.030700
 
 --- Restarting execution
---- UCM_h.gms(842) 5 Mb
+--- UCM_h.gms(840) 5 Mb
 --- Reading solution for model UCM_SIMPLE
---- UCM_h.gms(842) 8 Mb
---- Executing after solve: elapsed 0:00:05.608
---- UCM_h.gms(824) 9 Mb
+--- UCM_h.gms(840) 9 Mb
+--- Executing after solve: elapsed 0:00:03.285
+--- UCM_h.gms(822) 10 Mb
 --- Generating MIP model UCM_SIMPLE
---- UCM_h.gms(842) 19 Mb
+--- UCM_h.gms(840) 20 Mb
 --- LOOPS FOR/WHILE = 2
----   45,708 rows  44,257 columns  205,429 non-zeroes
----   4,416 discrete-columns
---- Executing CPLEX: elapsed 0:00:06.279
+---   47,104 rows  47,137 columns  210,077 non-zeroes
+---   4,704 discrete-columns
+--- Executing CPLEX: elapsed 0:00:04.078
 
 IBM ILOG CPLEX   24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
 --- GAMS/Cplex licensed for continuous and discrete problems.
@@ -151,377 +143,340 @@ Cplex 12.6.0.1
 
 Reading data...
 Starting Cplex...
-Space for names approximately 4.43 Mb
+Space for names approximately 4.21 Mb
 Use option 'names no' to turn use of names off
 Tried aggregator 2 times.
-MIP Presolve eliminated 19312 rows and 26213 columns.
-MIP Presolve modified 15582 coefficients.
+MIP Presolve eliminated 19862 rows and 28068 columns.
+MIP Presolve modified 15979 coefficients.
 Aggregator did 481 substitutions.
-Reduced MIP has 25915 rows, 17563 columns, and 109104 nonzeros.
-Reduced MIP has 3494 binaries, 0 generals, 0 SOSs, and 0 indicators.
-Presolve time = 0.23 sec. (134.42 ticks)
-Found incumbent of value 2.2200149e+010 after 0.33 sec. (177.69 ticks)
-Probing fixed 0 vars, tightened 447 bounds.
-Probing time = 0.03 sec. (10.04 ticks)
+Reduced MIP has 26761 rows, 18588 columns, and 111944 nonzeros.
+Reduced MIP has 3552 binaries, 0 generals, 0 SOSs, and 0 indicators.
+Presolve time = 0.26 sec. (138.42 ticks)
+Found incumbent of value 3.0478950e+010 after 0.39 sec. (183.20 ticks)
+Probing fixed 0 vars, tightened 387 bounds.
+Probing time = 0.03 sec. (10.30 ticks)
 Tried aggregator 1 time.
-MIP Presolve eliminated 1 rows and 0 columns.
-MIP Presolve modified 1739 coefficients.
-Reduced MIP has 25914 rows, 17563 columns, and 109102 nonzeros.
-Reduced MIP has 3494 binaries, 0 generals, 0 SOSs, and 0 indicators.
-Presolve time = 0.11 sec. (53.09 ticks)
-Probing time = 0.01 sec. (5.77 ticks)
-Clique table members: 1560.
+MIP Presolve eliminated 10 rows and 5 columns.
+MIP Presolve modified 2757 coefficients.
+Reduced MIP has 26751 rows, 18583 columns, and 111920 nonzeros.
+Reduced MIP has 3552 binaries, 0 generals, 0 SOSs, and 0 indicators.
+Presolve time = 0.13 sec. (55.32 ticks)
+Probing time = 0.02 sec. (5.96 ticks)
+Clique table members: 1630.
 MIP emphasis: balance optimality and feasibility.
 MIP search method: dynamic search.
 Parallel mode: none, using 1 thread.
 Tried aggregator 1 time.
 LP Presolve eliminated 573 rows and 765 columns.
 Aggregator did 288 substitutions.
-Reduced LP has 25053 rows, 16510 columns, and 106045 nonzeros.
-Presolve time = 0.03 sec. (21.06 ticks)
+Reduced LP has 25890 rows, 17530 columns, and 108863 nonzeros.
+Presolve time = 0.11 sec. (21.53 ticks)
 Initializing dual steep norms . . .
 
 Iteration log . . .
-Iteration:     1   Dual objective     =       1016375.322315
-Iteration:   450   Dual objective     =      13464863.933909
-Iteration:   812   Dual objective     =      13588768.982445
+Iteration:     1   Dual objective     =        327254.341069
+Iteration:   441   Dual objective     =      31164336.139919
+Iteration:   774   Dual objective     =      31285211.417473
 Perturbation started.
-Iteration:  1010   Dual objective     =      13589465.060737
-Iteration:  1321   Dual objective     =      13589465.060887
-Iteration:  1874   Dual objective     =      13589465.061159
-Iteration:  2286   Dual objective     =      13589465.061407
-Iteration:  2784   Dual objective     =      13589465.062167
-Iteration:  3169   Dual objective     =      13589465.063066
-Iteration:  3505   Dual objective     =      13589465.063693
+Iteration:  1111   Dual objective     =      31306502.204054
+Iteration:  1603   Dual objective     =      31306502.204339
+Iteration:  1921   Dual objective     =      31306502.204496
+Iteration:  2319   Dual objective     =      31306502.204690
+Iteration:  2745   Dual objective     =      31306502.205100
+Iteration:  3212   Dual objective     =      31306502.205338
+Iteration:  3681   Dual objective     =      31306551.580057
+Iteration:  4061   Dual objective     =      31308256.599823
 Removing perturbation.
 Initializing dual steep norms . . .
-Root relaxation solution time = 0.28 sec. (200.31 ticks)
+Root relaxation solution time = 0.59 sec. (236.12 ticks)
 
         Nodes                                         Cuts/
    Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
 
-*     0+    0                      2.22001e+010    10912.3860     3772  100.00%
-Found incumbent of value 2.2200149e+010 after 0.85 sec. (477.49 ticks)
-      0     0  1.35895e+007   151  2.22001e+010  1.35895e+007     3772   99.94%
-*     0+    0                      2.34167e+007  1.35895e+007     3772   41.97%
-Found incumbent of value 2.3416667e+007 after 1.04 sec. (606.92 ticks)
-      0     0  1.35895e+007   128  2.34167e+007     Cuts: 125     5245   41.97%
-*     0+    0                      1.73429e+007  1.35895e+007     5245   21.64%
-Found incumbent of value 1.7342918e+007 after 2.44 sec. (1908.03 ticks)
-      0     0  1.35895e+007   158  1.73429e+007     Cuts: 457     6240   21.64%
-*     0+    0                      1.43686e+007  1.35895e+007     6240    5.42%
-Found incumbent of value 1.4368556e+007 after 2.88 sec. (2202.01 ticks)
-      0     0  1.35895e+007    68  1.43686e+007      Cuts: 46     6603    5.42%
-*     0+    0                      1.37476e+007  1.35895e+007     6603    1.15%
-Found incumbent of value 1.3747642e+007 after 3.54 sec. (2803.53 ticks)
+*     0+    0                      3.04689e+010        0.0000     4380  100.00%
+Found incumbent of value 3.0468950e+010 after 1.29 sec. (522.37 ticks)
+      0     0  3.13089e+007   107  3.04689e+010  3.13089e+007     4380   99.90%
+*     0+    0                      3.36925e+007  3.13089e+007     4380    7.07%
+Found incumbent of value 3.3692460e+007 after 1.44 sec. (609.55 ticks)
+      0     0  3.13112e+007    72  3.36925e+007     Cuts: 260     4975    7.07%
+*     0+    0                      3.16011e+007  3.13112e+007     4975    0.92%
+Found incumbent of value 3.1601055e+007 after 1.90 sec. (903.33 ticks)
 
-GUB cover cuts applied:  6
-Clique cuts applied:  2
-Cover cuts applied:  49
-Implied bound cuts applied:  25
-Flow cuts applied:  23
-Mixed integer rounding cuts applied:  80
-Zero-half cuts applied:  33
-Gomory fractional cuts applied:  11
+GUB cover cuts applied:  7
+Cover cuts applied:  10
+Implied bound cuts applied:  30
+Flow cuts applied:  13
+Mixed integer rounding cuts applied:  33
+Zero-half cuts applied:  12
+Gomory fractional cuts applied:  18
 
 Root node processing (before b&c):
-  Real time             =    3.57 sec. (2815.09 ticks)
+  Real time             =    1.92 sec. (906.03 ticks)
 Sequential b&c:
   Real time             =    0.00 sec. (0.00 ticks)
                           ------------
-Total (root+branch&cut) =    3.57 sec. (2815.09 ticks)
+Total (root+branch&cut) =    1.92 sec. (906.03 ticks)
 MIP status(102): integer optimal, tolerance
-Cplex Time: 3.57sec (det. 2815.21 ticks)
+Cplex Time: 1.92sec (det. 906.16 ticks)
 Fixing integer variables, and solving final LP...
 Tried aggregator 1 time.
-LP Presolve eliminated 43044 rows and 40056 columns.
-Aggregator did 445 substitutions.
-Reduced LP has 2219 rows, 3756 columns, and 8052 nonzeros.
-Presolve time = 0.03 sec. (26.29 ticks)
+LP Presolve eliminated 43885 rows and 41582 columns.
+Aggregator did 474 substitutions.
+Reduced LP has 2745 rows, 5081 columns, and 10292 nonzeros.
+Presolve time = 0.05 sec. (27.98 ticks)
 Initializing dual steep norms . . .
 
 Iteration log . . .
-Iteration:     1   Dual objective     =       7579467.486920
-Iteration:   214   Dual objective     =      13624592.796202
+Iteration:     1   Dual objective     =      14326786.822240
+Iteration:   252   Dual objective     =      31265614.127099
+Iteration:   431   Dual objective     =      31350312.307885
 Fixed MIP status(1): optimal
-Cplex Time: 0.12sec (det. 49.32 ticks)
+Cplex Time: 0.15sec (det. 56.18 ticks)
 
 Solution satisfies tolerances.
 
-MIP Solution:     13747641.912457    (6603 iterations, 0 nodes)
-Final Solve:      13747641.912459    (312 iterations)
+MIP Solution:     31601055.473558    (4975 iterations, 0 nodes)
+Final Solve:      31601055.473556    (552 iterations)
 
-Best possible:    13589465.060738
-Absolute gap:       158176.851719
-Relative gap:            0.011506
+Best possible:    31311188.852788
+Absolute gap:       289866.620770
+Relative gap:            0.009173
 
 --- Restarting execution
---- UCM_h.gms(842) 10 Mb
+--- UCM_h.gms(840) 11 Mb
 --- Reading solution for model UCM_SIMPLE
---- UCM_h.gms(842) 13 Mb
---- Executing after solve: elapsed 0:00:10.495
+--- UCM_h.gms(840) 13 Mb
+--- Executing after solve: elapsed 0:00:07.163
+--- UCM_h.gms(935) 14 Mb
+
+GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 421 Ms
+--- UCM_h.gms(936) 14 Mb
+
+GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 430 Ms
 --- UCM_h.gms(937) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Total time = 611 Ms
---- UCM_h.gms(938) 14 Mb
-
-GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: PowerCapacity
-Total time = 631 Ms
---- UCM_h.gms(939) 14 Mb
-
-GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
 Exception not caught: OLE error 800A03EC
 
 Any changes made to the spreadsheet were not saved
-Total time = 571 Ms
+Total time = 351 Ms
+--- UCM_h.gms(938) 14 Mb
+
+GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 481 Ms
+--- UCM_h.gms(939) 14 Mb
+
+GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 400 Ms
 --- UCM_h.gms(940) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: RampDownMaximum
-Total time = 621 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 420 Ms
 --- UCM_h.gms(941) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: RampShutDownMaximum
-Total time = 641 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 401 Ms
 --- UCM_h.gms(942) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: RampStartUpMaximum
-Total time = 611 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 410 Ms
 --- UCM_h.gms(943) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: RampUpMaximum
-Total time = 621 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 430 Ms
 --- UCM_h.gms(944) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: TimeUpInitial
-Total time = 631 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 421 Ms
 --- UCM_h.gms(945) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: TimeDownInitial
-Total time = 641 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 390 Ms
 --- UCM_h.gms(946) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: TimeUpMinimum
-Total time = 641 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 400 Ms
 --- UCM_h.gms(947) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: TimeDownMinimum
-Total time = 631 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 401 Ms
 --- UCM_h.gms(948) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: Reserve
-Total time = 621 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 390 Ms
 --- UCM_h.gms(949) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: StorageCapacity
-Total time = 611 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 380 Ms
 --- UCM_h.gms(950) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: StorageInflow
-Total time = 631 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 401 Ms
 --- UCM_h.gms(951) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Total time = 611 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 390 Ms
 --- UCM_h.gms(952) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: LoadShedding
-Total time = 621 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 441 Ms
 --- UCM_h.gms(953) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: FlowMaximum
-Total time = 631 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 451 Ms
 --- UCM_h.gms(954) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: AvailabilityFactor
-Total time = 681 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 420 Ms
 --- UCM_h.gms(955) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: OutageFactor
-Total time = 671 Ms
---- UCM_h.gms(956) 14 Mb
-
-GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: Demand
-Total time = 651 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Inputs.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 420 Ms
 --- UCM_h.gms(957) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Inputs.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: PartLoadMin
-Total time = 661 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 391 Ms
+--- UCM_h.gms(958) 14 Mb
+
+GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 430 Ms
 --- UCM_h.gms(959) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: Power
-Total time = 641 Ms
---- UCM_h.gms(960) 14 Mb
-
-GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Total time = 631 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 430 Ms
 --- UCM_h.gms(961) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Total time = 631 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 431 Ms
+--- UCM_h.gms(962) 14 Mb
+
+GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 411 Ms
 --- UCM_h.gms(963) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: CurtailedPower
-Total time = 631 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 440 Ms
 --- UCM_h.gms(964) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: ShedLoad
-Total time = 631 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 401 Ms
 --- UCM_h.gms(965) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: Committed
-Total time = 671 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 441 Ms
 --- UCM_h.gms(966) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: Flow
-Total time = 661 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 460 Ms
 --- UCM_h.gms(967) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Total time = 731 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 421 Ms
 --- UCM_h.gms(968) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: StorageInput
-Total time = 681 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 431 Ms
 --- UCM_h.gms(969) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: StorageLevel
-Total time = 661 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 420 Ms
 --- UCM_h.gms(970) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: SystemCost
-Total time = 811 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 390 Ms
 --- UCM_h.gms(971) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: LostLoad_MaxPower
-Total time = 671 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 411 Ms
 --- UCM_h.gms(972) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: LostLoad_MinPower
-Total time = 651 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 400 Ms
 --- UCM_h.gms(973) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: LostLoad_Reserve2D
-Total time = 661 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 430 Ms
 --- UCM_h.gms(974) 14 Mb
 
 GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: LostLoad_Reserve2U
-Total time = 661 Ms
---- UCM_h.gms(975) 14 Mb
-
-GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: LostLoad_RampUp
-Total time = 661 Ms
---- UCM_h.gms(976) 14 Mb
-
-GDXXRW           24.3.3 r48116 Released Sep 19, 2014 VS8 x86 32bit/MS Windows 
-Input file : E:\svn\dispaset-joinup\Simulation\Results.gdx
-Output file: E:\svn\dispaset-joinup\Simulation\Results.xlsx
-Adding new sheet: LostLoad_RampDown
-Total time = 671 Ms
+Input file : E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.gdx
+Output file: E:\svn\Dispa-SET - JRC\Dispa-SET\Simulation\Results.xlsx
+Total time = 421 Ms
 *** Status: Normal completion
---- Job UCM_h.gms Stop 02/05/16 14:24:35 elapsed 0:00:37.173
+--- Job UCM_h.gms Stop 02/08/16 15:27:45 elapsed 0:00:25.738

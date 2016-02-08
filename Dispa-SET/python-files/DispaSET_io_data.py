@@ -8,8 +8,10 @@ import os
 import sys
  
 
-# Function that reduces the length of the keys to be written to 64 (max admissible length for GAMS):
 def shrink_to_64(list_keys):
+    '''
+    Function that reduces the length of the keys to be written to 64 (max admissible length for GAMS)
+    '''
     for i in range(len(list_keys)):
         key = list_keys[i]
         if len(key) > 63:
@@ -17,9 +19,11 @@ def shrink_to_64(list_keys):
     return list_keys
 
 
-# Function that writes a variable (either set or parameter) to the gdxHandle:
 def insert_symbol(gdxHandle,variable):
-
+    '''
+    Function that writes a variable (either set or parameter) to the gdxHandle
+    The format of the dispaset variable must be the version 2.0
+    '''
     from gdxcc import *  
 
     domains = []                # Domains contains the names of the input sets for the parameter (empty for a set)
@@ -94,7 +98,10 @@ def insert_symbol(gdxHandle,variable):
 
 
 def insert_symbol_21(gdxHandle,variable):
-
+    '''
+    Function that writes a variable (either set or parameter) to the gdxHandle
+    The format of the dispaset variable must be the version 2.1
+    '''
     from gdxcc import *  
 
     domains = []                # Domains contains the names of the input sets for the parameter (empty for a set)
@@ -162,7 +169,10 @@ def insert_symbol_21(gdxHandle,variable):
     print(variable['type'] + ' ' + variable['name'] + ' successfully written')
 
 def insert_symbols_211(gdxHandle,sets,parameters):
-
+    '''
+    Function that writes a variable (either set or parameter) to the gdxHandle
+    The format of the dispaset variable must be the version 2.1.1
+    '''
     from gdxcc import *  
     
     # Check array sizes for parameters:
@@ -222,9 +232,12 @@ def insert_symbols_211(gdxHandle,sets,parameters):
 
 
 
-# Function that reads all the variables (in list_vars) and inserts them one by one into gdx_out:
+# 
 def write_variables(gams_dir,gdx_out,list_vars,format='2.0'):
-
+    '''
+    Function that reads all the variables (in list_vars) and inserts them one by one into gdx_out
+    Currently accepts Dispaset data formats 2.0, 2.1 and 2.1.1
+    '''
     from gdxcc import *  
     #Check gams_dir:
     if not os.path.isdir(gams_dir):
@@ -255,10 +268,15 @@ def write_variables(gams_dir,gdx_out,list_vars,format='2.0'):
     print 'Data Successfully written to ' + gdx_out
 
 
-# Function that reads all the variables (in list_vars) and inserts them one by one into gdx_out:
-# format is the version of dispaset in which the data is formated
-# firstrow is the excel row number containing the first line of the DATA (not the headers)
 def write_toexcel(xls_out,list_vars,format='2.1',firstrow=7):
+    '''
+    Function that reads all the variables (in list_vars) and inserts them one by one into gdx_out
+    :param xls_out: The path of the folder where the excel files are to be written
+    :param list_vars: List containing the dispaset variables 
+    :param format: Format version of the dispaset variables. Currently supports 2.1 and 2.1.1
+    :param firstrow: Excel row number containing the first line of the DATA (not the headers)
+    :return: Binary variable (True)
+    '''
     
     import pandas as pd
     

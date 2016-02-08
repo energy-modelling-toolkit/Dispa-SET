@@ -126,7 +126,6 @@ PowerMustRun(u,h)                [MW]    Minimum power output
 
 $gdxin %inputfilename%
 
-$LOAD c
 $LOAD mk
 $LOAD n
 $LOAD l
@@ -184,7 +183,6 @@ $LOAD TimeUpMinimum
 ;
 
 Display
-c,
 mk,
 n,
 l,

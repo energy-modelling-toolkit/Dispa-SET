@@ -6,9 +6,11 @@ import sys
 import numpy as np
 
 
-# Function converting a pyomo variable or parameter into a pandas dataframe.
-# The variable must 2-dimensional and the sets must be provided
 def pyomo_to_pandas(sets,var):
+    '''
+    Function converting a pyomo variable or parameter into a pandas dataframe.
+    The variable must have one or two dimensions and the sets must be provided as a list of lists
+    '''
     import pandas as pd 
     
     if len(sets) != var.dim():
@@ -32,9 +34,12 @@ def pyomo_to_pandas(sets,var):
         print 'the pyomo_to_pandas function currently only accepts one or two-dimensional variables'
         return []
 
-# Function that flattens the multidimensional dispaset input data into the pyomo format: a dicitonary with a tuple and the parameter value. 
-# The tuple contains the strings of the corresponding set values
+
 def pyomo_format(sets,param):
+    '''
+    Function that flattens the multidimensional dispaset input data into the pyomo format: a dicitonary with a tuple and the parameter value. 
+    The tuple contains the strings of the corresponding set values
+    '''    
     param_new = {}
     ndims = len(param['sets'])
     for i in range(ndims):
@@ -69,8 +74,10 @@ def pyomo_format(sets,param):
 
 
      
-# Function that flattens a n-dimensional matrix and returns a dictionary with the values and their coordinates in a tuple     
 def tuple_format(array):
+    '''
+    Function that flattens a n-dimensional matrix and returns a dictionary with the values and their coordinates in a tuple     
+    '''
     ndims = len(array.shape)
     out = {}
     if ndims == 1:
@@ -96,37 +103,45 @@ def tuple_format(array):
     return out
 
 
-
-
-# Self-defined logspace function in which low and high are the first and last values of the space:
 def mylogspace(low,high,N):
+    '''
+    Self-defined logspace function in which low and high are the first and last values of the space
+    '''
     # shifting all values so that low = 1
     space = np.logspace(0,np.log10(high+low+1),N)-(low+1)
     return(space)
 
-# Self-defined function to find the index of the nearest value in a vector
 def find_nearest(array,value):
+    '''
+    Self-defined function to find the index of the nearest value in a vector
+    '''
     idx = (np.abs(array-value)).argmin()
     return idx
 
-# Function to add a record to a dictionnary (e.g. a new power plant) from another dictionary:
 def append_to_dict(k,source,destination):
+    '''
+    Function to add a record to a dictionnary (e.g. a new power plant) from another dictionary
+    '''
     for key in source:
         if key in destination:
             destination[key]=destination[key].append(source[key][k])
         else:
             destination[key]=[source[key][k]]
 
-# Load a particular variable from the DispaSET input data structure v2.0 (Obsolete for v2.1 onwards):
 def load_var(input,string):
+    '''
+    Load a particular variable from the DispaSET input data structure v2.0 (Obsolete from v2.1.1 onwards)
+    '''
     out = []
     for var in input:
         if var['name'] == string:
             out = var['val']
     return out
 
-# Load a particular set from the DispaSET input data structure (Obsolete for v2.1 onwards):
 def load_set(input,string,set_name):
+    '''
+    Load a particular set from the DispaSET input data structure (Obsolete for v2.1.1 onwards)
+    '''
     out = []
     for i in input:
         if i['name'] == string:
@@ -135,9 +150,12 @@ def load_set(input,string,set_name):
                     out = j['uels']
     return out
 
-# Function that loads a csv sheet into a panda variable and saves it in a separate path. If the saved variable is newer
-# than the sheet, do no load the sheet again.
+
 def load_csv_to_pd(path_csv,file_csv,path_pandas,file_pandas):
+    '''
+    Function that loads a csv sheet into a panda variable and saves it in a separate path. If the saved variable is newer
+    than the sheet, do no load the sheet again.
+    '''
     import pandas as pd
     
     filepath_csv = os.path.join(path_csv,file_csv)
@@ -155,9 +173,11 @@ def load_csv_to_pd(path_csv,file_csv,path_pandas,file_pandas):
         data= pd.read_pickle(filepath_pandas)
     return data
 
-# Function that loads an xls sheet into a panda variable and saves it in a separate path. If the saved variable is newer
-# than the sheet, do no load the sheet again.
 def load_xl_to_pd(path_excel,file_excel,sheet_excel,path_pandas,file_pandas,header=0):
+    '''
+    Function that loads an xls sheet into a panda variable and saves it in a separate path. If the saved variable is newer
+    than the sheet, do no load the sheet again.
+    '''
     import pandas as pd    
     
     filepath_excel = os.path.join(path_excel,file_excel)
@@ -176,11 +196,14 @@ def load_xl_to_pd(path_excel,file_excel,sheet_excel,path_pandas,file_pandas,head
     return data
     
     
-# Merge excessively disaggregated power Units.
-# plants: Pandas dataframe with each power plant and their characteristics (following the DispaSET format)
-# AdditionalArrays: list of arrays to be merged. Number of rows must be equal to the number of plants. The merged values are a weighted average of the original values with respect to capacities
-# Nslices: number slices used to fingerprint each power plant characteristics. slices in the power plant data to categorize them  (fewer slices involves that the plants will be aggregated more easily)
 def clustering(plants,AdditionalArrays=[],Nslices=20):
+    '''
+    # Merge excessively disaggregated power Units.
+    :param plants: Pandas dataframe with each power plant and their characteristics (following the DispaSET format)
+    :param AdditionalArrays: List of arrays to be merged. The number of rows must be equal to the number of plants. The merged values are a weighted average of the original values with respect to capacities
+    :param Nslices: number slices used to fingerprint each power plant characteristics. slices in the power plant data to categorize them  (fewer slices involves that the plants will be aggregated more easily)
+    :return: A list with the merged plants and a sublist of the merged additional arrays
+    '''
     import pandas as pd
     
     # Checking the the required columns are present in the input pandas dataframe:
