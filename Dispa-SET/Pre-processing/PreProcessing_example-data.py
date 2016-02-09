@@ -1,13 +1,16 @@
+'''
+ This script is the Python pre-processing tool for the JRC Dispa-SET 2.0 model
+ The output is a gdx file readable in GAMS
+ It requires the DispaSET_io_data.py utility, developed by S. Quoilin and the gdxx.py utility, provided in GAMS
+ To install the gdxx library (for Python 2.7):
+ C:\GAMS\win64\24.0\apifiles\Python\api>python gdxsetup.py install
+
+changes in 2.1: modification of variables: demand, costvariable, fuelprice, flowmacimum, flowminimum,markup,pricetransmission
+changes in 2.1.1: set and parameters are now stored in dictionnaries instead of a list
+
+'''
+
 __author__ = 'Sylvain Quoilin <sylvain.quoilin@ec.europa.eu>'
-
-# This script is the Python pre-processing tool for the JRC Dispa-SET 2.0 model
-# The output is a gdx file readable in GAMS
-# It requires the DispaSET_io_data.py utility, developed by S. Quoilin and the gdxx.py utility, provided in GAMS
-# To install the gdxx library (for Python 2.7):
-# C:\GAMS\win64\24.0\apifiles\Python\api>python gdxsetup.py install
-
-#changes in 2.1: modification of variables: demand, costvariable, fuelprice, flowmacimum, flowminimum,markup,pricetransmission
-#changes in 2.1.1: set and parameters are now stored in dictionnaries instead of a list
 
 
 import sys
@@ -39,9 +42,6 @@ path_data_pandas = 'example-data/pandas'
 sim = '../Simulation'
 
 description = '6.3 GW storage, only 2 hours capacity, pumped hydro into reserve'
-
-# perform JRC and IEA analyses:
-additional_analysis = False
 
 # Formats to write final template of inputs:
 # gdx is required for GAMS, excel allows visualizing the data, pickle is the fastest solution
@@ -270,9 +270,6 @@ for i in range(Nhours):
 #####################################   Reserve needs     #########################################################
 ###################################################################################################################
 
-# Since the time step is one hour, we assume that the required 15-min
-# ramping needs are integrated into the reserves.
-
 reserve_2U_tot = 500 * np.ones(Nhours)
 reserve_2D_tot = 250 * np.ones(Nhours)
 
@@ -366,9 +363,6 @@ sets_in = ['u', 'f']
 values = np.zeros([len(sets[setx]) for setx in sets_in],dtype='bool')
 parameters['Fuel'] = {'sets':sets_in,'val':values}
 # not used at the modment in the gams file
-
-# Variable cost:
-# Note that Dispaset allows defining the price in bidding blocks. This is not used here => only the first block is considered
 
 # Biomass price
 price_bio = 250                            # in EUR/T, source: http://www.michamps4b.be/evolution-prix-du-pellet-en-belgique.php
@@ -626,13 +620,6 @@ values = np.array([
     [0,             0,              RollingHorizon_lookahead]
 ])
 parameters['Config'] = {'sets':['x_config','y_config'],'val':values}
-
-
-#if Nhours == 8760 and additional_analysis:
-#    from IEA_analysis import IEA_analysis
-#    from JRC import JRC_analysis
-#    IEA_analysis(list_par,rampdown15,rampup15)
-#    prob = JRC_analysis(list_par,Pcap_sol,Pcap_wind)
 
 list_vars = []
 gdx_out = "../GAMS-files/Inputs.gdx"
