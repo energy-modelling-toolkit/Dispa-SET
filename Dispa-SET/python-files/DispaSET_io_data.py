@@ -3,10 +3,16 @@
 
 __author__ = 'Sylvain Quoilin (sylvain.quoilin@ec.europa.eu)'
 
+import logging
 import numpy as np
 import os
 import sys
- 
+try:
+    from gdxcc import *
+    gdxcc_available = True
+except ImportError:
+    gdxcc_available = False
+
 
 def shrink_to_64(list_keys):
     '''
@@ -24,7 +30,6 @@ def insert_symbol(gdxHandle,variable):
     Function that writes a variable (either set or parameter) to the gdxHandle
     The format of the dispaset variable must be the version 2.0
     '''
-    from gdxcc import *  
 
     domains = []                # Domains contains the names of the input sets for the parameter (empty for a set)
     description = None          # Describes the variable being written (to be added)
@@ -102,7 +107,6 @@ def insert_symbol_21(gdxHandle,variable):
     Function that writes a variable (either set or parameter) to the gdxHandle
     The format of the dispaset variable must be the version 2.1
     '''
-    from gdxcc import *  
 
     domains = []                # Domains contains the names of the input sets for the parameter (empty for a set)
     description = None          # Describes the variable being written (to be added)
@@ -169,12 +173,12 @@ def insert_symbol_21(gdxHandle,variable):
     print(variable['type'] + ' ' + variable['name'] + ' successfully written')
 
 def insert_symbols_211(gdxHandle,sets,parameters):
+
     '''
     Function that writes a variable (either set or parameter) to the gdxHandle
     The format of the dispaset variable must be the version 2.1.1
     '''
-    from gdxcc import *  
-    
+
     # Check array sizes for parameters:
     for p in parameters:
         variable = parameters[p]
@@ -238,34 +242,37 @@ def write_variables(gams_dir,gdx_out,list_vars,format='2.0'):
     Function that reads all the variables (in list_vars) and inserts them one by one into gdx_out
     Currently accepts Dispaset data formats 2.0, 2.1 and 2.1.1
     '''
-    from gdxcc import *  
-    #Check gams_dir:
-    if not os.path.isdir(gams_dir):
-        sys.exit('Could not find the specific gams directory' + gams_dir)
+    if gdxcc_available:
+        #Check gams_dir:
+        if not os.path.isdir(gams_dir):
+            sys.exit('Could not find the specific gams directory' + gams_dir)
 
-    gdxHandle = new_gdxHandle_tp()
-    gdxCreateD(gdxHandle, gams_dir, GMS_SSSIZE)
-    gdxOpenWrite(gdxHandle, gdx_out, "")
-    
+        gdxHandle = new_gdxHandle_tp()
+        gdxCreateD(gdxHandle, gams_dir, GMS_SSSIZE)
+        gdxOpenWrite(gdxHandle, gdx_out, "")
+            
 
-    if format == '2.0':
-        for var in list_vars:
-            insert_symbol(gdxHandle,var)
-    elif format == '2.1':
-        for var in list_vars:
-            insert_symbol_21(gdxHandle,var)
-    elif format == '2.1.1':
-        [sets, parameters] = list_vars
-        insert_symbols_211(gdxHandle,sets,parameters)
-    else:
-        print 'Format ' + format + ' not supported'
-        return()
+        if format == '2.0':
+            for var in list_vars:
+                insert_symbol(gdxHandle,var)
+        elif format == '2.1':
+            for var in list_vars:
+                insert_symbol_21(gdxHandle,var)
+        elif format == '2.1.1':
+            [sets, parameters] = list_vars
+            insert_symbols_211(gdxHandle,sets,parameters)
+        else:
+            print 'Format ' + format + ' not supported'
+            return()
 
-    gdxClose(gdxHandle)
+        gdxClose(gdxHandle)
 
-    #pickle.dump(list_vars, open( gdx_out[:-4]+'.p', "wb" ) )
+        #pickle.dump(list_vars, open( gdx_out[:-4]+'.p', "wb" ) )
 
-    print 'Data Successfully written to ' + gdx_out
+        print 'Data Successfully written to ' + gdx_out
+    else: 
+        logging.warn("gdxcc module not installed. GDX will not be produced")
+
 
 
 def write_toexcel(xls_out,list_vars,format='2.1',firstrow=7):

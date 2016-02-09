@@ -45,7 +45,7 @@ additional_analysis = False
 # Formats to write final template of inputs:
 # gdx is required for GAMS, excel allows visualizing the data, pickle is the fastest solution
 write_excel = True
-write_gdx = True
+write_gdx = false
 write_pickle = True
 
 # Residual binary variable:

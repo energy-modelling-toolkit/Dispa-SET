@@ -1,3 +1,4 @@
 *~
 *~gm
 *.pyc
+docs/_build/*
