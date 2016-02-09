@@ -2,3 +2,7 @@
 *~gm
 *.pyc
 docs/_build/*
+*.lst
+*.lxi
+*.log
+
