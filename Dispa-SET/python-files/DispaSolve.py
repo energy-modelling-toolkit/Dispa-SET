@@ -13,8 +13,13 @@ __author__ = 'Sylvain Quoilin'
 
 import sys
 from pyomo.environ import *
+from pyomo.opt import TerminationCondition
+
 import numpy as np
 import pandas as pd
+import pickle
+import logging
+
 from DispaTools import pyomo_format,pyomo_to_pandas
 
 
@@ -59,7 +64,6 @@ def  DispOptim(sets,parameters):
     for key in parameters.keys():
         params[key] = pyomo_format(sets,parameters[key])
     #params = pyomo_format(sets,parameters)
-
 
 
 ########################################################################################################################
@@ -149,8 +153,6 @@ def  DispOptim(sets,parameters):
 
 
 
-
-
 ########################################################################################################################
 ############################################### EQUATIONS ##############################################################
 ########################################################################################################################
@@ -167,15 +169,15 @@ def  DispOptim(sets,parameters):
 ###################################################################################################################################################################################################################################################################
 
     def EQ_SystemCost(model,h):
-                return model.SystemCost[h] == (sum (model.CostFixed[u]*model.Committed[u,h] for u in model.u)
-                    + sum ((model.CostStartUpH[u,h]+model.CostShutDownH[u,h]) for u in model.u)
-                    + sum((model.CostRampUpH[u,h]+model.CostRampDownH[u,h]) for u in model.u)
-                    + sum(model.CostVariable[u,h]*model.Power[u,h] for u in model.u)
-                    + sum (model.PriceTransmission[l,h]*model.Flow[l,h] for l in model.l)
-                    + sum (model.CostLoadShedding[n,h]*model.ShedLoad[n,h] for n in model.n)
-                    + 30000*sum(model.LostLoad_MaxPower[n,h]+model.LostLoad_MinPower[n,h] for n in model.n)
-                    + 20000*sum(model.LostLoad_Reserve2U[n,h]+model.LostLoad_Reserve2D[n,h] for n in model.n)
-                    + 10000*sum(model.LostLoad_RampUp[u,h]+model.LostLoad_RampDown[u,h] for u in model.u))
+                return model.SystemCost[h] == (sum(model.CostFixed[u] * model.Committed[u,h] for u in model.u)
+                    + sum((model.CostStartUpH[u,h] + model.CostShutDownH[u,h]) for u in model.u)
+                    + sum((model.CostRampUpH[u,h] + model.CostRampDownH[u,h]) for u in model.u)
+                    + sum(model.CostVariable[u,h] * model.Power[u,h] for u in model.u)
+                    + sum(model.PriceTransmission[l,h] * model.Flow[l,h] for l in model.l)
+                    + sum(model.CostLoadShedding[n,h] * model.ShedLoad[n,h] for n in model.n)
+                    + 30000 * sum(model.LostLoad_MaxPower[n,h] + model.LostLoad_MinPower[n,h] for n in model.n)
+                    + 20000 * sum(model.LostLoad_Reserve2U[n,h] + model.LostLoad_Reserve2D[n,h] for n in model.n)
+                    + 10000 * sum(model.LostLoad_RampUp[u,h] + model.LostLoad_RampDown[u,h] for u in model.u))
 
 
 
@@ -337,8 +339,6 @@ def  DispOptim(sets,parameters):
                 return sum(1-model.Committed[u,h] for h in model.h) >= 0
             else:
                 return Constraint.Skip
-
-
 
 
 ###################################################################################################################################################################################################################################################################
@@ -548,8 +548,6 @@ def  DispOptim(sets,parameters):
 ######################################## Definition of model ##########################################################
 #######################################################################################################################
 
-  
-    #solver_manager = SolverManagerFactory("pyro") #parallel
 
     model.EQ_Objective_Function = Objective(rule=EQ_Objective_function)
     
@@ -600,21 +598,29 @@ def  DispOptim(sets,parameters):
     model.EQ_Force_DeCommitment = Constraint(model.u,model.h,rule=EQ_Force_DeCommitment)
     model.EQ_LoadShedding = Constraint(model.n,model.h,rule =EQ_LoadShedding)
 
-  # initialize the solver / solver manager.
-    solver = SolverFactory("cplex")
-#    opt = solver
-    if solver is None:
-        print "A CPLEX solver is not available on this machine."
-        sys.exit(1)
-    solver_manager = SolverManagerFactory("serial") #serial
-    
-    results = solver.solve(model,options_string="mipgap=0.05",tee=True)
-    model.solutions.load_from(results)
-
     return model
 
 
+def run_solver(instance, solver="cplex", solver_manager="serial"):
+    # initialize the solver / solver manager.
+    solver = SolverFactory(solver)
+    if solver is None:
+        logging.critical( "Solver %s is not available on this machine." % solver)
+        sys.exit(1)
+    solver_manager = SolverManagerFactory(solver_manager) #serial or pyro
 
+    results = solver.solve(instance, options_string="mipgap=0.05", tee=True)
+    if results.solver.termination_condition != TerminationCondition.optimal:
+        # something went wrong
+        logging.warn("Solver: %s" % results.solver.termination_condition)
+        logging.debug(results.solver)                                                                   
+    else:
+        logging.info("Solver: %s" % results.solver.termination_condition)
+        instance.solutions.load_from(results)                                                                      
+        return instance
+    
+def after_solver(results):
+    pass
 
 
 #######################################################################################################################
@@ -635,7 +641,6 @@ def DispaSolve(sets,parameters):
     
     
     # Initialize the results dictionnary:
-    results = {}
     
     # Load the config parameter in the pyomo format (easier to read):
     config = pyomo_format(sets,parameters['Config'])
@@ -719,6 +724,8 @@ def DispaSolve(sets,parameters):
     range_start = index_all.get_loc(start)
     days = range(range_start/24,Nhours_sim/24-1 - config['RollingHorizon LookAhead','day'],config['RollingHorizon Length','day'])
     
+    results = {}
+
     for d in days:
         range_start = d*24
         range_stop = np.minimum(range_start + config['RollingHorizon Length','day']*24 + config['RollingHorizon LookAhead','day']*24,Nhours)
@@ -726,8 +733,8 @@ def DispaSolve(sets,parameters):
         h_kept = range(range_start,range_stop - config['RollingHorizon LookAhead','day']*24)        # Time indexes of the values that will be kept and stored
         index_range = index_all[h_range]
         index_kept = index_all[h_kept]
-        print 'Optimizing time interval ' + str(index_range[0]) + ' to ' + str(index_range[-1])
-        print 'Conserving only the interval ' + str(index_kept[0]) + ' to ' + str(index_kept[-1])
+        logging.info('Optimizing time interval ' + str(index_range[0]) + ' to ' + str(index_range[-1]))
+        logging.info('Conserving only the interval ' + str(index_kept[0]) + ' to ' + str(index_kept[-1]))
         # Slice the time-dependent parameters to the right horizon: 
         parameters_sliced = {}
         for var in parameters:
@@ -765,48 +772,49 @@ def DispaSolve(sets,parameters):
             parameters_sliced['TimeDownLeft_JustStopped']['val'][u,:] = np.minimum(len(h_range) - 1 - np.arange(len(h_range)),parameters_sliced['TimeDownMinimum']['val'][u]*np.ones(len(h_range))).astype('int')
     
         # Optimize: 
-        opt = DispOptim(sets_sliced,parameters_sliced)
+        instance = DispOptim(sets_sliced,parameters_sliced)
+        opt = run_solver(instance)
         
         results_sliced = {}
-        results_sliced['Committed'] = pyomo_to_pandas([sets_sliced['u'],sets_sliced['h']],getattr(opt,'Committed'))
-        results_sliced['CostStartUpH'] = pyomo_to_pandas([sets_sliced['u'],sets_sliced['h']],getattr(opt,'CostStartUpH'))
-        results_sliced['CostShutDownH'] = pyomo_to_pandas([sets_sliced['u'],sets_sliced['h']],getattr(opt,'CostShutDownH'))
-        results_sliced['CostRampUpH'] = pyomo_to_pandas([sets_sliced['u'],sets_sliced['h']],getattr(opt,'CostRampUpH'))
-        results_sliced['CostRampDownH'] = pyomo_to_pandas([sets_sliced['u'],sets_sliced['h']],getattr(opt,'CostRampDownH'))
-        results_sliced['Flow'] = pyomo_to_pandas([sets_sliced['l'],sets_sliced['h']],getattr(opt,'Flow'))
-        results_sliced['Power'] = pyomo_to_pandas([sets_sliced['u'],sets_sliced['h']],getattr(opt,'Power'))
-        results_sliced['ShedLoad'] = pyomo_to_pandas([sets_sliced['n'],sets_sliced['h']],getattr(opt,'ShedLoad'))
-        results_sliced['StorageInput'] = pyomo_to_pandas([sets_sliced['s'],sets_sliced['h']],getattr(opt,'StorageInput'))
-        results_sliced['StorageLevel'] = pyomo_to_pandas([sets_sliced['s'],sets_sliced['h']],getattr(opt,'StorageLevel'))
-        results_sliced['SystemCost'] = pyomo_to_pandas([sets_sliced['h']],getattr(opt,'SystemCost'))
-        results_sliced['LostLoad_MaxPower'] = pyomo_to_pandas([sets_sliced['n'],sets_sliced['h']],getattr(opt,'LostLoad_MaxPower'))
-        results_sliced['LostLoad_RampUp'] = pyomo_to_pandas([sets_sliced['u'],sets_sliced['h']],getattr(opt,'LostLoad_RampUp'))
-        results_sliced['LostLoad_RampDown'] = pyomo_to_pandas([sets_sliced['u'],sets_sliced['h']],getattr(opt,'LostLoad_RampDown'))
-        results_sliced['LostLoad_MinPower'] = pyomo_to_pandas([sets_sliced['n'],sets_sliced['h']],getattr(opt,'LostLoad_MinPower'))
-        results_sliced['LostLoad_Reserve2U'] = pyomo_to_pandas([sets_sliced['n'],sets_sliced['h']],getattr(opt,'LostLoad_Reserve2U'))
-        results_sliced['LostLoad_Reserve2D'] = pyomo_to_pandas([sets_sliced['n'],sets_sliced['h']],getattr(opt,'LostLoad_Reserve2D'))
+        results_sliced['Committed'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'Committed'))
+        results_sliced['CostStartUpH'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'CostStartUpH'))
+        results_sliced['CostShutDownH'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'CostShutDownH'))
+        results_sliced['CostRampUpH'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'CostRampUpH'))
+        results_sliced['CostRampDownH'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'CostRampDownH'))
+        results_sliced['Flow'] = pyomo_to_pandas([sets_sliced['l'], sets_sliced['h']], getattr(opt,'Flow'))
+        results_sliced['Power'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'Power'))
+        results_sliced['ShedLoad'] = pyomo_to_pandas([sets_sliced['n'], sets_sliced['h']], getattr(opt,'ShedLoad'))
+        results_sliced['StorageInput'] = pyomo_to_pandas([sets_sliced['s'], sets_sliced['h']], getattr(opt,'StorageInput'))
+        results_sliced['StorageLevel'] = pyomo_to_pandas([sets_sliced['s'], sets_sliced['h']], getattr(opt,'StorageLevel'))
+        results_sliced['SystemCost'] = pyomo_to_pandas([sets_sliced['h']], getattr(opt,'SystemCost'))
+        results_sliced['LostLoad_MaxPower'] = pyomo_to_pandas([sets_sliced['n'], sets_sliced['h']], getattr(opt,'LostLoad_MaxPower'))
+        results_sliced['LostLoad_RampUp'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'LostLoad_RampUp'))
+        results_sliced['LostLoad_RampDown'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'LostLoad_RampDown'))
+        results_sliced['LostLoad_MinPower'] = pyomo_to_pandas([sets_sliced['n'], sets_sliced['h']], getattr(opt,'LostLoad_MinPower'))
+        results_sliced['LostLoad_Reserve2U'] = pyomo_to_pandas([sets_sliced['n'], sets_sliced['h']], getattr(opt,'LostLoad_Reserve2U'))
+        results_sliced['LostLoad_Reserve2D'] = pyomo_to_pandas([sets_sliced['n'], sets_sliced['h']], getattr(opt,'LostLoad_Reserve2D'))
     
         # Defining the main results dictionnary:
         if len(results) == 0:
             for r in results_sliced:
-                results[r] = pd.DataFrame(index=index_sim,columns=results_sliced[r].columns)
-            
+                results[r] = pd.DataFrame(index=index_sim, columns=results_sliced[r].columns)
+
         # Adding the sliced results to the main results dictionnary:
         for r in results_sliced:
             results_sliced[r].index=index_range
-            results[r].loc[index_kept,:] = results_sliced[r].loc[index_kept,:] 
+            results[r].loc[index_kept, :] = results_sliced[r].loc[index_kept, :] 
             
         # Calculating the times up and down of each power plant
         TimeUp = np.zeros(Nunits)
         TimeDown = np.zeros(Nunits)
         for u in range(Nunits):
-            for i in index_kept.order(ascending=False):   # take the inverse
-                if results['Power'].loc[i,sets['u'][u]] > 0:
+            for i in index_kept.order(ascending=False):   # take the inverse #FIXME new pandas : index.kept.sort_values() 
+                if results['Power'].loc[i, sets['u'][u]] > 0:
                     TimeUp[u] += 1
                 else:
                     break
-            for i in index_kept.order(ascending=False):   # take the inverse
-                if results['Committed'].loc[i,sets['u'][u]] == 0:
+            for i in index_kept.order(ascending=False):   # take the inverse #FIXME new pandas : index.kept.sort_values() 
+                if results['Committed'].loc[i, sets['u'][u]] == 0:
                     TimeDown[u] += 1
                 else:
                     break    
@@ -816,8 +824,8 @@ def DispaSolve(sets,parameters):
                 TimeDown[u] += parameters['TimeDownInitial']['val'][u]        
             
         # Updating the initial values for the next optimization:
-        parameters['StorageInitial']['val'] = results['StorageLevel'].loc[index_kept[-1],:].values.astype('float')
-        parameters['PowerInitial']['val'] = results['Power'].loc[index_kept[-1],:].values.astype('float')
+        parameters['StorageInitial']['val'] = results['StorageLevel'].loc[index_kept[-1], :].values.astype('float')
+        parameters['PowerInitial']['val'] = results['Power'].loc[index_kept[-1], :].values.astype('float')
         parameters['TimeUpInitial']['val'] = TimeUp
         parameters['TimeDownInitial']['val'] = TimeDown
     
@@ -830,5 +838,3 @@ def DispaSolve(sets,parameters):
         del opt,parameters_sliced,sets_sliced
     
     return results
-
-
