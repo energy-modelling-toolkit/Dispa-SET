@@ -30,8 +30,9 @@ import matplotlib.pyplot as plt
 ###################################################################################################################
 
 # Paths:
-gams_dir = '/home/sylvain/progs/GAMS/matlab'
-#gams_dir = 'C:\\GAMS\\win64\\24.3'
+#gams_dir = '/home/sylvain/progs/GAMS/matlab'
+gams_dir = 'C:\\GAMS\\win32\\24.3'
+
 
 path_data_csv = 'example-data/csv'
 path_data_pandas = 'example-data/pandas'
