@@ -654,7 +654,8 @@ if write_excel:
     
 if write_pickle:
     import cPickle
-    cPickle.dump([sets, parameters], open(sim + '/Inputs.p', 'wb'))
+    with open(sim + '/Inputs.p', 'wb') as pfile:
+        cPickle.dump([sets, parameters], pfile, protocol=cPickle.HIGHEST_PROTOCOL)
 
 ###################################################################################################################
 #####################################   Plotting load and VRE      ################################################

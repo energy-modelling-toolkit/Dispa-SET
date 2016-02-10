@@ -198,7 +198,8 @@ def load_xl_to_pd(path_excel,file_excel,sheet_excel,path_pandas,file_pandas,head
     
 def clustering(plants,AdditionalArrays=[],Nslices=20):
     '''
-    # Merge excessively disaggregated power Units.
+    Merge excessively disaggregated power Units.
+    
     :param plants: Pandas dataframe with each power plant and their characteristics (following the DispaSET format)
     :param AdditionalArrays: List of arrays to be merged. The number of rows must be equal to the number of plants. The merged values are a weighted average of the original values with respect to capacities
     :param Nslices: number slices used to fingerprint each power plant characteristics. slices in the power plant data to categorize them  (fewer slices involves that the plants will be aggregated more easily)

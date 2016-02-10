@@ -278,6 +278,7 @@ def write_variables(gams_dir,gdx_out,list_vars,format='2.0'):
 def write_toexcel(xls_out,list_vars,format='2.1',firstrow=7):
     '''
     Function that reads all the variables (in list_vars) and inserts them one by one into gdx_out
+    
     :param xls_out: The path of the folder where the excel files are to be written
     :param list_vars: List containing the dispaset variables 
     :param format: Format version of the dispaset variables. Currently supports 2.1 and 2.1.1
