@@ -32,6 +32,7 @@ Contents
    overview
    workflow
    API
+   developpers
 
 
 Indices and tables

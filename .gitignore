@@ -1,7 +1,7 @@
 *~
 *~gm
 *.pyc
-docs/_build/*
+Docs/_build/*
 *.lst
 *.lxi
 *.log

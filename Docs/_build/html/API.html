@@ -198,11 +198,23 @@ The definition of the rolling horizon must be included into the DispaSET Config 
 <dl class="function">
 <dt id="DispaTools.clustering">
 <code class="descclassname">DispaTools.</code><code class="descname">clustering</code><span class="sig-paren">(</span><em>plants</em>, <em>AdditionalArrays=[]</em>, <em>Nslices=20</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaTools.html#clustering"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaTools.clustering" title="Permalink to this definition">¶</a></dt>
-<dd><p># Merge excessively disaggregated power Units.
-:param plants: Pandas dataframe with each power plant and their characteristics (following the DispaSET format)
-:param AdditionalArrays: List of arrays to be merged. The number of rows must be equal to the number of plants. The merged values are a weighted average of the original values with respect to capacities
-:param Nslices: number slices used to fingerprint each power plant characteristics. slices in the power plant data to categorize them  (fewer slices involves that the plants will be aggregated more easily)
-:return: A list with the merged plants and a sublist of the merged additional arrays</p>
+<dd><p>Merge excessively disaggregated power Units.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>plants</strong> &#8211; Pandas dataframe with each power plant and their characteristics (following the DispaSET format)</li>
+<li><strong>AdditionalArrays</strong> &#8211; List of arrays to be merged. The number of rows must be equal to the number of plants. The merged values are a weighted average of the original values with respect to capacities</li>
+<li><strong>Nslices</strong> &#8211; number slices used to fingerprint each power plant characteristics. slices in the power plant data to categorize them  (fewer slices involves that the plants will be aggregated more easily)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A list with the merged plants and a sublist of the merged additional arrays</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
@@ -296,12 +308,24 @@ The format of the dispaset variable must be the version 2.1.1</p>
 <dl class="function">
 <dt id="DispaSET_io_data.write_toexcel">
 <code class="descclassname">DispaSET_io_data.</code><code class="descname">write_toexcel</code><span class="sig-paren">(</span><em>xls_out</em>, <em>list_vars</em>, <em>format='2.1'</em>, <em>firstrow=7</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET_io_data.html#write_toexcel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET_io_data.write_toexcel" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function that reads all the variables (in list_vars) and inserts them one by one into gdx_out
-:param xls_out: The path of the folder where the excel files are to be written
-:param list_vars: List containing the dispaset variables 
-:param format: Format version of the dispaset variables. Currently supports 2.1 and 2.1.1
-:param firstrow: Excel row number containing the first line of the DATA (not the headers)
-:return: Binary variable (True)</p>
+<dd><p>Function that reads all the variables (in list_vars) and inserts them one by one into gdx_out</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>xls_out</strong> &#8211; The path of the folder where the excel files are to be written</li>
+<li><strong>list_vars</strong> &#8211; List containing the dispaset variables</li>
+<li><strong>format</strong> &#8211; Format version of the dispaset variables. Currently supports 2.1 and 2.1.1</li>
+<li><strong>firstrow</strong> &#8211; Excel row number containing the first line of the DATA (not the headers)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Binary variable (True)</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">

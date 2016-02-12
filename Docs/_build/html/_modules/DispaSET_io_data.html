@@ -84,6 +84,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../workflow.html">Workflow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../API.html">API Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developpers.html">Developpers</a></li>
 </ul>
 
             
@@ -134,10 +135,16 @@
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s">&#39;Sylvain Quoilin (sylvain.quoilin@ec.europa.eu)&#39;</span>
 
+<span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">sys</span>
- 
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">gdxcc</span> <span class="kn">import</span> <span class="o">*</span>
+    <span class="n">gdxcc_available</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">gdxcc_available</span> <span class="o">=</span> <span class="bp">False</span>
+
 
 <div class="viewcode-block" id="shrink_to_64"><a class="viewcode-back" href="../API.html#DispaSET_io_data.shrink_to_64">[docs]</a><span class="k">def</span> <span class="nf">shrink_to_64</span><span class="p">(</span><span class="n">list_keys</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
@@ -155,7 +162,6 @@
 <span class="sd">    Function that writes a variable (either set or parameter) to the gdxHandle</span>
 <span class="sd">    The format of the dispaset variable must be the version 2.0</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="kn">from</span> <span class="nn">gdxcc</span> <span class="kn">import</span> <span class="o">*</span>  
 
     <span class="n">domains</span> <span class="o">=</span> <span class="p">[]</span>                <span class="c"># Domains contains the names of the input sets for the parameter (empty for a set)</span>
     <span class="n">description</span> <span class="o">=</span> <span class="bp">None</span>          <span class="c"># Describes the variable being written (to be added)</span>
@@ -233,7 +239,6 @@
 <span class="sd">    Function that writes a variable (either set or parameter) to the gdxHandle</span>
 <span class="sd">    The format of the dispaset variable must be the version 2.1</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="kn">from</span> <span class="nn">gdxcc</span> <span class="kn">import</span> <span class="o">*</span>  
 
     <span class="n">domains</span> <span class="o">=</span> <span class="p">[]</span>                <span class="c"># Domains contains the names of the input sets for the parameter (empty for a set)</span>
     <span class="n">description</span> <span class="o">=</span> <span class="bp">None</span>          <span class="c"># Describes the variable being written (to be added)</span>
@@ -300,12 +305,12 @@
     <span class="k">print</span><span class="p">(</span><span class="n">variable</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39; &#39;</span> <span class="o">+</span> <span class="n">variable</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39; successfully written&#39;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="insert_symbols_211"><a class="viewcode-back" href="../API.html#DispaSET_io_data.insert_symbols_211">[docs]</a><span class="k">def</span> <span class="nf">insert_symbols_211</span><span class="p">(</span><span class="n">gdxHandle</span><span class="p">,</span><span class="n">sets</span><span class="p">,</span><span class="n">parameters</span><span class="p">):</span>
+
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Function that writes a variable (either set or parameter) to the gdxHandle</span>
 <span class="sd">    The format of the dispaset variable must be the version 2.1.1</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="kn">from</span> <span class="nn">gdxcc</span> <span class="kn">import</span> <span class="o">*</span>  
-    
+
     <span class="c"># Check array sizes for parameters:</span>
     <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
         <span class="n">variable</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="n">p</span><span class="p">]</span>
@@ -369,39 +374,43 @@
 <span class="sd">    Function that reads all the variables (in list_vars) and inserts them one by one into gdx_out</span>
 <span class="sd">    Currently accepts Dispaset data formats 2.0, 2.1 and 2.1.1</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="kn">from</span> <span class="nn">gdxcc</span> <span class="kn">import</span> <span class="o">*</span>  
-    <span class="c">#Check gams_dir:</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">gams_dir</span><span class="p">):</span>
-        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s">&#39;Could not find the specific gams directory&#39;</span> <span class="o">+</span> <span class="n">gams_dir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">gdxcc_available</span><span class="p">:</span>
+        <span class="c">#Check gams_dir:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">gams_dir</span><span class="p">):</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s">&#39;Could not find the specific gams directory&#39;</span> <span class="o">+</span> <span class="n">gams_dir</span><span class="p">)</span>
 
-    <span class="n">gdxHandle</span> <span class="o">=</span> <span class="n">new_gdxHandle_tp</span><span class="p">()</span>
-    <span class="n">gdxCreateD</span><span class="p">(</span><span class="n">gdxHandle</span><span class="p">,</span> <span class="n">gams_dir</span><span class="p">,</span> <span class="n">GMS_SSSIZE</span><span class="p">)</span>
-    <span class="n">gdxOpenWrite</span><span class="p">(</span><span class="n">gdxHandle</span><span class="p">,</span> <span class="n">gdx_out</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
-    
+        <span class="n">gdxHandle</span> <span class="o">=</span> <span class="n">new_gdxHandle_tp</span><span class="p">()</span>
+        <span class="n">gdxCreateD</span><span class="p">(</span><span class="n">gdxHandle</span><span class="p">,</span> <span class="n">gams_dir</span><span class="p">,</span> <span class="n">GMS_SSSIZE</span><span class="p">)</span>
+        <span class="n">gdxOpenWrite</span><span class="p">(</span><span class="n">gdxHandle</span><span class="p">,</span> <span class="n">gdx_out</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+            
 
-    <span class="k">if</span> <span class="n">format</span> <span class="o">==</span> <span class="s">&#39;2.0&#39;</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">list_vars</span><span class="p">:</span>
-            <span class="n">insert_symbol</span><span class="p">(</span><span class="n">gdxHandle</span><span class="p">,</span><span class="n">var</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">format</span> <span class="o">==</span> <span class="s">&#39;2.1&#39;</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">list_vars</span><span class="p">:</span>
-            <span class="n">insert_symbol_21</span><span class="p">(</span><span class="n">gdxHandle</span><span class="p">,</span><span class="n">var</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">format</span> <span class="o">==</span> <span class="s">&#39;2.1.1&#39;</span><span class="p">:</span>
-        <span class="p">[</span><span class="n">sets</span><span class="p">,</span> <span class="n">parameters</span><span class="p">]</span> <span class="o">=</span> <span class="n">list_vars</span>
-        <span class="n">insert_symbols_211</span><span class="p">(</span><span class="n">gdxHandle</span><span class="p">,</span><span class="n">sets</span><span class="p">,</span><span class="n">parameters</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">print</span> <span class="s">&#39;Format &#39;</span> <span class="o">+</span> <span class="n">format</span> <span class="o">+</span> <span class="s">&#39; not supported&#39;</span>
-        <span class="k">return</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">format</span> <span class="o">==</span> <span class="s">&#39;2.0&#39;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">list_vars</span><span class="p">:</span>
+                <span class="n">insert_symbol</span><span class="p">(</span><span class="n">gdxHandle</span><span class="p">,</span><span class="n">var</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">format</span> <span class="o">==</span> <span class="s">&#39;2.1&#39;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">list_vars</span><span class="p">:</span>
+                <span class="n">insert_symbol_21</span><span class="p">(</span><span class="n">gdxHandle</span><span class="p">,</span><span class="n">var</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">format</span> <span class="o">==</span> <span class="s">&#39;2.1.1&#39;</span><span class="p">:</span>
+            <span class="p">[</span><span class="n">sets</span><span class="p">,</span> <span class="n">parameters</span><span class="p">]</span> <span class="o">=</span> <span class="n">list_vars</span>
+            <span class="n">insert_symbols_211</span><span class="p">(</span><span class="n">gdxHandle</span><span class="p">,</span><span class="n">sets</span><span class="p">,</span><span class="n">parameters</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&#39;Format &#39;</span> <span class="o">+</span> <span class="n">format</span> <span class="o">+</span> <span class="s">&#39; not supported&#39;</span>
+            <span class="k">return</span><span class="p">()</span>
 
-    <span class="n">gdxClose</span><span class="p">(</span><span class="n">gdxHandle</span><span class="p">)</span>
+        <span class="n">gdxClose</span><span class="p">(</span><span class="n">gdxHandle</span><span class="p">)</span>
 
-    <span class="c">#pickle.dump(list_vars, open( gdx_out[:-4]+&#39;.p&#39;, &quot;wb&quot; ) )</span>
+        <span class="c">#pickle.dump(list_vars, open( gdx_out[:-4]+&#39;.p&#39;, &quot;wb&quot; ) )</span>
 
-    <span class="k">print</span> <span class="s">&#39;Data Successfully written to &#39;</span> <span class="o">+</span> <span class="n">gdx_out</span></div>
+        <span class="k">print</span> <span class="s">&#39;Data Successfully written to &#39;</span> <span class="o">+</span> <span class="n">gdx_out</span>
+    <span class="k">else</span><span class="p">:</span> 
+        <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;gdxcc module not installed. GDX will not be produced&quot;</span><span class="p">)</span></div>
+
 
 
 <div class="viewcode-block" id="write_toexcel"><a class="viewcode-back" href="../API.html#DispaSET_io_data.write_toexcel">[docs]</a><span class="k">def</span> <span class="nf">write_toexcel</span><span class="p">(</span><span class="n">xls_out</span><span class="p">,</span><span class="n">list_vars</span><span class="p">,</span><span class="n">format</span><span class="o">=</span><span class="s">&#39;2.1&#39;</span><span class="p">,</span><span class="n">firstrow</span><span class="o">=</span><span class="mi">7</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Function that reads all the variables (in list_vars) and inserts them one by one into gdx_out</span>
+<span class="sd">    </span>
 <span class="sd">    :param xls_out: The path of the folder where the excel files are to be written</span>
 <span class="sd">    :param list_vars: List containing the dispaset variables </span>
 <span class="sd">    :param format: Format version of the dispaset variables. Currently supports 2.1 and 2.1.1</span>

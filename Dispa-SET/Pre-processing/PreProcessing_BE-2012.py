@@ -19,6 +19,7 @@ import numpy as np
 import os
 import shutil
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 ###################################################################################################################
@@ -45,7 +46,7 @@ additional_analysis = False
 # Formats to write final template of inputs:
 # gdx is required for GAMS, excel allows visualizing the data, pickle is the fastest solution
 write_excel = True
-write_gdx = false
+write_gdx = False
 write_pickle = True
 
 # Residual binary variable:

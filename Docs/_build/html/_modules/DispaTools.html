@@ -84,6 +84,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../workflow.html">Workflow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../API.html">API Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developpers.html">Developpers</a></li>
 </ul>
 
             
@@ -329,7 +330,8 @@
     
 <div class="viewcode-block" id="clustering"><a class="viewcode-back" href="../API.html#DispaTools.clustering">[docs]</a><span class="k">def</span> <span class="nf">clustering</span><span class="p">(</span><span class="n">plants</span><span class="p">,</span><span class="n">AdditionalArrays</span><span class="o">=</span><span class="p">[],</span><span class="n">Nslices</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    # Merge excessively disaggregated power Units.</span>
+<span class="sd">    Merge excessively disaggregated power Units.</span>
+<span class="sd">    </span>
 <span class="sd">    :param plants: Pandas dataframe with each power plant and their characteristics (following the DispaSET format)</span>
 <span class="sd">    :param AdditionalArrays: List of arrays to be merged. The number of rows must be equal to the number of plants. The merged values are a weighted average of the original values with respect to capacities</span>
 <span class="sd">    :param Nslices: number slices used to fingerprint each power plant characteristics. slices in the power plant data to categorize them  (fewer slices involves that the plants will be aggregated more easily)</span>
