@@ -4,20 +4,54 @@ __author__ = 'Sylvain Quoilin (sylvain.quoilin@ec.europa.eu)'
 import os
 import sys
 import numpy as np
+import pandas as pd 
+
+### PYOMO TOOLS
+
+def get_sets(instance, var):
+    '''Get sets that belong to a pyomo Variable or Param
+
+    :param instance: Pyomo Instance
+    :param var: Pyomo Variable
+    :return: A list with the sets that belong to this Param 
+    '''
+    sets = []
+    var = getattr(instance, var)
+
+    if var.dim() > 1:
+        for pset in var._index.set_tuple:
+            sets.append(pset.name)
+    else:
+        sets.append(var._index.name)
+    return sets
+
+def get_set_members(instance, sets):
+    '''Get set members that belong to this set
+
+    :param instance: Pyomo Instance
+    :param set: Pyomo Set
+    :return: A list with the set members  
+    '''
+    sm = []
+    for s in sets:
+        sm.append([v for v in getattr(instance, s).value])
+    return sm
 
 
-def pyomo_to_pandas(sets,var):
+def pyomo_to_pandas(instance, var):
     '''
     Function converting a pyomo variable or parameter into a pandas dataframe.
     The variable must have one or two dimensions and the sets must be provided as a list of lists
     '''
-    import pandas as pd 
-    
+    setnames = get_sets(instance, var)
+    sets = get_set_members(instance, setnames)
+    var = getattr(instance, var)  # Previous script used model.var instead of var
+    ####
     if len(sets) != var.dim():
         sys.exit('The number of provided set lists (' + str(len(sets)) + ') does not match the dimensions of the variable (' + str(var.dim()) + ')')
     if var.dim() == 1:
         [SecondSet] = sets
-        out = pd.DataFrame(columns = [var.name],index=SecondSet)
+        out = pd.DataFrame(columns=[var.name], index=SecondSet)
         data = var.get_values()
         for idx in data:
             out[var.name][idx] = data[idx]
@@ -25,7 +59,7 @@ def pyomo_to_pandas(sets,var):
         
     elif var.dim() == 2:
         [FirstSet,SecondSet] = sets
-        out = pd.DataFrame(columns = FirstSet,index=SecondSet)
+        out = pd.DataFrame(columns=FirstSet, index=SecondSet)
         data = var.get_values()
         for idx in data:
             out[idx[0]][idx[1]] = data[idx]
@@ -35,11 +69,12 @@ def pyomo_to_pandas(sets,var):
         return []
 
 
-def pyomo_format(sets,param):
+def pyomo_format(sets, param):
     '''
     Function that flattens the multidimensional dispaset input data into the pyomo format: a dicitonary with a tuple and the parameter value. 
     The tuple contains the strings of the corresponding set values
     '''    
+
     param_new = {}
     ndims = len(param['sets'])
     for i in range(ndims):
@@ -73,7 +108,9 @@ def pyomo_format(sets,param):
     return param_new        
 
 
-     
+### END OF PYOMO TOOLS
+
+### HELPER FUNCTIONS
 def tuple_format(array):
     '''
     Function that flattens a n-dimensional matrix and returns a dictionary with the values and their coordinates in a tuple     
@@ -156,7 +193,6 @@ def load_csv_to_pd(path_csv,file_csv,path_pandas,file_pandas):
     Function that loads a csv sheet into a panda variable and saves it in a separate path. If the saved variable is newer
     than the sheet, do no load the sheet again.
     '''
-    import pandas as pd
     
     filepath_csv = os.path.join(path_csv,file_csv)
     filepath_pandas = os.path.join(path_pandas,file_pandas)
@@ -178,7 +214,6 @@ def load_xl_to_pd(path_excel,file_excel,sheet_excel,path_pandas,file_pandas,head
     Function that loads an xls sheet into a panda variable and saves it in a separate path. If the saved variable is newer
     than the sheet, do no load the sheet again.
     '''
-    import pandas as pd    
     
     filepath_excel = os.path.join(path_excel,file_excel)
     filepath_pandas = os.path.join(path_pandas,file_pandas)
@@ -205,7 +240,6 @@ def clustering(plants,AdditionalArrays=[],Nslices=20):
     :param Nslices: number slices used to fingerprint each power plant characteristics. slices in the power plant data to categorize them  (fewer slices involves that the plants will be aggregated more easily)
     :return: A list with the merged plants and a sublist of the merged additional arrays
     '''
-    import pandas as pd
     
     # Checking the the required columns are present in the input pandas dataframe:
     required_inputs = ['Unit','PowerCapacity','PartLoadMin','RampUpRate','RampDownRate','StartUpTime','MinUpTime','MinDownTime','NoLoadCost','StartUpCost','Efficiency']   

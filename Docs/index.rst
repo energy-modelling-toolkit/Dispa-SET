@@ -22,7 +22,7 @@ Libraries used
 * `pandas`_ for input and result data handling 
 * `matplotlib`_ for plotting
 
-
+  
 Contents
 --------
 
@@ -31,8 +31,9 @@ Contents
 
    overview
    workflow
+   data
    API
-   developpers
+   developers
 
 
 Indices and tables

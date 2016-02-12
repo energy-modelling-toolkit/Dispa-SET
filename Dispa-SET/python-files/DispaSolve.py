@@ -38,7 +38,7 @@ def  DispOptim(sets,parameters):
     '''
     
     # Definition of model:
-    model = ConcreteModel()
+    model = ConcreteModel('DispaSET')
 
 #######################################################################################################################
 ############################################ Definition of the sets ###################################################
@@ -62,7 +62,7 @@ def  DispOptim(sets,parameters):
     # Transform the parameters into the pyomo format:
     params = {}
     for key in parameters.keys():
-        params[key] = pyomo_format(sets,parameters[key])
+        params[key] = pyomo_format(sets, parameters[key])
     #params = pyomo_format(sets,parameters)
 
 
@@ -776,24 +776,27 @@ def DispaSolve(sets,parameters):
         opt = run_solver(instance)
         
         results_sliced = {}
-        results_sliced['Committed'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'Committed'))
-        results_sliced['CostStartUpH'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'CostStartUpH'))
-        results_sliced['CostShutDownH'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'CostShutDownH'))
-        results_sliced['CostRampUpH'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'CostRampUpH'))
-        results_sliced['CostRampDownH'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'CostRampDownH'))
-        results_sliced['Flow'] = pyomo_to_pandas([sets_sliced['l'], sets_sliced['h']], getattr(opt,'Flow'))
-        results_sliced['Power'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'Power'))
-        results_sliced['ShedLoad'] = pyomo_to_pandas([sets_sliced['n'], sets_sliced['h']], getattr(opt,'ShedLoad'))
-        results_sliced['StorageInput'] = pyomo_to_pandas([sets_sliced['s'], sets_sliced['h']], getattr(opt,'StorageInput'))
-        results_sliced['StorageLevel'] = pyomo_to_pandas([sets_sliced['s'], sets_sliced['h']], getattr(opt,'StorageLevel'))
-        results_sliced['SystemCost'] = pyomo_to_pandas([sets_sliced['h']], getattr(opt,'SystemCost'))
-        results_sliced['LostLoad_MaxPower'] = pyomo_to_pandas([sets_sliced['n'], sets_sliced['h']], getattr(opt,'LostLoad_MaxPower'))
-        results_sliced['LostLoad_RampUp'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'LostLoad_RampUp'))
-        results_sliced['LostLoad_RampDown'] = pyomo_to_pandas([sets_sliced['u'], sets_sliced['h']], getattr(opt,'LostLoad_RampDown'))
-        results_sliced['LostLoad_MinPower'] = pyomo_to_pandas([sets_sliced['n'], sets_sliced['h']], getattr(opt,'LostLoad_MinPower'))
-        results_sliced['LostLoad_Reserve2U'] = pyomo_to_pandas([sets_sliced['n'], sets_sliced['h']], getattr(opt,'LostLoad_Reserve2U'))
-        results_sliced['LostLoad_Reserve2D'] = pyomo_to_pandas([sets_sliced['n'], sets_sliced['h']], getattr(opt,'LostLoad_Reserve2D'))
-    
+        # TDO Iterate all VARs instead of listing everything. Can we?
+        #for v in model.component_objects(Var):
+        #    results_sliced[v] = pyomo_to_pandas(opt, v)
+
+        results_sliced['Committed'] = pyomo_to_pandas(opt,'Committed')
+        results_sliced['CostStartUpH'] = pyomo_to_pandas(opt,'CostStartUpH')
+        results_sliced['CostShutDownH'] = pyomo_to_pandas(opt,'CostShutDownH')
+        results_sliced['CostRampUpH'] = pyomo_to_pandas(opt,'CostRampUpH')
+        results_sliced['CostRampDownH'] = pyomo_to_pandas(opt,'CostRampDownH')
+        results_sliced['Flow'] = pyomo_to_pandas(opt,'Flow')
+        results_sliced['Power'] = pyomo_to_pandas(opt,'Power')
+        results_sliced['ShedLoad'] = pyomo_to_pandas(opt,'ShedLoad')
+        results_sliced['StorageInput'] = pyomo_to_pandas(opt,'StorageInput')
+        results_sliced['StorageLevel'] = pyomo_to_pandas(opt,'StorageLevel')
+        results_sliced['SystemCost'] = pyomo_to_pandas(opt,'SystemCost')
+        results_sliced['LostLoad_MaxPower'] = pyomo_to_pandas(opt,'LostLoad_MaxPower')
+        results_sliced['LostLoad_RampUp'] = pyomo_to_pandas(opt,'LostLoad_RampUp')
+        results_sliced['LostLoad_RampDown'] = pyomo_to_pandas(opt,'LostLoad_RampDown')
+        results_sliced['LostLoad_MinPower'] = pyomo_to_pandas(opt,'LostLoad_MinPower')
+        results_sliced['LostLoad_Reserve2U'] = pyomo_to_pandas(opt,'LostLoad_Reserve2U')
+        results_sliced['LostLoad_Reserve2D'] = pyomo_to_pandas(opt,'LostLoad_Reserve2D')
         # Defining the main results dictionnary:
         if len(results) == 0:
             for r in results_sliced:

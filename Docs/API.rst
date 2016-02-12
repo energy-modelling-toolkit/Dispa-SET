@@ -5,9 +5,6 @@ API Documentation
 
 DispaSolve
 ----------
-#.. automodule:: DispaSolve.DispOptim
-#.. automodule:: DispaSolve.DispaSolve
-
 .. automodule:: DispaSolve
    :members:
 
