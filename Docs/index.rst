@@ -30,6 +30,7 @@ Contents
    :maxdepth: 1
 
    overview
+   model
    workflow
    data
    API

@@ -1,7 +1,7 @@
 .. _workflow:
 
-Workflow
-========
+Getting Started
+===============
 This page explains how to use the model.
 
 
