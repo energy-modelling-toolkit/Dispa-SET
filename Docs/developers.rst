@@ -5,6 +5,18 @@ Developers
 Developers' section.
 
 
+Folders organization
+--------------------
+
+- GAMS code and scripts are included within the "GAMS-files" folder. The code should only be modified in that folder!
+- Python code and scripts are included within the "python-files" folder. 
+- Pre-processing scripts and raw data are included within the "Pre-processing" folder.
+
+A sample Simulation Environment Folder is available at SimulationReferenceTestCase. The files in this folders are generated automatically by the pre-processing scripts. They should not be modified. The folder should be replaced and updated at every major Dispa-SET release.
+
+By default, the pre-processing scripts are set to generate the simulation environment within the "Simulation" folder. This folder is excluded in .gitignore and can therefore be used for testing purposes.
+
+
 Math equations in the Docs
 --------------------------
 

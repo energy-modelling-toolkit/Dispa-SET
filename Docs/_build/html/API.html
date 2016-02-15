@@ -31,8 +31,8 @@
 
   
     <link rel="top" title="Dispa-SET 2.1.1 documentation" href="index.html"/>
-        <link rel="next" title="Developpers" href="developpers.html"/>
-        <link rel="prev" title="Workflow" href="workflow.html"/> 
+        <link rel="next" title="Developers" href="developers.html"/>
+        <link rel="prev" title="Data Schema" href="data.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -84,14 +84,15 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="model.html">Model Description</a></li>
-<li class="toctree-l1"><a class="reference internal" href="workflow.html">Workflow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workflow.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data.html">Data Schema</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="">API Documentation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#dispasolve">DispaSolve</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-DispaSolve">DispaSolve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-DispaTools">DispaTools</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-DispaSET_io_data">IO - data</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="developpers.html">Developpers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developers.html">Developers</a></li>
 </ul>
 
             
@@ -138,11 +139,9 @@
             
   <div class="section" id="api-documentation">
 <span id="api"></span><h1>API Documentation<a class="headerlink" href="#api-documentation" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="dispasolve">
-<h2>DispaSolve<a class="headerlink" href="#dispasolve" title="Permalink to this headline">¶</a></h2>
-<p>#.. automodule:: DispaSolve.DispOptim
-#.. automodule:: DispaSolve.DispaSolve</p>
-<span class="target" id="module-DispaSolve"></span><p>This worksheet contains the two main function to solve the Dispa-SET optimization problem.</p>
+<div class="section" id="module-DispaSolve">
+<span id="dispasolve"></span><h2>DispaSolve<a class="headerlink" href="#module-DispaSolve" title="Permalink to this headline">¶</a></h2>
+<p>This worksheet contains the two main function to solve the Dispa-SET optimization problem.</p>
 <dl class="function">
 <dt id="DispaSolve.DispOptim">
 <code class="descclassname">DispaSolve.</code><code class="descname">DispOptim</code><span class="sig-paren">(</span><em>sets</em>, <em>parameters</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSolve.html#DispOptim"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSolve.DispOptim" title="Permalink to this definition">¶</a></dt>
@@ -227,6 +226,48 @@ The definition of the rolling horizon must be included into the DispaSET Config 
 </dd></dl>
 
 <dl class="function">
+<dt id="DispaTools.get_set_members">
+<code class="descclassname">DispaTools.</code><code class="descname">get_set_members</code><span class="sig-paren">(</span><em>instance</em>, <em>sets</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaTools.html#get_set_members"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaTools.get_set_members" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get set members that belong to this set</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>instance</strong> &#8211; Pyomo Instance</li>
+<li><strong>set</strong> &#8211; Pyomo Set</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A list with the set members</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaTools.get_sets">
+<code class="descclassname">DispaTools.</code><code class="descname">get_sets</code><span class="sig-paren">(</span><em>instance</em>, <em>var</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaTools.html#get_sets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaTools.get_sets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get sets that belong to a pyomo Variable or Param</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>instance</strong> &#8211; Pyomo Instance</li>
+<li><strong>var</strong> &#8211; Pyomo Variable</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A list with the sets that belong to this Param</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
 <dt id="DispaTools.load_csv_to_pd">
 <code class="descclassname">DispaTools.</code><code class="descname">load_csv_to_pd</code><span class="sig-paren">(</span><em>path_csv</em>, <em>file_csv</em>, <em>path_pandas</em>, <em>file_pandas</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaTools.html#load_csv_to_pd"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaTools.load_csv_to_pd" title="Permalink to this definition">¶</a></dt>
 <dd><p>Function that loads a csv sheet into a panda variable and saves it in a separate path. If the saved variable is newer
@@ -267,7 +308,7 @@ The tuple contains the strings of the corresponding set values</p>
 
 <dl class="function">
 <dt id="DispaTools.pyomo_to_pandas">
-<code class="descclassname">DispaTools.</code><code class="descname">pyomo_to_pandas</code><span class="sig-paren">(</span><em>sets</em>, <em>var</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaTools.html#pyomo_to_pandas"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaTools.pyomo_to_pandas" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">DispaTools.</code><code class="descname">pyomo_to_pandas</code><span class="sig-paren">(</span><em>instance</em>, <em>var</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaTools.html#pyomo_to_pandas"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaTools.pyomo_to_pandas" title="Permalink to this definition">¶</a></dt>
 <dd><p>Function converting a pyomo variable or parameter into a pandas dataframe.
 The variable must have one or two dimensions and the sets must be provided as a list of lists</p>
 </dd></dl>
@@ -348,10 +389,10 @@ Currently accepts Dispaset data formats 2.0, 2.1 and 2.1.1</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="developpers.html" class="btn btn-neutral float-right" title="Developpers" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="developers.html" class="btn btn-neutral float-right" title="Developers" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="workflow.html" class="btn btn-neutral" title="Workflow" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="data.html" class="btn btn-neutral" title="Data Schema" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
