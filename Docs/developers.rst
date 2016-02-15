@@ -5,6 +5,19 @@ Developers
 Developers' section.
 
 
+Math equations in the Docs
+--------------------------
+
+- To use online mathjax (default), there is nothing to do but displaying the equation requires internet connection
+- To use pngmath (for Linux)::
+	
+	sudo apt-get install dvipng
+	
+	In conf.py, add 'sphinx.ext.pngmath' in the extensions
+
+	in Makefile: $(SPHINXBUILD) -D pngmath_latex=latex -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+
+
 Clone git repository to svn
 ---------------------------
 * Install git svn ::
