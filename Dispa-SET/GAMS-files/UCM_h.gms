@@ -1,9 +1,13 @@
 $Title UCM model
+
+$eolcom //
 *Option LimRow=100000000;
-Option IterLim=100000000;
+Option IterLim=1000000000;
 Option ResLim = 10000000000;
 *Option SolPrint=On;
 Option SolPrint=Silent;
+*Option optca=0.0;
+
 
 
 
@@ -17,6 +21,10 @@ $set PrintResults 1
 * Name of the input file (Ideally, stick to the default Input.gdx)
 *$set InputFileName Input.gdx
 $set InputFileName Inputs.gdx
+
+* Definition of the equations that will be present in LP or MIP
+* (1 for LP 0 for MIP)
+$setglobal ConditionalSolve 0
 
 *===============================================================================
 *Definition of   sets and parameters
@@ -53,60 +61,60 @@ Alias(i,ii);
 
 *Parameters as defined in the input file
 PARAMETERS
-AvailabilityFactor(u,h)          [%]     Availability factor
-CommittedInitial(u)              [n.a.]  Initial committment status
+AvailabilityFactor(u,h)          [%]      Availability factor
+CommittedInitial(u)              [n.a.]   Initial committment status
 Config
 *CostCurtailment(n,h)             [€\MW]  Curtailment costs
-CostFixed(u)                     [€\h]   Fixed costs
-CostRampUp(u)                    [€\MW\h]Ramp-up costs
-CostRampDown(u)                  [€\MW\h]Ramp-down costs
-CostShutDown(u)                  [€]     Shut-down costs
-CostStartUp(u)                   [€]     Start-up costs
-CostVariable(u,h)              [€\MW]  Variable costs
-Curtailment(n)                   [n.a]   Curtailment allowed or not {1 0} at node n
-Demand(mk,n,h)                   [MW]    Demand
-Efficiency(u)                    [%]     Efficiency
-EmissionMaximum(n,p)             [tP]    Emission limit
-EmissionRate(u,p)                [tP\MW] P emission rate
-FlowMaximum(l,h)                 [MW]    Line limits
-FlowMinimum(l,h)                 [MW]    Minimum flow
-FuelPrice(n,f,h)                 [€\F]   Fuel price
-Fuel(u,f)                        [n.a.]  Fuel type {1 0}
-LineNode(l,n)                    [n.a.]  Incidence matrix {-1 +1}
-LoadShedding(n)                  [n.a.]  Load shedding capacity
-Location(u,n)                    [n.a.]  Location {1 0}
-Markup(u,h)                      [€\MW]  Markup
-OutageFactor(u,h)                [%]     Outage Factor (100% = full outage)
-PartLoadMin(u)                   [%]     Minimum part load
-PermitPrice(p)                   [€\tP]  Permit price
-PowerCapacity(u)                 [MW]    Installed capacity
-PowerInitial(u)                  [MW]    Power output before initial period
-PowerMinStable(u)                [MW]    Minimum power output
-PriceTransmission(l,h)           [€\MWh] Transmission price
-StorageChargingCapacity(u)        [MW]   Storage capacity
-StorageChargingEfficiency(u)      [%]    Charging efficiency
-RampDownMaximum(u)               [MW\h]  Ramp down limit
-RampShutDownMaximum(u)           [MW\h]  Shut-down ramp limit
-RampStartUpMaximum(u)            [MW\h]  Start-up ramp limit
-RampUpMaximum(u)                 [MW\h]  Ramp up limit
-Reserve(t)                       [n.a.]  Reserve technology {1 0}
-StorageCapacity(u)               [MWh] Storage capacity
-StorageDischargeEfficiency(u)    [%]     Discharge efficiency
-StorageOutflow(u,h)              [MWh]  Storage outflows
-StorageInflow(u,h)               [MWh]  Storage inflows (potential energy)
-StorageInitial(u)                [MWh] Storage level before initial period
-StorageMinimum(u)                [MWh] Storage minimum
-Technology(u,t)                  [n.a.]  Technology type {1 0}
-TimeDown(u,h)                    [h]     Hours down
-TimeDownLeft_initial(u)          [h]     Required time down left at the beginning of the simulated time period
-TimeDownLeft_JustStopped(u,h)    [h]     Required time down left at hour h if the Unit has just been stopped
-TimeDownInitial(u)               [h]     Hours down before initial period
-TimeDownMinimum(u)               [h]     Minimum down time
-TimeUpLeft_initial(u)            [h]     Required time up left at the beginning of the simulated time period
-TimeUpInitial(u)                 [h]     Hours on before initial period
-TimeUpMinimum(u)                 [h]     Minimum up time
-FlexibilityUp(u)                [MW\h]  Flexibility (up) of fast-starting power plants
-FlexibilityDown(u)              [MW\h]  Flexibility (down) of a committed power plant
+CostFixed(u)                     [€\h]    Fixed costs
+CostRampUp(u)                    [€\MW\h] Ramp-up costs
+CostRampDown(u)                  [€\MW\h] Ramp-down costs
+CostShutDown(u)                  [€]      Shut-down costs
+CostStartUp(u)                   [€]      Start-up costs
+CostVariable(u,h)                [€\MW]   Variable costs
+Curtailment(n)                   [n.a]    Curtailment allowed or not {1 0} at node n
+Demand(mk,n,h)                   [MW]     Demand
+Efficiency(u)                    [%]      Efficiency
+EmissionMaximum(n,p)             [tP]     Emission limit
+EmissionRate(u,p)                [tP\MW]  P emission rate
+FlowMaximum(l,h)                 [MW]     Line limits
+FlowMinimum(l,h)                 [MW]     Minimum flow
+FuelPrice(n,f,h)                 [€\F]    Fuel price
+Fuel(u,f)                        [n.a.]   Fuel type {1 0}
+LineNode(l,n)                    [n.a.]   Incidence matrix {-1 +1}
+LoadShedding(n)                  [n.a.]   Load shedding capacity
+Location(u,n)                    [n.a.]   Location {1 0}
+Markup(u,h)                      [€\MW]   Markup
+OutageFactor(u,h)                [%]      Outage Factor (100% = full outage)
+PartLoadMin(u)                   [%]      Minimum part load
+PermitPrice(p)                   [€\tP]   Permit price
+PowerCapacity(u)                 [MW]     Installed capacity
+PowerInitial(u)                  [MW]     Power output before initial period
+PowerMinStable(u)                [MW]     Minimum power output
+PriceTransmission(l,h)           [€\MWh]  Transmission price
+StorageChargingCapacity(u)       [MW]     Storage capacity
+StorageChargingEfficiency(u)     [%]      Charging efficiency
+RampDownMaximum(u)               [MW\h]   Ramp down limit
+RampShutDownMaximum(u)           [MW\h]   Shut-down ramp limit
+RampStartUpMaximum(u)            [MW\h]   Start-up ramp limit
+RampUpMaximum(u)                 [MW\h]   Ramp up limit
+Reserve(t)                       [n.a.]   Reserve technology {1 0}
+StorageCapacity(u)               [MWh]    Storage capacity
+StorageDischargeEfficiency(u)    [%]      Discharge efficiency
+StorageOutflow(u,h)              [MWh]    Storage outflows
+StorageInflow(u,h)               [MWh]    Storage inflows (potential energy)
+StorageInitial(u)                [MWh]    Storage level before initial period
+StorageMinimum(u)                [MWh]    Storage minimum
+Technology(u,t)                  [n.a.]   Technology type {1 0}
+TimeDown(u,h)                    [h]      Hours down
+TimeDownLeft_initial(u)          [h]      Required time down left at the beginning of the simulated time period
+TimeDownLeft_JustStopped(u,h)    [h]      Required time down left at hour h if the Unit has just been stopped
+TimeDownInitial(u)               [h]      Hours down before initial period
+TimeDownMinimum(u)               [h]      Minimum down time
+TimeUpLeft_initial(u)            [h]      Required time up left at the beginning of the simulated time period
+TimeUpInitial(u)                 [h]      Hours on before initial period
+TimeUpMinimum(u)                 [h]      Minimum up time
+FlexibilityUp(u)                 [MW\h]   Flexibility (up) of fast-starting power plants
+FlexibilityDown(u)               [MW\h]   Flexibility (down) of a committed power plant
 ;
 
 *Parameters as used within the loop
@@ -238,9 +246,12 @@ TimeUpMinimum
 *===============================================================================
 *Definition of variables
 *===============================================================================
-BINARY VARIABLES
+VARIABLES
 Committed(u,h)             [n.a.]  Unit committed at hour h {1 0}
 ;
+
+$If %ConditionalSolve% == 1 POSITIVE VARIABLES Committed (u,h) ; Committed.UP(u,h) = 1 ;
+$If not %ConditionalSolve% == 1 BINARY VARIABLES Committed (u,h) ;
 
 POSITIVE VARIABLES
 CostStartUpH(u,h)          [EUR]   Cost of starting up
@@ -267,7 +278,7 @@ SystemCost(h)              [EUR]   Hourly system cost
 ;
 
 free variable
-SystemCostD               ![EUR]   Total system cost  for one optimization period
+SystemCostD               ![EUR]   Total system cost for one optimization period
 ;
 
 *===============================================================================
@@ -739,28 +750,28 @@ EQ_LoadShedding(n,i)..
 *===============================================================================
 MODEL UCM_SIMPLE /
 EQ_Objective_function,
-EQ_CostStartUp,
-EQ_CostShutDown,
+$If not %ConditionalSolve% == 1 EQ_CostStartUp,
+$If not %ConditionalSolve% == 1 EQ_CostShutDown,
 *EQ_CostRampUp,
 *EQ_CostRampDown,
 EQ_Demand_balance_DA,
 EQ_Demand_balance_2U,
 EQ_Demand_balance_2D,
-EQ_Power_must_run,
+$If not %ConditionalSolve% == 1 EQ_Power_must_run,
 EQ_Power_available,
 EQ_PowerMaximum_previous,
 EQ_PowerMaximum_following,
 EQ_Ramp_down,
 *EQ_Minimum_time_up,
-EQ_Minimum_time_up_A,
+$If not %ConditionalSolve% == 1 EQ_Minimum_time_up_A,
 *EQ_Minimum_time_up_B,
 *EQ_Minimum_time_up_C,
-EQ_Minimum_time_up_JustStarted,
+$If not %ConditionalSolve% == 1 EQ_Minimum_time_up_JustStarted,
 *EQ_Minimum_time_down,
-EQ_Minimum_time_down_A,
+$If not %ConditionalSolve% == 1 EQ_Minimum_time_down_A,
 *EQ_Minimum_time_down_B,
 *EQ_Minimum_time_down_C,
-EQ_Minimum_time_down_JustStopped,
+$If not %ConditionalSolve% == 1 EQ_Minimum_time_down_JustStopped,
 EQ_Max_RampUp1,
 EQ_Max_RampUp2,
 EQ_Max_RampDown1,
@@ -835,9 +846,11 @@ FOR(day=index_start-index_first+1 TO index_stop-index_first-(Config("RollingHori
 
          Display TimeUpLeft_initial,TimeUpLeft_JustStarted,TimeDownLeft_initial,TimeDownLeft_JustStopped,TimeUpInitial,TimeDownInitial,PowerInitial,CommittedInitial;
 
-         SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
+$If %ConditionalSolve% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
+$If not %ConditionalSolve% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
 
-         Display EQ_Objective_function.M,EQ_CostStartUp.M,EQ_CostShutDown.M,EQ_Demand_balance_DA.M,EQ_Power_must_run.M,EQ_Power_available.M,EQ_PowerMaximum_previous.M,EQ_PowerMaximum_following.M,EQ_Ramp_down.M,EQ_Minimum_time_up_A.M,EQ_Minimum_time_up_JustStarted.M,EQ_Minimum_time_down_A.M,EQ_Minimum_time_down_JustStopped.M,   EQ_Max_RampUp1.M,    EQ_Max_RampUp2.M,EQ_Max_RampDown1.M,  EQ_Max_RampDown2.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M,EQ_Storage_boundaries.M,EQ_Storage_MaxCharge.m,EQ_Storage_MaxDischarge.m,EQ_Flow_limits_lower.M;
+$If %ConditionalSolve% == 1          Display EQ_Objective_function.M, EQ_Demand_balance_DA.M, EQ_Power_available.M, EQ_PowerMaximum_previous.M, EQ_PowerMaximum_following.M, EQ_Ramp_down.M, EQ_Max_RampUp1.M, EQ_Max_RampUp2.M,EQ_Max_RampDown1.M, EQ_Max_RampDown2.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
+$If not %ConditionalSolve% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Power_must_run.M, EQ_Power_available.M, EQ_PowerMaximum_previous.M, EQ_PowerMaximum_following.M, EQ_Ramp_down.M, EQ_Minimum_time_up_A.M, EQ_Minimum_time_up_JustStarted.M, EQ_Minimum_time_down_A.M, EQ_Minimum_time_down_JustStopped.M, EQ_Max_RampUp1.M, EQ_Max_RampUp2.M, EQ_Max_RampDown1.M, EQ_Max_RampDown2.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
 
 *Time counters
          Loop(i,
