@@ -22,7 +22,7 @@ import logging
 
 from DispaTools import pyomo_format,pyomo_to_pandas
 
-
+Mixed_Integer_LP = False
 
 def  DispOptim(sets,parameters):
     '''
@@ -126,8 +126,11 @@ def  DispOptim(sets,parameters):
 
     # a) Binary Variables:
     #model.Committed = Var(sets['h'],sets['u'],within = PositiveReals,bounds=(0,1))                   # [n.a.] Unit committed at hour h {1 0}
-    model.Committed = Var(model.u,model.h,within = Binary)
-    #model.Committed = Var(model.u,model.h,within =Integers,bounds=(0,1))
+    if Mixed_Integer_LP:
+        model.Committed = Var(model.u,model.h, within = Binary)
+    else:
+        model.Committed = Var(model.u,model.h, within = PositiveReals, bounds=(0,1))
+        
     # b) Positive Variables:
     model.CostStartUpH=Var(model.u,model.h,within = PositiveReals)             #  [€]Cost of start-up
     model.CostShutDownH=Var(model.u,model.h,within = PositiveReals)            #[ €]Cost ofshut-down
@@ -549,14 +552,15 @@ def  DispOptim(sets,parameters):
 #######################################################################################################################
 
 
-    model.EQ_Objective_Function = Objective(rule=EQ_Objective_function)
+    model.EQ_Objective_Function = Objective(rule=EQ_Objective_function, sense = minimize)
     
     model.EQ_SystemCost = Constraint(model.h,rule=EQ_SystemCost)
-
-    model.EQ_CostStartup = Constraint(model.u,model.h,rule=EQ_CostStartup)
-    model.EQ_CostShutDown = Constraint(model.u,model.h,rule=EQ_CostShutDown)
-    model.EQ_CostRampUp = Constraint(model.u,model.h,rule=EQ_CostRampUp)
-    model.EQ_CostRampDown = Constraint(model.u,model.h,rule=EQ_CostRampDown)
+    
+    if not Mixed_Integer_LP:   
+        model.EQ_CostStartup = Constraint(model.u,model.h,rule=EQ_CostStartup)
+        model.EQ_CostShutDown = Constraint(model.u,model.h,rule=EQ_CostShutDown)
+        model.EQ_CostRampUp = Constraint(model.u,model.h,rule=EQ_CostRampUp)
+        model.EQ_CostRampDown = Constraint(model.u,model.h,rule=EQ_CostRampDown)
 
 
     model.EQ_Demand_balance_DA = Constraint(model.n,model.h,rule = EQ_Demand_balance_DA)
@@ -565,7 +569,9 @@ def  DispOptim(sets,parameters):
 
 
 
-    model.EQ_Power_must_run = Constraint(model.u,model.h,rule=EQ_Power_must_run)
+    if not Mixed_Integer_LP:
+        model.EQ_Power_must_run = Constraint(model.u,model.h,rule=EQ_Power_must_run)
+
     model.EQ_Power_available=Constraint(model.u,model.h,rule=EQ_Power_available)
 
     model.EQ_PowerMaximum_previous=Constraint(model.u,model.h,rule=EQ_PowerMaximum_previous)
@@ -573,11 +579,12 @@ def  DispOptim(sets,parameters):
 
     model.EQ_Ramp_Down = Constraint(model.u,model.h,rule=EQ_Ramp_Down)
 
-    model.EQ_Minimum_time_up_A = Constraint(model.u,rule=EQ_Minimum_time_up_A)
-    model.EQ_Minimum_Time_up_JustStarted=Constraint(model.u,model.h,rule=EQ_Minimum_Time_up_JustStarted)
+    if not Mixed_Integer_LP:
+        model.EQ_Minimum_time_up_A = Constraint(model.u,rule=EQ_Minimum_time_up_A)
+        model.EQ_Minimum_Time_up_JustStarted=Constraint(model.u,model.h,rule=EQ_Minimum_Time_up_JustStarted)
 
-    model.EQ_Minimum_time_down_A = Constraint(model.u,rule=EQ_Minimum_time_down_A)
-    model.EQ_Minimum_Time_down_JustStopped=Constraint(model.u,model.h,rule=EQ_Minimum_Time_down_JustStopped)
+        model.EQ_Minimum_time_down_A = Constraint(model.u,rule=EQ_Minimum_time_down_A)
+        model.EQ_Minimum_Time_down_JustStopped=Constraint(model.u,model.h,rule=EQ_Minimum_Time_down_JustStopped)
 
     model.EQ_Max_RampUp1 = Constraint(model.u,model.h,rule=EQ_Max_RampUp1)
     model.EQ_Max_RampUp2 = Constraint(model.u,model.h,rule=EQ_Max_RampUp2)
@@ -600,25 +607,46 @@ def  DispOptim(sets,parameters):
 
     return model
 
-
-def run_solver(instance, solver="cplex", solver_manager="serial"):
-    # initialize the solver / solver manager.
-    solver = SolverFactory(solver)
-    if solver is None:
-        logging.critical( "Solver %s is not available on this machine." % solver)
-        sys.exit(1)
-    solver_manager = SolverManagerFactory(solver_manager) #serial or pyro
-
-    results = solver.solve(instance, options_string="mipgap=0.05", tee=True)
-    if results.solver.termination_condition != TerminationCondition.optimal:
-        # something went wrong
-        logging.warn("Solver: %s" % results.solver.termination_condition)
-        logging.debug(results.solver)                                                                   
-    else:
-        logging.info("Solver: %s" % results.solver.termination_condition)
-        instance.solutions.load_from(results)                                                                      
-        return instance
+if not Mixed_Integer_LP: 
+    def run_solver(instance, solver="cplex", solver_manager="serial"):
+ 
+        solver = SolverFactory(solver)
+ 
+        if solver is None:
+            logging.critical( "Solver %s is not available on this machine." % solver)
+            sys.exit(1)
+        solver_manager = SolverManagerFactory(solver_manager)
+ 
+        results = solver.solve(instance, tee=True)
+ 
+        if results.solver.termination_condition != TerminationCondition.optimal:
+            logging.warn("Solver: %s" % results.solver.termination_condition)
+            logging.debug(results.solver)                                                                   
+        else:
+            logging.info("Solver: %s" % results.solver.termination_condition)
+            instance.solutions.load_from(results)                                                                      
+            return instance
     
+
+if Mixed_Integer_LP:    
+    def run_solver(instance, solver="cplex", solver_manager="serial"):
+        # initialize the solver / solver manager.
+        solver = SolverFactory(solver)
+        if solver is None:
+            logging.critical( "Solver %s is not available on this machine." % solver)
+            sys.exit(1)
+        solver_manager = SolverManagerFactory(solver_manager) #serial or pyro
+
+        results = solver.solve(instance, options_string="mipgap=0.0", tee=True)
+        if results.solver.termination_condition != TerminationCondition.optimal:
+        # something went wrong
+            logging.warn("Solver: %s" % results.solver.termination_condition)
+            logging.debug(results.solver)                                                                   
+        else:
+            logging.info("Solver: %s" % results.solver.termination_condition)
+            instance.solutions.load_from(results)                                                                      
+            return instance
+   
 def after_solver(results):
     pass
 
