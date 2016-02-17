@@ -23,5 +23,5 @@ if __name__ == "__main__":
     logging.info("New run started")
     # Load parameter lists and loop:
     [sets, parameters] = pickle.load(open('../Simulation/Inputs.p','rb'))
-    results = DispaSolve(sets,parameters)
+    results = DispaSolve(sets, parameters, Mixed_Integer_LP=False)
     logging.info("Run finished")

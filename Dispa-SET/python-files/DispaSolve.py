@@ -17,24 +17,22 @@ from pyomo.opt import TerminationCondition
 
 import numpy as np
 import pandas as pd
-import pickle
 import logging
 
-from DispaTools import pyomo_format,pyomo_to_pandas
+from DispaTools import pyomo_format, pyomo_to_pandas
 
-Mixed_Integer_LP = False
 
-def  DispOptim(sets,parameters):
+def  DispOptim(sets, parameters, Mixed_Integer_LP=False):
     '''
     This is the main optimization function of Dispaset. 
     Two operation are performed:
     1. Translation of the dispaset data format into the pyomo format
-    2. Definition of the Pyomo optimization model as a ConcreteModel and solving
+    2. Definition of the Pyomo optimization model as a ConcreteModel
     
     :param sets: Dictionary containing the sets (defined as a list of strings or integegers)
     :param parameters: Dictionary containing the parameters of the optimization problem (in the DispaSET 2.1.1 format)
     
-    :return: The Pyomo optimization model including the solution
+    :return: The Pyomo optimization model instance
     '''
     
     # Definition of model:
@@ -607,45 +605,26 @@ def  DispOptim(sets,parameters):
 
     return model
 
-if not Mixed_Integer_LP: 
-    def run_solver(instance, solver="cplex", solver_manager="serial"):
- 
-        solver = SolverFactory(solver)
- 
-        if solver is None:
-            logging.critical( "Solver %s is not available on this machine." % solver)
-            sys.exit(1)
-        solver_manager = SolverManagerFactory(solver_manager)
- 
-        results = solver.solve(instance, tee=True)
- 
-        if results.solver.termination_condition != TerminationCondition.optimal:
-            logging.warn("Solver: %s" % results.solver.termination_condition)
-            logging.debug(results.solver)                                                                   
-        else:
-            logging.info("Solver: %s" % results.solver.termination_condition)
-            instance.solutions.load_from(results)                                                                      
-            return instance
-    
 
-if Mixed_Integer_LP:    
-    def run_solver(instance, solver="cplex", solver_manager="serial"):
-        # initialize the solver / solver manager.
-        solver = SolverFactory(solver)
-        if solver is None:
-            logging.critical( "Solver %s is not available on this machine." % solver)
-            sys.exit(1)
-        solver_manager = SolverManagerFactory(solver_manager) #serial or pyro
 
-        results = solver.solve(instance, options_string="mipgap=0.0", tee=True)
-        if results.solver.termination_condition != TerminationCondition.optimal:
-        # something went wrong
-            logging.warn("Solver: %s" % results.solver.termination_condition)
-            logging.debug(results.solver)                                                                   
-        else:
-            logging.info("Solver: %s" % results.solver.termination_condition)
-            instance.solutions.load_from(results)                                                                      
-            return instance
+
+def run_solver(instance, solver="cplex", solver_manager="serial", options_string=""):
+    # initialize the solver / solver manager.
+    solver = SolverFactory(solver)
+    if solver is None:
+        logging.critical( "Solver %s is not available on this machine." % solver)
+        sys.exit(1)
+    solver_manager = SolverManagerFactory(solver_manager) #serial or pyro
+
+    results = solver.solve(instance, options_string=options_string, tee=True)
+    if results.solver.termination_condition != TerminationCondition.optimal:
+    # something went wrong
+        logging.warn("Solver: %s" % results.solver.termination_condition)
+        logging.debug(results.solver)                                                                   
+    else:
+        logging.info("Solver: %s" % results.solver.termination_condition)
+        instance.solutions.load_from(results)                                                                      
+        return instance
    
 def after_solver(results):
     pass
@@ -655,7 +634,7 @@ def after_solver(results):
 ############################### Main wrapper (rolling horizon optimization) ###########################################
 #######################################################################################################################
 
-def DispaSolve(sets,parameters):
+def DispaSolve(sets, parameters, Mixed_Integer_LP=False):
     '''
     The DispaSolve function defines the rolling horizon optimization and saves each result variable in a pandas dataframe
     The definition of the rolling horizon must be included into the DispaSET Config parameter'
@@ -665,11 +644,9 @@ def DispaSolve(sets,parameters):
     
     :return: Dictionary of pandas dataframes with the optimization variables
     '''    
-    
-    
-    
+
     # Initialize the results dictionnary:
-    
+
     # Load the config parameter in the pyomo format (easier to read):
     config = pyomo_format(sets,parameters['Config'])
     
@@ -800,8 +777,13 @@ def DispaSolve(sets,parameters):
             parameters_sliced['TimeDownLeft_JustStopped']['val'][u,:] = np.minimum(len(h_range) - 1 - np.arange(len(h_range)),parameters_sliced['TimeDownMinimum']['val'][u]*np.ones(len(h_range))).astype('int')
     
         # Optimize: 
-        instance = DispOptim(sets_sliced,parameters_sliced)
-        opt = run_solver(instance)
+            
+        instance = DispOptim(sets_sliced, parameters_sliced, Mixed_Integer_LP)
+        if Mixed_Integer_LP:
+            opt = run_solver(instance, options_string="mipgap=0.0")
+        else:
+            opt = run_solver(instance)
+           
         
         results_sliced = {}
         # TDO Iterate all VARs instead of listing everything. Can we?
