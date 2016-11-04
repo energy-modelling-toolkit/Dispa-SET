@@ -6,11 +6,15 @@
 [RP:UCM_V2.0]
 1=
 
+[RP:MAKE_GDX]
+1=
+
+[MRUFILES]
+1=C:\Users\beltrag\Dispa-SET\Dispa-SET\Dispa-SET\GAMS-files\make_gdx.lst
+
 [OPENWINDOW_1]
-FILE0=E:\Dropbox\power_system_modelling-master2\Code\UCM_h.gms
-FILE1=E:\Dropbox\power_system_modelling-master2\Code\UCM_v2.0.gms
-FILE2=E:\Dropbox\power_system_modelling-master2\Code\UCM_v2.0.lst
-FILE3=E:\Dropbox\power_system_modelling-master2\Code\UCM_v2.0.lst
+FILE0=C:\Users\beltrag\Dispa-SET\Dispa-SET\Dispa-SET\Simulation\make_gdx.gms
+FILE1=C:\Users\beltrag\Dispa-SET\Dispa-SET\Dispa-SET\Simulation\make_gdx.gms
 MAXIM=0
 TOP=7
 LEFT=8

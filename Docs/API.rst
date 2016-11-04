@@ -3,14 +3,14 @@
 API Documentation
 =================
 
-DispaSolve
-----------
-.. automodule:: DispaSolve
-   :members:
-
 DispaTools
 ----------
 .. automodule:: DispaTools
+   :members:
+
+DispaCheck
+----------
+.. automodule:: DispaCheck
    :members:
 
 IO - data
@@ -18,3 +18,17 @@ IO - data
 .. automodule:: DispaSET_io_data
    :members:
 
+Input generation
+----------------
+.. automodule:: GenerateInputs
+   :members:
+
+Post Processing
+---------------
+.. automodule:: PostProcessing
+   :members:
+
+DispaSolve
+----------
+.. automodule:: DispaSolve
+   :members:

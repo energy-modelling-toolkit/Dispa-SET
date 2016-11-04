@@ -21,6 +21,7 @@ Libraries used
 * `pyomo`_ Optimization object library, interface to LP solver (e.g. CPLEX)
 * `pandas`_ for input and result data handling 
 * `matplotlib`_ for plotting
+* `GAMS_api`_ for the communication with GAMS
 
   
 Contents
@@ -30,8 +31,9 @@ Contents
    :maxdepth: 1
 
    overview
-   model
    workflow
+   model
+   implementation
    data
    API
    developers
@@ -51,6 +53,7 @@ References
 .. _matplotlib: http://matplotlib.org
 .. _pandas: http://pandas.pydata.org
 .. _pyomo: http://www.pyomo.org/
+.. _GAMS_api: http://www.gams.com/help/index.jsp?topic=%2Fgams.doc%2Fapis%2Findex.html
 .. _Institute of Energy and Transport: https://ec.europa.eu/jrc/en/institutes/iet
 .. _Joint Research Centre: https://ec.europa.eu/jrc/en
 

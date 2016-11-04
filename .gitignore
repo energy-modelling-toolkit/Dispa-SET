@@ -1,8 +1,14 @@
 *~
 *~gm
 *.pyc
-Docs/_build/*
 *.lst
 *.lxi
 *.log
-Dispa-SET/Simulation/*
+Dispa-SET/Simulations/*
+.pickle/
+~$Config.xlsx
+~*
+.~*
+.ipynb*
+Docs/_build/*
+Docs/_static/*
