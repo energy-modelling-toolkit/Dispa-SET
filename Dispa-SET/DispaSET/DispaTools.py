@@ -403,28 +403,26 @@ def invert_dic_df(dic):
             dic_out[col][key] = dic[key][col]
     return dic_out
 
-def get_sets(instance, var):
+def get_sets(instance, varname):
     '''Get sets that belong to a pyomo Variable or Param
 
     :param instance: Pyomo Instance
-    :param var: Pyomo Variable
+    :param varname: Name of the Pyomo Variable (string) 
     :return: A list with the sets that belong to this Param 
     '''
-    sets = []
-    var = getattr(instance, var)
+    var = getattr(instance, varname)
 
     if var.dim() > 1:
-        for pset in var._index.set_tuple:
-            sets.append(pset.name)
+        sets = [pset.cname() for pset in var._index.set_tuple]
     else:
-        sets.append(var._index.name)
+        sets = [var._index.name]
     return sets
 
 def get_set_members(instance, sets):
-    '''Get set members that belong to this set
+    '''Get set members relative to a list of sets
 
     :param instance: Pyomo Instance
-    :param set: Pyomo Set
+    :param sets: List of strings with the set names
     :return: A list with the set members  
     '''
     sm = []
@@ -433,14 +431,17 @@ def get_set_members(instance, sets):
     return sm
 
 
-def pyomo_to_pandas(instance, var):
+def pyomo_to_pandas(instance, varname):
     '''
     Function converting a pyomo variable or parameter into a pandas dataframe.
     The variable must have one or two dimensions and the sets must be provided as a list of lists
+    
+    :param instance: Pyomo Instance
+    :param varname: Name of the Pyomo Variable (string)     
     '''
-    setnames = get_sets(instance, var)
+    setnames = get_sets(instance, varname)
     sets = get_set_members(instance, setnames)
-    var = getattr(instance, var)  # Previous script used model.var instead of var
+    var = getattr(instance, varname)  # Previous script used model.var instead of var
     ####
     if len(sets) != var.dim():
         sys.exit('The number of provided set lists (' + str(len(sets)) + ') does not match the dimensions of the variable (' + str(var.dim()) + ')')
