@@ -74,3 +74,12 @@ Clone git repository to svn
 	git svn dcommit
 
 The folder can finally optionally be deleted to avoid any confusion.
+
+
+Public version of Dispa-SET
+---------------------------
+Because some input files are subject to intellectual property and copyrights, some folders available on the private repository cannot by uploaded to the public GitHub repository. The script DispaSync.sh in the root folder has been written to synchronize the subset of publicly available folders and files with an external folder. This folder can then be committed and pushed to the public repository. 
+
+By default, all file and folders are synchronized. In order to add a private path (to a file or to a folder), edit the DispaSync.sh file and add an entry to the "--exclude" argument.
+
+The "rsync" software is required for the synchronization and must be installed on the local machine. The script can be run in any UNIX terminal (i.e. it cannot be run in Windows).
