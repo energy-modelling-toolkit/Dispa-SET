@@ -58,6 +58,9 @@ if build:
     SimData = ds.BuildSimulation(config)
 
 if simulate:
-    from DispaSET.DispaSolveGAMS import SolveMILP
-    r = SolveMILP(config['SimulationDirectory'],config['GAMS_folder'])
+    if ds.gams_ok:
+        from DispaSET.DispaSolveGAMS import SolveMILP
+        r = SolveMILP(config['SimulationDirectory'],config['GAMS_folder'])
+    else:
+        print('The gams library is required to run the GAMS versions of Dispa-SET. Please install if from the /apifiles/Python/api/ folder in the GAMS directory')
 

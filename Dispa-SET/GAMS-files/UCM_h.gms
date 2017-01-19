@@ -1,7 +1,7 @@
 $Title UCM model
 
 $eolcom //
-Option LimRow=0;
+Option LimRow=1000;
 Option IterLim=1000000000;
 Option ResLim = 10000000000;
 *Option SolPrint=On;
@@ -70,13 +70,13 @@ PARAMETERS
 AvailabilityFactor(u,h)          [%]      Availability factor
 CommittedInitial(u)              [n.a.]   Initial committment status
 Config
-*CostCurtailment(n,h)             [€\MW]  Curtailment costs
-CostFixed(u)                     [€\h]    Fixed costs
-CostRampUp(u)                    [€\MW\h] Ramp-up costs
-CostRampDown(u)                  [€\MW\h] Ramp-down costs
-CostShutDown(u)                  [€]      Shut-down costs
-CostStartUp(u)                   [€]      Start-up costs
-CostVariable(u,h)                [€\MW]   Variable costs
+*CostCurtailment(n,h)             [ï¿½\MW]  Curtailment costs
+CostFixed(u)                     [ï¿½\h]    Fixed costs
+CostRampUp(u)                    [ï¿½\MW\h] Ramp-up costs
+CostRampDown(u)                  [ï¿½\MW\h] Ramp-down costs
+CostShutDown(u)                  [ï¿½]      Shut-down costs
+CostStartUp(u)                   [ï¿½]      Start-up costs
+CostVariable(u,h)                [ï¿½\MW]   Variable costs
 Curtailment(n)                   [n.a]    Curtailment allowed or not {1 0} at node n
 Demand(mk,n,h)                   [MW]     Demand
 Efficiency(u)                    [%]      Efficiency
@@ -84,18 +84,18 @@ EmissionMaximum(n,p)             [tP]     Emission limit
 EmissionRate(u,p)                [tP\MWh] P emission rate
 FlowMaximum(l,h)                 [MW]     Line limits
 FlowMinimum(l,h)                 [MW]     Minimum flow
-FuelPrice(n,f,h)                 [€\F]    Fuel price
+FuelPrice(n,f,h)                 [ï¿½\F]    Fuel price
 Fuel(u,f)                        [n.a.]   Fuel type {1 0}
 LineNode(l,n)                    [n.a.]   Incidence matrix {-1 +1}
 LoadShedding(n)                  [n.a.]   Load shedding capacity
 Location(u,n)                    [n.a.]   Location {1 0}
-Markup(u,h)                      [€\MW]   Markup
+Markup(u,h)                      [ï¿½\MW]   Markup
 OutageFactor(u,h)                [%]      Outage Factor (100% = full outage)
 PartLoadMin(u)                   [%]      Minimum part load
 PowerCapacity(u)                 [MW]     Installed capacity
 PowerInitial(u)                  [MW]     Power output before initial period
 PowerMinStable(u)                [MW]     Minimum power output
-PriceTransmission(l,h)           [€\MWh]  Transmission price
+PriceTransmission(l,h)           [ï¿½\MWh]  Transmission price
 StorageChargingCapacity(u)       [MW]     Storage capacity
 StorageChargingEfficiency(u)     [%]      Charging efficiency
 RampDownMaximum(u)               [MW\h]   Ramp down limit
@@ -127,7 +127,7 @@ $If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment 
 *Parameters as used within the loop
 PARAMETERS
 TimeUpLeft_JustStarted(u,h)      [h]     Required time up left at hour h if the Unit has just been started
-CostLoadShedding(n,h)            [€\MW]  Value of lost load
+CostLoadShedding(n,h)            [ï¿½\MW]  Value of lost load
 TimeUp(u,h)                      [h]     Hours up
 LoadMaximum(u,h)                 [%]     Maximum load given AF and OF
 PowerMustRun(u,h)                [MW]    Minimum power output
@@ -867,6 +867,7 @@ OutputSystemCost(h)
 OutputSpillage(s,h)
 OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
+ShadowPrice(n,h)
 ;
 
 OutputCommitted(u,z)=Committed.L(u,z);
@@ -880,6 +881,7 @@ OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(s,z)  = Spillage.L(s,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
+ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
@@ -898,7 +900,8 @@ LostLoad_MinPower,
 LostLoad_Reserve2D,
 LostLoad_Reserve2U,
 LostLoad_RampUp,
-LostLoad_RampDown
+LostLoad_RampDown,
+ShadowPrice
 ;
 
 $onorder

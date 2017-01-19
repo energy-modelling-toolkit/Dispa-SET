@@ -11,7 +11,7 @@ Welcome to Dispa-SET's documentation!
 :Version: |version|
 :Date: |today|
 
-The Dispa-SET model is a unit commitment and dispatch model developed within the “Joint Research Centre” and focused on the balancing and flexibility problems in European grids [1]_. It is written in GAMS an Python (Pyomo) and Excel for input/output data handling and visualization. The selected Mixed-Integer Linear Programming (MILP) solver is CPLEX.
+The Dispa-SET model is a unit commitment and dispatch model developed within the “Joint Research Centre” and focused on the balancing and flexibility problems in European grids [1]_. It is written in GAMS an Python (Pyomo) and uses csv files for input data handling. The optimisation is defined as a Linear Programming (LP) or Mixed-Integer Linear Programming (MILP) problem, depending on the desired level of accuracy and complexity. 
 
 
 

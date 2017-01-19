@@ -84,9 +84,41 @@ def UnitFuel(Inputs,shrink=True):
         fuels[uu[i]] = f[j[0][0]]
     return fuels
     
+def GetLoadData(datain,c):
+    ''' 
+    Get the load curve, the residual load curve, and the net residual load curve of a specific country
+
+    :param datain:  Dispa-SET inputs formatted into a list of dataframes (output of the ds_to_df function)
+    :param c:       Country to consider (e.g. 'BE')
+    :return out:    Dataframe with the following columns:
+                        Load:               Load curve of the specified country
+                        ResidualLoad:       Load minus the production of variable renewable sources
+                        NetResidualLoad:    Residual netted from the interconnections with neightbouring countries
+    '''
+    out = pd.DataFrame(index = datain['Demand'].index)
+    out['Load'] = datain['Demand']['DA',c]
+    # Listing power plants with non-dispatchable power generation:
+    VREunits = []   
+    VRE = np.zeros(len(out))
+    for t in ['WTON','WTOF','PHOT','HROR']:
+        for u in datain['Technology']:
+            if datain['Technology'].loc[t,u]:
+                VREunits.append(u)
+                VRE = VRE + datain['AvailabilityFactor'][u].values * datain['PowerCapacity'].loc[u,'PowerCapacity']
+    Interconnections = np.zeros(len(out))
+    for l in datain['FlowMinimum']:
+        if l[:2] == c:
+            Interconnections = Interconnections - datain['FlowMinimum'][l].values        
+        elif l[-2:] == c:
+            Interconnections = Interconnections + datain['FlowMinimum'][l].values     
+    out['ResidualLoad'] = out['Load'] - VRE
+    out['NetResidualLoad'] = out['ResidualLoad'] - Interconnections
+    return out
+
+
 def GetDemand(Inputs,c):
     ''' 
-    Get the demand curve of a specific country
+    Get the load curve and the residual load curve of a specific country
 
     :param Inputs:  Dispa-SET inputs
     :param c:       Country to consider (e.g. 'BE')
@@ -104,7 +136,6 @@ def GetDemand(Inputs,c):
     else:
         sys.exit('Inputs variable no valid')    
     return pd.Series(data,index=index,name=c)
-
 
     
 def AggregateByFuel(PowerOutput,Inputs,SpecifyFuels=None):
@@ -441,7 +472,7 @@ def GetResults(path='.',cache = False, TempPath='.pickle'):
     index_long = pd.DatetimeIndex(start=pd.datetime(*StartDate),end=StopDate_long,freq='h')
     
     # Setting the proper index to the result dataframes:
-    for key in ['OutputPower','OutputSystemCost','OutputCommitted','OutputCurtailedPower','OutputFlow', 'OutputShedLoad','OutputSpillage','OutputStorageLevel','OutputStorageInput','LostLoad_Reserve2U', 'LostLoad_MaxPower','LostLoad_MinPower','LostLoad_RampUp','LostLoad_RampDown','LostLoad_Reserve2D']:
+    for key in ['OutputPower','OutputSystemCost','OutputCommitted','OutputCurtailedPower','OutputFlow', 'OutputShedLoad','OutputSpillage','OutputStorageLevel','OutputStorageInput','LostLoad_Reserve2U', 'LostLoad_MaxPower','LostLoad_MinPower','LostLoad_RampUp','LostLoad_RampDown','LostLoad_Reserve2D','ShadowPrice']:
         if key in results:
             if len(results[key]) == len(index_long):                # Case of variables for which the look-ahead period recorded (e.g. the lost loads)
                 results[key].index = index_long
@@ -457,6 +488,9 @@ def GetResults(path='.',cache = False, TempPath='.pickle'):
 
     #Clean power plant names:
     results['OutputPower'].columns = clean_strings(results['OutputPower'].columns.tolist())    
+    # Remove epsilons:
+    if 'ShadowPrice' in results:
+        results['ShadowPrice'][results['ShadowPrice'] == 5e300] = 0
     
     for key in results['OutputPower']:
         if key not in inputs['units'].index:

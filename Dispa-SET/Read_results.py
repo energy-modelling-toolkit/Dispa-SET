@@ -81,3 +81,13 @@ ax = ds.EnergyBarPlot(datain,results,PPindicators)
 bar plots with max demand, installed capacity in each country
 line capacities wrong for some countries
 '''
+
+
+#%%
+
+load = ds.GetLoadData(datain,'IE')
+
+
+
+
+

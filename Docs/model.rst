@@ -1,9 +1,9 @@
-Ôªø.. _model:
+.. _model:
 
 Model Description
 =================
 
-The model is expressed as a MILP problem. Continuous variables include the individual unit dispatched power, the shedded load and the curtailed power generation. The binary variables are the commitment status of each unit. The main model features can be summarized as follows:
+The model is expressed as a MILP or LP problem. Continuous variables include the individual unit dispatched power, the shedded load and the curtailed power generation. The binary variables are the commitment status of each unit. The main model features can be summarized as follows:
 
 
 Variables
@@ -65,7 +65,7 @@ Parameters
 	PowerInitial(u)				MW	Power output before initial period
 	PowerMinStable(u)			MW	Minimum power for stable generation
 	PowerMustRun(u)				MW	Minimum power output
-	PriceTransmission(l,h)			‚Ç¨/MWh	Price of transmission between zones
+	PriceTransmission(l,h)			Ä/MWh	Price of transmission between zones
 	RampDownMaximum(u)			MW/h	Ramp down limit
 	RampShutDownMaximum(u)			MW/h	Shut-down ramp limit
 	RampStartUpMaximum(u)			MW/h	Start-up ramp limit
@@ -687,6 +687,6 @@ Since the start-up of individual units is not considered anymore, it is not usef
 References
 ^^^^^^^^^^
 
-.. [1] Hidalgo Gonz√°lez, I., Quoilin, S., & Zucker, A. (2014). Dispa-SET 2.0: unit commitment and power dispatch model (EUR 27015 EN). Petten, Netherlands: European Commission. 
+.. [1] Hidalgo Gonz·lez, I., Quoilin, S., & Zucker, A. (2014). Dispa-SET 2.0: unit commitment and power dispatch model (EUR 27015 EN). Petten, Netherlands: European Commission. 
 .. [2] Quoilin, S., Nijs, W., Hidalgo, I., & Thiel, C. (2015). Evaluation of simplified flexibility evaluation tools using a unit commitment model. IEEE Digital Library. 
 .. [3] Quoilin, S., Gonzalez Vazquez, I., Zucker, A., & Thiel, C. (2014). Available technical flexibility for balancing variable renewable energy sources: case study in Belgium. Proceedings of the 9th Conference on Sustainable Development of Energy, Water and Environment Systems. 
