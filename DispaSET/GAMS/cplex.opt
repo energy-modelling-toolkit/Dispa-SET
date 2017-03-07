@@ -1,0 +1,4 @@
+epgap=0.05
+*probe 3
+*CplexLP
+*Dict 

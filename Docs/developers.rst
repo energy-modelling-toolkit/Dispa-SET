@@ -43,7 +43,15 @@ Using Autodoc
 The "API" section of the Docs uses uses the sphinx autodoc extension to scan the source code of Dispa-SET and display the relevant functions together with their description, parameters and outputs.
 In the Sphinx "conf.py", the path to the source file must be added::
 
-	sys.path.insert(0, os.path.abspath('../Dispa-SET/DispaSET'))
+	sys.path.insert(0, os.path.abspath('../DispaSET'))
+
+If the API documentation is generated with sphinx-apidoc, from the Docs folder, use::
+
+	sphinx-apidoc -o . ../DispaSET/
+
+Add a link to "DispaSET" in the table of content of index.rst and include the root folder in conf.py::
+
+	sys.path.insert(0, os.path.abspath('../'))
 
 
 Clone git repository to svn

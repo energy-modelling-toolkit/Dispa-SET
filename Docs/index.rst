@@ -28,15 +28,15 @@ Contents
 --------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 3
 
    overview
    workflow
    model
    implementation
    data
-   API
    developers
+   DispaSET
 
 
 Indices and tables

@@ -687,6 +687,6 @@ Since the start-up of individual units is not considered anymore, it is not usef
 References
 ^^^^^^^^^^
 
-.. [1] Hidalgo González, I., Quoilin, S., & Zucker, A. (2014). Dispa-SET 2.0: unit commitment and power dispatch model (EUR 27015 EN). Petten, Netherlands: European Commission. 
+.. [1] Quoilin, S., Hidalgo Gonzalez, I., & Zucker, A. (2017). Modelling Future EU Power Systems Under High Shares of Renewables: The Dispa-SET 2.1 open-source model. Publications Office of the European Union. 
 .. [2] Quoilin, S., Nijs, W., Hidalgo, I., & Thiel, C. (2015). Evaluation of simplified flexibility evaluation tools using a unit commitment model. IEEE Digital Library. 
 .. [3] Quoilin, S., Gonzalez Vazquez, I., Zucker, A., & Thiel, C. (2014). Available technical flexibility for balancing variable renewable energy sources: case study in Belgium. Proceedings of the 9th Conference on Sustainable Development of Energy, Water and Environment Systems. 

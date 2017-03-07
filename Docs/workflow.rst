@@ -18,6 +18,7 @@ Install Python 2.7, with full scientific stack. The Anaconda_ distribution is re
 This can be achieved using the pip installer (example for numpy)::
 
 	pip install numpy
+
 NB: For Windows users, some packages might require the installation of a C++ compiler for Python. This corresponds to the typical error message: "Unable to find vcvarsall.bat". This can be solved by installing the freely available "Microsoft Visual C++ Compiler for Python 2.7 ".  In some cases the path to the compiler must be added to the PATH windows environment variable (e.g. C:\Program Files\Common Files\Microsoft\Visual C++ for Python\9.0)
 
 
@@ -52,16 +53,13 @@ Dispa-SET runs are defined in dedicated excel configuration files stored in the 
 2. Pre-processing
 ^^^^^^^^^^^^^^^^^
 To run the pre-processing tool with this configuration file, 2 options are available:
-* From the command line, specify the configuration file to be used as an argument. Within the "Dispa-SET" folder run::
+* From the command line, specify the configuration file to be used as an argument, the solver (Pyomo or GAMS) and the actions to be performed. Within the "Dispa-SET" folder, run::
 
-	python DispaSET.py -b ConfigFiles/ConfigTest.xlsx
+	python dispacli.py -c ./ConfigFiles/ConfigTest.xlsx build
 
 * From a python IDE (e.g. Spyder), specifying the configuration file. Configure the "DispaSet.py" file to be run with the command line option "-b ConfigFiles/ConfigTest.xlsx". The figure below shows the "Run Settings" dialog properly configure for Spyder.
+
 .. image:: figures/spyder_config.png
-
-* Without specification of the configuration file. In that case the pre-processing tool prompts the user for the path the configuration file, which should be provided as follows::
-
-	ConfigFiles/ConfigTest.xlsx
 
 
 3. Check the simulation environment
@@ -93,32 +91,68 @@ GAMS can also be run from the command line (this is the only option for the Linu
 	gams UCM_h.gms
 
 
-From Dispa-SET, using GAMS:
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+From Dispa-SET, using GAMS or PYOMO:
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Using the GAMS api, the simulation can be started directly from the main DispaSet python file after the pre-processing phase. From the "Dispa-SET" folder, run::
 
-	python DispaSet.py -br ConfigFiles/ConfigTest.xlsx
+	python dispacli.py -g -c ./ConfigFiles/ConfigTest.xlsx build simulate
 
-This generates the simulation environment, runs the optimisation, and stores the results in the same folder.
+This generates the simulation environment, runs the optimisation, and stores the results in the same folder. 
 
+The same action can be performed using the PYOMO solver. In that case, the "-g" argument must be changed into "-p"::
 
-From Dispa-SET, using PYOMO:
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-To be implemented.
+	python dispacli.py -p -c ./ConfigFiles/ConfigTest.xlsx build simulate
 
 
 Postprocessing
 --------------
-Various functions and tools are provided within the PostProcessing.py file to load, analyse and plot the siimulation results. The use of these functions is illustrated into the the "Read_results_notebook.ipynb"  Notebook, which can be run by changing the path to the simulation folder.
+Various functions and tools are provided within the PostProcessing.py file to load, analyse and plot the siimulation results. The use of these functions is illustrated into the the "Read_results_notebook.ipynb"  Notebook, which can be run by changing the path to the simulation folder. The type of results provided by the post-processing is illustrated hereunder.
 
-The type of results provided bt the postprocessing is illustrated with the following figures:
+The power dispatch can be plotted for each simulated zone. In this plot, the units are aggregated by fuel type. The power consumed by storage units and the exportations are indicated as negative values. 
 
 .. image:: figures/results_dispatch.png
+
+It is also interesting to display the results at the unit level to gain deeper insights regarding the dispatch. In that case, a plot is generated, showing the commitment status of all units in a zone at each timestep. Both the dispatch plot and the commitment plot can be called using the CountryPlots function. 
+
 .. image:: figures/results_rug.png
+
+Some aggregated statistics on the simulations results can also be obtained, including the number of hours of congestion in each interconnection line, the yearly energy balances for each zone, the amount of lost load, etc.
+
+.. image:: figures/result_analysis.png
+
+The yearly energy balance per fuel or per technology is also useful to compare the energy mix in each zone. This can be plotted using the EnergyBarPlot function, with the following results:
+
 .. image:: figures/results_balance.png
-.. image:: figures/results_aggreg.png
-.. image:: figures/results_zones.png
-.. image:: figures/results_congestion.png
+
+
+Using the Dispa-SET API
+-----------------------
+
+The various actions described above can be performed directly in python, by importing the Dispa-SET library. An example file ("build_and_run.py") is available in the "scripts/" folder. The successive steps are:
+
+Import Dispa-SET::
+
+	import DispaSET as ds
+
+Load the configuration file::
+	
+	config = ds.load_config_excel('ConfigFiles/ConfigTest.xlsx')
+
+Build the simulation environment::
+
+	SimData = ds.build_simulation(config)
+
+Solve using PYOMO::
+
+	r = ds.solve_pyomo(config['SimulationDirectory'])
+
+Solve using GAMS::
+
+	r = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
+
+A more detailed description of the Dispa-SET functions in available in the API section.
+
+
 
 
 .. _Anaconda: https://www.continuum.io/downloads
