@@ -48,7 +48,7 @@ Indices and tables
 
 References
 ----------
-.. [1] Hidalgo González, I., Quoilin, S., & Zucker, A. (2014). Dispa-SET 2.0: unit commitment and power dispatch model (EUR 27015 EN). Petten, Netherlands: European Commission. 
+.. [1] Quoilin, S., Hidalgo Gonzalez, I., & Zucker, A. (2017). Modelling Future EU Power Systems Under High Shares of Renewables: The Dispa-SET 2.1 open-source model. Publications Office of the European Union.  
 
 .. _matplotlib: http://matplotlib.org
 .. _pandas: http://pandas.pydata.org
