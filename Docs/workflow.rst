@@ -61,6 +61,7 @@ To run the pre-processing tool with this configuration file, 2 options are avail
 
 .. image:: figures/spyder_config.png
 
+NB: The command line interface dispacli.py is designed to run with the Python interpreter, which should be the one selected. It might present some problems when run in Ipython.
 
 3. Check the simulation environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

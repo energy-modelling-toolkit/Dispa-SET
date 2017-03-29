@@ -63,6 +63,13 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
         sys.exit(1)
     else:
         index = NTC_inter.index
+    # Checking that all values are positive:
+    if (NTC_inter.values < 0).any():
+        pos = np.where(NTC_inter.values < 0)
+        logging.warn('WARNING: At least NTC value is negative, for example in line ' + str(NTC_inter.columns[pos[1][0]]) + ' and time step ' + str(NTC_inter.index[pos[0][0]]))
+    if (Historical_flows.values < 0).any():
+        pos = np.where(Historical_flows.values < 0)
+        logging.warn('WARNING: At least one historical flow is negative, for example in line ' + str(Historical_flows.columns[pos[1][0]]) + ' and time step ' + str(Historical_flows.index[pos[0][0]]))
     all_connections = []
     simulation_connections = []
     # List all connections from the dataframe headers:

@@ -17,48 +17,59 @@ import shutil
 import logging
 import time
 
-from .misc.gdx_handler import get_gams_path
+from .misc.gdx_handler import get_gams_path, import_local_lib, package_exists
 
-def solve_GAMS(sim_folder, gams_folder=None):
-    try:
-        import gams
-    except ImportError:
-        logging.critical('The gams library is required to run the GAMS versions of DispaSET.'
-                 'Please install if from the /apifiles/Python/api/ folder in the GAMS directory')
-        sys.exit(1)
-
-    if not os.path.exists(gams_folder):
-        gams_folder = get_gams_path()
-        if not os.path.exists(gams_folder):
-            logging.critical('The provided path for GAMS (' + gams_folder + ') does not exist')
-            sys.exit(1)
+def is_sim_folder_ok(sim_folder):
 
     if not os.path.exists(sim_folder):
-        logging.critical('The provided DispaSET simulation environment folder (' + sim_folder + ') does not exist')
-        sys.exit(1)
+        logging.error('The provided DispaSET simulation environment folder (' + sim_folder + ') does not exist')
+        return False
 
-    if not os.path.exists(sim_folder + '/Inputs.gdx'):
-        logging.critical('There is no Inputs.gdx file within the specified DispaSET simulation environment folder (' + sim_folder + ')')
-        sys.exit(1)
+    if not os.path.exists(os.path.join(sim_folder, 'Inputs.gdx')):
+        logging.error('There is no Inputs.gdx file within the specified DispaSET simulation environment folder (' + sim_folder + ')')
+        return False
 
-    if not os.path.exists(sim_folder + '/UCM_h.gms'):
-        logging.critical('There is no UCM_h.gms file within the specified DispaSET simulation environment folder (' + sim_folder + ')')
-        sys.exit(1)
+    if not os.path.exists(os.path.join(sim_folder, 'UCM_h.gms')):
+        logging.error('There is no UCM_h.gms file within the specified DispaSET simulation environment folder (' + sim_folder + ')')
+        return False
+    return True
 
-    # create GAMS workspace:
-    ws = gams.GamsWorkspace(system_directory=gams_folder, debug=3)
-    shutil.copy(os.path.join(sim_folder, 'UCM_h.gms'), ws.working_directory)
-    shutil.copy(os.path.join(sim_folder, 'Inputs.gdx'), ws.working_directory)
-    t1 = ws.add_job_from_file('UCM_h.gms')
-    time0 = time.time()
-    t1.run()
-    logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
 
-    # copy the result file to the simulation environment folder:
-    shutil.copy(os.path.join(ws.working_directory, 'Results.gdx'), sim_folder)
-    return t1
-#    for rec in t1.out_db["x"]:
-#        print "x(" + rec.key(0) + "," + rec.key(1) + "): level=" + str(rec.level) + " marginal=" + str(rec.marginal)
+def solve_GAMS(sim_folder, gams_folder=None):
+    if not package_exists('gams'):
+        logging.warning('Could not import gams. Trying to automatically locate gdxcc folder')
+        if not import_local_lib('gams'):
+            return False
+
+    if not os.path.exists(gams_folder):
+        logging.warn('The provided path for GAMS (' + gams_folder + ') does not exist. Trying to locate...')
+        gams_folder = get_gams_path()
+        if not os.path.exists(gams_folder):
+            logging.error('GAMS path cannot be located. Simulation is stopped')
+            return False
+
+    if is_sim_folder_ok(sim_folder):
+        # create GAMS workspace:
+        from gams import GamsWorkspace
+        ws = GamsWorkspace(system_directory=gams_folder, debug=3)
+        shutil.copy(os.path.join(sim_folder, 'UCM_h.gms'), ws.working_directory)
+        shutil.copy(os.path.join(sim_folder, 'Inputs.gdx'), ws.working_directory)
+        t1 = ws.add_job_from_file('UCM_h.gms')
+        #Do not create .lst file
+        opt = ws.add_options()
+        if sys.platform == 'win32':
+            opt.output = 'nul'
+        else:
+            opt.output = '/dev/null'
+        time0 = time.time()
+        t1.run(opt)
+        logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
+
+        # copy the result file to the simulation environment folder:
+        shutil.copy(os.path.join(ws.working_directory, 'Results.gdx'), sim_folder)
+        return t1
+    else:
+        return False
 
 
 def solve_pyomo(sim_folder):

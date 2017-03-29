@@ -15,13 +15,18 @@ Functions:
 
 
 import sys
-from pyomo.environ import Constraint, ConcreteModel, Objective, Param, Set, Var, \
-    minimize, SolverManagerFactory, SolverFactory, PositiveReals, Binary
-from pyomo.opt import TerminationCondition
+import logging
+try:
+
+    from pyomo.environ import Constraint, ConcreteModel, Objective, Param, Set, Var, \
+        minimize, SolverManagerFactory, SolverFactory, PositiveReals, Binary
+    from pyomo.opt import TerminationCondition
+except ImportError:
+    logging.critical('Pyomo and a compatible solver is needed to run the pyomo version of DispaSET. Please install by typing "pip install pyomo"')
+    sys.exit(1)
 
 import numpy as np
 import pandas as pd
-import logging
 
 from .utils import pyomo_format, pyomo_to_pandas
 

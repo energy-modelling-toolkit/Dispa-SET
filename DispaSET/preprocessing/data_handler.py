@@ -5,8 +5,6 @@ import sys
 import numpy as np
 import pandas as pd
 
-from ..misc.gdx_handler import get_gams_path
-
 
 def merge_series(plants, data, mapping, method='WeightedAverage'):
     """
@@ -345,9 +343,18 @@ def load_config_excel(ConfigFile):
     # Read the technologies participating to reserve markets:
     config['ReserveParticipation'] = read_truefalse(sheet, 131, 1, 145, 3)
 
-    # Checks
 
-    if not os.path.isdir(config['GAMS_folder']):
-        config['GAMS_folder'] = get_gams_path()
+
+    logging.info("Using config file " + ConfigFile + " to build the simulation environment")
 
     return config
+
+def load_config_yaml(filename):
+    """ Loads YAML file to dictionary"""
+    import yaml
+    with open(filename, 'r') as f:
+        try:
+            return yaml.load(f)
+        except yaml.YAMLError as exc:
+            logging.error('Cannot parse config file: {}'.format(filename))
+            raise

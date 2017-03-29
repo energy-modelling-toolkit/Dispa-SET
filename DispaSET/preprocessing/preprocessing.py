@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from .data_check import check_units, check_df, isStorage
+from .data_check import check_units, check_df, isStorage, check_MinMaxFlows
 from .utils import clustering, interconnections, incidence_matrix
 from .data_handler import merge_series, define_parameter, invert_dic_df, write_to_excel, load_csv
 
@@ -34,6 +34,7 @@ def build_simulation(config):
     :param config: Dictionary with all the configuration fields loaded from the excel file. Output of the 'LoadConfig' function.
 
     """
+    logging.info('New build started')
     # %%################################################################################################################
     #####################################   Main Inputs    ############################################################
     ###################################################################################################################
@@ -171,8 +172,7 @@ def build_simulation(config):
 
     # Interconnections:
     # [Interconnections_sim,Interconnections_RoW,Interconnections] = interconnections(config['countries'],NTC_inter,Historical_flows)
-    [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['countries'],
-                                                                                      NTC, flows)
+    [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['countries'], NTC, flows)
 
     if len(Interconnections_sim.columns) > 0:
         NTCs = Interconnections_sim.loc[idx_utc_noloc, :]
@@ -395,7 +395,7 @@ def build_simulation(config):
     Nunits = len(Plants_merged)
     parameters = {}
 
-    # Each parameter is associated with certain sets, as defined in the following list:    
+    # Each parameter is associated with certain sets, as defined in the following list:
     sets_param = {}
     sets_param['AvailabilityFactor'] = ['u', 'h']
     sets_param['CostFixed'] = ['u']
@@ -446,12 +446,12 @@ def build_simulation(config):
     for var in sets_param:
         parameters[var] = define_parameter(sets_param[var], sets, value=0)
 
-    # List of parameters whose default value is 1   
+    # List of parameters whose default value is 1
     for var in ['AvailabilityFactor', 'Efficiency', 'Curtailment', 'StorageChargingEfficiency',
                 'StorageDischargeEfficiency']:
         parameters[var] = define_parameter(sets_param[var], sets, value=1)
 
-    # List of parameters whose default value is very high   
+    # List of parameters whose default value is very high
     for var in ['RampUpMaximum', 'RampDownMaximum', 'RampStartUpMaximum', 'RampShutDownMaximum', 'EmissionMaximum',
                 'TimeUpInitial', 'TimeDownInitial']:
         parameters[var] = define_parameter(sets_param[var], sets, value=1e7)
@@ -507,7 +507,7 @@ def build_simulation(config):
     if config['AllowCurtailment'] == 0:
         parameters['Curtailment'] = define_parameter(sets_param['Curtailment'], sets, value=0)
 
-    # Extracting the Availability factors of the renewable technologies only:    
+    # Extracting the Availability factors of the renewable technologies only:
     for tr in sets['tr']:
         if tr not in Renewables:
             logging.warn('No availability factor could be found for technology "' + str(tr) + '". A default value of 100% will be used')
@@ -537,7 +537,7 @@ def build_simulation(config):
         parameters['LoadShedding']['val'][i] = LoadShedding['ratio'][c] * Load[c].max()
 
     # %%#################################################################################################################################################################################################
-    # Variable Cost  
+    # Variable Cost
     # Equivalence dictionnary between fuel types and price entries in the config sheet:
     FuelEntries = {'BIO':'PriceOfBiomass', 'GAS':'PriceOfGas', 'HRD':'PriceOfBlackCoal', 'LIG':'PriceOfLignite', 'NUC':'PriceOfNuclear', 'OIL':'PriceOfFuelOil', 'PEA':'PriceOfPeat'}
     for unit in range(Nunits):
@@ -565,7 +565,9 @@ def build_simulation(config):
         if l in Inter_RoW.columns:
             parameters['FlowMaximum']['val'][i, :] = Inter_RoW[l]
             parameters['FlowMinimum']['val'][i, :] = Inter_RoW[l]
-
+    # Check values:
+    check_MinMaxFlows(parameters['FlowMinimum']['val'],parameters['FlowMaximum']['val'])
+    
     parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
 
     # Outage Factors
@@ -667,7 +669,7 @@ def build_simulation(config):
         import cPickle
         with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
             cPickle.dump(SimData, pfile, protocol=cPickle.HIGHEST_PROTOCOL)
-
+    logging.info('Build finished')
     # %%################################################################################################################
     #####################################   Plotting load and VRE      ################################################
     ###################################################################################################################

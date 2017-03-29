@@ -240,19 +240,23 @@ def plot_dispatch(demand, plotdata, level=None, rng=[]):
     import matplotlib.patches as mpatches
     import matplotlib.lines as mlines
 
-    if isinstance(rng, list):
-        pdrng = plotdata.index[:7 * 24]
+    if isinstance(rng,list):
+        pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
+    elif rng[0] < plotdata.index[0] or rng[0] > plotdata.index[-1] or rng[-1] < plotdata.index[0] or rng[-1] > plotdata.index[-1]:
+        logging.warn('Plotting range is not properly defined, considering the first simulated week')
+        pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
     else:
         pdrng = rng
-    alpha = '0.3'
-
+    alpha = '0.3'        
+        
+        
     # find the zero line position:
     cols = plotdata.columns.tolist()
     idx_zero = 0
-    tmp = plotdata.iloc[:, idx_zero].mean()
-    while tmp <= 0 and idx_zero < len(cols):
+    tmp = plotdata.iloc[:,idx_zero].mean()
+    while tmp <= 0 and idx_zero<len(cols)-1:
         idx_zero += 1
-        tmp = plotdata.iloc[:, idx_zero].mean()
+        tmp = plotdata.iloc[:,idx_zero].mean()
 
     tmp = plotdata[cols[:idx_zero]].sum(axis=1)
     sumplot_neg = pd.DataFrame()

@@ -14,22 +14,65 @@ Example:
 @author: Sylvain Quoilin (sylvain.quoilin@ec.europa.eu)
 
 """
-import logging
+import platform
 import os
 import sys
 import time as tm
-
-try:
-    import gdxcc
-
-    gdxcc_available = True
-except ImportError:
-    gdxcc_available = False
-
 import numpy as np
 import pandas as pd
+import logging
 
 from .str_handler import shrink_to_64
+
+def package_exists(package):
+    # http://stackoverflow.com/questions/14050281/how-to-check-if-a-python-module-exists-without-importing-it
+    import pkgutil
+    package_loader = pkgutil.find_loader(package)
+    return package_loader is not None
+
+
+def import_local_lib(lib):
+    # Try to import the GAMS api and gdxcc to write gdx files
+    if lib == 'gams':
+        if sys.platform == 'linux2' and platform.architecture()[0] == '64bit':
+            sys.path.append('./Externals/gams_api/linux64/')
+        elif sys.platform == 'win32' and platform.architecture()[0] == '64bit':
+            sys.path.append('./Externals/gams_api/win64/')
+        try:
+            import gams
+            return True
+        except ImportError:
+            logging.error('Could not find gams. The gams library is required to run the GAMS versions of DispaSET.'
+                          'Please install if from the /apifiles/Python/api/ folder in the GAMS directory')
+            sys.exit(1)
+    elif lib == 'gdxcc':
+        if sys.platform == 'linux2' and platform.architecture()[0] == '32bit':
+            sys.path.append('./Externals/gdxcc/linux32/')
+        elif sys.platform == 'linux2' and platform.architecture()[0] == '64bit':
+            sys.path.append('./Externals/gams_api/linux64/')
+        elif sys.platform == 'win32' and platform.architecture()[0] == '32bit':
+            sys.path.append('./Externals/gdxcc/win32/')
+        elif sys.platform == 'win32' and platform.architecture()[0] == '64bit':
+            sys.path.append('./Externals/gams_api/win64/')
+        elif sys.platform == 'darwin':
+            sys.path.append('./Externals/gdxcc/osx64/')
+        try:
+            import gdxcc
+            return True
+        except ImportError:
+            logging.critical("gdxcc module could not be found. GDX cannot be produced or read")
+            sys.exit(1)
+    else:
+        logging.error('Only "gams" and "gdxcc" are present')
+
+if package_exists('gdxcc'):
+    import gdxcc
+else:
+    logging.warning('Could not import gdxcc. Trying to use pre-compiled libraries')
+    if import_local_lib('gdxcc'):
+        import gdxcc
+
+#####################
 
 
 def _insert_symbols(gdxHandle, sets, parameters):
@@ -106,7 +149,7 @@ def _insert_symbols(gdxHandle, sets, parameters):
                 logging.error('Key ' + gdxKeys[0] + ' of set ' + s + ' could not be written')
 
         gdxcc.gdxDataWriteDone(gdxHandle)
-	logging.debug('Set ' + s + ' successfully written')
+    logging.debug('Set ' + s + ' successfully written')
 
 
 def write_variables(gams_dir, gdx_out, list_vars):
@@ -120,25 +163,23 @@ def write_variables(gams_dir, gdx_out, list_vars):
     :param gdx_out:         (Relative) path to the gdx file to be written
     :param list_vars:       List with the sets and parameters to be written
     """
-    if gdxcc_available:
-        # Check gams_dir:
-        if not os.path.isdir(gams_dir):
-            logging.critical('Could not find the specified gams directory: ' + gams_dir)
-            sys.exit(1)
-
-        gdxHandle = gdxcc.new_gdxHandle_tp()
-        gdxcc.gdxCreateD(gdxHandle, gams_dir, gdxcc.GMS_SSSIZE)
-        gdxcc.gdxOpenWrite(gdxHandle, gdx_out, "")
-
-        [sets, parameters] = list_vars
-        _insert_symbols(gdxHandle, sets, parameters)
-
-        gdxcc.gdxClose(gdxHandle)
-
-        logging.info('Data Successfully written to ' + gdx_out)
-    else:
-        logging.critical("gdxcc module not available. GDX cannot be produced")
+    if not os.path.isdir(gams_dir):
+        gams_dir = get_gams_path()
+    if not os.path.isdir(gams_dir):
+        logging.critical('GDXCC: Could not find the specified gams directory: ' + gams_dir)
         sys.exit(1)
+
+    gdxHandle = gdxcc.new_gdxHandle_tp()
+    gdxcc.gdxCreateD(gdxHandle, gams_dir, gdxcc.GMS_SSSIZE)
+    gdxcc.gdxOpenWrite(gdxHandle, gdx_out, "")
+
+    [sets, parameters] = list_vars
+    _insert_symbols(gdxHandle, sets, parameters)
+
+    gdxcc.gdxClose(gdxHandle)
+
+    logging.info('Data Successfully written to ' + gdx_out)
+
 
 
 def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
@@ -152,9 +193,7 @@ def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
     :returns:        Dictionary with all the collected values (within lists)
     """
 
-    if not gdxcc_available:
-        logging.critical("gdxcc module not available. GDX cannot be read")
-        sys.exit(1)
+
 
     from gdxcc import gdxSymbolInfo, gdxCreateD, gdxOpenRead, GMS_SSSIZE, gdxDataReadDone, new_gdxHandle_tp, \
         gdxDataReadStr, gdxFindSymbol, gdxErrorStr, gdxDataReadStrStart, gdxGetLastError

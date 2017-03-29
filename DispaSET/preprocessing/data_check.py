@@ -11,6 +11,24 @@ import numpy as np
 import pandas as pd
 import logging
 
+
+def check_MinMaxFlows(df_min,df_max):
+    '''
+    Function that checks that there is no incompatibility between the minimum and maximum flows
+    '''
+    if (df_min > df_max).any():
+        pos = np.where(df_min > df_max)
+        logging.critical('ERROR: At least one minimum flow is higher than the maximum flow, for example in line number ' + str(pos[0][0]) + ' and time step ' + str(pos[1][0]))
+        sys.exit(1)
+        
+    if (df_max < 0).any():
+        pos = np.where(df_max < 0)
+        logging.critical('ERROR: At least one maximum flow is negative, for example in line number ' + str(pos[0][0]) + ' and time step ' + str(pos[1][0]))
+        sys.exit(1)
+
+    return True
+
+
 def check_units(config, plants):
     """
     Function that checks the power plant characteristics
