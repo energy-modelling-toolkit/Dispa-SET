@@ -331,9 +331,9 @@ def build_simulation(config):
                 Outages[oldname] = Outages[('all', Plants_merged['Technology'][newname])]
 
     # Merging the time series relative to the clustered power plants:
-    ReservoirScaledInflows_merged = merge_series(plants, ReservoirScaledInflows, mapping, method='WeightedAverage')
-    ReservoirLevels_merged = merge_series(plants, ReservoirLevels, mapping)
-    Outages_merged = merge_series(plants, Outages, mapping)
+    ReservoirScaledInflows_merged = merge_series(plants, ReservoirScaledInflows, mapping, method='WeightedAverage', tablename='ScaledInflows')
+    ReservoirLevels_merged = merge_series(plants, ReservoirLevels, mapping, tablename='ReservoirLevels')
+    Outages_merged = merge_series(plants, Outages, mapping, tablename='Outages')
 
     # %%
     # checking data

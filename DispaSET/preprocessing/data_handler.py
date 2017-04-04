@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 
-def merge_series(plants, data, mapping, method='WeightedAverage'):
+def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
     """
     Function that merges the times series corresponding to the merged units (e.g. outages, inflows, etc.)
 
@@ -14,6 +14,7 @@ def merge_series(plants, data, mapping, method='WeightedAverage'):
     :param data:        Pandas dataframe with the time series and the original unit names as column header
     :param mapping:     Mapping between the merged units and the original units. Output of the clustering function
     :param method:      Select the merging method ('WeightedAverage'/'Sum')
+    :param tablename:   Name of the table being processed (e.g. 'Outages'), used in the warnings
     :return merged:     Pandas dataframe with the merged time series when necessary
     """
 
@@ -50,10 +51,14 @@ def merge_series(plants, data, mapping, method='WeightedAverage'):
                 else:
                     logging.critical('Method "' + str(method) + '" unknown in function MergeSeries')
                     sys.exit(1)
+        elif key in plants['Unit']:
+            if not type(
+                    key) == tuple:  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
+                logging.warn('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the mapping between original and clustered units. Skipping')         
         else:
             if not type(
                     key) == tuple:  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
-                logging.warn('Column ' + str(key) + ' not found in the mapping between original and clustered units. Skipping')
+                logging.warn('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the table of power plants. Skipping')
     return merged
 
 

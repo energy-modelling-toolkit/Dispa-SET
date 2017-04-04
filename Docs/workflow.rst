@@ -57,7 +57,7 @@ To run the pre-processing tool with this configuration file, 2 options are avail
 
 	python dispacli.py -c ./ConfigFiles/ConfigTest.xlsx build
 
-* From a python IDE (e.g. Spyder), specifying the configuration file. Configure the "DispaSet.py" file to be run with the command line option "-b ConfigFiles/ConfigTest.xlsx". The figure below shows the "Run Settings" dialog properly configure for Spyder.
+* It also possible to run the command line interface from a python IDE (e.g. Spyder), specifying the configuration file. Configure the "DispaSet.py" file to be run with the command line option "-b ConfigFiles/ConfigTest.xlsx". The figure below shows the "Run Settings" dialog properly configure for Spyder. Note that this is not recommended. Some running scripts are available in the corresponding directory to be run from and IDE.
 
 .. image:: figures/spyder_config.png
 
