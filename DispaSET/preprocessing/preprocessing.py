@@ -100,7 +100,7 @@ def build_simulation(config):
         path = config['RenewablesAF'].replace('##', str(c))
         tmp = load_csv(path, index_col=0, parse_dates=True)
         values[c] = tmp.loc[idx_utc_noloc, :]
-    Renewables = invert_dic_df(values)
+    Renewables = invert_dic_df(values,tablename='AvailabilityFactors')
 
     # Outage factors:                
     paths = {}
@@ -135,12 +135,13 @@ def build_simulation(config):
 
     # Power plants:
     plants = pd.DataFrame()
-    for c in config['countries']:
-        path = config['PowerPlantData'].replace('##', str(c))
-        tmp = load_csv(path)
-        #        if tmp.index.dtype == 'int64' or tmp.index.dtype == 'float' or tmp.index.dtype == 'int32':
-        #            sys.exit('Error in country ' + c + '. Power plants ids must be strings (not numbers) and must be unique even between countries')
-        plants = plants.append(tmp, ignore_index=True)
+    if os.path.isfile(config['PowerPlantData']):
+        plants = load_csv(config['PowerPlantData'])
+    elif '##' in config['PowerPlantData']:
+        for c in config['countries']:
+            path = config['PowerPlantData'].replace('##', str(c))
+            tmp = load_csv(path)
+            plants = plants.append(tmp, ignore_index=True)
     plants = plants[plants['Technology'] != 'Other']
     plants = plants[pd.notnull(plants['PowerCapacity'])]
     plants.index = range(len(plants))
@@ -328,7 +329,7 @@ def build_simulation(config):
                 logging.warn('No outage data found for plant "' + str(
                     oldname) + '". Using the non country-specific outage profile provided for technology "' + str(
                     Plants_merged['Technology'][newname]) + '".')
-                Outages[oldname] = Outages[('all', Plants_merged['Technology'][newname])]
+                Outages[oldname] = TechOutages[('all', Plants_merged['Technology'][newname])]
 
     # Merging the time series relative to the clustered power plants:
     ReservoirScaledInflows_merged = merge_series(plants, ReservoirScaledInflows, mapping, method='WeightedAverage', tablename='ScaledInflows')

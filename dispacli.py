@@ -42,7 +42,10 @@ def cli(ctx, config, engine):
 @click.pass_context
 def build(ctx):
     """Build simulation files"""
-
+    conf = ctx.obj['conf']
+    engine = ctx.obj['engine']
+    if engine == 'gams' and conf['WriteGDX']:
+        logging.warn('The config specifies that a gdx file should be written, although PYOMO is selected as engine. This a properly installed version of GAMS. Desactivate the option if it is not the case')
     SimData = ds.build_simulation(ctx.obj['conf'] )
 
 

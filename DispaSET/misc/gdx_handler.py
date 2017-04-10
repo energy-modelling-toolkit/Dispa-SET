@@ -32,12 +32,18 @@ def package_exists(package):
 
 
 def import_local_lib(lib):
-    # Try to import the GAMS api and gdxcc to write gdx files
+    '''
+    Try to import the GAMS api and gdxcc to write gdx files
+    '''
+    # First define the path to the 'Externals' folder. This path must be defined relatively to the current script location
+    path_script = os.path.dirname(__file__)
+    path_ext = os.path.join(path_script,'../../Externals')
+
     if lib == 'gams':
         if sys.platform == 'linux2' and platform.architecture()[0] == '64bit':
-            sys.path.append('./Externals/gams_api/linux64/')
+            sys.path.append(os.path.join(path_ext,'gams_api/linux64/'))
         elif sys.platform == 'win32' and platform.architecture()[0] == '64bit':
-            sys.path.append('./Externals/gams_api/win64/')
+            sys.path.append(os.path.join(path_ext,'gams_api/win64/'))
         try:
             import gams
             return True
@@ -47,19 +53,20 @@ def import_local_lib(lib):
             sys.exit(1)
     elif lib == 'gdxcc':
         if sys.platform == 'linux2' and platform.architecture()[0] == '32bit':
-            sys.path.append('./Externals/gdxcc/linux32/')
+            sys.path.append(os.path.join(path_ext,'gdxcc/linux32/'))
         elif sys.platform == 'linux2' and platform.architecture()[0] == '64bit':
-            sys.path.append('./Externals/gams_api/linux64/')
+            sys.path.append(os.path.join(path_ext,'gams_api/linux64/'))
         elif sys.platform == 'win32' and platform.architecture()[0] == '32bit':
-            sys.path.append('./Externals/gdxcc/win32/')
+            sys.path.append(os.path.join(path_ext,'gdxcc/win32/'))
         elif sys.platform == 'win32' and platform.architecture()[0] == '64bit':
-            sys.path.append('./Externals/gams_api/win64/')
+            sys.path.append(os.path.join(path_ext,'gams_api/win64/'))
         elif sys.platform == 'darwin':
-            sys.path.append('./Externals/gdxcc/osx64/')
+            sys.path.append(os.path.join(path_ext,'gdxcc/osx64/'))
         try:
             import gdxcc
             return True
         except ImportError:
+            print [x for x in sys.path]
             logging.critical("gdxcc module could not be found. GDX cannot be produced or read")
             sys.exit(1)
     else:

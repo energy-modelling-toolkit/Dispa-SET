@@ -32,7 +32,7 @@ def incidence_matrix(sets, set_used, parameters, param_used):
             first_country = sets[set_used][i][0:2]
             second_country = sets[set_used][i][6:9]
         else:
-            logging.error('The format of the interconnection is not admitted.')
+            logging.error('The format of the interconnection is not valid.')
             sys.exit(1)
 
         for j in range(len(sets['n'])):
@@ -90,7 +90,13 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
     for interconnection in simulation_connections:
         if interconnection in NTC_inter.columns:
             df_countries_simulated[interconnection] = NTC_inter[interconnection]
+            logging.info('Detected interconnection ' + interconnection + '. The historical NTCs will be imposed as maximum flow value')
     interconnections1 = df_countries_simulated.columns
+
+    # Display a warning if a country is isolated:
+    for c in Simulation_list:
+        if not any([c in conn for conn in interconnections1]):
+            logging.warn('Zone ' + c + ' Does not appear to be connected to any other zone in the NTC table. It should be simulated in isolation')
 
     df_RoW_temp = pd.DataFrame(index=index)
     connNames = []
@@ -112,8 +118,10 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
         for name in connNames:
             if nameToCompare[0:2] in name[0:2]:
                 exports.append(connNames.index(name))
+                logging.info('Detected interconnection ' + name + ', happening between a simulated zone and the rest of the world. The historical flows will be imposed to the model')
             elif nameToCompare[0:2] in name[6:8]:
                 imports.append(connNames.index(name))
+                logging.info('Detected interconnection ' + name + ', happening between the rest of the world and a simulated zone. The historical flows will be imposed to the model')
 
         flows_out = pd.concat(df_RoW_temp[connNames[exports[i]]] for i in range(len(exports)))
         flows_out = flows_out.groupby(flows_out.index).sum()

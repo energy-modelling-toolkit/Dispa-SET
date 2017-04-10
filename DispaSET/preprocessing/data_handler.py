@@ -81,30 +81,33 @@ def define_parameter(sets_in, sets, value=0):
     return {'sets': sets_in, 'val': values}
 
 
-def invert_dic_df(dic):
+def invert_dic_df(dic,tablename=''):
     """
     Function that takes as input a dictionary of dataframes, and inverts the key of
     the dictionary with the columns headers of the dataframes
 
     :param dic: dictionary of dataframes, with the same columns headers and the same index
+    :param tablename: string with the name of the table being processed (for the error msg)
     :returns: dictionary of dataframes, with swapped headers
     """
-    cols = [aa for aa in dic[dic.keys()[0]].columns]
-    index = dic[dic.keys()[0]].index
-    cols_out = dic.keys()
+    # keys are defined as the keys of the original dictionary, cols are the columns of the original dataframe
+    # items are the keys of the output dictionary, i.e. the columns of the original dataframe    
     dic_out = {}
-    for col in cols:
-        dic_out[col] = pd.DataFrame(index=index, columns=cols_out)
+    # First, check that all indexes have the same length:
+    index = dic[dic.keys()[0]].index
     for key in dic:
-        if [aa for aa in dic[key].columns] != cols:
-            logging.error('The columns of the dataframes within the dictionary are not all equal')
-            sys.exit(1)
         if len(dic[key].index) != len(index):
-            logging.error('The indexes of the dataframes within the dictionary are not all equal')
+            logging.error('The indexes of the data tables "' + tablename + '" are not equal in all the files')
             sys.exit(1)
-        for col in cols:
-            dic_out[col][key] = dic[key][col]
-    return dic_out  #TODO: this def could be replaced by pd.Panel.fromDict(dic, orient='minor')
+    # Then put the data in a panda Panel with minor orientation:
+    panel = pd.Panel.fromDict(dic, orient='minor')
+    # Display a warning if some items are missing in the original data:
+    for item in panel.items:
+        for key in dic.keys():
+            if item not in dic[key].columns:
+                logging.warn('The column "' + item + '" is not present in "' + key + '" for the "' + tablename + '" data. Zero will be assumed')
+        dic_out[item] = panel[item].fillna(0)
+    return dic_out  
 
 
 def write_to_excel(xls_out, list_vars):

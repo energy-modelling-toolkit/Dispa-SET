@@ -26,7 +26,7 @@ def is_sim_folder_ok(sim_folder):
         return False
 
     if not os.path.exists(os.path.join(sim_folder, 'Inputs.gdx')):
-        logging.error('There is no Inputs.gdx file within the specified DispaSET simulation environment folder (' + sim_folder + ')')
+        logging.error('There is no Inputs.gdx file within the specified DispaSET simulation environment folder (' + sim_folder + '). Check that the GDX output is activated in the option file and that no error stated during the pre-processing')
         return False
 
     if not os.path.exists(os.path.join(sim_folder, 'UCM_h.gms')):
@@ -35,7 +35,7 @@ def is_sim_folder_ok(sim_folder):
     return True
 
 
-def solve_GAMS(sim_folder, gams_folder=None):
+def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
     if not package_exists('gams'):
         logging.warning('Could not import gams. Trying to automatically locate gdxcc folder')
         if not import_local_lib('gams'):
@@ -55,18 +55,21 @@ def solve_GAMS(sim_folder, gams_folder=None):
         shutil.copy(os.path.join(sim_folder, 'UCM_h.gms'), ws.working_directory)
         shutil.copy(os.path.join(sim_folder, 'Inputs.gdx'), ws.working_directory)
         t1 = ws.add_job_from_file('UCM_h.gms')
-        #Do not create .lst file
         opt = ws.add_options()
-        if sys.platform == 'win32':
-            opt.output = 'nul'
-        else:
-            opt.output = '/dev/null'
+        #Do not create .lst file
+        if not output_lst:
+            if sys.platform == 'win32':
+                opt.output = 'nul'
+            else:
+                opt.output = '/dev/null'
         time0 = time.time()
         t1.run(opt)
         logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
 
         # copy the result file to the simulation environment folder:
         shutil.copy(os.path.join(ws.working_directory, 'Results.gdx'), sim_folder)
+        if output_lst:
+            shutil.copy(os.path.join(ws.working_directory, 'UCM_h.lst'), sim_folder)
         return t1
     else:
         return False
