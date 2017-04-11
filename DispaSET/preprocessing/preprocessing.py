@@ -641,7 +641,7 @@ def build_simulation(config):
         os.makedirs(sim)
     if LP:
         fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
-        fout = open(sim + 'UCM_h.gms', "wt")
+        fout = open(os.path.join(sim,'UCM_h.gms'), "wt")
         for line in fin:
             fout.write(line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1'))
         fin.close()

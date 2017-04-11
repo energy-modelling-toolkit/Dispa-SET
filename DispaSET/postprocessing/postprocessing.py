@@ -521,7 +521,7 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
     return inputs, results
 
 
-def plot_country(inputs, results, c, rng=[]):
+def plot_country(inputs, results, c='', rng=[]):
     """
     Generates plots from the dispa-SET results for one spedific country
 
@@ -529,6 +529,10 @@ def plot_country(inputs, results, c, rng=[]):
     :param results:     DispaSET results
     :param c:           Considered country (e.g. 'BE')
     """
+    if c =='':
+        Nzones = len(inputs['sets']['n'])
+        c = inputs['sets']['n'][np.random.randint(Nzones)]
+        print('Randomly selected zone for the detailed analysis: '+ c)
 
     plotdata = get_plot_data(inputs, results, c)
 

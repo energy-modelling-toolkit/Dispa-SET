@@ -90,6 +90,28 @@ def _insert_symbols(gdxHandle, sets, parameters):
     :param parameters: dictionary with all the parameters
     """
 
+    # It is essential to write the sets first, otherwise h might be written in the wrong order
+    for s in sets:
+        gdxSymbolType = gdxcc.GMS_DT_SET
+        dims = 1
+
+        gdxcc.gdxDataWriteStrStart(gdxHandle, s, "", dims, gdxSymbolType, 0)
+        gdxValues = gdxcc.doubleArray(5)
+        gdxValues[gdxcc.GMS_VAL_LEVEL] = 0.0  # 0.0 == Y (explanatory text of set in gdx)
+
+        Nrows = len(sets[s])
+
+        for row in range(Nrows):
+            gdxKeys = [str(ss) for ss in shrink_to_64([sets[s][row]])]  # Reduce the size if bigger than 64 characters
+            try:
+                success = gdxcc.gdxDataWriteStr(gdxHandle, gdxKeys, gdxValues)
+            except:
+                success = False
+            if not success:
+                logging.error('Key ' + gdxKeys[0] + ' of set ' + s + ' could not be written')
+
+        gdxcc.gdxDataWriteDone(gdxHandle)
+
     # Check array sizes for parameters:
     for p in parameters:
         variable = parameters[p]
@@ -136,26 +158,7 @@ def _insert_symbols(gdxHandle, sets, parameters):
         gdxcc.gdxDataWriteDone(gdxHandle)
         logging.debug('Parameter ' + p + ' successfully written')
 
-    for s in sets:
-        gdxSymbolType = gdxcc.GMS_DT_SET
-        dims = 1
 
-        gdxcc.gdxDataWriteStrStart(gdxHandle, s, "", dims, gdxSymbolType, 0)
-        gdxValues = gdxcc.doubleArray(5)
-        gdxValues[gdxcc.GMS_VAL_LEVEL] = 0.0  # 0.0 == Y (explanatory text of set in gdx)
-
-        Nrows = len(sets[s])
-
-        for row in range(Nrows):
-            gdxKeys = [str(ss) for ss in shrink_to_64([sets[s][row]])]  # Reduce the size if bigger than 64 characters
-            try:
-                success = gdxcc.gdxDataWriteStr(gdxHandle, gdxKeys, gdxValues)
-            except:
-                success = False
-            if not success:
-                logging.error('Key ' + gdxKeys[0] + ' of set ' + s + ' could not be written')
-
-        gdxcc.gdxDataWriteDone(gdxHandle)
     logging.debug('Set ' + s + ' successfully written')
 
 
@@ -350,19 +353,32 @@ def get_gams_path():
             break
     elif sys.platform == 'win32':
         paths = ['C:\\GAMS', 'C:\\Program Files\\GAMS', 'C:\\Program Files (x86)\\GAMS']
-        lines = []
+        lines_32 = []
+        lines_64 = []
         for path in paths:
             if os.path.exists(path):
-                paths1 = [path + os.sep + tmp for tmp in os.listdir(path) if
-                          tmp.startswith('win') and os.path.exists(path + os.sep + tmp)]
-                for path1 in paths1:
-                    lines = lines + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
+                paths_32 = [path + os.sep + tmp for tmp in os.listdir(path) if
+                          tmp.startswith('win32') and os.path.exists(path + os.sep + tmp)]
+                paths_64 = [path + os.sep + tmp for tmp in os.listdir(path) if
+                          tmp.startswith('win64') and os.path.exists(path + os.sep + tmp)]
+                for path1 in paths_32:
+                    lines_32 = lines_32 + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
                                      tmp.startswith('24') and os.path.isfile(
                                          path1 + os.sep + tmp + os.sep + 'gams.exe')]
-        for line in lines:
+                for path1 in paths_64:
+                    lines_64 = lines_64 + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
+                                     tmp.startswith('24') and os.path.isfile(
+                                         path1 + os.sep + tmp + os.sep + 'gams.exe')]
+        for line in lines_64:
             if os.path.exists(line):
                 out = line
             break
+        if out == '':    # The 32-bit version of gams should never be preferred
+            for line in lines_32:
+                if os.path.exists(line):
+                    out = line
+                    logging.critical('It seems that the installed version of gams is 32-bit, which might cause consol crashing and compatibility problems. Please consider using GAMS 64-bit')
+                break
     elif sys.platform == 'darwin':
         paths = ['/Applications/']
         lines = []

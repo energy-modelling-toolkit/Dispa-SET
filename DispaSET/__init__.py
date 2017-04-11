@@ -60,30 +60,6 @@ except:
     # if it didn't work, it might be due to ipython messing with the output
     # typical error: Unable to configure handler 'console': IOStream has no fileno
     # try without console output:
-    print('WARNING: the console output is failing (possibly because of ipython). Please refer to the log file')
-    _LOGCONFIG = {
-         "version": 1,
-         "disable_existing_loggers": False,
-         'formatters': {
-            'standard': {
-                'format': '%(asctime)s [%(levelname)-8s] (%(funcName)s): %(message)s',
-                'datefmt': '%y/%m/%d %H:%M:%S'
-            },
-         },
-         "handlers": {    
-             "error_file": {
-                 "class": "logging.FileHandler",
-                 "level": "WARNING",
-                 'formatter': 'standard',
-                 'filename': 'warn.log',
-                 'encoding': 'utf8'
-    
-             }
-         },
-    
-         "root": {
-             "level": "INFO",
-             "handlers": [ "error_file"],
-         }
-    }    
+    print('WARNING: the colored console output is failing (possibly because of ipython). Switching to monochromatic output')
+    _LOGCONFIG['handlers']['console']['class'] = "logging.StreamHandler"
     logging.config.dictConfig(_LOGCONFIG)

@@ -84,6 +84,18 @@ Clone git repository to svn
 The folder can finally optionally be deleted to avoid any confusion.
 
 
+Issue with the compilation of the GAMS API
+------------------------------------------
+First, check that the installed version of GAMS is the 64 bit. 32 bit versions tend to generated compatibility issues.
+
+When the pre-compiled libraries do not work, they must be re-compiled from the GAMS apifile folder. In Windows, this generally raises the issue of the missing vcvarsall.bat file. If the issue persists after installing the Microsoft C++ compiler for Python 2.7, try the following:
+
+1. Enter MSVC for Python command prompt
+2. SET DISTUTILS_USE_SDK=1
+3. SET MSSdk=1
+4. python.exe gdxsetup.py install
+
+
 Public version of Dispa-SET
 ---------------------------
 Because some input files are subject to intellectual property and copyrights, some folders available on the private repository cannot by uploaded to the public GitHub repository. The script DispaSync.sh in the root folder has been written to synchronize the subset of publicly available folders and files with an external folder. This folder can then be committed and pushed to the public repository. 

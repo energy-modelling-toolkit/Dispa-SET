@@ -24,9 +24,9 @@ NB: For Windows users, some packages might require the installation of a C++ com
 
 Using Dispa-SET with GAMS:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-Dispa-SET is primarily designed to run with GAMS and therefore requires GAMS to be installed with a valid user licence.
+Dispa-SET is primarily designed to run with GAMS and therefore requires GAMS to be installed with a valid user licence. Currently, only the 64-bit version of GAMS is supported in Dispa-SET!
 
-The GAMS api for python has been pre-compiled in the "Externals" folder and is usable with most operating systems (both 32 and 64 bits). If the pre-compiled binaries are not available or could not be loaded, the system exits with an error message. In that case, the gams python api should be compiled from the source provided in the GAMS installation folder (e.g. "C:\GAMS\win32\24.3\apifiles\Python\api")::
+The GAMS api for python has been pre-compiled in the "Externals" folder and is usable with most operating systems. If the pre-compiled binaries are not available or could not be loaded, the system exits with an error message. In that case, the gams python api should be compiled from the source provided in the GAMS installation folder (e.g. "C:\\GAMS\\win64\\24.3\\apifiles\\Python\\api")::
 
 	python gdxsetup.py install
 	python gamssetup.py install
@@ -35,7 +35,6 @@ The api requires the path to the gams installation folder. The "get_gams_path()"
 
 Using Dispa-SET with PYOMO:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-NB: in the current Dispa-SET distribution, the PYOMO solver is outdated and should not be used.
 
 * Install pyomo ::
 
@@ -50,18 +49,15 @@ Run the pre-processing tool
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Dispa-SET runs are defined in dedicated excel configuration files stored in the "ConfigFiles" folder. The configuration file "ConfigTest.xlsx" has be setup for testing purposes. It generates a 10-days optimisation using data relative to the Dutch power system. 
 
-2. Pre-processing
-^^^^^^^^^^^^^^^^^
-To run the pre-processing tool with this configuration file, 2 options are available:
-* From the command line, specify the configuration file to be used as an argument, the solver (Pyomo or GAMS) and the actions to be performed. Within the "Dispa-SET" folder, run::
+2. Pre-processing using the command line interface
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+From the command line, specify the configuration file to be used as an argument, the solver (Pyomo or GAMS) and the actions to be performed. Within the "Dispa-SET" folder, run::
 
 	python dispacli.py -c ./ConfigFiles/ConfigTest.xlsx build
 
-* It also possible to run the command line interface from a python IDE (e.g. Spyder), specifying the configuration file. Configure the "DispaSet.py" file to be run with the command line option "-b ConfigFiles/ConfigTest.xlsx". The figure below shows the "Run Settings" dialog properly configure for Spyder. Note that this is not recommended. Some running scripts are available in the corresponding directory to be run from and IDE.
-
-.. image:: figures/spyder_config.png
-
 NB: The command line interface dispacli.py is designed to run with the Python interpreter, which should be the one selected. It might present some problems when run in Ipython.
+
+NB2: the pre-processing can also be run directly using the DispaSET API, as describe in the last section of this page.
 
 3. Check the simulation environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

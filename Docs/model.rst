@@ -65,7 +65,7 @@ Parameters
 	PowerInitial(u)				MW	Power output before initial period
 	PowerMinStable(u)			MW	Minimum power for stable generation
 	PowerMustRun(u)				MW	Minimum power output
-	PriceTransmission(l,h)			€/MWh	Price of transmission between zones
+	PriceTransmission(l,h)			EUR/MWh	Price of transmission between zones
 	RampDownMaximum(u)			MW/h	Ramp down limit
 	RampShutDownMaximum(u)			MW/h	Shut-down ramp limit
 	RampStartUpMaximum(u)			MW/h	Start-up ramp limit
@@ -640,7 +640,7 @@ The condition for the clustering of two units is a combination of subconditions 
 
 .. image:: figures/clustering.png
 
-When two units are clustered, the minimum and maximum capacities of new aggregated units (indicated by *) are given by:
+When two units are clustered, the minimum and maximum capacities of new aggregated units (indicated by the star) are given by:
 
 .. math::
 
