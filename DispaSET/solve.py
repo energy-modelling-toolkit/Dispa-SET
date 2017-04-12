@@ -51,19 +51,27 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
     if is_sim_folder_ok(sim_folder):
         # create GAMS workspace:
         from gams import GamsWorkspace
-        ws = GamsWorkspace(system_directory=gams_folder, debug=3)
-        shutil.copy(os.path.join(sim_folder, 'UCM_h.gms'), ws.working_directory)
-        shutil.copy(os.path.join(sim_folder, 'Inputs.gdx'), ws.working_directory)
-        t1 = ws.add_job_from_file('UCM_h.gms')
-        opt = ws.add_options()
-        #Do not create .lst file
-        if not output_lst:
-            if sys.platform == 'win32':
-                opt.output = 'nul'
+        try:
+            ws = GamsWorkspace(system_directory=gams_folder, debug=3)
+            shutil.copy(os.path.join(sim_folder, 'UCM_h.gms'), ws.working_directory)
+            shutil.copy(os.path.join(sim_folder, 'Inputs.gdx'), ws.working_directory)
+            t1 = ws.add_job_from_file('UCM_h.gms')
+            opt = ws.add_options()
+            #Do not create .lst file
+            if not output_lst:
+                if sys.platform == 'win32':
+                    opt.output = 'nul'
+                else:
+                    opt.output = '/dev/null'
+            time0 = time.time()
+            t1.run(opt)
+        except Exception, e:
+            if 'optCreateD' in str(e):
+                logging.error('The GAMS solver can only be run once in the same console. Please open another console')
+                sys.exit(1)
             else:
-                opt.output = '/dev/null'
-        time0 = time.time()
-        t1.run(opt)
+                logging.error('The following error occured when trying to solve the model in gams: ' + str(e))
+                sys.exit(1)
         logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
 
         # copy the result file to the simulation environment folder:

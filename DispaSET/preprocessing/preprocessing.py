@@ -11,7 +11,6 @@ import os
 import shutil
 import sys
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -25,14 +24,14 @@ from ..misc.gdx_handler import write_variables
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
 
-def build_simulation(config):
+def build_simulation(config,plot_load=False):
     """
     This function reads the DispaSET config, loads the specified data,
     processes it when needed, and formats it in the proper DispaSET format.
     The output of the function is a directory with all inputs and simulation files required to run a DispaSET simulation
     
     :param config: Dictionary with all the configuration fields loaded from the excel file. Output of the 'LoadConfig' function.
-
+    :param plot_load: Boolean used to display a plot of the demand curves in the different zones
     """
     logging.info('New build started')
     # %%################################################################################################################
@@ -675,24 +674,26 @@ def build_simulation(config):
     #####################################   Plotting load and VRE      ################################################
     ###################################################################################################################
 
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111)
-
-    # Plotting the 15-min load data for a visual check:
-    N = len(Load[config['countries']])
-    for i in config['countries']:
-        ax1.plot(Load[i].resample('h').mean(), label='Load ' + i)
-
-    x_ticks = np.linspace(0, N - 1, 20, dtype='int32')
-    plt.xticks(rotation='vertical')
-    plt.ylabel('Power (MW)')
-    fig.subplots_adjust(bottom=0.2)
-
-    ax1.legend()
-    # plt.show() # Removed it for now because it caused problems to headless boxes
-    logging.debug('Plotted 15-min load data in ' + sim + '/ALL_YEAR.pdf')
-
-    fig.set_size_inches(15, 12)
-    fig.savefig(sim + '/ALL_YEAR.pdf', dpi=300, bbox_inches='tight')
+    if plot_load:
+        import matplotlib.pyplot as plt
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
+    
+        # Plotting the 15-min load data for a visual check:
+        N = len(Load[config['countries']])
+        for i in config['countries']:
+            ax1.plot(Load[i].resample('h').mean(), label='Load ' + i)
+    
+        x_ticks = np.linspace(0, N - 1, 20, dtype='int32')
+        plt.xticks(rotation='vertical')
+        plt.ylabel('Power (MW)')
+        fig.subplots_adjust(bottom=0.2)
+    
+        ax1.legend()
+        # plt.show() # Removed it for now because it caused problems to headless boxes
+        logging.debug('Plotted 15-min load data in ' + sim + '/ALL_YEAR.pdf')
+    
+        fig.set_size_inches(15, 12)
+        fig.savefig(sim + '/ALL_YEAR.pdf', dpi=300, bbox_inches='tight')
 
     return SimData
