@@ -31,6 +31,10 @@ option
 * Print results to excel files (0 for no, 1 for yes)
 $set Verbose 0
 
+* Set debug mode. !! This breaks the loop and requires a debug.gdx file !!
+* (0 for no, 1 for yes)
+$set Debug 0
+
 * Print results to excel files (0 for no, 1 for yes)
 $set PrintResults 0
 
@@ -83,13 +87,13 @@ PARAMETERS
 AvailabilityFactor(u,h)          [%]      Availability factor
 CommittedInitial(u)              [n.a.]   Initial committment status
 Config
-*CostCurtailment(n,h)             [�\MW]  Curtailment costs
-CostFixed(u)                     [�\h]    Fixed costs
-CostRampUp(u)                    [�\MW\h] Ramp-up costs
-CostRampDown(u)                  [�\MW\h] Ramp-down costs
-CostShutDown(u)                  [�]      Shut-down costs
-CostStartUp(u)                   [�]      Start-up costs
-CostVariable(u,h)                [�\MW]   Variable costs
+*CostCurtailment(n,h)             [EUR\MW]  Curtailment costs
+CostFixed(u)                     [EUR\h]    Fixed costs
+CostRampUp(u)                    [EUR\MW\h] Ramp-up costs
+CostRampDown(u)                  [EUR\MW\h] Ramp-down costs
+CostShutDown(u)                  [EUR]      Shut-down costs
+CostStartUp(u)                   [EUR]      Start-up costs
+CostVariable(u,h)                [EUR\MW]   Variable costs
 Curtailment(n)                   [n.a]    Curtailment allowed or not {1 0} at node n
 Demand(mk,n,h)                   [MW]     Demand
 Efficiency(u)                    [%]      Efficiency
@@ -97,18 +101,18 @@ EmissionMaximum(n,p)             [tP]     Emission limit
 EmissionRate(u,p)                [tP\MWh] P emission rate
 FlowMaximum(l,h)                 [MW]     Line limits
 FlowMinimum(l,h)                 [MW]     Minimum flow
-FuelPrice(n,f,h)                 [�\F]    Fuel price
+FuelPrice(n,f,h)                 [EUR\F]    Fuel price
 Fuel(u,f)                        [n.a.]   Fuel type {1 0}
 LineNode(l,n)                    [n.a.]   Incidence matrix {-1 +1}
 LoadShedding(n)                  [n.a.]   Load shedding capacity
 Location(u,n)                    [n.a.]   Location {1 0}
-Markup(u,h)                      [�\MW]   Markup
+Markup(u,h)                      [EUR\MW]   Markup
 OutageFactor(u,h)                [%]      Outage Factor (100% = full outage)
 PartLoadMin(u)                   [%]      Minimum part load
 PowerCapacity(u)                 [MW]     Installed capacity
 PowerInitial(u)                  [MW]     Power output before initial period
 PowerMinStable(u)                [MW]     Minimum power output
-PriceTransmission(l,h)           [�\MWh]  Transmission price
+PriceTransmission(l,h)           [EUR\MWh]  Transmission price
 StorageChargingCapacity(u)       [MW]     Storage capacity
 StorageChargingEfficiency(u)     [%]      Charging efficiency
 RampDownMaximum(u)               [MW\h]   Ramp down limit
@@ -140,7 +144,7 @@ $If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment 
 *Parameters as used within the loop
 PARAMETERS
 TimeUpLeft_JustStarted(u,h)      [h]     Required time up left at hour h if the Unit has just been started
-CostLoadShedding(n,h)            [�\MW]  Value of lost load
+CostLoadShedding(n,h)            [EUR\MW]  Value of lost load
 TimeUp(u,h)                      [h]     Hours up
 LoadMaximum(u,h)                 [%]     Maximum load given AF and OF
 PowerMustRun(u,h)                [MW]    Minimum power output
@@ -803,13 +807,23 @@ UCM_SIMPLE.optcr = 0.01;
 *===============================================================================
 
 * Scalar variables necessary to the loop:
-scalar FirstHour,LastHour,LastKeptHour,day,ndays;
+scalar FirstHour,LastHour,LastKeptHour,day,ndays,failed;
 ndays = floor(card(h)/24);
 if (Config("RollingHorizon LookAhead","day") > ndays -1, abort "The look ahead period is longer than the simulation length";);
+
+* Some parameters used for debugging:
+failed=0;
+parameter TimeUpInitial_dbg(u), TimeDownInitial_dbg(u), CommittedInitial_dbg(u), PowerInitial_dbg(u), StorageInitial_dbg(s);
 
 * Fixing the initial guesses:
 *PowerH.L(u,i)=PowerInitial(u);
 *Committed.L(u,i)=CommittedInitial(u);
+
+* Defining a parameter that records the solver status:
+set  tmp   "tpm"  / "model", "solver" /  ;
+parameter status(tmp,h);
+
+$if %Debug% == 1 $goto DebugSection
 
 FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("RollingHorizon Length","day"),
          FirstHour = (day-1)*24+1;
@@ -824,7 +838,10 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          TimeDownLeft_initial(u)=min(card(i),(TimeDownMinimum(u)-TimeDownInitial(u))*(1-CommittedInitial(u)));
          TimeDownLeft_JustStopped(u,i) = min(card(i)-ord(i)+1,TimeDownMinimum(u));
 
+*        Defining the minimum level at the end of the horizon, ensuring that it is feasible with the provided inflows:
          StorageFinalMin(s) =  min(StorageInitial(s) + sum(i,StorageInflow(s,i)) - sum(i,StorageOutflow(s,i)) , sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*AvailabilityFactor(s,i)));
+*        Correcting the minimum level to avoid the infeasibility in case it is too close to the StorageCapacity:
+         StorageFinalMin(s) = min(StorageFinalMin(s),StorageCapacity(s) - smax(i,StorageInflow(s,i)));
 
 $If %Verbose% == 1   Display TimeUpLeft_initial,TimeUpLeft_JustStarted,TimeDownLeft_initial,TimeDownLeft_JustStopped,TimeUpInitial,TimeDownInitial,PowerInitial,CommittedInitial,StorageFinalMin;
 
@@ -833,6 +850,13 @@ $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCo
 
 $If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_Max_RampUp1.M, EQ_Max_RampUp2.M,EQ_Max_RampDown1.M, EQ_Max_RampDown2.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
 $If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Power_must_run.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_Minimum_time_up_A.M, EQ_Minimum_time_up_JustStarted.M, EQ_Minimum_time_down_A.M, EQ_Minimum_time_down_JustStopped.M, EQ_Max_RampUp1.M, EQ_Max_RampUp2.M, EQ_Max_RampDown1.M, EQ_Max_RampDown2.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
+
+         status("model",i) = UCM_SIMPLE.Modelstat;
+         status("solver",i) = UCM_SIMPLE.Solvestat;
+
+if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, TimeUpInitial_dbg(u) = TimeUpInitial(u); TimeDownInitial_dbg(u) = TimeDownInitial(u); CommittedInitial_dbg(u) = CommittedInitial(u); PowerInitial_dbg(u) = PowerInitial(u); StorageInitial_dbg(s) = StorageInitial(s);
+                                                                           EXECUTE_UNLOAD "debug.gdx" day, status, TimeUpInitial_dbg, TimeDownInitial_dbg, CommittedInitial_dbg, PowerInitial_dbg, StorageInitial_dbg;
+                                                                           failed=1;);
 
 *Time counters
          Loop(i,
@@ -914,7 +938,8 @@ LostLoad_Reserve2D,
 LostLoad_Reserve2U,
 LostLoad_RampUp,
 LostLoad_RampDown,
-ShadowPrice
+ShadowPrice,
+status
 ;
 
 $onorder
@@ -963,3 +988,37 @@ EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_RampUp
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_RampDown rng=LostLoad_RampDown!A1 rdim=1 cdim=1'
 
 
+
+$exit
+
+$Label DebugSection
+
+$gdxin debug.gdx
+$LOAD day
+$LOAD PowerInitial_dbg
+$LOAD CommittedInitial_dbg
+$LOAD StorageInitial_dbg
+$LOAD TimeDownInitial_dbg
+$LOAD TimeUpInitial_dbg
+;
+PowerInitial(u) = PowerInitial_dbg(u); CommittedInitial(u) = CommittedInitial_dbg(u); StorageInitial(s) = StorageInitial_dbg(s); TimeDownInitial(u) = TimeDownInitial_dbg(u); TimeUpInitial(u) = TimeUpInitial_dbg(u);
+FirstHour = (day-1)*24+1;
+LastHour = min(card(h),FirstHour + (Config("RollingHorizon Length","day")+Config("RollingHorizon LookAhead","day")) * 24 - 1);
+LastKeptHour = LastHour - Config("RollingHorizon LookAhead","day") * 24;
+i(h) = no;
+i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
+TimeUpLeft_initial(u)=min(card(i),(TimeUpMinimum(u)-TimeUpInitial(u))*CommittedInitial(u));
+TimeUpLeft_JustStarted(u,i) = min(card(i)-ord(i)+1,TimeUpMinimum(u));
+TimeDownLeft_initial(u)=min(card(i),(TimeDownMinimum(u)-TimeDownInitial(u))*(1-CommittedInitial(u)));
+TimeDownLeft_JustStopped(u,i) = min(card(i)-ord(i)+1,TimeDownMinimum(u));
+StorageFinalMin(s) =  min(StorageInitial(s) + sum(i,StorageInflow(s,i)) - sum(i,StorageOutflow(s,i)) , sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*AvailabilityFactor(s,i)));
+StorageFinalMin(s) = min(StorageFinalMin(s),StorageCapacity(s) - smax(i,StorageInflow(s,i)));
+$If %Verbose% == 1   Display TimeUpLeft_initial,TimeUpLeft_JustStarted,TimeDownLeft_initial,TimeDownLeft_JustStopped,TimeUpInitial,TimeDownInitial,PowerInitial,CommittedInitial,StorageFinalMin;
+$If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
+$If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
+$If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_Max_RampUp1.M, EQ_Max_RampUp2.M,EQ_Max_RampDown1.M, EQ_Max_RampDown2.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
+$If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Power_must_run.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_Minimum_time_up_A.M, EQ_Minimum_time_up_JustStarted.M, EQ_Minimum_time_down_A.M, EQ_Minimum_time_down_JustStopped.M, EQ_Max_RampUp1.M, EQ_Max_RampUp2.M, EQ_Max_RampDown1.M, EQ_Max_RampDown2.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
+
+display day,FirstHour,LastHour,LastKeptHour;
+Display StorageFinalMin,TimeUpLeft_initial,TimeUpLeft_JustStarted,TimeDownLeft_initial,TimeDownLeft_JustStopped,TimeUpInitial,TimeDownInitial,PowerInitial,CommittedInitial,StorageFinalMin;
+Display Flow.L,Power.L,Committed.L,ShedLoad.L,StorageLevel.L,StorageInput.L,SystemCost.L,MaxRamp2U.L,MaxRamp2D.L,Spillage.L,StorageLevel.L,StorageInput.L,LostLoad_MaxPower.L,LostLoad_MinPower.L,LostLoad_reserve2U.L,LostLoad_reserve2D.L,LostLoad_RampUP.L,LostLoad_RampDown.L;

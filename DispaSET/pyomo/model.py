@@ -15,6 +15,7 @@ Functions:
 
 
 import sys
+import os
 import logging
 try:
 
@@ -118,7 +119,6 @@ def DispOptim(sets, parameters, LPFormulation=False):
     model.StorageFinalMin = Param(sets['s'], initialize=params['StorageFinalMin'])
     model.StorageInflow = Param(sets['s'], sets['h'], initialize=params['StorageInflow'])  # [MWh] Storage inflows (potential energy)
     model.StorageInitial = Param(sets['s'], initialize=params['StorageInitial'])  # [MWh] Storage level before initial period
-    model.StorageProfile = Param(sets['s'], sets['h'], initialize=params[ 'StorageProfile'])  # [-] Storage level to be resepected at the end of each horizon
     model.StorageMinimum = Param(sets['s'], initialize=params['StorageMinimum'])  # [MWh] Storage minimum
     model.StorageOutflow = Param(sets['s'], sets['h'], initialize=params['StorageOutflow'])  # [MWh] Storage outflows
     model.Technology = Param(sets['u'], sets['t'], initialize=params['Technology'])  # [n.a] Technology type {1 0}
@@ -634,19 +634,22 @@ def DispOptim(sets, parameters, LPFormulation=False):
 
     return model
 
-def try_solvers(prefered_solver):
+def try_solvers(prefered_solver,path_cplex=''):
     """ Initialize solver engine, trying different solvers. Faster solvers are tried first """
     for solver in [prefered_solver, 'cplex', 'gurobi', 'cbc', 'glpk']:
-        s = SolverFactory(solver)
-	if s.available():
-	   logging.info('Solver %s will be used' % solver)
-           return s
+        if solver=='cplex' and os.path.isfile(path_cplex):
+            s = SolverFactory(solver,executable=path_cplex)
+        else:
+            s = SolverFactory(solver)
+        if s.available():
+            logging.info('Solver %s will be used' % solver)
+            return s
     logging.error("No solvers found on this machine")
     sys.exit(1)
 
-def run_solver(instance, solver="cplex", solver_manager="serial", options_string=""):
+def run_solver(instance, solver="cplex", solver_manager="serial", options_string="", path_cplex=''):
     # initialize the solver / solver manager.
-    solver = try_solvers(solver)
+    solver = try_solvers(solver,path_cplex=path_cplex)
     solver_manager = SolverManagerFactory(solver_manager)  # serial or pyro
 
     results = solver.solve(instance, options_string=options_string, tee=True)
@@ -668,7 +671,7 @@ def after_solver(results):
 ############################### Main wrapper (rolling horizon optimization) ###########################################
 #######################################################################################################################
 
-def DispaSolve(sets, parameters, LPFormulation=False):
+def DispaSolve(sets, parameters, LPFormulation=False, path_cplex = ''):
     """
     The DispaSolve function defines the rolling horizon optimization and saves each result variable in a pandas dataframe
     The definition of the rolling horizon must be included into the DispaSET Config parameter'
@@ -851,14 +854,14 @@ def DispaSolve(sets, parameters, LPFormulation=False):
         # Optimize: 
         instance = DispOptim(sets_sliced, parameters_sliced, LPFormulation)
         if not LPFormulation:
-            opt = run_solver(instance, options_string="mipgap=0.01")
+            opt = run_solver(instance, options_string="mipgap=0.01",path_cplex=path_cplex)
         else:
-            opt = run_solver(instance)
+            opt = run_solver(instance,path_cplex=path_cplex)
 
         results_sliced = {}
         # TDO Iterate all VARs instead of listing everything. Can we?
         #for v in instance.component_objects(Var):  # FIXME: Seems like this loops does the same as the lines below
-        #    results_sliced[v] = pyomo_to_pandas(opt, v.cname())
+        #    results_sliced[v] = pyomo_to_pandas(opt, v.getname())
 
         results_sliced['Committed'] = pyomo_to_pandas(opt, 'Committed')
         results_sliced['CostStartUpH'] = pyomo_to_pandas(opt, 'CostStartUpH')

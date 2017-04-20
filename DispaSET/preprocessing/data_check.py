@@ -40,6 +40,16 @@ def check_units(config, plants):
                   'StartUpTime', 'CO2Intensity']
     StrKeys = ['Unit', 'Zone', 'Fuel', 'Technology']
 
+    # Special treatment for the Optional key Nunits:
+    if 'Nunits' in plants:
+        keys.append('Nunits')
+        NonNaNKeys.append('Nunits')
+        if any([not float(x).is_integer() for x in plants['Nunits']]):
+            logging.error('Some values are not integers in the "Nunits" column of the plant database')
+            sys.exit(1)
+    else:
+        logging.info('The columns "Nunits" is not present in the power plant database. A value of one will be assumed by default')
+
     for key in keys:
         if key not in plants:
             logging.critical('The power plants data does not contain the field "' + key + '", which is mandatory')
@@ -70,6 +80,10 @@ def check_units(config, plants):
     lower_hard = {'RampUpRate': 0, 'RampDownRate': 0, 'Efficiency': 0}
     higher = {'PartLoadMin': 1, 'Efficiency': 1}
     higher_time = {'MinUpTime': 0, 'MinDownTime': 0}  # 'StartUpTime':0,
+
+    # Special treatment for the Optional key Nunits:
+    if 'Nunits' in plants:
+        lower_hard['Nunits'] = 0
 
     for key in lower:
         if any(plants[key] < lower[key]):
@@ -106,6 +120,7 @@ def check_units(config, plants):
             logging.critical('The value of ' + key + ' should be lower than the horizon length (' + str(
                 config['HorizonLength'] * 24) + ' hours). A higher value has been found for units ' + str(plantlist))
             sys.exit(1)
+            
     return True
 
 

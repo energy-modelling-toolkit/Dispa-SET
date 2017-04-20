@@ -243,6 +243,11 @@ def build_simulation(config,plot_load=False):
                                   'STOMaxChargingPower': 'StorageChargingCapacity',
                                   'STOChargingEfficiency': 'StorageChargingEfficiency',
                                   'CO2Intensity': 'EmissionRate'}, inplace=True)
+    
+    for key in ['TimeUpMinimum','TimeDownMinimum']:
+        if any([not x.is_integer() for x in Plants_merged[key].values.astype('float')]):
+            logging.warn(key + ' in the power plant data has been rounded to the nearest integer value')
+            Plants_merged.loc[:,key] = Plants_merged[key].values.astype('int32')
 
     if not len(Plants_merged.index.unique()) == len(Plants_merged):
         # Very unlikely case:
@@ -312,7 +317,7 @@ def build_simulation(config,plot_load=False):
                 ReservoirScaledInflows[oldname] = 0
 
 
-                # merge the outages:
+    # merge the outages:
     for i in plants.index:  # for all the old plant indexes
         # get the old plant name corresponding to s:
         oldname = plants['Unit'][i]
@@ -417,6 +422,7 @@ def build_simulation(config,plot_load=False):
     sets_param['LoadShedding'] = ['n']
     sets_param['Location'] = ['u', 'n']
     sets_param['Markup'] = ['u', 'h']
+    sets_param['Nunits'] = ['u']
     sets_param['OutageFactor'] = ['u', 'h']
     sets_param['PartLoadMin'] = ['u']
     sets_param['PowerCapacity'] = ['u']
@@ -448,7 +454,7 @@ def build_simulation(config,plot_load=False):
 
     # List of parameters whose default value is 1
     for var in ['AvailabilityFactor', 'Efficiency', 'Curtailment', 'StorageChargingEfficiency',
-                'StorageDischargeEfficiency']:
+                'StorageDischargeEfficiency', 'Nunits']:
         parameters[var] = define_parameter(sets_param[var], sets, value=1)
 
     # List of parameters whose default value is very high
@@ -465,6 +471,12 @@ def build_simulation(config,plot_load=False):
     for var in ['Efficiency', 'PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
                 'CostRampUp']:
         parameters[var]['val'] = Plants_merged[var].values
+
+    # List of parameters whose value is not necessarily specified in the dataframe Plants_merged
+    for var in ['Nunits']:
+        if var in Plants_merged:
+            parameters[var]['val'] = Plants_merged[var].values
+
 
     # List of parameters whose value is known, and provided in the dataframe Plants_sto.
     for var in ['StorageCapacity', 'StorageChargingCapacity', 'StorageChargingEfficiency']:
@@ -597,11 +609,14 @@ def build_simulation(config,plot_load=False):
         parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['countries'][i]).values
 
     # Initial Power
-    # Nuclear and Fossil Gas greater than 350 MW are up (assumption):
-    for i in range(Nunits):
-        if Plants_merged['Fuel'][i] in ['GAS', 'NUC'] and Plants_merged['PowerCapacity'][i] > 350:
-            parameters['PowerInitial']['val'][i] = (Plants_merged['PartLoadMin'][i] + 1) / 2 * \
-                                                   Plants_merged['PowerCapacity'][i]
+    if 'InitialPower' in Plants_merged:
+        parameters['PowerInitial']['val'] = Plants_merged['InitialPower'].values
+    else:
+        for i in range(Nunits):
+            # Nuclear and Fossil Gas greater than 350 MW are up (assumption):
+            if Plants_merged['Fuel'][i] in ['GAS', 'NUC'] and Plants_merged['PowerCapacity'][i] > 350:
+                parameters['PowerInitial']['val'][i] = (Plants_merged['PartLoadMin'][i] + 1) / 2 * \
+                                                       Plants_merged['PowerCapacity'][i]
             # Config variables:
     sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead']
     sets['y_config'] = ['year', 'month', 'day']
@@ -670,6 +685,9 @@ def build_simulation(config,plot_load=False):
         with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
             cPickle.dump(SimData, pfile, protocol=cPickle.HIGHEST_PROTOCOL)
     logging.info('Build finished')
+    
+    if os.path.isfile('warn.log'):
+        shutil.move('warn.log', os.path.join(sim, 'warn_preprocessing.log'))
     # %%################################################################################################################
     #####################################   Plotting load and VRE      ################################################
     ###################################################################################################################

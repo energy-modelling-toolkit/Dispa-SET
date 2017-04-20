@@ -298,6 +298,7 @@ def load_config_excel(ConfigFile):
     config['WriteGDX'] = sheet.cell_value(19, 2)
     config['WritePickle'] = sheet.cell_value(20, 2)
     config['GAMS_folder'] = sheet.cell_value(21, 2)
+    config['cplex_path'] = sheet.cell_value(22, 2)
 
     config['StartDate'] = xlrd.xldate_as_tuple(sheet.cell_value(30, 2), wb.datemode)
     config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(31, 2), wb.datemode)

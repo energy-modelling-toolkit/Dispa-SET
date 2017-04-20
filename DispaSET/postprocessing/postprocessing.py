@@ -25,6 +25,52 @@ COLORS = {'NUC': 'orange', 'LIG': 'brown', 'HRD': 'grey', 'BIO': 'darkgreen', 'G
           'WST': 'dodgerblue', 'SUN': 'yellow', 'WIN': 'red', 'FlowIn': 'green', 'WAT': 'blue', 'Storage': 'blue',
           'FlowOut': 'green'}
 
+def GAMSstatus(statustype,num):
+    '''
+    Function that returns the model status or the solve status from gams
+    
+    :param statustype: String with the type of status to retrieve ("solver" or "model")
+    :param num:     Indicated termination condition (Integer)
+    :returns:       String with the status
+    '''
+    if statustype=="model":
+        msg =   {1: u'Optimal solution achieved',
+                 2: u'Local optimal solution achieved',
+                 3: u'Unbounded model found',
+                 4: u'Infeasible model found',
+                 5: u'Locally infeasible model found (in NLPs)',
+                 6: u'Solver terminated early and model was infeasible',
+                 7: u'Solver terminated early and model was feasible but not yet optimal',
+                 8: u'Integer solution model found',
+                 9: u'Solver terminated early with a non integer solution found (only in MIPs)',
+                 10: u'No feasible integer solution could be found',
+                 11: u'Licensing problem',
+                 12: u'Error achieved \u2013 No cause known',
+                 13: u'Error achieved \u2013 No solution attained',
+                 14: u'No solution returned',
+                 15: u'Feasible in a CNS models',
+                 16: u'Locally feasible in a CNS models',
+                 17: u'Singular in a CNS models',
+                 18: u'Unbounded \u2013 no solution',
+                 19: u'Infeasible \u2013 no solution'}
+    elif statustype=="solver":
+        msg =   {1: u'Normal termination',
+                 2: u'Solver ran out of iterations (fix with iterlim)',
+                 3: u'Solver exceeded time limit (fix with reslim)',
+                 4: u'Solver quit with a problem (see LST file) found',
+                 5: u'Solver quit with excessive nonlinear term evaluation errors (see LST file and fix with bounds or domlim)',
+                 6: u'Solver terminated for unknown reason (see LST file)',
+                 7: u'Solver terminated with preprocessor error (see LST file)',
+                 8: u'User interrupt',
+                 9: u'Solver terminated with some type of failure (see LST file)',
+                 10: u'Solver terminated with some type of failure (see LST file)',
+                 11: u'Solver terminated with some type of failure (see LST file)',
+                 12: u'Solver terminated with some type of failure (see LST file)',
+                 13: u'Solver terminated with some type of failure (see LST file)'}
+    else:
+        sys.exit('Incorrect GAMS status type')
+    return str(msg[num])
+
 
 def unit_location(Inputs, shrink=True):
     """ 
@@ -489,7 +535,7 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
     for key in ['OutputPower', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
                 'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput', 'LostLoad_Reserve2U',
                 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp', 'LostLoad_RampDown', 'LostLoad_Reserve2D',
-                'ShadowPrice']:
+                'ShadowPrice','status']:
         if key in results:
             if len(results[key]) == len(
                     index_long):  # Case of variables for which the look-ahead period recorded (e.g. the lost loads)
@@ -518,6 +564,16 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
         if key not in inputs['sets']['u']:
             logging.error("Unit '" + key + "' present in the results cannot be found in the set 'u' from the inputs")
 
+    if "model" in results['status']:
+        errors = results['status'][(results['status']['model'] != 1) & (results['status']['model'] != 8)]
+        if len(errors) > 0:
+            logging.critical('Some simulation errors were encountered. Some results could not be computed, for example at \n \
+                            time ' + str(errors.index[0]) + ', with the error message: "' + GAMSstatus('model',errors['model'].iloc[0]) + '". \n \
+                            The complete list is available in results["errors"] \n \
+                            The optimization might be debugged by activating the Debug flag in the GAMS simulation file and running it') 
+            for i in errors.index:
+                errors.loc[i,'Error Message'] = GAMSstatus('model',errors['model'][i])
+            results['errors'] = errors
     return inputs, results
 
 

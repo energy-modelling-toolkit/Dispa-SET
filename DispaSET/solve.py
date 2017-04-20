@@ -76,9 +76,13 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
 
         # copy the result file to the simulation environment folder:
         shutil.copy(os.path.join(ws.working_directory, 'Results.gdx'), sim_folder)
-        if output_lst:
-            shutil.copy(os.path.join(ws.working_directory, 'UCM_h.lst'), sim_folder)
-        return t1
+        for filename in ['UCM_h.lst','UCM_h.log','debug.gdx']:
+            if os.path.isfile(os.path.join(ws.working_directory, 'debug.gdx')):
+                shutil.copy(os.path.join(ws.working_directory, 'debug.gdx'), sim_folder)
+        if os.path.isfile(os.path.join(ws.working_directory, 'debug.gdx')):
+            logging.warn('A debug file was created. There has probably been an optimization error')
+        if os.path.isfile('warn.log'):
+            shutil.move('warn.log', os.path.join(ws.sim_folder, 'warn_solve.log'))
     else:
         return False
 
@@ -93,8 +97,16 @@ def solve_pyomo(sim_folder):
         LPFormulation = False
     else:
         LPFormulation = True
+    
+    if os.path.isfile(SimData['config']['cplex_path']):
+        path_cplex = SimData['config']['cplex_path']
+    else:
+        path_cplex = ''
+        if len(SimData['config']['cplex_path']) > 2:
+            logging.warn('The specified path for cplex (' + SimData['config']['cplex_path'] + ') is not valid. It will be ignored')
+        
     time0 = time.time()
-    results = DispaSolve(SimData['sets'], SimData['parameters'], LPFormulation=LPFormulation)
+    results = DispaSolve(SimData['sets'], SimData['parameters'], LPFormulation=LPFormulation, path_cplex=path_cplex)
     logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
 
     return results

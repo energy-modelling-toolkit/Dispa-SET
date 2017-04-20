@@ -14,7 +14,7 @@ def get_sets(instance, varname):
     var = getattr(instance, varname)
 
     if var.dim() > 1:
-        sets = [pset.cname() for pset in var._index.set_tuple]
+        sets = [pset.getname() for pset in var._index.set_tuple]
     else:
         sets = [var._index.name]
     return sets

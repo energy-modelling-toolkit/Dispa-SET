@@ -230,7 +230,7 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
                         # Do a weighted average:
                         plants_merged.loc[j, key] = (plants_merged[key][j] * P_old + plants[key][i] * P_add) / (
                         P_add + P_old)
-                    elif key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower']:
+                    elif key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower']:
                         # Do a sum:
                         plants_merged.loc[j, key] = plants_merged[key][j] + plants[key][i]
                     elif key in ['PartLoadMin', 'StartUpTime']:
