@@ -1,4 +1,5 @@
 import logging.config
+import os
 
 __version__ = "2.2dev"
 
@@ -53,6 +54,13 @@ from .postprocessing.postprocessing import get_result_analysis
 from .postprocessing.postprocessing import get_indicators_powerplant
 from .postprocessing.postprocessing import plot_energy_country_fuel
 
+# Removeing log file:
+if os.path.isfile('warn.log'):
+    try:
+        os.remove('warn.log')
+    except:
+        print 'Could not erase previous log file "warn.log"'
+        
 # Setting logging configuration:
 try: 
     logging.config.dictConfig(_LOGCONFIG)

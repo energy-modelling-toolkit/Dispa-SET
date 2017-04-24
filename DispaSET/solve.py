@@ -82,7 +82,7 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
         if os.path.isfile(os.path.join(ws.working_directory, 'debug.gdx')):
             logging.warn('A debug file was created. There has probably been an optimization error')
         if os.path.isfile('warn.log'):
-            shutil.move('warn.log', os.path.join(ws.sim_folder, 'warn_solve.log'))
+            shutil.copy('warn.log', os.path.join(sim_folder, 'warn_solve.log'))
     else:
         return False
 
@@ -108,5 +108,6 @@ def solve_pyomo(sim_folder):
     time0 = time.time()
     results = DispaSolve(SimData['sets'], SimData['parameters'], LPFormulation=LPFormulation, path_cplex=path_cplex)
     logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
-
+    if os.path.isfile('warn.log'):
+        shutil.copy('warn.log', os.path.join(sim_folder, 'warn_solve.log'))
     return results

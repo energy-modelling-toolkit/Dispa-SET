@@ -17,11 +17,14 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
     :param tablename:   Name of the table being processed (e.g. 'Outages'), used in the warnings
     :return merged:     Pandas dataframe with the merged time series when necessary
     """
-
     Nunits = len(plants)
     plants.index = range(Nunits)
     merged = pd.DataFrame(index=data.index)
     unitnames = [plants['Unit'][x] for x in mapping['NewIndex']]
+    # First check the data:
+    for key in data:
+        if str(data[key].dtype) not in ['bool','int','float','float16', 'float32', 'float64', 'float128','int8', 'int16', 'int32', 'int64']:
+            logging.critical('The column "' + key + '" of table + "' + tablename + '" is not numeric!')
     for key in data:
         if key in unitnames:
             i = unitnames.index(key)

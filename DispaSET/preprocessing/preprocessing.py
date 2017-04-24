@@ -687,7 +687,7 @@ def build_simulation(config,plot_load=False):
     logging.info('Build finished')
     
     if os.path.isfile('warn.log'):
-        shutil.move('warn.log', os.path.join(sim, 'warn_preprocessing.log'))
+        shutil.copy('warn.log', os.path.join(sim, 'warn_preprocessing.log'))
     # %%################################################################################################################
     #####################################   Plotting load and VRE      ################################################
     ###################################################################################################################
