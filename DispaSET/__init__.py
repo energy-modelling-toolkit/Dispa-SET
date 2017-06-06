@@ -28,7 +28,7 @@ _LOGCONFIG = {
 
          "error_file": {
              "class": "logging.FileHandler",
-             "level": "WARNING",
+             "level": "INFO",
              'formatter': 'standard',
              'filename': 'warn.log',
              'encoding': 'utf8'

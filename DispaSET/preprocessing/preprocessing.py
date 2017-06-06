@@ -14,14 +14,16 @@ import sys
 import numpy as np
 import pandas as pd
 
-from .data_check import check_units, check_df, isStorage, check_MinMaxFlows
+from .data_check import check_units, check_chp, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors
 from .utils import clustering, interconnections, incidence_matrix
-from .data_handler import merge_series, define_parameter, invert_dic_df, write_to_excel, load_csv
+from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, write_to_excel, load_csv
 
 from ..misc.gdx_handler import write_variables
 
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
+
+
 
 
 def build_simulation(config,plot_load=False):
@@ -58,6 +60,8 @@ def build_simulation(config,plot_load=False):
     List_tech_renewables = ['WTON', 'WTOF', 'PHOT', 'HROR']
     # List of storage technologies:
     List_tech_storage = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS']
+    # List of CHP types:
+    List_types_CHP = ['CHP', 'Extraction', 'Condensing']
     # DispaSET fuels:
     Fuels = ['BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH']
 
@@ -76,61 +80,26 @@ def build_simulation(config,plot_load=False):
     days_simulation = delta.days + 1
     hours_simulation = 24 * days_simulation
 
+    # Defining missing configuration fields for backwards compatibility:
+    if not isinstance(config['default']['CostLoadShedding'],(float,int,long)):
+        config['default']['CostLoadShedding'] = 1000
+    if not isinstance(config['default']['CostHeatSlack'],(float,int,long)):
+        config['default']['CostHeatSlack'] = 50
+    
     # Load :
-    tmp = {}
-    for c in config['countries']:
-        path = config['Demand'].replace('##', str(c))
-        tmp[c] = load_csv(path, header=None, index_col=0, parse_dates=True)
-        tmp[c].columns = [str(c)]  # renaming the series
-        tmp[c] = tmp[c][c]  # taking only the series
-    Load = pd.DataFrame(tmp)
-    Load = Load.loc[idx_utc_noloc, :]
+    Load = NodeBasedTable(config['Demand'],idx_utc_noloc,config['countries'],tablename='Demand')    
+    
     if config['modifiers']['Demand'] != 1:
         logging.info('Scaling load curve by a factor ' + str(config['modifiers']['Demand']))
         Load = Load * config['modifiers']['Demand']
 
     # Interconnections:
-    flows = load_csv(config['Interconnections'], index_col=0, parse_dates=True)
-    NTC = load_csv(config['NTC'], index_col=0, parse_dates=True)
+    flows = load_csv(config['Interconnections'], index_col=0, parse_dates=True).fillna(0)
+    NTC = load_csv(config['NTC'], index_col=0, parse_dates=True).fillna(0)
 
-    # Availability factors:
-    values = {}
-    for c in config['countries']:
-        path = config['RenewablesAF'].replace('##', str(c))
-        tmp = load_csv(path, index_col=0, parse_dates=True)
-        values[c] = tmp.loc[idx_utc_noloc, :]
-    Renewables = invert_dic_df(values,tablename='AvailabilityFactors')
-
-    # Outage factors:                
-    paths = {}
-    if os.path.isfile(config['Outages']):
-        paths['all'] = config['Outages']
-    elif '##' in config['Outages']:
-        for c in config['countries']:
-            path = config['Outages'].replace('##', str(c))
-            if os.path.isfile(path):
-                paths[c] = path
-    Outages = pd.DataFrame(index=idx_utc_noloc)
-    TechOutages = pd.DataFrame(index=idx_utc_noloc)
-    if len(paths) == 0:
-        logging.info('No data file found for the Outages. Using default value zero')
-    else:
-        for c in paths:
-            path = paths[c]
-            tmp = load_csv(path, index_col=0, parse_dates=True)
-            for key in tmp:
-                if key in Technologies:  # Special case where the profile is defined for a whole technology
-                    TechOutages[(c, key)] = tmp[key]
-                else:
-                    Outages[key] = tmp[key]
-
-                    # Load Shedding:
-    if os.path.isfile(config['LoadShedding']):
-        LoadShedding = load_csv(config['LoadShedding'], header=None, index_col=0)
-    else:
-        logging.warn('No data file found for the Load Shedding capacity. Using default value ' + str(config['default']['LoadShedding']))
-        LoadShedding = pd.DataFrame(config['default']['LoadShedding'], index=config['countries'], columns=[0])
-    LoadShedding.columns = ['ratio']
+    # Load Shedding:
+    LoadShedding = NodeBasedTable(config['LoadShedding'],idx_utc_noloc,config['countries'],tablename='LoadShedding',default=config['default']['LoadShedding'])    
+    CostLoadShedding = NodeBasedTable(config['CostLoadShedding'],idx_utc_noloc,config['countries'],tablename='CostLoadShedding',default=config['default']['CostLoadShedding'])    
 
     # Power plants:
     plants = pd.DataFrame()
@@ -147,6 +116,26 @@ def build_simulation(config,plot_load=False):
 
     # check plant list:
     check_units(config, plants)
+    # If not present, add the non-compulsory fields to the units table:
+    for key in ['CHPPowerLossFactor','CHPPowerToHeat','CHPType','STOCapacity','STOSelfDischarge','STOMaxChargingPower','STOChargingEfficiency']:
+        if key not in plants.columns:
+            plants[key] = np.nan
+
+    # Defining the hydro storages:
+    plants_sto = plants[[u in List_tech_storage for u in plants['Technology']]]
+    # Defining the CHPs:
+    plants_chp = plants[[x in List_types_CHP for x in plants['CHPType']]]
+
+    Outages = UnitBasedTable(plants,config['Outages'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='Outages')
+    AF = UnitBasedTable(plants,config['RenewablesAF'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1)
+    ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='ReservoirLevels',default=0)
+    ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='ReservoirScaledInflows',default=0)
+    HeatDemand = UnitBasedTable(plants_chp,config['HeatDemand'],idx_utc_noloc,config['countries'],fallbacks=['Unit'],tablename='HeatDemand',default=0)
+    CostHeatSlack = UnitBasedTable(plants_chp,config['CostHeatSlack'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default']['CostHeatSlack'])
+
+    # data checks:
+    check_AvailabilityFactors(plants,AF)
+    check_heat_demand(plants,HeatDemand)
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
@@ -169,9 +158,7 @@ def build_simulation(config,plot_load=False):
             logging.warn('No data file or default value found for "' + fuel + '. Assuming zero marginal price!')
             FuelPrices[fuel] = pd.Series(0, index=idx_utc_noloc)
 
-
     # Interconnections:
-    # [Interconnections_sim,Interconnections_RoW,Interconnections] = interconnections(config['countries'],NTC_inter,Historical_flows)
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['countries'], NTC, flows)
 
     if len(Interconnections_sim.columns) > 0:
@@ -179,50 +166,6 @@ def build_simulation(config,plot_load=False):
     else:
         NTCs = pd.DataFrame(index=idx_utc_noloc)
     Inter_RoW = Interconnections_RoW.loc[idx_utc_noloc, :]
-
-    # Storage:
-    # levels:
-    paths = {}
-    if os.path.isfile(config['ReservoirLevels']):
-        paths['all'] = config['ReservoirLevels']
-    elif '##' in config['ReservoirLevels']:
-        for c in config['countries']:
-            path = config['ReservoirLevels'].replace('##', str(c))
-            if os.path.isfile(path):
-                paths[c] = path
-    ReservoirLevels = pd.DataFrame(index=idx_utc_noloc)
-    if len(paths) == 0:
-        logging.warn('No data file found for the Reservoir Levels.')
-    else:
-        for c in paths:
-            path = paths[c]
-            tmp = load_csv(path, index_col=0, parse_dates=True)
-            for key in tmp:
-                if key in Technologies:  # Special case where the profile is defined for a whole technology
-                    ReservoirLevels[(c, key)] = tmp[key]
-                else:
-                    ReservoirLevels[key] = tmp[key]
-                    # Inflows:
-    paths = {}
-    if os.path.isfile(config['ReservoirScaledInflows']):
-        paths['all'] = config['ReservoirScaledInflows']
-    elif '##' in config['ReservoirScaledInflows']:
-        for c in config['countries']:
-            path = config['ReservoirScaledInflows'].replace('##', str(c))
-            if os.path.isfile(path):
-                paths[c] = path
-    ReservoirScaledInflows = pd.DataFrame(index=idx_utc_noloc)
-    if len(paths) == 0:
-        logging.warn('No data file found for the Reservoir Inflows.')
-    else:
-        for c in paths:
-            path = paths[c]
-            tmp = load_csv(path, index_col=0, parse_dates=True)
-            for key in tmp:
-                if key in Technologies:  # Special case where the profile is defined for a whole technology
-                    ReservoirScaledInflows[(c, key)] = tmp[key]
-                else:
-                    ReservoirScaledInflows[key] = tmp[key]
 
                     # Clustering of the plants:
     if config['SimulationType'] == 'LP clustered':
@@ -242,12 +185,13 @@ def build_simulation(config,plot_load=False):
                                   'STOCapacity': 'StorageCapacity',
                                   'STOMaxChargingPower': 'StorageChargingCapacity',
                                   'STOChargingEfficiency': 'StorageChargingEfficiency',
+                                  'STOSelfDischarge': 'StorageSelfDischarge',
                                   'CO2Intensity': 'EmissionRate'}, inplace=True)
     
     for key in ['TimeUpMinimum','TimeDownMinimum']:
-        if any([not x.is_integer() for x in Plants_merged[key].values.astype('float')]):
+        if any([not x.is_integer() for x in Plants_merged[key].fillna(0).values.astype('float')]):
             logging.warn(key + ' in the power plant data has been rounded to the nearest integer value')
-            Plants_merged.loc[:,key] = Plants_merged[key].values.astype('int32')
+            Plants_merged.loc[:,key] = Plants_merged[key].fillna(0).values.astype('int32')
 
     if not len(Plants_merged.index.unique()) == len(Plants_merged):
         # Very unlikely case:
@@ -275,47 +219,35 @@ def build_simulation(config,plot_load=False):
 
     # Defining the hydro storages:
     Plants_sto = Plants_merged[[u in List_tech_storage for u in Plants_merged['Technology']]]
-
+    # Defining the CHPs:
+    Plants_chp = Plants_merged[[x in List_types_CHP for x in Plants_merged['CHPType']]]
+    # check chp plants:
+    check_chp(config, Plants_chp)
+    # For all the chp plants correct the PowerCapacity, which is defined in cogeneration mode in the inputs and in power generation model in the optimization model
+    for u in Plants_chp.index:
+        PurePowerCapacity = Plants_chp.loc[u,'PowerCapacity']* (1 + Plants_chp.loc[u,'CHPPowerLossFactor'] / Plants_chp.loc[u,'CHPPowerToHeat'])
+        Plants_merged.loc[u,'PartLoadMin'] = Plants_merged.loc[u,'PartLoadMin'] * Plants_chp.loc[u,'PowerCapacity']/PurePowerCapacity
+        Plants_merged.loc[u,'PowerCapacity'] = PurePowerCapacity
+        
     # Get the hydro time series corresponding to the original plant list:
     StorageFormerIndexes = [s for s in plants.index if
-                            plants['Technology'][s] == 'HDAM' or plants['Technology'][s] == 'HPHS']
-    for s in StorageFormerIndexes:  # for all the old plant indexes
+                            plants['Technology'][s] in List_tech_storage]
+
+    # Same with the CHPs:
+    # Get the heat demand time series corresponding to the original plant list:
+    CHPFormerIndexes = [s for s in plants.index if
+                            plants['CHPType'][s] in List_types_CHP]
+    for s in CHPFormerIndexes:  # for all the old plant indexes
         # get the old plant name corresponding to s:
         oldname = plants['Unit'][s]
         newname = mapping['NewIndex'][s]
-        if oldname not in ReservoirLevels:
-            if (Plants_sto['Zone'][newname], Plants_sto['Technology'][newname]) in ReservoirLevels:
-                logging.warn('No level data found for plant "' + str(
-                    oldname) + '". Using the level profile provided for technology "' + str(
-                    Plants_sto['Technology'][newname]) + '" and country "' + Plants_sto['Zone'][newname] + '".')
-                ReservoirLevels[oldname] = ReservoirLevels[
-                    (Plants_sto['Zone'][newname], Plants_sto['Technology'][newname])]
-            elif ('all', Plants_sto['Technology'][newname]) in ReservoirLevels:
-                logging.warn('No level data found for plant "' + str(
-                    oldname) + '". Using the non country-specific level profile provided for technology "' + str(
-                    Plants_sto['Technology'][newname]) + '".')
-                ReservoirLevels[oldname] = ReservoirLevels[('all', Plants_sto['Technology'][newname])]
-            else:
-                logging.warn('No level profile data found for plant "' + str(oldname) + '". Assuming zero')
-                ReservoirLevels[oldname] = 0
-        # do the same with the inflows:
-        if oldname not in ReservoirScaledInflows:
-            if (Plants_sto['Zone'][newname], Plants_sto['Technology'][newname]) in ReservoirScaledInflows:
-                logging.warn('No inflow data found for plant "' + str(
-                    oldname) + '". Using the inflow profile provided for technology "' + str(
-                    Plants_sto['Technology'][newname]) + '" and country "' + Plants_sto['Zone'][newname] + '".')
-                ReservoirScaledInflows[oldname] = ReservoirScaledInflows[
-                    (Plants_sto['Zone'][newname], Plants_sto['Technology'][newname])]
-            elif ('all', Plants_sto['Technology'][newname]) in ReservoirScaledInflows:
-                logging.warn('No inflow data found for plant "' + str(
-                    oldname) + '". Using the non country-specific inflow profile provided for technology "' + str(
-                    Plants_sto['Technology'][newname]) + '".')
-                ReservoirScaledInflows[oldname] = ReservoirScaledInflows[('all', Plants_sto['Technology'][newname])]
-            else:
-                if Plants_sto['Technology'][newname] == 'HDAM':
-                    logging.warn('No inflow data found for plant "' + str(oldname) + '". Assuming zero')
-                ReservoirScaledInflows[oldname] = 0
-
+        if oldname not in HeatDemand:
+            logging.warn('No heat demand profile found for CHP plant "' + str(oldname) + '". Assuming zero')
+            HeatDemand[oldname] = 0
+        if oldname not in CostHeatSlack:
+            logging.warn('No heat cost profile found for CHP plant "' + str(oldname) + '". Assuming zero')
+            CostHeatSlack[oldname] = 0
+ 
 
     # merge the outages:
     for i in plants.index:  # for all the old plant indexes
@@ -323,26 +255,25 @@ def build_simulation(config,plot_load=False):
         oldname = plants['Unit'][i]
         newname = mapping['NewIndex'][i]
 
-        if oldname not in Outages:
-            if (Plants_merged['Zone'][newname], Plants_merged['Technology'][newname]) in TechOutages:
-                logging.warn('No outage data found for plant "' + str(
-                    oldname) + '". Using the outage profile provided for technology "' + str(
-                    Plants_merged['Technology'][newname]) + '" and country "' + Plants_merged['Zone'][newname] + '".')
-                Outages[oldname] = Outages[(Plants_merged['Zone'][newname], Plants_merged['Technology'][newname])]
-            elif ('all', Plants_merged['Technology'][newname]) in TechOutages:
-                logging.warn('No outage data found for plant "' + str(
-                    oldname) + '". Using the non country-specific outage profile provided for technology "' + str(
-                    Plants_merged['Technology'][newname]) + '".')
-                Outages[oldname] = TechOutages[('all', Plants_merged['Technology'][newname])]
-
     # Merging the time series relative to the clustered power plants:
     ReservoirScaledInflows_merged = merge_series(plants, ReservoirScaledInflows, mapping, method='WeightedAverage', tablename='ScaledInflows')
     ReservoirLevels_merged = merge_series(plants, ReservoirLevels, mapping, tablename='ReservoirLevels')
     Outages_merged = merge_series(plants, Outages, mapping, tablename='Outages')
+    HeatDemand_merged = merge_series(plants, HeatDemand, mapping, tablename='HeatDemand',method='Sum')
+    AF_merged = merge_series(plants, AF, mapping, tablename='AvailabilityFactors')
+    CostHeatSlack_merged = merge_series(plants, CostHeatSlack, mapping, tablename='CostHeatSlack')
+    
+    # Correcting heat demands in case of outages:
+    for key in HeatDemand_merged:
+        if key in Outages_merged and Outages_merged[key].max() > 0:
+            HeatDemand_merged[key] = HeatDemand_merged[key].values * (1 - Outages_merged[key].values)
+            logging.info('Corrected the heat demand profile for chp unit ' + key + ' with the outage values')
 
     # %%
     # checking data
     check_df(Load, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Load')
+    check_df(AF_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+             name='AF_merged')
     check_df(Outages_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Outages_merged')
     check_df(Inter_RoW, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Inter_RoW')
     check_df(FuelPrices, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='FuelPrices')
@@ -351,9 +282,18 @@ def build_simulation(config,plot_load=False):
              name='ReservoirLevels_merged')
     check_df(ReservoirScaledInflows_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
              name='ReservoirScaledInflows_merged')
-    for key in Renewables:
-        check_df(Renewables[key], StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
-                 name='Renewables["' + key + '"]')
+    check_df(HeatDemand_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+             name='HeatDemand_merged')
+    check_df(HeatDemand_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+             name='CostHeatSlack_merged')
+    check_df(LoadShedding, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+             name='LoadShedding')
+    check_df(CostLoadShedding, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+             name='CostLoadShedding')
+
+#    for key in Renewables:
+#        check_df(Renewables[key], StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+#                 name='Renewables["' + key + '"]')
 
     # %%%
 
@@ -364,6 +304,7 @@ def build_simulation(config,plot_load=False):
 
     # re-indexing with the longer index and filling possibly missing data at the beginning and at the end::
     Load = Load.reindex(idx_long, method='nearest').fillna(method='bfill')
+    AF_merged = AF_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
     Inter_RoW = Inter_RoW.reindex(idx_long, method='nearest').fillna(method='bfill')
     NTCs = NTCs.reindex(idx_long, method='nearest').fillna(method='bfill')
     FuelPrices = FuelPrices.reindex(idx_long, method='nearest').fillna(method='bfill')
@@ -372,8 +313,10 @@ def build_simulation(config,plot_load=False):
     ReservoirLevels_merged = ReservoirLevels_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
     ReservoirScaledInflows_merged = ReservoirScaledInflows_merged.reindex(idx_long, method='nearest').fillna(
         method='bfill')
-    for tr in Renewables:
-        Renewables[tr] = Renewables[tr].reindex(idx_long, method='nearest').fillna(method='bfill')
+    LoadShedding = LoadShedding.reindex(idx_long, method='nearest').fillna(method='bfill')
+    CostLoadShedding = CostLoadShedding.reindex(idx_long, method='nearest').fillna(method='bfill')
+#    for tr in Renewables:
+#        Renewables[tr] = Renewables[tr].reindex(idx_long, method='nearest').fillna(method='bfill')
 
     # %%################################################################################################################
     ############################################   Sets    ############################################################
@@ -390,6 +333,7 @@ def build_simulation(config,plot_load=False):
     sets['f'] = Fuels
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
+    sets['chp'] = Plants_chp.index.tolist()
     sets['t'] = Technologies
     sets['tr'] = List_tech_renewables
 
@@ -403,7 +347,11 @@ def build_simulation(config,plot_load=False):
     # Each parameter is associated with certain sets, as defined in the following list:
     sets_param = {}
     sets_param['AvailabilityFactor'] = ['u', 'h']
+    sets_param['CHPPowerToHeat'] = ['chp']
+    sets_param['CHPPowerLossFactor'] = ['chp']
     sets_param['CostFixed'] = ['u']
+    sets_param['CostHeatSlack'] = ['chp','h']
+    sets_param['CostLoadShedding'] = ['n','h']
     sets_param['CostRampUp'] = ['u']
     sets_param['CostRampDown'] = ['u']
     sets_param['CostShutDown'] = ['u']
@@ -418,8 +366,9 @@ def build_simulation(config,plot_load=False):
     sets_param['FlowMinimum'] = ['l', 'h']
     sets_param['FuelPrice'] = ['n', 'f', 'h']
     sets_param['Fuel'] = ['u', 'f']
+    sets_param['HeatDemand'] = ['chp','h']
     sets_param['LineNode'] = ['l', 'n']
-    sets_param['LoadShedding'] = ['n']
+    sets_param['LoadShedding'] = ['n','h']
     sets_param['Location'] = ['u', 'n']
     sets_param['Markup'] = ['u', 'h']
     sets_param['Nunits'] = ['u']
@@ -433,10 +382,11 @@ def build_simulation(config,plot_load=False):
     sets_param['RampStartUpMaximum'] = ['u']
     sets_param['RampShutDownMaximum'] = ['u']
     sets_param['Reserve'] = ['t']
-    sets_param['StorageCapacity'] = ['s']
+    sets_param['StorageCapacity'] = ['u']            
     sets_param['StorageChargingCapacity'] = ['s']
     sets_param['StorageChargingEfficiency'] = ['s']
     sets_param['StorageDischargeEfficiency'] = ['s']
+    sets_param['StorageSelfDischarge'] = ['u']
     sets_param['StorageInflow'] = ['s', 'h']
     sets_param['StorageInitial'] = ['s']
     sets_param['StorageMinimum'] = ['s']
@@ -469,7 +419,7 @@ def build_simulation(config,plot_load=False):
     # %%
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
     for var in ['Efficiency', 'PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
-                'CostRampUp']:
+                'CostRampUp','StorageCapacity', 'StorageSelfDischarge']:
         parameters[var]['val'] = Plants_merged[var].values
 
     # List of parameters whose value is not necessarily specified in the dataframe Plants_merged
@@ -479,11 +429,15 @@ def build_simulation(config,plot_load=False):
 
 
     # List of parameters whose value is known, and provided in the dataframe Plants_sto.
-    for var in ['StorageCapacity', 'StorageChargingCapacity', 'StorageChargingEfficiency']:
+    for var in ['StorageChargingCapacity', 'StorageChargingEfficiency']:
         parameters[var]['val'] = Plants_sto[var].values
 
     # The storage discharge efficiency is actually given by the unit efficiency:
     parameters['StorageDischargeEfficiency']['val'] = Plants_sto['Efficiency'].values
+    
+    # List of parameters whose value is known, and provided in the dataframe Plants_chp
+    for var in ['CHPPowerToHeat','CHPPowerLossFactor']:
+        parameters[var]['val'] = Plants_chp[var].values
 
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
@@ -496,7 +450,6 @@ def build_simulation(config,plot_load=False):
                 logging.warn(s + ': The reservoir level is sometimes higher than its capacity!')
         else:
             logging.warn( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
-            aa = s
             parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
             parameters['StorageProfile']['val'][i, :] = 0.5
 
@@ -505,6 +458,11 @@ def build_simulation(config,plot_load=False):
         if s in ReservoirScaledInflows_merged:
             parameters['StorageInflow']['val'][i, :] = ReservoirScaledInflows_merged[s][idx_long].values * \
                                                        Plants_sto['PowerCapacity'][s]
+    # CHP time series:
+    for i, u in enumerate(sets['chp']):
+        if u in HeatDemand_merged:
+            parameters['HeatDemand']['val'][i, :] = HeatDemand_merged[u][idx_long].values 
+            parameters['CostHeatSlack']['val'][i, :] = CostHeatSlack_merged[u][idx_long].values
 
     # Ramping rates are reconstructed for the non dimensional value provided (start-up and normal ramping are not differentiated)
     parameters['RampUpMaximum']['val'] = Plants_merged['RampUpRate'].values * Plants_merged['PowerCapacity'].values * 60
@@ -519,15 +477,12 @@ def build_simulation(config,plot_load=False):
     if config['AllowCurtailment'] == 0:
         parameters['Curtailment'] = define_parameter(sets_param['Curtailment'], sets, value=0)
 
-    # Extracting the Availability factors of the renewable technologies only:
-    for tr in sets['tr']:
-        if tr not in Renewables:
-            logging.warn('No availability factor could be found for technology "' + str(tr) + '". A default value of 100% will be used')
-    for unit in range(Nunits):
-        for country in config['countries']:
-            if Plants_merged['Technology'][unit] in Renewables.keys() and Plants_merged['Zone'][unit] == country:
-                parameters['AvailabilityFactor']['val'][unit, :] = Renewables[Plants_merged['Technology'][unit]][
-                    country]
+    # Availability Factors
+    if len(AF_merged.columns) != 0:
+        for i, u in enumerate(sets['u']):
+            if u in AF_merged.columns:
+                parameters['AvailabilityFactor']['val'][i, :] = AF_merged[u].values
+
 
     # Demand
     # Dayahead['NL'][1800:1896] = Dayahead['NL'][1632:1728]
@@ -546,7 +501,8 @@ def build_simulation(config,plot_load=False):
 
     # Load Shedding:
     for i, c in enumerate(sets['n']):
-        parameters['LoadShedding']['val'][i] = LoadShedding['ratio'][c] * Load[c].max()
+        parameters['LoadShedding']['val'][i] = LoadShedding[c] * Load[c].max()
+        parameters['CostLoadShedding']['val'][i] = CostLoadShedding[c]
 
     # %%#################################################################################################################################################################################################
     # Variable Cost
@@ -566,7 +522,7 @@ def build_simulation(config,plot_load=False):
             found = True
         if not found:
             logging.warn('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] + ' in unit ' + \
-                  Plants_merged['Fuel'][unit] + '. A null variable cost has been assigned')
+                  Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
 
     # %%#################################################################################################################################################################################################
 
@@ -607,6 +563,19 @@ def build_simulation(config,plot_load=False):
         # Location
     for i in range(len(sets['n'])):
         parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['countries'][i]).values
+
+    # CHPType parameter:
+    sets['chp_type'] = ['Extraction','Back-Pressure']
+    parameters['CHPType'] = define_parameter(['chp','chp_type'],sets,value=0)
+    for i,u in enumerate(sets['chp']):
+        if u in Plants_chp.index:
+            if Plants_chp.loc[u,'CHPType'].lower() == 'extraction':
+                parameters['CHPType']['val'][i,0] = 1
+            elif Plants_chp.loc[u,'CHPType'].lower() == 'back-pressure':
+                parameters['CHPType']['val'][i,1] = 1
+            else:
+                logging.error('CHPType not valid for plant ' + u)
+                sys.exit(1)
 
     # Initial Power
     if 'InitialPower' in Plants_merged:

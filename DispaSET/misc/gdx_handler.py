@@ -134,8 +134,8 @@ def _insert_symbols(gdxHandle, sets, parameters):
             if shape[i] != len(sets[variable['sets'][i]]):
                 logging.error(
                     'Variable ' + p + ': The \'val\' data matrix has ' + str(shape[i]) + ' elements for dimention ' +
-                    sets[variable['sets'][i]] + ' while there are ' + str(
-                        len(variable['sets'][i]['uels'])) + ' set values')
+                    str(variable['sets'][i]) + ' while there are ' + str(
+                        len(variable['sets'])) + ' set values')
                 sys.exit(1)
 
         for index, value in np.ndenumerate(variable['val']):
@@ -178,6 +178,7 @@ def write_variables(gams_dir, gdx_out, list_vars):
     if not os.path.isdir(gams_dir):
         logging.critical('GDXCC: Could not find the specified gams directory: ' + gams_dir)
         sys.exit(1)
+    gams_dir = gams_dir.encode()
 
     gdxHandle = gdxcc.new_gdxHandle_tp()
     gdxcc.gdxCreateD(gdxHandle, gams_dir, gdxcc.GMS_SSSIZE)

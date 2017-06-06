@@ -6,6 +6,167 @@ import numpy as np
 import pandas as pd
 
 
+def NodeBasedTable(path,idx,countries,tablename='',default=None):
+    '''
+    This function loads the tabular data stored in csv files relative to each
+    zone (a.k.a node, country) of the simulation.
+
+    :param path:                Path to the data to be loaded
+    :param idx:                 Pandas datetime index to be used for the output
+    :param countries:           List with the country codes to be considered
+    :param fallback:            List with the order of data source. 
+    :param tablename:           String with the name of the table being processed
+    :param default:             Default value to be applied if no data is found
+    
+    :return:           Dataframe with the time series for each unit
+    '''
+              
+    paths = {}
+    if os.path.isfile(path):
+        paths['all'] = path
+        SingleFile=True
+    elif '##' in path:
+        for c in countries:
+            path_c = path.replace('##', str(c))
+            if os.path.isfile(path_c):
+                paths[str(c)] = path_c
+            else:
+                logging.error('No data file found for the table ' + tablename + ' and country ' + c + '. File ' + path_c + ' does not exist')
+                sys.exit(1)
+        SingleFile=False
+    data = pd.DataFrame(index=idx)
+    if len(paths) == 0:
+        logging.info('No data file found for the table ' + tablename + '. Using default value ' + str(default))
+        if default is None:
+            pass
+        elif isinstance(default,(float,int,long)):
+            data = pd.DataFrame(default,index=idx,columns=countries)
+        else:
+            logging.error('Default value provided for table ' + tablename + ' is not valid')
+            sys.exit(1)
+    elif SingleFile:   
+        # If it is only one file, there is a header with the country code
+        tmp = load_csv(paths['all'], index_col=0, parse_dates=True)
+        if not tmp.index.is_unique:
+            logging.error('The index of data file ' + paths['all'] + ' is not unique. Please check the data')
+            sys.exit(1)
+        for key in countries:
+            if key in tmp:
+                data[key] = tmp[key]  
+            elif len(tmp.columns) == 1:    # if the country code is not in the header, it can also be because it is a single country simulation and no header is needed:
+                data[key] = tmp.iloc[:,0]
+            else:
+                logging.error('Country ' + key + ' could not be found in the file ' + path + '. Using default value ' + str(default))
+                if default is None:
+                    pass
+                elif isinstance(default,(float,int,long)):
+                    data[key] = default
+                else:
+                    logging.error('Default value provided for table ' + tablename + ' is not valid')
+                    sys.exit(1)
+    else: # assembling the files in a single dataframe:
+        for c in paths:
+            path = paths[c]
+            # In case of separated files for each country, there is no header
+            tmp = load_csv(path, index_col=0, parse_dates=True)
+            # check that the loaded file is ok:
+            if not tmp.index.is_unique:
+                logging.error('The index of data file ' + paths['all'] + ' is not unique. Please check the data')
+                sys.exit(1)
+            data[c] = tmp.iloc[:,0]
+     
+    return data   
+
+
+
+def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',default=None):
+    '''
+    This function loads the tabular data stored in csv files and assigns the 
+    proper values to each unit of the plants dataframe. If the unit-specific 
+    value is not found in the data, the script can fallback on more generic 
+    data (e.g. fuel-based, technology-based, zone-based) or to the default value.
+    The order in which the data should be loaded is specified in the fallback
+    list. For example, ['Unit','Technology'] means that the script will first
+    try to find a perfect match for the unit name in the data table. If not found, 
+    a column with the unit technology as header is search. If not found, the
+    default value is assigned.
+
+    :param plants:              Dataframe with the units for which data is required
+    :param path:                Path to the data to be loaded
+    :param idx:                 Pandas datetime index to be used for the output
+    :param countries:           List with the country codes to be considered
+    :param fallback:            List with the order of data source. 
+    :param tablename:           String with the name of the table being processed
+    :param default:             Default value to be applied if no data is found
+    
+    :return:           Dataframe with the time series for each unit
+    '''
+              
+    paths = {}
+    if os.path.isfile(path):
+        paths['all'] = path
+        SingleFile=True
+    elif '##' in path:
+        for c in countries:
+            path_c = path.replace('##', str(c))
+            if os.path.isfile(path_c):
+                paths[str(c)] = path_c
+            else:
+                logging.error('No data file found for the table ' + tablename + ' and country ' + c + '. File ' + path_c + ' does not exist')
+                sys.exit(1)
+        SingleFile=False
+    data = pd.DataFrame(index=idx)
+    if len(paths) == 0:
+        logging.info('No data file found for the table ' + tablename + '. Using default value ' + str(default))
+        if default is None:
+            out = pd.DataFrame(index=idx)
+        elif isinstance(default,(float,int,long)):
+            out = pd.DataFrame(default,index=idx,columns=plants['Unit'])
+        else:
+            logging.error('Default value provided for table ' + tablename + ' is not valid')
+            sys.exit(1)
+    else: # assembling the files in a single dataframe:
+        columns = []
+        for c in paths:
+            path = paths[c]
+            tmp = load_csv(path, index_col=0, parse_dates=True)
+            # check that the loaded file is ok:
+            if not tmp.index.is_unique:
+                logging.error('The index of data file ' + path + ' is not unique. Please check the data')
+                sys.exit(1)
+            if SingleFile:
+                for key in tmp:
+                    data[key] = tmp[key]                
+            else:    # use the multi-index header with the country
+                for key in tmp:
+                    columns.append((c,key))
+                    data[c+','+key] = tmp[key]
+        if not SingleFile:
+            data.columns = pd.MultiIndex.from_tuples(columns, names=['Country', 'Data'])
+        # For each plant and each fallback key, try to find the corresponding column in the data
+        out = pd.DataFrame(index=idx)
+        for j in plants.index:
+            u = plants.loc[j,'Unit']
+            found = False
+            for i,key in enumerate(fallbacks):    
+                if SingleFile:
+                    header = plants.loc[j,key]
+                else:
+                    header = (plants.loc[j,'Zone'],plants.loc[j,key])
+                if header in data:
+                    out[u] = data[header]
+                    found = True
+                    if i > 0:
+                        logging.warn('No specific information was found for unit ' + u + ' in table ' + tablename + '. The generic information for ' + str(header) + ' has been used')
+                    break
+            if not found:
+                logging.info('No specific information was found for unit ' + u + ' in table ' + tablename + '. Using default value ' + str(default))
+                if not default is None:
+                    out[u] = default        
+    return out   
+
+
+
 def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
     """
     Function that merges the times series corresponding to the merged units (e.g. outages, inflows, etc.)
@@ -24,7 +185,7 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
     # First check the data:
     for key in data:
         if str(data[key].dtype) not in ['bool','int','float','float16', 'float32', 'float64', 'float128','int8', 'int16', 'int32', 'int64']:
-            logging.critical('The column "' + key + '" of table + "' + tablename + '" is not numeric!')
+            logging.critical('The column "' + str(key) + '" of table + "' + tablename + '" is not numeric!')
     for key in data:
         if key in unitnames:
             i = unitnames.index(key)
@@ -315,7 +476,8 @@ def load_config_excel(ConfigFile):
 
     params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
               'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
-              'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat']
+              'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
+              'CostHeatSlack','CostLoadShedding']
     for i, param in enumerate(params):
         config[param] = sheet.cell_value(61 + i, 2)
 
@@ -329,6 +491,8 @@ def load_config_excel(ConfigFile):
     config['default']['PriceOfLignite'] = sheet.cell_value(76, 5)
     config['default']['PriceOfPeat'] = sheet.cell_value(77, 5)
     config['default']['LoadShedding'] = sheet.cell_value(65, 5)
+    config['default']['CostHeatSlack'] = sheet.cell_value(79, 5)
+    config['default']['CostLoadShedding'] = sheet.cell_value(80, 5)
 
     # read the list of countries to consider:
     def read_truefalse(sheet, rowstart, colstart, rowstop, colstop):
@@ -354,8 +518,6 @@ def load_config_excel(ConfigFile):
 
     # Read the technologies participating to reserve markets:
     config['ReserveParticipation'] = read_truefalse(sheet, 131, 1, 145, 3)
-
-
 
     logging.info("Using config file " + ConfigFile + " to build the simulation environment")
 

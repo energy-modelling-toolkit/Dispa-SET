@@ -40,13 +40,14 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
         logging.warning('Could not import gams. Trying to automatically locate gdxcc folder')
         if not import_local_lib('gams'):
             return False
-
     if not os.path.exists(gams_folder):
         logging.warn('The provided path for GAMS (' + gams_folder + ') does not exist. Trying to locate...')
         gams_folder = get_gams_path()
         if not os.path.exists(gams_folder):
             logging.error('GAMS path cannot be located. Simulation is stopped')
             return False
+    sim_folder = sim_folder.encode()
+    gams_folder = gams_folder.encode()
 
     if is_sim_folder_ok(sim_folder):
         # create GAMS workspace:
@@ -65,7 +66,7 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
                     opt.output = '/dev/null'
             time0 = time.time()
             t1.run(opt)
-        except Exception, e:
+        except Exception as e:
             if 'optCreateD' in str(e):
                 logging.error('The GAMS solver can only be run once in the same console. Please open another console')
                 sys.exit(1)

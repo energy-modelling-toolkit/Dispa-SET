@@ -11,6 +11,24 @@ import numpy as np
 import pandas as pd
 import logging
 
+def check_AvailabilityFactors(plants,AF):
+    '''
+    Function that checks the validity of the provided availability factors and warns
+    if a default value of 100% is used.
+    '''
+    if (AF.values < 0).any():
+        logging.error('Some Availaibility factors are negative')
+        sys.exit(1)
+    if (AF.values > 1).any():
+        logging.critical('Some Availability factors are higher than one. They must be carefully checked')
+    for t in ['WTON', 'WTOF', 'PHOT', 'HROR']:
+        for i in plants[plants['Technology']==t].index:
+            u = plants.loc[i,'Unit']
+            if u in AF:
+                if (AF[u].values == 1).all():
+                    logging.critical('The availability factor of unit ' + str(u) + ' + for technology ' + t + ' is always 100%!')
+            else:
+                logging.critical('Unit ' + str(u) + ' (technology ' + t + ') does not appear in the availbilityFactors table. Its values will be set to 100%!')
 
 def check_MinMaxFlows(df_min,df_max):
     '''
@@ -28,6 +46,84 @@ def check_MinMaxFlows(df_min,df_max):
 
     return True
 
+
+def check_chp(config, plants):
+    """
+    Function that checks the CHP plant characteristics
+    """   
+    keys = ['CHPType','CHPPowerToHeat','CHPPowerLossFactor']
+    NonNaNKeys = ['CHPPowerToHeat','CHPPowerLossFactor']
+    StrKeys = ['CHPType']
+    
+    for key in keys:
+        if key not in plants:
+            logging.critical('The power plants data does not contain the field "' + key + '", which is mandatory for CHP units')
+            sys.exit(1)
+
+    for key in NonNaNKeys:
+        for u in plants.index:
+            if type(plants.loc[u, key]) == str:
+                logging.critical('A non numeric value was detected in the power plants inputs for parameter "' + key + '"')
+                sys.exit(1)
+            if np.isnan(plants.loc[u, key]):
+                logging.critical('The power plants data is missing for unit number ' + str(u) + ' and parameter "' + key + '"')
+                sys.exit(1)
+
+    for key in StrKeys:
+        for u in plants.index:
+            if not type(plants.loc[u, key]) == str:
+                logging.critical(
+                    'A numeric value was detected in the power plants inputs for parameter "' + key + '". This column should contain strings only.')
+                sys.exit(1)
+            elif plants.loc[u, key] == '':
+                logging.critical('An empty value was detected in the power plants inputs for unit "' + str(
+                    u) + '" and parameter "' + key + '"')
+                sys.exit(1) 
+    
+    # Check the efficiency values:
+    for u in plants.index:
+        if plants.loc[u,'CHPType'].lower() not in ['extraction','back-pressure']:
+            logging.critical('The value of CHPType should be "extraction" or "back-pressure". The type of unit ' + u + ' is "' + str(plants.loc[u,'CHPType'] + '"'))
+            sys.exit(1)              
+        if plants.loc[u,'CHPPowerToHeat'] < 0 or plants.loc[u,'CHPPowerToHeat'] > 10:
+            logging.critical('The value of CHPPowerToHeat should be higher or equal to zero and lower than 10. Unit ' + u + ' has a value of ' + str(plants.loc[u,'CHPPowerToHeat']))
+            sys.exit(1)         
+        if plants.loc[u,'CHPPowerLossFactor'] < 0 or plants.loc[u,'CHPPowerLossFactor'] > 1:
+            logging.critical('The value of CHPPowerLossFactor should be higher or equal to zero and lower than 1. Unit ' + u + ' has a value of ' + str(plants.loc[u,'CHPPowerLossFactor']))
+            sys.exit(1)   
+        if plants.loc[u,'CHPType'].lower() == 'back-pressure' and plants.loc[u,'CHPPowerLossFactor'] != 0:
+            logging.critical('The value of CHPPowerLossFactor must be zero if the CHP types is "back-pressure". Unit ' + u + ' has a value of ' + str(plants.loc[u,'CHPPowerLossFactor']))
+            sys.exit(1)               
+        # Calculating the nominal total efficiency:
+        # F = 1/eta * (P + C_v * Q)    => eta_tot = (P+Q)/F = eta * (P + Q) / (P + C_v * Q) = eta * (P/Q + 1) / (P/Q + C_v) 
+        TotalEfficiency = plants.loc[u,'Efficiency'] * (plants.loc[u,'CHPPowerToHeat'] + 1) / (plants.loc[u,'CHPPowerToHeat'] + plants.loc[u,'CHPPowerLossFactor'])
+        if TotalEfficiency < 0 or TotalEfficiency > 1.14:
+            logging.critical('The calculated value of the total CHP efficiency for unit ' + u + ' is ' + str(TotalEfficiency) + ', which is unrealistic!')
+            sys.exit(1)        
+        if TotalEfficiency > 0.95:
+            logging.warn('The calculated value of the total CHP efficiency for unit ' + u + ' is ' + str(TotalEfficiency) + ', which is very high!')  
+
+    # Check the optional heat storage values:
+    if 'STOCapacity' in plants:
+        for u in plants.index:     
+            Qdot = plants.loc[u,'PowerCapacity']/plants.loc[u,'CHPPowerToHeat']
+            if plants.loc[u,'STOCapacity'] < Qdot*0.5 :
+                logging.warn('Unit ' + u + ': The value of the thermal storage capacity (' + str(plants.loc[u,'STOCapacity']) + 'MWh) seems very low compared to its thermal power (' + str(Qdot) + 'MW).')
+            elif plants.loc[u,'STOCapacity'] > Qdot * 24:
+                logging.warn('Unit ' + u + ': The value of the thermal storage capacity (' + str(plants.loc[u,'STOCapacity']) + 'MWh) seems very high compared to its thermal power (' + str(Qdot) + 'MW).')
+
+    if 'STOSelfDischarge' in plants:
+        for u in plants.index:     
+            if plants.loc[u,'STOSelfDischarge'] < 0 :
+                logging.error('Unit ' + u + ': The value of the thermal storage self-discharge (' + str(plants.loc[u,'STOSelfDischarge']*100) + '%/day) cannot be negative')
+                sys.exit(1)
+            elif plants.loc[u,'STOSelfDischarge'] > 1:
+                logging.warn('Unit ' + u + ': The value of the thermal storage self-discharge (' + str(plants.loc[u,'STOSelfDischarge']*100) + '%/day) seems very high')
+            elif plants.loc[u,'STOSelfDischarge'] > 24:
+                logging.error('Unit ' + u + ': The value of the thermal storage self-discharge (' + str(plants.loc[u,'STOSelfDischarge']*100) + '%/day) is too high')
+                sys.exit(1)                           
+
+    return True
 
 def check_units(config, plants):
     """
@@ -124,12 +220,41 @@ def check_units(config, plants):
     return True
 
 
+def check_heat_demand(plants,data):
+    '''
+    Function that checks the validity of the heat demand profiles
+    '''
+    plants.index = plants['Unit']
+    for u in data:
+        if u in plants.index and 'CHPPowerToHeat' in plants:
+            # Mwimum heat demand must be lower than the plant themal capacity:
+            Qmax = plants.loc[u,'PowerCapacity']/plants.loc[u,'CHPPowerToHeat']
+            if plants.loc[u,'CHPType'].lower() == 'extraction':
+                Qmin = 0
+            elif plants.loc[u,'CHPType'].lower() == 'back-pressure':
+                Qmin = plants.loc[u,'PowerCapacity'] * plants.loc[u,'PartLoadMin'] /plants.loc[u,'CHPPowerToHeat']
+                sys.exit(1)
+            else:
+                logging.error('The CHP type for unit ' + u + ' is not valid.')
+            if np.isnan(Qmax):
+                logging.error('CHPPowerToHeat is not defined for unit ' + str(u) + ' appearing in the heat demand profiles')
+                sys.exit(1)
+            elif data[u].max() > Qmax:
+                logging.warn('The maximum thermal demand for unit ' + str(u) + ' (' + str(data[u].max()) + ') is higher than its thermal capacity (' + str(Qmax) + ')')
+                
+            if data[u].min() < Qmin:
+                logging.warn('The minimum thermal demand for unit ' + str(u) + ' (' + str(data[u].min()) + ') is lower than its minimum thermal generation (' + str(Qmin) + ' MWth)')              
+        else:
+            logging.warn('The heat demand profile with header "' + str(u) + '" does not correspond to any CHP plant. It will be ignored.')
+    return True
+
+
 def check_df(df, StartDate=None, StopDate=None, name=''):
     """
     Function that check the time series provided as inputs
     """
 
-    if type(df.index) is pd.tseries.index.DatetimeIndex:
+    if isinstance(df.index, pd.DatetimeIndex):
         if not StartDate in df.index:
             logging.warn('The start date ' + str(StartDate) + ' is not in the index of the provided dataframe')
         if not StopDate in df.index:

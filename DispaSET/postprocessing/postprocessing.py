@@ -28,7 +28,7 @@ COLORS = {'NUC': 'orange', 'LIG': 'brown', 'HRD': 'grey', 'BIO': 'darkgreen', 'G
 def GAMSstatus(statustype,num):
     '''
     Function that returns the model status or the solve status from gams
-    
+
     :param statustype: String with the type of status to retrieve ("solver" or "model")
     :param num:     Indicated termination condition (Integer)
     :returns:       String with the status
@@ -486,8 +486,6 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
     :returns inputs,results:    Two dictionaries with all the input and outputs 
     """
 
-    gams_dir = get_gams_path()
-
     inputfile = path + '/Inputs.p'
     resultfile = path + '/Results.gdx'
 
@@ -498,7 +496,14 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
     inputs['sets']['u'] = clean_strings(inputs['sets']['u'])
     inputs['units'].index = clean_strings(inputs['units'].index.tolist())
     # inputs['units']['Unit'] = clean_strings(inputs['units']['Unit'].tolist())
-
+    gams_dir = inputs['config']['GAMS_folder'].encode() # We need to pass the dir in config if we run it in clusters. PBS script fail to autolocate
+    if not os.path.exists(gams_dir):
+        logging.warn('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
+        gams_dir = get_gams_path()
+        if not os.path.exists(gams_dir):
+            logging.error('GAMS path cannot be located. Simulation is stopped')
+            return False
+    gams_dir = gams_dir.encode()
     # Load results and store in cache file in the .pickle folder:
     if cache:
         import cPickle
@@ -535,7 +540,7 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
     for key in ['OutputPower', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
                 'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput', 'LostLoad_Reserve2U',
                 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp', 'LostLoad_RampDown', 'LostLoad_Reserve2D',
-                'ShadowPrice','status']:
+                'ShadowPrice', 'OutputHeat', 'OutputHeatSlack','status']:
         if key in results:
             if len(results[key]) == len(
                     index_long):  # Case of variables for which the look-ahead period recorded (e.g. the lost loads)
@@ -546,7 +551,7 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
             else:  # Variables whose index is not complete (sparse formulation)
                 results[key].index = index_long[results[key].index - 1]
                 if key in ['OutputPower', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
-                           'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput']:
+                           'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput','OutputHeat', 'OutputHeatSlack']:
                     results[key] = results[key].reindex(index).fillna(0)
                     # results[key].fillna(0,inplace=True)
         else:
@@ -570,7 +575,7 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
             logging.critical('Some simulation errors were encountered. Some results could not be computed, for example at \n \
                             time ' + str(errors.index[0]) + ', with the error message: "' + GAMSstatus('model',errors['model'].iloc[0]) + '". \n \
                             The complete list is available in results["errors"] \n \
-                            The optimization might be debugged by activating the Debug flag in the GAMS simulation file and running it') 
+                            The optimization might be debugged by activating the Debug flag in the GAMS simulation file and running it')
             for i in errors.index:
                 errors.loc[i,'Error Message'] = GAMSstatus('model',errors['model'][i])
             results['errors'] = errors

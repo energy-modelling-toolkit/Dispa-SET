@@ -61,7 +61,8 @@ t                Generation technologies
 tr(t)            Renewable generation technologies
 f                Fuel types
 p                Pollutants
-s(u)             Storage Units (with reservoir)
+s(u)             Hydro Storage Units (with reservoir)
+chp(u)           CHP units
 h                Hours
 i(h)             Subset of simulated hours for one iteration
 z(h)             Subset of all simulated hours
@@ -85,6 +86,9 @@ Alias(i,ii);
 *Parameters as defined in the input file
 PARAMETERS
 AvailabilityFactor(u,h)          [%]      Availability factor
+CHPPowerLossFactor(chp)          [%]      Power loss when generating heat
+CHPPowerToHeat(chp)              [%]      Nominal power-to-heat factor
+CHPType
 CommittedInitial(u)              [n.a.]   Initial committment status
 Config
 *CostCurtailment(n,h)             [EUR\MW]  Curtailment costs
@@ -94,6 +98,8 @@ CostRampDown(u)                  [EUR\MW\h] Ramp-down costs
 CostShutDown(u)                  [EUR]      Shut-down costs
 CostStartUp(u)                   [EUR]      Start-up costs
 CostVariable(u,h)                [EUR\MW]   Variable costs
+CostHeatSlack(chp,h)             [EUR\MWh]  Cost of supplying heat via other means
+CostLoadShedding(n,h)            [EUR\MWh] Cost of load shedding
 Curtailment(n)                   [n.a]    Curtailment allowed or not {1 0} at node n
 Demand(mk,n,h)                   [MW]     Demand
 Efficiency(u)                    [%]      Efficiency
@@ -103,8 +109,9 @@ FlowMaximum(l,h)                 [MW]     Line limits
 FlowMinimum(l,h)                 [MW]     Minimum flow
 FuelPrice(n,f,h)                 [EUR\F]    Fuel price
 Fuel(u,f)                        [n.a.]   Fuel type {1 0}
+HeatDemand(chp,h)                [MWh]    Heat demand profile for chp units
 LineNode(l,n)                    [n.a.]   Incidence matrix {-1 +1}
-LoadShedding(n)                  [n.a.]   Load shedding capacity
+LoadShedding(n,h)                [MW]   Load shedding capacity
 Location(u,n)                    [n.a.]   Location {1 0}
 Markup(u,h)                      [EUR\MW]   Markup
 OutageFactor(u,h)                [%]      Outage Factor (100% = full outage)
@@ -115,6 +122,7 @@ PowerMinStable(u)                [MW]     Minimum power output
 PriceTransmission(l,h)           [EUR\MWh]  Transmission price
 StorageChargingCapacity(u)       [MW]     Storage capacity
 StorageChargingEfficiency(u)     [%]      Charging efficiency
+StorageSelfDischarge(u)          [%\day]  Self-discharge of the storage units
 RampDownMaximum(u)               [MW\h]   Ramp down limit
 RampShutDownMaximum(u)           [MW\h]   Shut-down ramp limit
 RampStartUpMaximum(u)            [MW\h]   Start-up ramp limit
@@ -166,12 +174,18 @@ $LOAD tr
 $LOAD f
 $LOAD p
 $LOAD s
+$LOAD chp
 $LOAD h
 $LOAD z
 *$LOAD d
 $LOAD AvailabilityFactor
+$LOAD CHPPowerLossFactor
+$LOAD CHPPowerToHeat
+$LOAD CHPType
 $LOAD Config
 $LOAD CostFixed
+$LOAD CostHeatSlack
+$LOAD CostLoadShedding
 $LOAD CostShutDown
 $LOAD CostStartUp
 $LOAD CostVariable
@@ -185,6 +199,7 @@ $LOAD FlowMaximum
 $LOAD FlowMinimum
 $LOAD FuelPrice
 $LOAD Fuel
+$LOAD HeatDemand
 $LOAD LineNode
 $LOAD LoadShedding
 $LOAD Location
@@ -196,6 +211,7 @@ $LOAD PartLoadMin
 $LOAD PriceTransmission
 $LOAD StorageChargingCapacity
 $LOAD StorageChargingEfficiency
+$LOAD StorageSelfDischarge
 $LOAD RampDownMaximum
 $LOAD RampShutDownMaximum
 $LOAD RampStartUpMaximum
@@ -230,8 +246,12 @@ tr,
 f,
 p,
 s,
+chp,
 h,
 AvailabilityFactor,
+CHPPowerLossFactor,
+CHPPowerToHeat,
+CHPType,
 Config,
 CostFixed,
 CostShutDown,
@@ -247,6 +267,8 @@ FlowMaximum,
 FlowMinimum,
 FuelPrice,
 Fuel,
+HeatDemand,
+HeatSlack,
 LineNode,
 Location,
 LoadShedding
@@ -258,6 +280,7 @@ PowerInitial,
 PriceTransmission,
 StorageChargingCapacity,
 StorageChargingEfficiency,
+StorageSelfDischarge,
 RampDownMaximum,
 RampShutDownMaximum,
 RampStartUpMaximum,
@@ -302,8 +325,8 @@ Power(u,h)                 [MW]    Power output
 PowerMaximum(u,h)          [MW]    Power output
 PowerMinimum(u,h)          [MW]    Power output
 ShedLoad(n,h)              [MW]    Shed load
-StorageInput(s,h)          [MWh]   Charging input for storage units
-StorageLevel(s,h)          [MWh]   Storage level of charge
+StorageInput(u,h)          [MWh]   Charging input for storage units
+StorageLevel(u,h)          [MWh]   Storage level of charge
 LostLoad_MaxPower(n,h)     [MW]    Deficit in terms of maximum power
 LostLoad_RampUp(u,h)       [MW]    Deficit in terms of ramping up for each plant
 LostLoad_RampDown(u,h)     [MW]    Deficit in terms of ramping down
@@ -312,6 +335,8 @@ LostLoad_Reserve2U(n,h)    [MW]    Deficit in reserve up
 LostLoad_Reserve2D(n,h)    [MW]    Deficit in reserve down
 spillage(s,h)              [MWh]   spillage from water reservoirs
 SystemCost(h)              [EUR]   Hourly system cost
+Heat(chp,h)                [MW]    Heat output by chp plant
+HeatSlack(chp,h)           [MW]    Heat satisfied by other sources
 ;
 
 free variable
@@ -350,8 +375,6 @@ LoadMaximum(u,h)= AvailabilityFactor(u,h)*(1-OutageFactor(u,h));
 PowerMustRun(u,h)=PowerMinStable(u)*LoadMaximum(u,h);
 PowerMustRun(u,h)$(sum(tr,Technology(u,tr))>=1 and smin(n,Location(u,n)*(1-Curtailment(n)))=1) = PowerCapacity(u)*LoadMaximum(u,h);
 
-CostLoadShedding(n,h)=1000;
-
 $If %Verbose% == 1 Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial, FlexibilityUp, FlexibilityDown;
 
 $offorder
@@ -361,6 +384,13 @@ $offorder
 *===============================================================================
 EQUATIONS
 EQ_Objective_function
+EQ_CHP_extraction_Pmax
+EQ_CHP_extraction
+EQ_CHP_backpressure
+EQ_CHP_demand_satisfaction,
+EQ_Heat_Storage_balance
+EQ_Heat_Storage_minimum
+EQ_Heat_Storage_level
 EQ_CostStartUp
 EQ_CostShutDown
 EQ_CostRampUp
@@ -419,16 +449,18 @@ $label skipequation
 EQ_SystemCost(i)..
          SystemCost(i)
          =E=
-         sum((u),CostFixed(u)*Committed(u,i))
-         +sum((u),CostStartUpH(u,i) + CostShutDownH(u,i))
-         +sum((u),CostRampUpH(u,i) + CostRampDownH(u,i))
-         +sum((u),CostVariable(u,i)*Power(u,i))
-         +sum((l),PriceTransmission(l,i)*Flow(l,i))
-         +sum((n),CostLoadShedding(n,i)*ShedLoad(n,i))
-         +100E3*(sum((n),LostLoad_MaxPower(n,i)+LostLoad_MinPower(n,i)))
-         +80E3*(sum((n),LostLoad_Reserve2U(n,i)+LostLoad_Reserve2D(n,i)))
-         +70E3*sum((u),LostLoad_RampUp(u,i)+LostLoad_RampDown(u,i))
-         +1*sum((s),spillage(s,i))
+         sum(u,CostFixed(u)*Committed(u,i))
+         +sum(u,CostStartUpH(u,i) + CostShutDownH(u,i))
+         +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
+         +sum(u,CostVariable(u,i) * Power(u,i))
+         +sum(l,PriceTransmission(l,i)*Flow(l,i))
+         +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
+         +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
+         +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
+         +100E3*(sum(n,LostLoad_MaxPower(n,i)+LostLoad_MinPower(n,i)))
+         +80E3*(sum(n,LostLoad_Reserve2U(n,i)+LostLoad_Reserve2D(n,i)))
+         +70E3*sum(u,LostLoad_RampUp(u,i)+LostLoad_RampDown(u,i))
+         +1*sum(s,spillage(s,i))
 ;
 
 EQ_Objective_function..
@@ -439,13 +471,13 @@ EQ_Objective_function..
 
 EQ_CostStartUp(u,i)$(CostStartUp(u) <> 0)..
          CostStartUpH(u,i)
-         =g=
+         =G=
          CostStartUp(u)*(Committed(u,i)-CommittedInitial(u)$(ord(i) = 1)-Committed(u,i-1)$(ord(i) > 1))
 ;
 
 EQ_CostShutDown(u,i)$(CostShutDown(u) <> 0)..
          CostShutDownH(u,i)
-         =g=
+         =G=
          CostShutDown(u)*(CommittedInitial(u)$(ord(i) = 1)+Committed(u,i-1)$(ord(i) > 1)-Committed(u,i))
 ;
 
@@ -457,7 +489,7 @@ EQ_CostRampUp(u,i)$(CostRampUp(u) <> 0)..
 
 EQ_CostRampDown(u,i)$(CostRampDown(u) <> 0)..
          CostRampDownH(u,i)
-         =g=
+         =G=
          CostRampDown(u)*(PowerInitial(u)$(ord(i) = 1)+Power(u,i-1)$(ord(i) > 1)-Power(u,i))
 ;
 
@@ -745,15 +777,75 @@ EQ_Force_DeCommitment(u,i)$(LoadMaximum(u,i)=0 or ord(u)=200)..
 EQ_LoadShedding(n,i)..
          ShedLoad(n,i)
          =L=
-         LoadShedding(n)
+         LoadShedding(n,i)
 ;
 
+* CHP units:
+EQ_CHP_extraction(chp,i)$(CHPType(chp,'Extraction'))..
+         Power(chp,i)
+         =G=
+         StorageInput(chp,i) * CHPPowerToHeat(chp)
+;
 
+EQ_CHP_extraction_Pmax(chp,i)$(CHPType(chp,'Extraction'))..
+         Power(chp,i)
+         =L=
+         PowerCapacity(chp)  - StorageInput(chp,i) * CHPPowerLossFactor(chp)
+;
+
+EQ_CHP_backpressure(chp,i)$(CHPType(chp,'Back-Pressure'))..
+         Power(chp,i)
+         =E=
+         StorageInput(chp,i) * CHPPowerToHeat(chp)
+;
+
+EQ_CHP_demand_satisfaction(chp,i)..
+         Heat(chp,i) + HeatSlack(chp,i)
+         =E=
+         HeatDemand(chp,i)
+
+;
+
+*Heat Storage balance
+EQ_Heat_Storage_balance(chp,i)..
+          StorageInitial(chp)$(ord(i) = 1)
+         +StorageLevel(chp,i-1)$(ord(i) > 1)
+         +StorageInput(chp,i)
+         =E=
+         StorageLevel(chp,i)
+         +Heat(chp,i) + StorageSelfDischarge(chp) * StorageLevel(chp,i)/24
+;
+* The self-discharge proportional to the charging level is a bold hypothesis, but it avoids keeping self-discharging if the level reaches zero
+
+*Storage level must be above a minimum
+EQ_Heat_Storage_minimum(chp,i)..
+         StorageMinimum(chp)
+         =L=
+         StorageLevel(chp,i)
+;
+
+*Storage level must below storage capacity
+EQ_Heat_Storage_level(chp,i)..
+         StorageLevel(chp,i)
+         =L=
+         StorageCapacity(chp)
+;
+
+* Minimum level at the end of the optimization horizon:
+*EQ_Heat_Storage_boundaries(chp,i)$(ord(i) = card(i))..
+*         StorageFinalMin(chp)
+*         =L=
+*         StorageLevel(chp,i)
+*;
 *===============================================================================
 *Definition of models
 *===============================================================================
 MODEL UCM_SIMPLE /
 EQ_Objective_function,
+EQ_CHP_extraction_Pmax,
+EQ_CHP_extraction,
+EQ_CHP_backpressure,
+EQ_CHP_demand_satisfaction,
 $If not %LPFormulation% == 1 EQ_CostStartUp,
 $If not %LPFormulation% == 1 EQ_CostShutDown,
 $If %LPFormulation% == 1 EQ_CostRampUp,
@@ -763,6 +855,9 @@ EQ_Demand_balance_2U,
 EQ_Demand_balance_2D,
 $If not %LPFormulation% == 1 EQ_Power_must_run,
 EQ_Power_available,
+EQ_Heat_Storage_balance,
+EQ_Heat_Storage_minimum,
+EQ_Heat_Storage_level,
 EQ_Ramp_up,
 EQ_Ramp_down,
 *EQ_Minimum_time_up,
@@ -877,6 +972,8 @@ if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, TimeU
          PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
 
          StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
+         StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
+
 
 *Loop variables to display after solving:
 $If %Verbose% == 1 Display LastKeptHour,PowerInitial,TimeUp,TimeDown,MaxRamp2D.L,MaxRamp2U.L,CostStartUpH.L,CostShutDownH.L,CostRampUpH.L;
@@ -894,24 +991,31 @@ $If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.
 
 PARAMETER
 OutputCommitted(u,h)
+OutputHeat(chp,h)
 OutputFlow(l,h)
 OutputPower(u,h)
-OutputStorageInput(s,h)
-OutputStorageLevel(s,h)
+OutputStorageInput(u,h)
+OutputStorageLevel(u,h)
 *OutputTimeDown(u,i)
 *OutputTimeUp(u,i)
 OutputSystemCost(h)
 OutputSpillage(s,h)
 OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
+OutputHeat(chp,h)
+OutputHeatSlack(chp,h)
 ShadowPrice(n,h)
 ;
 
 OutputCommitted(u,z)=Committed.L(u,z);
 OutputFlow(l,z)=Flow.L(l,z);
 OutputPower(u,z)=Power.L(u,z);
+OutputHeat(chp,z)=Heat.L(chp,z);
+OutputHeatSlack(chp,z)=HeatSlack.L(chp,z);
 OutputStorageInput(s,z)=StorageInput.L(s,z);
+OutputStorageInput(chp,z)=StorageInput.L(chp,z);
 OutputStorageLevel(s,z)=StorageLevel.L(s,z);
+OutputStorageLevel(chp,z)=StorageLevel.L(chp,z);
 *OutputTimeDown(u,i)=TimeDown(u,i);
 *OutputTimeUp(u,h)=TimeUp(u,i);
 OutputSystemCost(z)=SystemCost.L(z);
@@ -924,6 +1028,8 @@ EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
 OutputFlow,
 OutputPower,
+OutputHeat,
+OutputHeatSlack,
 OutputStorageInput,
 OutputStorageLevel,
 *OutputTimeDown,

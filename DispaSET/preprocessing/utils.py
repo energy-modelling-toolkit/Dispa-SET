@@ -95,8 +95,8 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
 
     # Display a warning if a country is isolated:
     for c in Simulation_list:
-        if not any([c in conn for conn in interconnections1]):
-            logging.warn('Zone ' + c + ' Does not appear to be connected to any other zone in the NTC table. It should be simulated in isolation')
+        if not any([c in conn for conn in interconnections1]) and len(Simulation_list)>1:
+            logging.warn('Zone ' + c + ' does not appear to be connected to any other zone in the NTC table. It should be simulated in isolation')
 
     df_RoW_temp = pd.DataFrame(index=index)
     connNames = []
@@ -208,12 +208,15 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
     #    for i in range(len(plants.columns)):
     #        if plants.columns[i] != 'Unit' and plants.dtypes[i] == np.dtype('O'):
     #            string_keys.append(plants.columns[i])
-    string_keys = ['Zone', 'Technology', 'Fuel']
+    string_keys = ['Zone', 'Technology', 'Fuel','CHPType']
+    # First, fill nan values:
+    for key in string_keys:
+        plants[key].fillna('',inplace=True)
 
     for i in plants.index:  # i is the plant to be added to the new list
         merged = False
         for j in plants_merged.index:  # j corresponds to the clustered plants
-            same_type = all([plants[key][i] == plants_merged[key][j] for key in
+            same_type = all([plants[key].fillna('')[i] == plants_merged[key].fillna('')[j] for key in
                              string_keys]) and cluster  # if clustering is off, all plants will be considered as different and will therefore not be merged
             same_fingerprint = (fingerprints[i] == fingerprints_merged[j])
             low_pmin = (plants['PartLoadMin'][i] <= PartLoadMax)
@@ -226,7 +229,7 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
                 P_add = plants['PowerCapacity'][i]  # Additional power to be added
                 for key in plants_merged:
                     if key in ['RampUpRate', 'RampDownRate', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'Efficiency',
-                               'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge']:
+                               'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge','CHPPowerToHeat','CHPPowerLossFactor']:
                         # Do a weighted average:
                         plants_merged.loc[j, key] = (plants_merged[key][j] * P_old + plants[key][i] * P_add) / (
                         P_add + P_old)
@@ -263,6 +266,7 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
         if len(map_plant_orig[j]) == 1:  # The plant has not been merged
             NewName = str(map_plant_orig[j]) + ' - ' + plants_merged['Unit'][j]
             NewName = shrink_to_64(clean_strings(NewName))
+            NewName = NewName.rstrip()                          # remove space at the end because it is not considered by gams
             plants_merged.loc[j, 'Unit'] = NewName
             mapping['FormerIndexes'][NewName] = [map_plant_orig[j][0]]
             mapping['NewIndex'][map_plant_orig[j][0]] = NewName
@@ -272,6 +276,7 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
                 all_stringkeys = all_stringkeys + ' - ' + plants_merged[key][j]
             NewName = str(map_plant_orig[j]) + all_stringkeys
             NewName = shrink_to_64(clean_strings(NewName))
+            NewName = NewName.rstrip()                          # remove space at the end because it is not considered by gams
             plants_merged.loc[j, 'Unit'] = NewName
             list_oldplants = [x for x in map_plant_orig[j]]
             mapping['FormerIndexes'][NewName] = list_oldplants
