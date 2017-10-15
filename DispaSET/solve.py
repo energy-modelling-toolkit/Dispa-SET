@@ -35,7 +35,7 @@ def is_sim_folder_ok(sim_folder):
     return True
 
 
-def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
+def solve_GAMS(sim_folder, gams_folder=None, work_dir=None, output_lst=False):
     if not package_exists('gams'):
         logging.warning('Could not import gams. Trying to automatically locate gdxcc folder')
         if not import_local_lib('gams'):
@@ -53,7 +53,7 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
         # create GAMS workspace:
         from gams import GamsWorkspace
         try:
-            ws = GamsWorkspace(system_directory=gams_folder, debug=3)
+            ws = GamsWorkspace(system_directory=gams_folder, working_directory=work_dir, debug=3)
             shutil.copy(os.path.join(sim_folder, 'UCM_h.gms'), ws.working_directory)
             shutil.copy(os.path.join(sim_folder, 'Inputs.gdx'), ws.working_directory)
             t1 = ws.add_job_from_file('UCM_h.gms')

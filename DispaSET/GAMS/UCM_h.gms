@@ -86,8 +86,9 @@ Alias(i,ii);
 *Parameters as defined in the input file
 PARAMETERS
 AvailabilityFactor(u,h)          [%]      Availability factor
-CHPPowerLossFactor(chp)          [%]      Power loss when generating heat
-CHPPowerToHeat(chp)              [%]      Nominal power-to-heat factor
+CHPPowerLossFactor(u)          [%]      Power loss when generating heat
+CHPPowerToHeat(u)              [%]      Nominal power-to-heat factor
+CHPMaxHeat(chp)                [MW]     Maximum heat capacity of chp plant
 CHPType
 CommittedInitial(u)              [n.a.]   Initial committment status
 Config
@@ -181,6 +182,7 @@ $LOAD z
 $LOAD AvailabilityFactor
 $LOAD CHPPowerLossFactor
 $LOAD CHPPowerToHeat
+$LOAD CHPMaxHeat
 $LOAD CHPType
 $LOAD Config
 $LOAD CostFixed
@@ -251,6 +253,7 @@ h,
 AvailabilityFactor,
 CHPPowerLossFactor,
 CHPPowerToHeat,
+CHPMaxHeat,
 CHPType,
 Config,
 CostFixed,
@@ -387,7 +390,9 @@ EQ_Objective_function
 EQ_CHP_extraction_Pmax
 EQ_CHP_extraction
 EQ_CHP_backpressure
-EQ_CHP_demand_satisfaction,
+EQ_CHP_P2H
+EQ_CHP_demand_satisfaction
+EQ_CHP_max_heat
 EQ_Heat_Storage_balance
 EQ_Heat_Storage_minimum
 EQ_Heat_Storage_level
@@ -562,11 +567,11 @@ EQ_Demand_balance_2D(n,i)..
 
 *Minimum power output is above the must-run output level for each unit in all periods
 EQ_Power_must_run(u,i)..
-         PowerMustRun(u,i)
-         *Committed(u,i)
+         PowerMustRun(u,i) * Committed(u,i) - (StorageInput(u,i) * CHPPowerLossFactor(u) )$(chp(u) and CHPType(u,'Extraction'))
          =L=
          Power(u,i)
 ;
+
 
 *Maximum power output is below the available capacity
 EQ_Power_available(u,i)..
@@ -799,11 +804,22 @@ EQ_CHP_backpressure(chp,i)$(CHPType(chp,'Back-Pressure'))..
          StorageInput(chp,i) * CHPPowerToHeat(chp)
 ;
 
+EQ_CHP_P2H(chp,i)$(CHPType(chp,'P2H'))..
+         Power(chp,i)
+         =E=
+         PowerCapacity(chp) - StorageInput(chp,i) * CHPPowerLossFactor(chp)
+;
+
+EQ_CHP_max_heat(chp,i)..
+         StorageInput(chp,i)
+         =L=
+         CHPMaxHeat(chp)
+;
+
 EQ_CHP_demand_satisfaction(chp,i)..
          Heat(chp,i) + HeatSlack(chp,i)
          =E=
          HeatDemand(chp,i)
-
 ;
 
 *Heat Storage balance
@@ -845,7 +861,9 @@ EQ_Objective_function,
 EQ_CHP_extraction_Pmax,
 EQ_CHP_extraction,
 EQ_CHP_backpressure,
+EQ_CHP_P2H,
 EQ_CHP_demand_satisfaction,
+EQ_CHP_max_heat,
 $If not %LPFormulation% == 1 EQ_CostStartUp,
 $If not %LPFormulation% == 1 EQ_CostShutDown,
 $If %LPFormulation% == 1 EQ_CostRampUp,

@@ -76,38 +76,60 @@ def check_chp(config, plants):
                     'A numeric value was detected in the power plants inputs for parameter "' + key + '". This column should contain strings only.')
                 sys.exit(1)
             elif plants.loc[u, key] == '':
-                logging.critical('An empty value was detected in the power plants inputs for unit "' + str(
-                    u) + '" and parameter "' + key + '"')
+                logging.critical('An empty value was detected in the power plants inputs for unit "' + str(u) + '" and parameter "' + key + '"')
                 sys.exit(1) 
     
     # Check the efficiency values:
     for u in plants.index:
-        if plants.loc[u,'CHPType'].lower() not in ['extraction','back-pressure']:
-            logging.critical('The value of CHPType should be "extraction" or "back-pressure". The type of unit ' + u + ' is "' + str(plants.loc[u,'CHPType'] + '"'))
-            sys.exit(1)              
-        if plants.loc[u,'CHPPowerToHeat'] < 0 or plants.loc[u,'CHPPowerToHeat'] > 10:
-            logging.critical('The value of CHPPowerToHeat should be higher or equal to zero and lower than 10. Unit ' + u + ' has a value of ' + str(plants.loc[u,'CHPPowerToHeat']))
-            sys.exit(1)         
-        if plants.loc[u,'CHPPowerLossFactor'] < 0 or plants.loc[u,'CHPPowerLossFactor'] > 1:
-            logging.critical('The value of CHPPowerLossFactor should be higher or equal to zero and lower than 1. Unit ' + u + ' has a value of ' + str(plants.loc[u,'CHPPowerLossFactor']))
-            sys.exit(1)   
-        if plants.loc[u,'CHPType'].lower() == 'back-pressure' and plants.loc[u,'CHPPowerLossFactor'] != 0:
-            logging.critical('The value of CHPPowerLossFactor must be zero if the CHP types is "back-pressure". Unit ' + u + ' has a value of ' + str(plants.loc[u,'CHPPowerLossFactor']))
-            sys.exit(1)               
-        # Calculating the nominal total efficiency:
-        # F = 1/eta * (P + C_v * Q)    => eta_tot = (P+Q)/F = eta * (P + Q) / (P + C_v * Q) = eta * (P/Q + 1) / (P/Q + C_v) 
-        TotalEfficiency = plants.loc[u,'Efficiency'] * (plants.loc[u,'CHPPowerToHeat'] + 1) / (plants.loc[u,'CHPPowerToHeat'] + plants.loc[u,'CHPPowerLossFactor'])
-        if TotalEfficiency < 0 or TotalEfficiency > 1.14:
-            logging.critical('The calculated value of the total CHP efficiency for unit ' + u + ' is ' + str(TotalEfficiency) + ', which is unrealistic!')
-            sys.exit(1)        
-        if TotalEfficiency > 0.95:
-            logging.warn('The calculated value of the total CHP efficiency for unit ' + u + ' is ' + str(TotalEfficiency) + ', which is very high!')  
+        plant_PowerCapacity = plants.loc[u,'PowerCapacity']
+        plant_MaxHeat = plants.loc[u, 'CHPMaxHeat']
+        plant_powertoheat =  plants.loc[u,'CHPPowerToHeat']
+        plant_powerlossfactor = plants.loc[u,'CHPPowerLossFactor']
 
+        if plants.loc[u,'CHPType'].lower() not in ['extraction','back-pressure', 'p2h']:
+            logging.critical('The value of CHPType should be "extraction", "back-pressure" or "p2h". The type of unit ' + u + ' is "' + str(plants.loc[u,'CHPType'] + '"'))
+            sys.exit(1)              
+        if 0 > plant_powertoheat > 10:
+            logging.critical('The value of CHPPowerToHeat should be higher or equal to zero and lower than 10. Unit ' + u + ' has a value of ' + str(plant_powertoheat))
+            sys.exit(1)         
+        if 0 > plant_powerlossfactor > 1 and plants.loc[u,'CHPType'].lower() != 'p2h':
+            logging.critical('The value of CHPPowerLossFactor should be higher or equal to zero and lower than 1. Unit ' + u + ' has a value of ' + str(plant_powerlossfactor))
+            sys.exit(1)   
+        if plants.loc[u,'CHPType'].lower() == 'back-pressure' and plant_powerlossfactor != 0:
+            logging.critical('The value of CHPPowerLossFactor must be zero if the CHP types is "back-pressure". Unit ' + u + ' has a value of ' + str(plant_powerlossfactor))
+            sys.exit(1)
+        if plants.loc[u, 'CHPType'].lower() == 'extraction':
+            intersection_MaxHeat = plant_PowerCapacity / plant_powertoheat
+            if not pd.isnull(plant_MaxHeat):
+                if intersection_MaxHeat < plant_MaxHeat:
+                    logging.warning('Given Maximum heat CHPMaxHeat ({}) is higher than the intersection point of the two other constraints ({}) '
+                                    '(power loss factor and backpressure line) therefore it will not be ignored'.format(plant_MaxHeat, intersection_MaxHeat) )
+                    plant_MaxHeat = intersection_MaxHeat
+            else:
+                plant_MaxHeat = intersection_MaxHeat
+
+        # Calculating the nominal total efficiency at the highest point:
+        if plants.loc[u,'CHPType'].lower() != 'p2h':
+            Fuel = (plant_PowerCapacity + plant_powerlossfactor * plant_MaxHeat)/plants.loc[u,'Efficiency'] # F = (P + C_v * Q)/eta_condensation
+            TotalEfficiency = (plant_PowerCapacity + plant_MaxHeat) / Fuel             # eta_tot = (P + Q) / F
+            logging.debug('Highest overall efficiency of CHP plant {} is {:.2f}'.format(u,TotalEfficiency))
+            if TotalEfficiency < 0 or TotalEfficiency > 1.14:
+                logging.critical('The calculated value of the total CHP efficiency for unit ' + u + ' is ' + str(TotalEfficiency) + ', which is unrealistic!')
+                sys.exit(1)
+            if TotalEfficiency > 0.95:
+                logging.warn('The calculated value of the total CHP efficiency for unit ' + u + ' is ' + str(TotalEfficiency) + ', which is very high!')
+
+    # Check the optional MaxHeatCapacity parameter. While it adds another realistic boundary it is not a required parameter for the definition of the CHP's operational envelope.:
+    if 'CHPMaxHeat' in plants:
+        for u in plants.index:
+            plant_MaxHeat = plants.loc[u, 'CHPMaxHeat']
+            if plant_MaxHeat <=0:
+                logging.warn('CHPMaxHeat for plant {} is {} which shuts down any heat production.'.format(u, plant_MaxHeat))
     # Check the optional heat storage values:
     if 'STOCapacity' in plants:
         for u in plants.index:     
             Qdot = plants.loc[u,'PowerCapacity']/plants.loc[u,'CHPPowerToHeat']
-            if plants.loc[u,'STOCapacity'] < Qdot*0.5 :
+            if plants.loc[u,'STOCapacity'] < Qdot * 0.5 :
                 logging.warn('Unit ' + u + ': The value of the thermal storage capacity (' + str(plants.loc[u,'STOCapacity']) + 'MWh) seems very low compared to its thermal power (' + str(Qdot) + 'MW).')
             elif plants.loc[u,'STOCapacity'] > Qdot * 24:
                 logging.warn('Unit ' + u + ': The value of the thermal storage capacity (' + str(plants.loc[u,'STOCapacity']) + 'MWh) seems very high compared to its thermal power (' + str(Qdot) + 'MW).')
@@ -226,24 +248,30 @@ def check_heat_demand(plants,data):
     '''
     plants.index = plants['Unit']
     for u in data:
-        if u in plants.index and 'CHPPowerToHeat' in plants:
-            # Mwimum heat demand must be lower than the plant themal capacity:
-            Qmax = plants.loc[u,'PowerCapacity']/plants.loc[u,'CHPPowerToHeat']
-            if plants.loc[u,'CHPType'].lower() == 'extraction':
+        if u in plants.index:
+            plant_CHP_type = plants.loc[u,'CHPType'].lower()
+            if pd.isnull(plants.loc[u, 'CHPMaxHeat']):
+                plant_Qmax = +np.inf
+            else:
+                plant_Qmax = plants.loc[u,'CHPMaxHeat']
+            if plant_CHP_type == 'extraction':
                 Qmin = 0
-            elif plants.loc[u,'CHPType'].lower() == 'back-pressure':
+                Qmax = min(plants.loc[u, 'PowerCapacity'] / plants.loc[u, 'CHPPowerToHeat'], plant_Qmax)
+            elif plant_CHP_type == 'back-pressure':
                 Qmin = plants.loc[u,'PowerCapacity'] * plants.loc[u,'PartLoadMin'] /plants.loc[u,'CHPPowerToHeat']
-                sys.exit(1)
+                Qmax = min(plants.loc[u, 'PowerCapacity'] / plants.loc[u, 'CHPPowerToHeat'], plant_Qmax)
+            elif plant_CHP_type == 'p2h':
+                Qmin = 0
+                Qmax = plant_Qmax
             else:
                 logging.error('The CHP type for unit ' + u + ' is not valid.')
-            if np.isnan(Qmax):
+            if np.isnan(Qmax) and plant_CHP_type!='p2h':
                 logging.error('CHPPowerToHeat is not defined for unit ' + str(u) + ' appearing in the heat demand profiles')
                 sys.exit(1)
             elif data[u].max() > Qmax:
-                logging.warn('The maximum thermal demand for unit ' + str(u) + ' (' + str(data[u].max()) + ') is higher than its thermal capacity (' + str(Qmax) + ')')
-                
+                logging.warn('The maximum thermal demand for unit ' + str(u) + ' (' + str(data[u].max()) + ') is higher than its thermal capacity (' + str(Qmax) + '). Slack heat will be used to cover that.')
             if data[u].min() < Qmin:
-                logging.warn('The minimum thermal demand for unit ' + str(u) + ' (' + str(data[u].min()) + ') is lower than its minimum thermal generation (' + str(Qmin) + ' MWth)')              
+                logging.warn('The minimum thermal demand for unit ' + str(u) + ' (' + str(data[u].min()) + ') is lower than its minimum thermal generation (' + str(Qmin) + ' MWth)')
         else:
             logging.warn('The heat demand profile with header "' + str(u) + '" does not correspond to any CHP plant. It will be ignored.')
     return True
