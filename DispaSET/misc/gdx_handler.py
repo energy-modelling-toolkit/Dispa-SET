@@ -140,7 +140,7 @@ def _insert_symbols(gdxHandle, sets, parameters):
 
         for index, value in np.ndenumerate(variable['val']):
             # Write line by line if value is non null
-            if value != 0 and not np.isnan(value):
+            if value != 0 and not pd.isnull(value):
                 gdxKeys = []  # All the set values for this line
                 for i in range(dims):
                     key = sets[variable['sets'][i]][

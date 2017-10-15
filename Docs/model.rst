@@ -17,114 +17,122 @@ Sets
 	======= =================================================================================
 	Name	Description
 	======= =================================================================================
-	f	Fuel types
-	h	Hours
-	i	Time step in the current optimization horizon
-	l	Transmission lines between nodes
-	mk	{DA: Day-Ahead, 2U: Reserve up, 2D: Reserve Down}
-	n	Zones within each country (currently one zone, or node, per country)
-	p	Pollutants
-	t	Power generation technologies
-	tr	Renewable power generation technologies
-	u	Units
-	s	Storage units (including hydro reservoirs)
+	f       Fuel types
+	h       Hours
+	i       Time step in the current optimization horizon
+	l       Transmission lines between nodes
+	mk      {DA: Day-Ahead, 2U: Reserve up, 2D: Reserve Down}
+	n       Zones within each country (currently one zone, or node, per country)
+	p       Pollutants
+	t       Power generation technologies
+	tr      Renewable power generation technologies
+	u       Units
+	s       Storage units (including hydro reservoirs)
+	chp(u)  CHP units
 	======= =================================================================================
 
 Parameters
 ----------
 
-.. table:: 
+.. table::
 
 	======================================= ======= =============================================================
-	Name					Units	Description
+	Name                                    Units   Description
 	======================================= ======= =============================================================
-	AvailabilityFactor(u,i)			%	Percentage of nominal capacity available
-	CommittedInitial(u)			n.a.	Initial commitment status
-	CostFixed(u)		 		EUR/h	Fixed costs
-	CostLoadShedding(n,h)			EUR/MWh	Shedding costs
-	CostRampDown(u)				EUR/MW	Ramp-down costs
-	CostRampUp(u)				EUR/MW	Ramp-up costs
-	CostShutDown(u)				EUR/h	Shut-down costs
-	CostStartUp(u)				EUR/h	Start-up costs
-	CostVariableH(u,i)			EUR/MWh	Variable costs
-	Curtailment(n)				n.a.	Curtailment {binary: 1 allowed}
-	Demand(mk,n,i)				MW	Hourly demand in each zone
-	Efficiency(u)				%	Power plant efficiency
-	EmissionMaximum(n,p)			EUR/tP	Emission limit per zone for pollutant p
-	EmissionRate(u,p)			tP/MW	Emission rate of pollutant p from unit u
-	FlexibilityDown(u)			MW/h	Available fast shut-down ramping capacity
-	FlexibilityUp(u)			MW/h	Available fast start-up ramping capacity
-	Fuel(u,f)				n.a.	Fuel type used by unit u {binary: 1 u uses f}
-	LineNode(l,n)				n.a.	Line-zone incidence matrix {-1,+1}
-	LoadMaximum(u,h)			%	Maximum load for each unit
-	LoadShedding(n,h)			MW	Load that may be shed per zone in 1 hour
-	Location(u,n)				n.a.	Location {binary: 1 u located in n}
-	OutageFactor(u,h)			%	Outage factor (100 % = full outage) per hour
-	PartLoadMin(u)				%	Percentage of minimum nominal capacity
-	PowerCapacity(u)			MW	Installed capacity
-	PowerInitial(u)				MW	Power output before initial period
-	PowerMinStable(u)			MW	Minimum power for stable generation
-	PowerMustRun(u)				MW	Minimum power output
-	PriceTransmission(l,h)			EUR/MWh	Price of transmission between zones
-	RampDownMaximum(u)			MW/h	Ramp down limit
-	RampShutDownMaximum(u)			MW/h	Shut-down ramp limit
-	RampStartUpMaximum(u)			MW/h	Start-up ramp limit
-	RampUpMaximum(u)			MW/h	Ramp up limit
-	Reserve(t)				n.a.	Reserve provider {binary}
-	StorageCapacity(s)			MWh 	Storage capacity (reservoirs)
-	StorageChargingCapacity(s)		MW	Maximum charging capacity
-	StorageChargingEfficiency(s)		%	Charging efficiency
-	StorageDischargeEfficiency(s)		%	Discharge efficiency
-	StorageInflow(s,h)			MWh 	Storage inflows
-	StorageInitial(s)			MWh 	Storage level before initial period
-	StorageMinimum(s)			MWh 	Minimum storage level
-	StorageOutflow(s,h)			MWh	Storage outflows (spills) 
-	StorageProfile(u,h)              	MWh     Storage long-term level profile 
-	Technology(u,t)				n.a.	Technology type {binary: 1: u belongs to t}
-	TimeDownInitial(u)			h	Hours down before initial period
-	TimeDownLeftInitial(u)			h	Time down remaining at initial time
-	TimeDownLeftJustStopped(u,i)		h	Time down remaining if started at time i
-	TimeDownMinimum(u)			h	Minimum down time
-	TimeDown(u,h)				h	Number of hours down
-	TimeUpInitial(u)			h	Number of hours up before initial period
-	TimeUpLeftInitial(u)			h	Time up remaining at initial time
-	TimeUpLeftJustStarted(u,i)		h	Time up remaining if started at time i
-	TimeUpMinimum(u)			h	Minimum up time
-	TimeUp(u,h)				h	Number of hours up
-	VOLL ()					EUR/MWh	Value of lost load
-        ======================================= ======= =============================================================
+	AvailabilityFactor(u,i)                 %       Percentage of nominal capacity available
+	CHPPowerLossFactor(u)                   %       Power loss when generating heat
+	CHPPowerToHeat(u)                       %       Nominal power-to-heat factor
+	CHPMaxHeat(chp)                         MW      Maximum heat capacity of chp plant
+	CHPType                                 n.a.    CHP Type
+	CommittedInitial(u)                     n.a.    Initial commitment status
+	CostFixed(u)                            EUR/h   Fixed costs
+	CostLoadShedding(n,h)                   EUR/MWh Shedding costs
+	CostRampDown(u)                         EUR/MW  Ramp-down costs
+	CostRampUp(u)                           EUR/MW  Ramp-up costs
+	CostShutDown(u)                         EUR/h   Shut-down costs
+	CostStartUp(u)                          EUR/h   Start-up costs
+	CostVariableH(u,i)                      EUR/MWh Variable costs
+	Curtailment(n)                          n.a.    Curtailment {binary: 1 allowed}
+	Demand(mk,n,i)                          MW      Hourly demand in each zone
+	Efficiency(u)                           %       Power plant efficiency
+	EmissionMaximum(n,p)                    EUR/tP  Emission limit per zone for pollutant p
+	EmissionRate(u,p)                       tP/MW   Emission rate of pollutant p from unit u
+	FlexibilityDown(u)                      MW/h    Available fast shut-down ramping capacity
+	FlexibilityUp(u)                        MW/h    Available fast start-up ramping capacity
+	Fuel(u,f)                               n.a.    Fuel type used by unit u {binary: 1 u uses f}
+	LineNode(l,n)                           n.a.    Line-zone incidence matrix {-1,+1}
+	LoadMaximum(u,h)                        %       Maximum load for each unit
+	LoadShedding(n,h)                       MW      Load that may be shed per zone in 1 hour
+	Location(u,n)                           n.a.    Location {binary: 1 u located in n}
+	OutageFactor(u,h)                       %       Outage factor (100 % = full outage) per hour
+	PartLoadMin(u)                          %       Percentage of minimum nominal capacity
+	PowerCapacity(u)                        MW      Installed capacity
+	PowerInitial(u)                         MW      Power output before initial period
+	PowerMinStable(u)                       MW      Minimum power for stable generation
+	PowerMustRun(u)                         MW      Minimum power output
+	PriceTransmission(l,h)                  EUR/MWh	Price of transmission between zones
+	RampDownMaximum(u)                      MW/h    Ramp down limit
+	RampShutDownMaximum(u)                  MW/h    Shut-down ramp limit
+	RampStartUpMaximum(u)                   MW/h    Start-up ramp limit
+	RampUpMaximum(u)                        MW/h    Ramp up limit
+	Reserve(t)                              n.a.    Reserve provider {binary}
+	StorageCapacity(s)                      MWh     Storage capacity (reservoirs)
+	StorageChargingCapacity(s)              MW      Maximum charging capacity
+	StorageChargingEfficiency(s)            %       Charging efficiency
+	StorageDischargeEfficiency(s)           %       Discharge efficiency
+	StorageInflow(s,h)                      MWh     Storage inflows
+	StorageInitial(s)                       MWh     Storage level before initial period
+	StorageMinimum(s)                       MWh     Minimum storage level
+	StorageOutflow(s,h)                     MWh     Storage outflows (spills)
+	StorageProfile(u,h)                     MWh     Storage long-term level profile
+	Technology(u,t)                         n.a.    Technology type {binary: 1: u belongs to t}
+	TimeDownInitial(u)                      h       Hours down before initial period
+	TimeDownLeftInitial(u)                  h       Time down remaining at initial time
+	TimeDownLeftJustStopped(u,i)            h       Time down remaining if started at time i
+	TimeDownMinimum(u)                      h       Minimum down time
+	TimeDown(u,h)                           h       Number of hours down
+	TimeUpInitial(u)                        h       Number of hours up before initial period
+	TimeUpLeftInitial(u)                    h       Time up remaining at initial time
+	TimeUpLeftJustStarted(u,i)              h       Time up remaining if started at time i
+	TimeUpMinimum(u)                        h       Minimum up time
+	TimeUp(u,h)                             h       Number of hours up
+	VOLL ()                                 EUR/MWh	Value of lost load
+	======================================= ======= =============================================================
+
 
 Optimization Variables
 ----------------------
 
-.. table:: 
+.. table::
 
-	======================= ======= =============================================================
-	Name			Units	Description
-	======================= ======= =============================================================
-	Committed(u,h)		n.a.	Unit committed at hour h {1,0}
-	CostStartUpH(u,h)	EUR	Cost of starting up
-	CostShutDownH(u,h)	EUR	cost of shutting down
-	CostRampUpH(u,h)	EUR	Ramping cost
-	CostRampDownH(u,h)	EUR	Ramping cost
-	CurtailedPower(n,h)	MW	Curtailed power at node n
-	Flow(l,h)		MW	Flow through lines
-	MaxRamp2U(u,h)		MW/h	Maximum 15-min Ramp-up capbility
-	MaxRamp2D(u,h)		MW/h	Maximum 15-min Ramp-down capbility
-	Power(u,h)		MW	Power output
-	PowerMaximum(u,h)	MW	Power output
-	PowerMinimum(u,h)	MW	Power output
-	ShedLoad(n,h)		MW	Shed load
-	StorageInput(s,h)	MWh	Charging input for storage units
-	StorageLevel(s,h)	MWh	Storage level of charge
-	Spillage(s,h)           MWh     Spillage from water reservoirs
-	SystemCostD		EUR	Total system cost  for one optimization period
-	LostLoadMaxPower(n,h)	MW	Deficit in terms of maximum power
-	LostLoadRampUp(u,h)	MW	Deficit in terms of ramping up for each plant
-	LostLoadRampDown(u,h)	MW	Deficit in terms of ramping down
-	LostLoadMinPower(n,h)	MW	Power exceeding the demand
-	LostLoadReserve2U(n,h)	MW	Deficit in reserve up
-	======================= ======= =============================================================
+    ======================= ======= =============================================================
+    Name                    Units   Description
+    ======================= ======= =============================================================
+    Committed(u,h)          n.a.    Unit committed at hour h {1,0}
+    CostStartUpH(u,h)       EUR     Cost of starting up
+    CostShutDownH(u,h)      EUR     Cost of shutting down
+    CostRampUpH(u,h)        EUR     Ramping cost
+    CostRampDownH(u,h)	    EUR     Ramping cost
+    CurtailedPower(n,h)	    MW	    Curtailed power at node n
+    Flow(l,h)               MW      Flow through lines
+    Heat(chp,h)             MW      Heat output by chp plant
+    HeatSlack(chp,h)        MW      Heat satisfied by other sources
+    MaxRamp2U(u,h)          MW/h    Maximum 15-min Ramp-up capbility
+    MaxRamp2D(u,h)          MW/h    Maximum 15-min Ramp-down capbility
+    Power(u,h)              MW      Power output
+    PowerMaximum(u,h)       MW      Power output
+    PowerMinimum(u,h)       MW      Power output
+    ShedLoad(n,h)           MW      Shed load
+    StorageInput(s,h)       MWh     Charging input for storage units
+    StorageLevel(s,h)       MWh     Storage level of charge
+    Spillage(s,h)           MWh     Spillage from water reservoirs
+    SystemCostD             EUR     Total system cost  for one optimization period
+    LostLoadMaxPower(n,h)   MW      Deficit in terms of maximum power
+    LostLoadRampUp(u,h)     MW      Deficit in terms of ramping up for each plant
+    LostLoadRampDown(u,h)   MW      Deficit in terms of ramping down
+    LostLoadMinPower(n,h)   MW      Power exceeding the demand
+    LostLoadReserve2U(n,h)  MW      Deficit in reserve up
+    ======================= ======= =============================================================
 
 
 
@@ -146,11 +154,13 @@ Objective function
 The goal of the unit commitment problem is to minimize the total power system costs (expressed in EUR in equation ), which are defined as the sum of different cost items, namely: start-up and shut-down, fixed, variable, ramping, transmission-related and load shedding (voluntary and involuntary) costs.
 
 .. math::
-	\begin{split} 
+	\begin{split}
 	& min \sum _{u,n,i} \\
 	& \Big[ CostStartUp_{u,i} + CostShutDown_{u,i} + CostFixed_{u} \cdot Committed_{u,i}  \\
 	& + CostVariable_{u,i} \cdot Power_{u,i} + CostRampUp_{u,i} + CostRampDown_{u,i}   \\
 	& + PriceTransimission_{i,l} \cdot Flow_{i,l} + \left( CostLoadShedding_{i,n} \cdot ShedLoad_{i,n} \right)  \\
+	& + \sum _{chp} CostHeatSlack_{chp,i} \cdot  HeatSlack_{chp,i}) \\
+	& + \sum _{chp} CostVariable_{chp,i} \cdot CHPPowerLossFactor_{chp} \cdot Heat_{chp,i}) \\
 	& + VOLL_{Power} \cdot \left( LostLoadMaxPower_{i,n} + LostLoadMinPower_{i,n} \right) \\
 	& + VOLL_{Reserve} \cdot \left( LostLoadReserve2U_{i,n} + LostLoadReserve2D_{i,n} \right) \\
 	& + VOLL_{Ramp} \cdot \left( LostLoadRampUp_{u,i} + LostLoadRampDown_{u,i} \right) \Big]
@@ -263,7 +273,7 @@ The maximum ramping rate is also limited by the available capacity margin betwee
 
 .. math::
 
- 	\mathit{MaxRamp2U}_{u,i} \leq (\mathit{PowerCapacit}y_u \cdot \mathit{AvailabilityFactor}_{u,i}
+	\mathit{MaxRamp2U}_{u,i} \leq (\mathit{PowerCapacit}y_u \cdot \mathit{AvailabilityFactor}_{u,i}
 
 	 \cdot  (1-\mathit{OutageFactor}_{u,i})-\mathit{Power}_{u,i}) \cdot 4
 
@@ -493,7 +503,7 @@ The first constrain imposes that the energy stored by a given unit is bounded by
 
 .. math::
 
- 	\mathit{StorageMinimum}_s \leq \mathit{StorageLevel}_{s,i}
+	\mathit{StorageMinimum}_s \leq \mathit{StorageLevel}_{s,i}
 
 In the case of a storage unit, the availability factor applies to the charging/discharging power, but also to the storage capacity. The storage level is thus limited by:
 
@@ -563,6 +573,125 @@ Some storage units are equiped with large reservoirs, whose capacity at full loa
 	\mathit{StorageLevel}_{s,0} + \sum\limits_{i=1}^N InFlows_{s,i} )
 
 where StorageProfile is a non-dimensional minimum storage level provided as an exogenous input. The minimum is taken to avoid unfeasibilities in case the provided inflows are not sufficient to comply with the imposed storage level at the end of the horizon.
+
+Heat production constraints (CHP plants only)
+---------------------------------------------
+
+In DispaSET Power plants can be indicated as CHP satisfying one heat demand.  Heat Demand can be covered either by a CHP plant or by alternative heat supply options (Heat Slack).
+
+.. image:: figures/CHP_flows.png
+
+The following two heat balance constraints are used for any CHP plant type.
+
+.. math::
+
+    Heat(chp,i) + HeatSlack(chp,i)
+    = HeatDemand(chp,i)
+
+.. math::
+
+    StorageInput_{chp,i} \leq CHPMaxHeat_{chp}
+
+The constraints between heat and power production differ for each plant design and explained within the following subsections.
+
+Steam plants with Backpressure turbine
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This options includes steam-turbine based power plants with a backpressure turbine. The feasible operating region is between AB. The slope of the line is the heat to power ratio.
+
+.. figure:: figures/backpressure.png
+       :scale: 50 %
+       :align: center
+
+
+.. math::
+
+    Power_{chp,i}
+    =
+    StorageInput_{chp,i} \cdot CHPPowerToHeat_{chp}
+
+Steam plants with Extraction/condensing turbine
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This options includes steam-turbine based power plants with an extraction/condensing turbine. The feasible operating region is within ABCDE.
+The vertical dotted line BC corresponds to the minimum condensation line (as defined by *CHPMaxHeat*). The slope of the DC line is the heat to power ratio and the slope of the AB line is the inverse of the power penalty ratio.
+
+.. figure:: figures/extraction.png
+       :scale: 50 %
+       :align: center
+
+
+.. math::
+    Power_{chp,i}
+    \geq
+    StorageInput_{chp,i} \cdot CHPPowerToHeat_{chp}
+
+
+.. math::
+    Power_{chp,i}
+    \leq
+    PowerCapacity_{chp} -
+
+    StorageInput_{chp,i} \cdot CHPPowerLossFactor_{chp}
+
+
+
+Power plant coupled with any power to heat option
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This option includes power plants coupled with resistance heater or heat pumps. The feasible operating line is between AB. The slope of the line is the inverse of the COP or efficiency.
+The vertical dotted line corresponds to the heat pump (or resistance heater) thermal capacity (as defined by *CHPMaxHeat*)
+
+.. figure:: figures/p2h.png
+       :scale: 50 %
+       :align: center
+
+
+.. math::
+
+    Power_{chp,i}
+    =
+    PowerCapacity_{chp} - StorageInput_{chp,i} \cdot CHPPowerLossFactor_{chp}
+
+
+
+Heat Storage
+~~~~~~~~~~~~
+Heat storage is modeled in a similar way as electric storage as follows:
+
+
+Heat Storage balance:
+
+.. math::
+
+    i=1:
+
+     StorageInitial_{chp}
+     +StorageInput_{chp,i}
+     =
+
+     StorageLevel_{chp,i}
+     +Heat_{chp,i} + StorageSelfDischarge_{chp} \cdot StorageLevel_{chp,i}/24
+
+    i>1:
+
+    +StorageLevel_{chp,i-1}
+    +StorageInput_{chp,i}
+    =
+
+    StorageLevel_{chp,i}
+    +Heat_{chp,i} + StorageSelfDischarge_{chp} \cdot StorageLevel_{chp,i}/24
+
+
+Storage level must be above a minimum and below storage capacity:
+
+.. math::
+
+    StorageMinimum_{chp}
+    \leq
+    StorageLevel_{chp,i}
+    \leq
+    StorageCapacity_{chp}
+
+
 
 Emission limits
 ---------------

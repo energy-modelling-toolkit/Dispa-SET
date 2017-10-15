@@ -771,7 +771,7 @@ def ds_to_df(inputs):
     for p in parameters:
         var = parameters[p]
         dim = len(var['sets'])
-        if var['sets'][-1] == 'h' and isinstance(dates, pd.tseries.index.DatetimeIndex) and dim > 1:
+        if var['sets'][-1] == 'h' and isinstance(dates, pd.DatetimeIndex) and dim > 1:
             # if len(dates) != var['val'].shape[-1]:
             #    sys.exit('The date range in the Config variable (' + str(len(dates)) + ' time steps) does not match the length of the time index (' + str(var['val'].shape[-1]) + ') for variable ' + p)
             var['firstrow'] = 5

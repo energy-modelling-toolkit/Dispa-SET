@@ -90,6 +90,12 @@ Unit-specific or technology-specific inputs
 
 Some parameters, such as the availability factor, the outage factor or the inflows may be defined at the unit level or at the technology level. For that reason, the pre-processing tool first lookups the unit name in the database to assign it a value, and then lookups the technology if no unit-specific information has been found.
 
+Demand
+------
+
+Electricity demand is given per zone/country and the first row of each column shoud reflect that name.
+
+Heat demand timeseries is needed where CHP plants are used. In the current formulation, each CHP plant is covering a heat load. In other words, one power plant is connected to a single district heating network. Therefore, in the heat demand input file, the first column has to be a time index and the following columns the heat demand in MW. The first row should contain the exact name of the power plant that will cover this demand.
 
 Countries
 ---------
@@ -196,15 +202,42 @@ Some parameters must only be defined for the units equipped with CHP. They can b
 
 .. table:: Specific fields for CHP units
 
-	=============================== =============== ===========
-	Description			Field name	Units
-	=============================== =============== ===========
-	CHP Type			CHPType		extraction/back-pressure/other
-	Power-to-heat ratio 		CHPPowerToHeat	
-	=============================== =============== ===========
+    ========================================= ================== ===========
+    Description                               Field name         Units
+    ========================================= ================== ===========
+    CHP Type                                  CHPType            extraction/back-pressure/p2h
+    Power-to-heat ratio                       CHPPowerToHeat     -
+    Power Loss factor                         CHPPowerLossFactor -
+    Maximum heat production                   CHPMaxHeat         MW(th)
+    Capacity of heat Storage                  STOCapacity        MWh(th)
+    % of storage heat losses per timestep     STOSelfDischarge   %
+    ========================================= ================== ===========
 
+In the current version of DispaSet three type of combined heat and power units are supported:
 
-NB: CHP units are not (yet) supported in version 2.1.1 of Dispa-SET
+* Extraction/condensing units
+* Backpressure units
+* Power to heat
+
+For each of the above configurations the following fields must be filled:
+
+.. table:: Mandatory fields per type of CHP unit (X: mandatory, o:optional)
+
+    ================== =========== ============ =============
+    Description        Extraction  Backpressure Power to heat
+    ================== =========== ============ =============
+    CHPType            X           X            X
+    CHPPowerToHeat     X           X
+    CHPPowerLossFactor X                        X
+    CHPMaxHeat         o           o            X
+    STOCapacity        o           o            o
+    STOSelfDischarge   o           o            o
+    ================== =========== ============ =============
+
+There are numerous data checking routines to ensure that all data provided is consistent.
+
+.. warning::
+    For extraction/condensing CHP plants, the power plant capacity (*PowerCapacity*) must correspont to the nameplate capacity in the maximum heat and power mode. Internal Dispaset calculations will use the equivalent stand-alone plants capacity based on the parameters provided.
 
 
 Renewable generation

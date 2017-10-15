@@ -62,7 +62,7 @@ def build_simulation(config,plot_load=False):
     # List of storage technologies:
     List_tech_storage = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS']
     # List of CHP types:
-    List_types_CHP = ['CHP', 'Extraction', 'Condensing']
+    List_types_CHP = ['extraction','back-pressure', 'p2h']
     # DispaSET fuels:
     Fuels = ['BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH']
 
@@ -118,14 +118,14 @@ def build_simulation(config,plot_load=False):
     # check plant list:
     check_units(config, plants)
     # If not present, add the non-compulsory fields to the units table:
-    for key in ['CHPPowerLossFactor','CHPPowerToHeat','CHPType','STOCapacity','STOSelfDischarge','STOMaxChargingPower','STOChargingEfficiency']:
+    for key in ['CHPPowerLossFactor','CHPPowerToHeat','CHPType','STOCapacity','STOSelfDischarge','STOMaxChargingPower','STOChargingEfficiency', 'CHPMaxHeat']:
         if key not in plants.columns:
             plants[key] = np.nan
 
     # Defining the hydro storages:
     plants_sto = plants[[u in List_tech_storage for u in plants['Technology']]]
     # Defining the CHPs:
-    plants_chp = plants[[x in List_types_CHP for x in plants['CHPType']]]
+    plants_chp = plants[[str(x).lower() in List_types_CHP for x in plants['CHPType']]]
 
     Outages = UnitBasedTable(plants,config['Outages'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='Outages')
     AF = UnitBasedTable(plants,config['RenewablesAF'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1)
@@ -221,13 +221,23 @@ def build_simulation(config,plot_load=False):
     # Defining the hydro storages:
     Plants_sto = Plants_merged[[u in List_tech_storage for u in Plants_merged['Technology']]]
     # Defining the CHPs:
-    Plants_chp = Plants_merged[[x in List_types_CHP for x in Plants_merged['CHPType']]]
+    Plants_chp = Plants_merged[[x.lower() in List_types_CHP for x in Plants_merged['CHPType']]].copy()
     # check chp plants:
     check_chp(config, Plants_chp)
     # For all the chp plants correct the PowerCapacity, which is defined in cogeneration mode in the inputs and in power generation model in the optimization model
     for u in Plants_chp.index:
-        PurePowerCapacity = Plants_chp.loc[u,'PowerCapacity']* (1 + Plants_chp.loc[u,'CHPPowerLossFactor'] / Plants_chp.loc[u,'CHPPowerToHeat'])
-        Plants_merged.loc[u,'PartLoadMin'] = Plants_merged.loc[u,'PartLoadMin'] * Plants_chp.loc[u,'PowerCapacity']/PurePowerCapacity
+        PowerCapacity = Plants_chp.loc[u, 'PowerCapacity']
+
+        if Plants_chp.loc[u,'CHPType'].lower() == 'p2h':
+            PurePowerCapacity = PowerCapacity
+        else:
+            if pd.isnull(Plants_chp.loc[u,'CHPMaxHeat']):  # If maximum heat is not defined, then it is defined as the intersection between two lines
+                MaxHeat = PowerCapacity / Plants_chp.loc[u,'CHPPowerToHeat']
+                Plants_chp.loc[u, 'CHPMaxHeat'] = 'inf'
+            else:
+                MaxHeat = Plants_chp.loc[u, 'CHPMaxHeat']
+            PurePowerCapacity = PowerCapacity + Plants_chp.loc[u,'CHPPowerLossFactor'] * MaxHeat
+        Plants_merged.loc[u,'PartLoadMin'] = Plants_merged.loc[u,'PartLoadMin'] * PowerCapacity / PurePowerCapacity  # FIXME: Is this correct?
         Plants_merged.loc[u,'PowerCapacity'] = PurePowerCapacity
         
     # Get the hydro time series corresponding to the original plant list:
@@ -285,7 +295,7 @@ def build_simulation(config,plot_load=False):
              name='ReservoirScaledInflows_merged')
     check_df(HeatDemand_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
              name='HeatDemand_merged')
-    check_df(HeatDemand_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(CostHeatSlack_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
              name='CostHeatSlack_merged')
     check_df(LoadShedding, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
              name='LoadShedding')
@@ -350,6 +360,7 @@ def build_simulation(config,plot_load=False):
     sets_param['AvailabilityFactor'] = ['u', 'h']
     sets_param['CHPPowerToHeat'] = ['chp']
     sets_param['CHPPowerLossFactor'] = ['chp']
+    sets_param['CHPMaxHeat'] = ['chp']
     sets_param['CostFixed'] = ['u']
     sets_param['CostHeatSlack'] = ['chp','h']
     sets_param['CostLoadShedding'] = ['n','h']
@@ -437,7 +448,7 @@ def build_simulation(config,plot_load=False):
     parameters['StorageDischargeEfficiency']['val'] = Plants_sto['Efficiency'].values
     
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
-    for var in ['CHPPowerToHeat','CHPPowerLossFactor']:
+    for var in ['CHPPowerToHeat','CHPPowerLossFactor', 'CHPMaxHeat']:
         parameters[var]['val'] = Plants_chp[var].values
 
     # Storage profile and initial state:
@@ -566,7 +577,7 @@ def build_simulation(config,plot_load=False):
         parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['countries'][i]).values
 
     # CHPType parameter:
-    sets['chp_type'] = ['Extraction','Back-Pressure']
+    sets['chp_type'] = ['Extraction','Back-Pressure', 'P2H']
     parameters['CHPType'] = define_parameter(['chp','chp_type'],sets,value=0)
     for i,u in enumerate(sets['chp']):
         if u in Plants_chp.index:
@@ -574,6 +585,8 @@ def build_simulation(config,plot_load=False):
                 parameters['CHPType']['val'][i,0] = 1
             elif Plants_chp.loc[u,'CHPType'].lower() == 'back-pressure':
                 parameters['CHPType']['val'][i,1] = 1
+            elif Plants_chp.loc[u,'CHPType'].lower() == 'p2h':
+                parameters['CHPType']['val'][i,2] = 1
             else:
                 logging.error('CHPType not valid for plant ' + u)
                 sys.exit(1)
