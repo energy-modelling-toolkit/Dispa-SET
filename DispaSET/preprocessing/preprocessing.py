@@ -35,7 +35,8 @@ def build_simulation(config,plot_load=False):
     :param config: Dictionary with all the configuration fields loaded from the excel file. Output of the 'LoadConfig' function.
     :param plot_load: Boolean used to display a plot of the demand curves in the different zones
     """
-    logging.info('New build started')
+    dispa_version = str(get_git_revision_tag())
+    logging.info('New build started. DispaSET version: ' + dispa_version)
     # %%################################################################################################################
     #####################################   Main Inputs    ############################################################
     ###################################################################################################################
@@ -608,7 +609,7 @@ def build_simulation(config,plot_load=False):
     sim = config['SimulationDirectory']
 
     # Simulation data:
-    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units': Plants_merged}
+    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units': Plants_merged, 'version': dispa_version}
 
     # list_vars = []
     gdx_out = "Inputs.gdx"
@@ -684,3 +685,11 @@ def build_simulation(config,plot_load=False):
         fig.savefig(sim + '/ALL_YEAR.pdf', dpi=300, bbox_inches='tight')
 
     return SimData
+
+def get_git_revision_tag():
+    """Get version of DispaSET used for this run. tag + commit hash"""
+    from subprocess import check_output
+    try:
+        return check_output(["git", "describe"]).strip()
+    except:
+        return 'NA'
