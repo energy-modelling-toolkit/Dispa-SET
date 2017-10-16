@@ -4,9 +4,11 @@ Dispa-SET
 ### Description
 The Dispa-SET model is a unit commitment and dispatch model developed within the “Joint Research Centre” and focused on the balancing and flexibility problems in European grids. It is written in GAMS and coupled to Matlab and Excel for input/output data handling and visualization. The selected Mixed-Integer Linear Programming (MILP) solver is CPLEX.
 
+It is written in GAMS an Python (Pyomo) and uses csv files for input data handling. The optimisation is defined as a Linear Programming (LP) or Mixed-Integer Linear Programming (MILP) problem, depending on the desired level of accuracy and complexity. 
+
  
 ### Features
-The model is expressed as a MILP problem. Continuous variables include the individual unit dispatched power, the shedded load and the curtailed power generation. The binary variables are the commitment status of each unit. The main model features can be summarized as follows:
+The model is expressed as an optimization problem. Continuous variables include the individual unit dispatched power, the shedded load and the curtailed power generation. The binary variables are the commitment status of each unit. The main model features can be summarized as follows:
 
 - Minimum and maximum power for each unit
 - Power plant ramping limits
@@ -20,8 +22,13 @@ The model is expressed as a MILP problem. Continuous variables include the indiv
 - Multi-nodes with capacity constraints on the lines (congestion)
 - Constraints on the targets for renewables and/or CO2 emissions
 - Yearly schedules for the outages (forced and planned) of each units
+- CHP power plants and thermal storage
 
 The demand is assumed to be inelastic to the price signal. The MILP objective function is therefore the total generation cost over the optimization period. 
+
+### Documentation
+The documentation and the stable releases are available on the main Dispa-SET website: http://www.dispaset.eu
+
 
 ### Ongoing developments
 The Dispa-SET project is relatively recent, and a number of improvements will be brought to the project in a close future:
@@ -44,7 +51,7 @@ Dispa-SET is a free software licensed under the “European Union Public Licence
 can be redistributed and/or modified under the terms of this license.
 
 ### Main developpers
-- Sylvain Quoilin (European Commission, Institute for Energy and Transport)
+- Sylvain Quoilin (University of Liège)
 - Ignacio Hidalgo (European Commission, Institute for Energy and Transport)
 - Andreas Zucker (European Commission, Institute for Energy and Transport)
 

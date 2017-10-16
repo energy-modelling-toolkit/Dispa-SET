@@ -50,7 +50,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'DispaSET'
-copyright = u'2016, Sylvain Quoilin'
+copyright = u'2017, Sylvain Quoilin & Kostas Kavvadias'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
