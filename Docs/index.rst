@@ -48,6 +48,7 @@ Contents
    data
    developers
    DispaSET
+   releases
 
 
 Indices and tables
