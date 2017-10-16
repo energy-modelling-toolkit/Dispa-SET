@@ -17,7 +17,7 @@ Changelog
 Version 2.2
 ^^^^^^^^^^^
 
-* Inclusion of CHP, power2heat and thermal storage
+* Inclusion of CHP, power2heat and thermal storage (these new features can be tested by running the config file for Cyprus: 'ConfigFiles/ConfigCY.xlsx')
 
 * Bug fixes
 

@@ -4,8 +4,7 @@ Overview
 ========
 
 :Organization:  `Joint Research Centre`_, 
-		`Institute of Energy and Transport`_,
-                Energy Technology Policy Outlook Unit
+		`European Commission`_,
 :Version: |version|
 :Date: |today|
 
@@ -80,7 +79,7 @@ References
 .. _pandas: http://pandas.pydata.org
 .. _pyomo: http://www.pyomo.org/
 .. _GAMS_api: http://www.gams.com/help/index.jsp?topic=%2Fgams.doc%2Fapis%2Findex.html
-.. _Institute of Energy and Transport: https://ec.europa.eu/jrc/en/institutes/iet
+.. _European Commission: https://ec.europa.eu/
 .. _Joint Research Centre: https://ec.europa.eu/jrc/en
 
 

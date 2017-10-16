@@ -52,6 +52,6 @@ can be redistributed and/or modified under the terms of this license.
 
 ### Main developpers
 - Sylvain Quoilin (University of Liège)
-- Ignacio Hidalgo (European Commission, Institute for Energy and Transport)
-- Andreas Zucker (European Commission, Institute for Energy and Transport)
+- Konstantinos Kavvadias (Joint Research Centre, European Commission)
+- Andreas Zucker (Joint Research Centre, European Commission)
 

@@ -1,10 +1,10 @@
 *~
 *~gm
-*.pyc
+*.py[cod]
 *.lst
 *.lxi
 *.log
-Dispa-SET/Simulations/*
+Simulations/*
 .pickle/
 ~$Config.xlsx
 ~*

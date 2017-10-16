@@ -28,11 +28,11 @@ http://www.dispaset.eu/latest/index.html
  
 Main contributors:
 
-* Sylvain Quoilin (Main Developper) 
+* Sylvain Quoilin (University of Liège, Belgium)) 
 
-* Konstantinos Kavvadias  
+* Konstantinos Kavvadias  (Joint Research Centre, EU Commission)
 
-* Andreas Zucker 
+* Andreas Zucker (Joint Research Centre, EU Commission)
 
 
 Contents
