@@ -27,6 +27,7 @@ The model documentation is available by running sphinx in the Docs folder of the
 http://www.dispaset.eu/latest/index.html
  
 Main contributors:
+------------------
 
 * Sylvain Quoilin (University of Liège, Belgium)) 
 
