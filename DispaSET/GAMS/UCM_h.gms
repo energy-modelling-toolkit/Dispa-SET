@@ -349,6 +349,9 @@ LL_3U(n,h)                 [MW]    Deficit in reserve up - non spinning
 LL_2D(n,h)                 [MW]    Deficit in reserve down
 spillage(s,h)              [MWh]   spillage from water reservoirs
 SystemCost(h)              [EUR]   Hourly system cost
+Reserve_2U(u,h)            [MW]    Spinning reserve up
+Reserve_2D(u,h)            [MW]    Spinning reserve down
+Reserve_3U(u,h)            [MW]    Non spinning quick start reserve up
 Heat(chp,h)                [MW]    Heat output by chp plant
 HeatSlack(chp,h)           [MW]    Heat satisfied by other sources
 ;
@@ -373,13 +376,6 @@ LoadMaximum(u,h)= AvailabilityFactor(u,h)*(1-OutageFactor(u,h));
 * Start-up and Shutdown ramping constraints. This remains to be solved
 RampStartUpMaximum(u) = max(RampStartUpMaximum(u),PowerMinStable(u));
 RampShutDownMaximum(u) = max(RampShutDownMaximum(u),PowerMinStable(u));
-
-* If the plant is stopped, its 15-min ramp-up capability is RampStartUpMaximum if it can start in this timeframe:
-FlexibilityUp(u) = RampStartUpMaximum(u)$(RampStartUpMaximum(u)>=PowerMinStable(u)*4);
-
-* If the plant is started, its 15-min ramp-down capability is either RampShutDownMaximum if it is fast enough, or RampDownMaximum otherwise
-*  RampDownMaximum(u)$(RampShutDownMaximum(u)<PowerMinStable(u)*4)
-FlexibilityDown(u) = RampShutDownMaximum(u)$(RampShutDownMaximum(u)>=PowerMinStable(u)*4);
 
 * parameters for clustered formulation (quickstart is defined as the capability to go to minimum power in 15 min)
 QuickStartPower(u,h) = 0;
@@ -415,20 +411,17 @@ EQ_CostStartUp
 EQ_CostShutDown
 EQ_CostRampUp
 EQ_CostRampDown
-*EQ_CostRamping2
 EQ_Demand_balance_DA
 EQ_Demand_balance_2U
+EQ_Demand_balance_3U
 EQ_Demand_balance_2D
 EQ_Power_must_run
-EQ_Power_bound_lower
-EQ_Power_bound_upper
 EQ_Power_available
 EQ_Ramp_up
 EQ_Ramp_down
-EQ_Max_RampUp1
-EQ_Max_RampUp2
-EQ_Max_RampDown1
-EQ_Max_RampDown2
+EQ_Reserve_2U_capability
+EQ_Reserve_2D_capability
+EQ_Reserve_3U_capability
 EQ_Minimum_time_up_A
 EQ_Minimum_time_up_B
 EQ_Minimum_time_up_C
@@ -512,16 +505,9 @@ EQ_CostRampDown(u,i)$(CostRampDown(u) <> 0)..
          CostRampDown(u)*(PowerInitial(u)$(ord(i) = 1)+Power(u,i-1)$(ord(i) > 1)-Power(u,i))
 ;
 
-*EQ_CostRamping2(u,i)$(CostRampUp(u)=0 and CostRampDown(u)=0)..
-*         CostRamping(u,i)
-*         =e=
-*         0
-*;
-
 *Hourly demand balance in the day-ahead market for each node
 EQ_Demand_balance_DA(n,i)..
          sum(u,Power(u,i)*Location(u,n))
-*         +sum(s,StorageOutputH(s,i)*Location(s,n))
           +sum(l,Flow(l,i)*LineNode(l,n))
          =E=
          Demand("DA",n,i)
@@ -531,53 +517,47 @@ EQ_Demand_balance_DA(n,i)..
          +LL_MinPower(n,i)
 ;
 
-* Maximum 15-min ramping up, in MW/h:
-Eq_Max_RampUp1(u,i)$(sum(tr,Technology(u,tr))=0)..
-         MaxRamp2U(u,i)
-         =L=
-         RampUpMaximum(u)*Committed(u,i)
-         + FlexibilityUp(u)*(1-Committed(u,i))
-*         +RampStartUpMaximum(u)$(RampStartUpMaximum(u)>=PowerMinStable(u)*4)*(1-Committed(u,i))
-;
-
-* Maximum 15-min ramping up, in MW/h:
-Eq_Max_RampUp2(u,i)$(sum(tr,Technology(u,tr))=0)..
-         MaxRamp2U(u,i)
-         =L=
-         (PowerCapacity(u)*LoadMaximum(u,i) - Power(u,i))*4
-;
-
-* Maximum 15-min shutting down, in MW/h:
-Eq_Max_RampDown1(u,i)$(sum(tr,Technology(u,tr))=0)..
-         MaxRamp2D(u,i)
-         =L=
-         max(RampDownMaximum(u),FlexibilityDown(u))*Committed(u,i)
-;
-
-* Maximum 15-min ramping down, in MW/h:
-Eq_Max_RampDown2(u,i)$(sum(tr,Technology(u,tr))=0)..
-         MaxRamp2D(u,i)
-         =L=
-         (Power(u,i) - PowerMinStable(u)$(RampShutDownMaximum(u)<PowerMinStable(u)*4)*Committed(u,i))*4
-;
-
+*Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(n,i)..
-         sum((u,t),MaxRamp2U(u,i)*Technology(u,t)*Reserve(t)*Location(u,n))
-*         +CurtailedPowerH(n,i)*Curtailment(n,i)
+         sum((u,t),Reserve_2U(u,i)*Technology(u,t)*Reserve(t)*Location(u,n))
+         =G=
+         +Demand("2U",n,i)*(1-K_QuickStart(n))
+         -LL_2U(n,i)
+;
+
+*Hourly demand balance in the upwards non-spinning reserve market for each node
+EQ_Demand_balance_3U(n,i)..
+         sum((u,t),(Reserve_2U(u,i) + Reserve_3U(u,i))*Technology(u,t)*Reserve(t)*Location(u,n))
          =G=
          +Demand("2U",n,i)
-         -LL_2U(n,i)
+         -LL_3U(n,i)
 ;
 
 *Hourly demand balance in the downwards reserve market for each node
 EQ_Demand_balance_2D(n,i)..
-         sum((u,t),MaxRamp2D(u,i)*Technology(u,t)*Reserve(t)*Location(u,n))
+         sum((u,t),Reserve_2D(u,i)*Technology(u,t)*Reserve(t)*Location(u,n))
          =G=
          Demand("2D",n,i)
-         -sum(s,(StorageChargingCapacity(s)-StorageInput(s,i)) )*4
          -LL_2D(n,i)
 ;
 
+EQ_Reserve_2U_capability(u,i)..
+         Reserve_2U(u,i)
+         =L=
+         PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i) - Power(u,i)
+;
+
+EQ_Reserve_2D_capability(u,i)..
+         Reserve_2D(u,i)
+         =L=
+         (Power(u,i) - PowerMustRun(u,i) * Committed(u,i)) + (StorageChargingCapacity(u)*Nunits(u)-StorageInput(u,i))$(s(u))
+;
+
+EQ_Reserve_3U_capability(u,i)$(QuickStartPower(u,i) > 0)..
+         Reserve_3U(u,i)
+         =L=
+         (Nunits(u)-Committed(u,i))*QuickStartPower(u,i)
+;
 
 *Minimum power output is above the must-run output level for each unit in all periods
 EQ_Power_must_run(u,i)..
@@ -586,14 +566,13 @@ EQ_Power_must_run(u,i)..
          Power(u,i)
 ;
 
-
 *Maximum power output is below the available capacity
 EQ_Power_available(u,i)..
          Power(u,i)
          =L=
          PowerCapacity(u)
                  *LoadMaximum(u,i)
-                         *Committed(u,i)
+                        *Committed(u,i)
 ;
 
 *Maximum power output with respect to power output in the previous period (ramping up constraint).
@@ -625,13 +604,6 @@ EQ_Ramp_down(u,i)$(sum(tr,Technology(u,tr))=0)..
          + LL_RampDown(u,i)
 ;
 
-*Minimum time up constraints
-*EQ_Minimum_time_up(u)..
-*         Committed(u,i)
-*         =G=
-*         sum(ii$((ord(ii) >= ord(i)+1-TimeUpMinimum(u)) and (ord(ii))<=ord(i))),Committed(u,i)-CommittedH(h-1,u))
-*;
-
 EQ_Minimum_time_up_A(u)..
          sum(i$(ord(i) <= TimeUpLeft_initial(u)),1-Committed(u,i))
          =E=
@@ -658,12 +630,6 @@ EQ_Minimum_time_up_JustStarted(u,i)$(ord(i) > 1)..
                  *(Committed(u,i)-CommittedInitial(u)$(ord(i) = 1)-Committed(u,i-1)$(ord(i) > 1))
 ;
 
-*Minimum time down constraints
-*EQ_Minimum_time_down(u)..
-*         1-Committed(u,i)
-*         =G=
-*         sum(ii$((ord(ii) >= ord(h)+1-TimeDownMinimum(u)) and (ord(ii))<=ord(h))),CommittedH(h-1,u)-Committed(u,i))
-*;
 
 EQ_Minimum_time_down_A(u)..
          sum(i$(ord(i) <= TimeDownLeft_initial(u)),Committed(u,i))
@@ -885,20 +851,13 @@ EQ_Heat_Storage_minimum,
 EQ_Heat_Storage_level,
 EQ_Ramp_up,
 EQ_Ramp_down,
-*EQ_Minimum_time_up,
 $If not %LPFormulation% == 1 EQ_Minimum_time_up_A,
-*EQ_Minimum_time_up_B,
-*EQ_Minimum_time_up_C,
 $If not %LPFormulation% == 1 EQ_Minimum_time_up_JustStarted,
-*EQ_Minimum_time_down,
 $If not %LPFormulation% == 1 EQ_Minimum_time_down_A,
-*EQ_Minimum_time_down_B,
-*EQ_Minimum_time_down_C,
 $If not %LPFormulation% == 1 EQ_Minimum_time_down_JustStopped,
-EQ_Max_RampUp1,
-EQ_Max_RampUp2,
-EQ_Max_RampDown1,
-EQ_Max_RampDown2,
+EQ_Reserve_2U_capability,
+EQ_Reserve_2D_capability,
+EQ_Reserve_3U_capability,
 EQ_Storage_minimum,
 EQ_Storage_level,
 EQ_Storage_input,
@@ -968,8 +927,8 @@ $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCos
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
 
 $If %Verbose% == 0 $goto skipdisplay2
-$If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_Max_RampUp1.M, EQ_Max_RampUp2.M,EQ_Max_RampDown1.M, EQ_Max_RampDown2.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
-$If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Power_must_run.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_Minimum_time_up_A.M, EQ_Minimum_time_up_JustStarted.M, EQ_Minimum_time_down_A.M, EQ_Minimum_time_down_JustStopped.M, EQ_Max_RampUp1.M, EQ_Max_RampUp2.M, EQ_Max_RampDown1.M, EQ_Max_RampDown2.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
+$If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
+$If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Commitment.M, EQ_MinUpTime.M, EQ_MinDownTime.M, EQ_MaxShutDowns.M, EQ_MaxStartUps.M, EQ_RampUp_TC.M, EQ_RampDown_TC.M, EQ_Demand_balance_DA.M, EQ_Demand_balance_2U.M, EQ_Demand_balance_2D.M, EQ_Demand_balance_3U.M, EQ_Reserve_2U_capability.M, EQ_Reserve_2D_capability.M, EQ_Reserve_3U_capability.M, EQ_Power_must_run.M, EQ_Power_must_run_update.M, EQ_Power_available.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_SystemCost.M, EQ_Flow_limits_lower.M, EQ_Flow_limits_upper.M, EQ_Force_Commitment.M, EQ_Force_DeCommitment.M, EQ_LoadShedding.M ;
 $label skipdisplay2
 
          status("model",i) = UCM_SIMPLE.Modelstat;
