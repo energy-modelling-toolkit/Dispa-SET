@@ -72,76 +72,18 @@ def GAMSstatus(statustype,num):
     return str(msg[num])
 
 
-def unit_location(Inputs, shrink=True):
-    """ 
-    Function that associates its location to each unit from the Dispaset inputs
-
-    :param inputs:      DispaSet inputs (version 2.1.1)
-    :returns loc:        Dictionary with the location of each unit
-    """
-    loc = {}
-    if isinstance(Inputs, list):
-        u = Inputs[0]['u']
-        n = Inputs[0]['n']
-        location = Inputs[1]['Location']['val']
-    elif isinstance(Inputs, dict):
-        u = Inputs['sets']['u']
-        n = Inputs['sets']['n']
-        location = Inputs['parameters']['Location']['val']
-    else:
-        logging.error('Inputs variable no valid')
-        sys.exit(1)
-    if shrink:
-        uu = shrink_to_64(u)
-    else:
-        uu = u
-    for i in range(len(u)):
-        j = np.where(location[i, :] > 0)
-        loc[uu[i]] = n[j[0][0]]
-    return loc
-
-
-def unit_fuel(Inputs, shrink=True):
-    """ 
-    Function that associates its fuel to each unit from the Dispaset inputs
-
-    :param inputs:      DispaSet inputs (version 2.1.1)
-    :param shrink:      If True, the unit name is reduced to 64, as in GAMS
-    :returns fuels:        Dictionary with the location of each unit
-    """
-    fuels = {}
-    if isinstance(Inputs, list):
-        u = Inputs[0]['u']
-        f = Inputs[0]['f']
-        Fuel = Inputs[1]['Fuel']['val']
-    elif isinstance(Inputs, dict):
-        u = Inputs['sets']['u']
-        f = Inputs['sets']['f']
-        Fuel = Inputs['parameters']['Fuel']['val']
-    else:
-        logging.error('Inputs variable no valid')
-        sys.exit(1)
-    if shrink:
-        uu = shrink_to_64(u)
-    else:
-        uu = u
-    for i in range(len(u)):
-        j = np.where(Fuel[i, :] > 0)
-        fuels[uu[i]] = f[j[0][0]]
-    return fuels
-
-
-def get_load_data(datain, c):
+def get_load_data(inputs, c):
     """ 
     Get the load curve, the residual load curve, and the net residual load curve of a specific country
 
-    :param datain:  DispaSET inputs formatted into a list of dataframes (output of the ds_to_df function)
+    :param inputs:  DispaSET inputs (output of the get_sim_results function)
     :param c:       Country to consider (e.g. 'BE')
     :return out:    Dataframe with the following columns:
                         Load:               Load curve of the specified country
                         ResidualLoad:       Load minus the production of variable renewable sources
                         NetResidualLoad:    Residual netted from the interconnections with neightbouring countries
     """
+    datain = inputs['param_df']
     out = pd.DataFrame(index=datain['Demand'].index)
     out['Load'] = datain['Demand']['DA', c]
     # Listing power plants with non-dispatchable power generation:
@@ -161,29 +103,6 @@ def get_load_data(datain, c):
     out['ResidualLoad'] = out['Load'] - VRE
     out['NetResidualLoad'] = out['ResidualLoad'] - Interconnections
     return out
-
-
-def get_demand(Inputs, c):
-    """ 
-    Get the load curve and the residual load curve of a specific country
-
-    :param Inputs:  DispaSET inputs
-    :param c:       Country to consider (e.g. 'BE')
-    """
-    StartDate = Inputs['config']['StartDate']
-    StopDate = Inputs['config']['StopDate']
-    index = pd.DatetimeIndex(start=pd.datetime(*StartDate), end=pd.datetime(*StopDate), freq='h')
-
-    if isinstance(Inputs, list):
-        idx = Inputs[0]['n'].index(c)
-        data = Inputs[1]['Demand']['val'][0, idx, range(len(index))]
-    elif isinstance(Inputs, dict):
-        idx = Inputs['sets']['n'].index(c)
-        data = Inputs['parameters']['Demand']['val'][0, idx, range(len(index))]
-    else:
-        logging.error('Inputs variable no valid')
-        sys.exit(1)
-    return pd.Series(data, index=index, name=c)
 
 
 def aggregate_by_fuel(PowerOutput, Inputs, SpecifyFuels=None):
@@ -206,7 +125,7 @@ def aggregate_by_fuel(PowerOutput, Inputs, SpecifyFuels=None):
     else:
         fuels = SpecifyFuels
     PowerByFuel = pd.DataFrame(0, index=PowerOutput.index, columns=fuels)
-    uFuel = unit_fuel(Inputs)
+    uFuel = Inputs['units']['Fuel']
 
     for u in PowerOutput:
         if uFuel[u] in fuels:
@@ -224,9 +143,9 @@ def filter_by_country(PowerOutput, inputs, c):
     :param PowerOutput:     Dataframe of power generationwith units as columns and time as index
     :param Inputs:          Dispaset inputs version 2.1.1
     :param c:               Selected country (e.g. 'BE')
-    :returns Power:          Dataframe with power generation by fuel
+    :returns Power:          Dataframe with power generation by country
     """
-    loc = unit_location(inputs)
+    loc = inputs['units']['Zone']
     Power = PowerOutput.loc[:, [u for u in PowerOutput.columns if loc[u] == c]]
     return Power
 
@@ -268,13 +187,136 @@ def get_plot_data(inputs, results, c):
     return plotdata
 
 
-def plot_dispatch(demand, plotdata, level=None, rng=[]):
+def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None):
+    """
+    Function that plots the dispatch data and the reservoir level as a cumulative sum.
+    In this case, the Pandas index is not used since it can cause a bug in matplotlib
+    
+    :param demand:      Pandas Series with the demand curve
+    :param plotdata:    Pandas Dataframe with the data to be plotted. Negative columns should be at the beginning. Output of the function GetPlotData
+    :param level:       Optional pandas series with an aggregated reservoir level for the considered zone.
+    :param curtailment: Optional pandas series with the value of the curtailment 
+    :param rng:         Indexes of the values to be plotted. If undefined, the first week is plotted
+    """
+    logging.critical('Error in when drawing the dispatch plot. Trying a safer mode without x-axis')
+    import itertools
+    # loop through colors. 
+    colors = itertools.cycle([COLORS[x] for x in plotdata.columns])
+    hatches = itertools.cycle(['x', '//', '\\', '/'])
+
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+    import matplotlib.lines as mlines
+
+    if rng is None:
+        pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
+    elif not type(rng) == type(demand.index):
+        logging.error('The "rng" variable must be a pandas DatetimeIndex')
+        sys.exit(1)
+    elif rng[0] < plotdata.index[0] or rng[0] > plotdata.index[-1] or rng[-1] < plotdata.index[0] or rng[-1] > plotdata.index[-1]:
+        logging.warn('Plotting range is not properly defined, considering the first simulated week')
+        pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
+    else:
+        pdrng = rng
+    alpha = '0.3'        
+    idx = [d.to_pydatetime() for d in pdrng]  
+        
+    # find the zero line position:
+    cols = plotdata.columns.tolist()
+    idx_zero = 0
+    tmp = plotdata.iloc[:,idx_zero].mean()
+    while tmp <= 0 and idx_zero<len(cols)-1:
+        idx_zero += 1
+        tmp = plotdata.iloc[:,idx_zero].mean()
+
+    tmp = plotdata[cols[:idx_zero]].sum(axis=1)
+    sumplot_neg = pd.DataFrame()
+    sumplot_neg['sum'] = tmp
+    tmp2 = plotdata[cols[:idx_zero]]
+    for col in tmp2:
+        sumplot_neg[col] = - tmp2[col]
+    sumplot_neg = sumplot_neg.cumsum(axis=1)
+
+    sumplot_pos = plotdata[cols[idx_zero:]].cumsum(axis=1)
+    sumplot_pos['zero'] = 0
+    sumplot_pos = sumplot_pos[['zero'] + sumplot_pos.columns[:-1].tolist()]
+
+    fig = plt.figure(figsize=(13, 7))
+
+    # Create left axis:
+    ax = fig.add_subplot(111)
+#    ax.set_ylim([-10000,15000])
+    ax.plot(idx, demand[pdrng].values, color='k')
+    plt.title('Power dispatch for country ' + demand.name[1])
+
+    labels = []
+    patches = []
+    colorlist = []
+
+#    # Plot negative values:
+    for j in range(idx_zero):
+        col1 = sumplot_neg.columns[j]
+        col2 = sumplot_neg.columns[j + 1]
+        color = next(colors)
+        hatch = next(hatches)
+        plt.fill_between(idx, sumplot_neg.loc[pdrng, col1].values, sumplot_neg.loc[pdrng, col2].values, color=color, alpha=alpha,
+                         hatch=hatch)
+        labels.append(col1)
+        patches.append(mpatches.Patch(color=color, alpha=0.3, hatch=hatch, label=col2))
+        colorlist.append(color)
+
+    # Plot Positive values:
+    for j in range(len(sumplot_pos.columns) - 1):
+        col1 = sumplot_pos.columns[j]
+        col2 = sumplot_pos.columns[j + 1]
+        color = next(colors)
+        hatch = next(hatches)
+        plt.fill_between(idx, sumplot_pos.loc[pdrng, col1].values, sumplot_pos.loc[pdrng, col2].values, color=color, alpha=alpha,
+                         hatch=hatch)
+        labels.append(col2)
+        patches.append(mpatches.Patch(color=color, alpha=0.3, hatch=hatch, label=col2))
+        colorlist.append(color)
+    
+    # Plot curtailment:    
+    if isinstance(curtailment,pd.Series):
+        if not curtailment.index.equals(demand.index):
+            logging.error('The curtailment time series must have the same index as the demand')
+            sys.exit(1)
+        color = 'red'
+        plt.fill_between(idx, sumplot_neg.loc[pdrng, 'sum'].values-curtailment[pdrng].values, sumplot_neg.loc[pdrng, 'sum'].values, color='red', alpha=0.7)
+        labels.append('Curtailment')
+        patches.append(mpatches.Patch(color='red', alpha=0.7, label='Curtailment'))
+   
+    plt.xticks(rotation=45)
+    ax.set_ylabel('Power [MW]')
+    ax.yaxis.label.set_fontsize(16)
+
+    if level is not None:
+        # Create right axis:
+        ax2 = fig.add_subplot(111, sharex=ax, frameon=False, label='aa')
+        ax2.plot(idx, level[pdrng].values, color='k', alpha=0.3, linestyle='--')
+        ax2.yaxis.tick_right()
+        ax2.yaxis.set_label_position("right")
+        ax2.set_ylabel('Level [MWh]')
+        ax2.yaxis.label.set_fontsize(16)
+        line_SOC = mlines.Line2D([], [], color='black', alpha=0.3, label='Reservoir', linestyle='--')
+
+    plt.xticks(rotation=45)
+    line_demand = mlines.Line2D([], [], color='black', label='Load')
+    plt.legend(handles=[line_demand] + patches[::-1], loc=4)
+    if level is None:
+        plt.legend(handles=[line_demand] + patches[::-1], loc=4)
+    else:
+        plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_SOC] + patches[::-1], loc=4)
+
+def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
     
     :param demand:      Pandas Series with the demand curve
     :param plotdata:    Pandas Dataframe with the data to be plotted. Negative columns should be at the beginning. Output of the function GetPlotData
     :param level:       Optional pandas series with an aggregated reservoir level for the considered zone.
+    :param curtailment: Optional pandas series with the value of the curtailment 
     :param rng:         Indexes of the values to be plotted. If undefined, the first week is plotted
     """
     import itertools
@@ -286,8 +328,11 @@ def plot_dispatch(demand, plotdata, level=None, rng=[]):
     import matplotlib.patches as mpatches
     import matplotlib.lines as mlines
 
-    if isinstance(rng,list):
+    if rng is None:
         pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
+    elif not type(rng) == type(demand.index):
+        logging.error('The "rng" variable must be a pandas DatetimeIndex')
+        sys.exit(1)
     elif rng[0] < plotdata.index[0] or rng[0] > plotdata.index[-1] or rng[-1] < plotdata.index[0] or rng[-1] > plotdata.index[-1]:
         logging.warn('Plotting range is not properly defined, considering the first simulated week')
         pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
@@ -320,14 +365,15 @@ def plot_dispatch(demand, plotdata, level=None, rng=[]):
 
     # Create left axis:
     ax = fig.add_subplot(111)
+#    ax.set_ylim([-10000,15000])
     ax.plot(pdrng, demand[pdrng], color='k')
-    plt.title('Power dispatch for country ' + demand.name)
+    plt.title('Power dispatch for country ' + demand.name[1])
 
     labels = []
     patches = []
     colorlist = []
 
-    # Plot negative values:
+#    # Plot negative values:
     for j in range(idx_zero):
         col1 = sumplot_neg.columns[j]
         col2 = sumplot_neg.columns[j + 1]
@@ -339,7 +385,7 @@ def plot_dispatch(demand, plotdata, level=None, rng=[]):
         patches.append(mpatches.Patch(color=color, alpha=0.3, hatch=hatch, label=col2))
         colorlist.append(color)
 
-    # Plot negative values:
+    # Plot Positive values:
     for j in range(len(sumplot_pos.columns) - 1):
         col1 = sumplot_pos.columns[j]
         col2 = sumplot_pos.columns[j + 1]
@@ -350,6 +396,17 @@ def plot_dispatch(demand, plotdata, level=None, rng=[]):
         labels.append(col2)
         patches.append(mpatches.Patch(color=color, alpha=0.3, hatch=hatch, label=col2))
         colorlist.append(color)
+    
+    # Plot curtailment:    
+    if isinstance(curtailment,pd.Series):
+        if not curtailment.index.equals(demand.index):
+            logging.error('The curtailment time series must have the same index as the demand')
+            sys.exit(1)
+        color = 'red'
+        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum']-curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'], color='red', alpha=0.7)
+        labels.append('Curtailment')
+        patches.append(mpatches.Patch(color='red', alpha=0.7, label='Curtailment'))
+   
 
     ax.set_ylabel('Power [MW]')
     ax.yaxis.label.set_fontsize(16)
@@ -365,11 +422,11 @@ def plot_dispatch(demand, plotdata, level=None, rng=[]):
         line_SOC = mlines.Line2D([], [], color='black', alpha=0.3, label='Reservoir', linestyle='--')
 
     line_demand = mlines.Line2D([], [], color='black', label='Load')
-
+    plt.legend(handles=[line_demand] + patches[::-1], loc=4)
     if level is None:
         plt.legend(handles=[line_demand] + patches[::-1], loc=4)
     else:
-        plt.legend(title='Dispatch for ' + demand.name, handles=[line_demand] + [line_SOC] + patches[::-1], loc=4)
+        plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_SOC] + patches[::-1], loc=4)
 
 
 def plot_rug(df_series, on_off=False, cmap='Greys'):
@@ -430,22 +487,23 @@ def plot_rug(df_series, on_off=False, cmap='Greys'):
                 i_on_off = iseries.apply(flag_operation).replace(False, np.nan)
                 i_on_off.plot(ax=iax, style='|', lw=.7, cmap=cmap)
             else:
-                x = iseries.index
+                x = [d.to_pydatetime() for d in iseries.index]
                 y = np.ones(len(iseries))
                 iax.scatter(x, y, marker='|', s=100,
                             c=iseries.values * 100, cmap=cmap)
 
     iax.spines['bottom'].set_visible(True)
-    iax.set_xlim(min(x), max(x))
+    plt.xticks(rotation=45)
+    #iax.set_xlim(min(x), max(x))
 
 
-def plot_energy_country_fuel(datain, results, PPindicators):
+
+def plot_energy_country_fuel(inputs, results, PPindicators):
     """
     Plots the generation for each country, disaggregated by fuel type
 
-    :param datain:          Inputs values (in the dataframe format: output of the function ds_to_df)
     :param results:         Dictionnary with the outputs of the model (output of the function GetResults)
-    :param PPindicators:    Por powerplant statistics (output of the function PerPowerPlantIndicators)
+    :param PPindicators:    Por powerplant statistics (output of the function get_indicators_powerplant)
     """
     fuels = PPindicators.Fuel.unique()
     countries = PPindicators.Zone.unique()
@@ -469,10 +527,42 @@ def plot_energy_country_fuel(datain, results, PPindicators):
     ax = GenPerCountry.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
                             title='Generation per country (the horizontal lines indicate the demand)')
     ax.set_ylabel('Generation [TWh]')
-    demand = datain['Demand']['DA'].sum() / 1E6
+    demand = inputs['param_df']['Demand']['DA'].sum() / 1E6
     ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=demand.values * 0, linewidth=2,
             color='k')
     return ax
+
+
+def plot_country_capacities(inputs,plot=True):
+    """
+    Plots the installed capacity for each country, disaggregated by fuel type
+
+    :param inputs :         Dictionnary with the inputs of the model (output of the function GetResults)
+    """
+    units = inputs['units']
+    CountryFuels = {}
+    for u in units.index:
+        CountryFuels[(units.Zone[u],units.Fuel[u])] = (units.Zone[u],units.Fuel[u])
+    
+    PowerCapacity = pd.DataFrame(columns=inputs['sets']['f'],index=inputs['sets']['n'])
+    StorageCapacity = pd.DataFrame(columns=inputs['sets']['f'],index=inputs['sets']['n'])
+    for n,f in CountryFuels:
+        idx = ((units.Zone == n) & (units.Fuel==f))
+        PowerCapacity.loc[n,f] = (units.PowerCapacity[idx]*units.Nunits[idx]).sum()
+        StorageCapacity.loc[n,f] = (units.StorageCapacity[idx]*units.Nunits[idx]).sum()
+
+    PowerCapacity = PowerCapacity[['NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL',
+                                   'WST', 'SUN', 'WIN', 'WAT']]
+    if plot:
+        colors = [COLORS[tech] for tech in PowerCapacity.columns]
+        ax = PowerCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
+                                title='Installed capacity per country (the horizontal lines indicate the peak demand)')
+        ax.set_ylabel('Capacity [MW]')
+        demand = inputs['param_df']['Demand']['DA'].max() 
+        ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=demand.values * 0, linewidth=2,
+                color='k')
+    return {'PowerCapacity':PowerCapacity,'StorageCapacity':StorageCapacity}
+
 
 
 def get_sim_results(path='.', cache=False, temp_path='.pickle'):
@@ -496,6 +586,12 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
     inputs['sets']['u'] = clean_strings(inputs['sets']['u'])
     inputs['units'].index = clean_strings(inputs['units'].index.tolist())
     # inputs['units']['Unit'] = clean_strings(inputs['units']['Unit'].tolist())
+    
+    # Add the formated parameters in the inputs variable if not already present:
+    if not 'param_df' in inputs:
+        inputs['param_df'] = ds_to_df(inputs)
+
+
     gams_dir = inputs['config']['GAMS_folder'].encode() # We need to pass the dir in config if we run it in clusters. PBS script fail to autolocate
     if not os.path.exists(gams_dir):
         logging.warn('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
@@ -504,6 +600,7 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
             logging.error('GAMS path cannot be located. Simulation is stopped')
             return False
     gams_dir = gams_dir.encode()
+
     # Load results and store in cache file in the .pickle folder:
     if cache:
         import cPickle
@@ -538,8 +635,8 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
 
     # Setting the proper index to the result dataframes:
     for key in ['OutputPower', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
-                'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput', 'LostLoad_Reserve2U',
-                'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp', 'LostLoad_RampDown', 'LostLoad_Reserve2D',
+                'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput', 'LostLoad_2U', 'LostLoad_3U',
+                'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp', 'LostLoad_RampDown', 'LostLoad_2D',
                 'ShadowPrice', 'OutputHeat', 'OutputHeatSlack','status']:
         if key in results:
             if len(results[key]) == len(
@@ -582,9 +679,9 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
     return inputs, results
 
 
-def plot_country(inputs, results, c='', rng=[]):
+def plot_country(inputs, results, c='', rng=None):
     """
-    Generates plots from the dispa-SET results for one spedific country
+    Generates plots from the dispa-SET results for one specific country
 
     :param inputs:      DispaSET inputs
     :param results:     DispaSET results
@@ -594,6 +691,11 @@ def plot_country(inputs, results, c='', rng=[]):
         Nzones = len(inputs['sets']['n'])
         c = inputs['sets']['n'][np.random.randint(Nzones)]
         print('Randomly selected zone for the detailed analysis: '+ c)
+    elif c not in inputs['sets']['n']:
+        logging.critical('Country ' + c + ' is not in the results')
+        Nzones = len(inputs['sets']['n'])
+        c = inputs['sets']['n'][np.random.randint(Nzones)]
+        logging.critical('Randomly selected country: '+ c)
 
     plotdata = get_plot_data(inputs, results, c)
 
@@ -603,10 +705,19 @@ def plot_country(inputs, results, c='', rng=[]):
     else:
         level = pd.Series(0, index=results['OutputPower'].index)
 
-    demand = get_demand(inputs, c)
+    demand = inputs['param_df']['Demand'][('DA', c)]
     sum_generation = plotdata.sum(axis=1)
 
-    plot_dispatch(demand, plotdata, level, rng=rng)
+    try:
+        if 'OutputCurtailedPower' in results and c in results['OutputCurtailedPower']:
+            plot_dispatch(demand, plotdata, level, curtailment=results['OutputCurtailedPower'][c], rng=rng)
+        else:
+            plot_dispatch(demand, plotdata, level, rng=rng)
+    except:
+        if 'OutputCurtailedPower' in results and c in results['OutputCurtailedPower']:
+            plot_dispatch_safe(demand, plotdata, level, curtailment=results['OutputCurtailedPower'][c], rng=rng)
+        else:
+            plot_dispatch_safe(demand, plotdata, level, rng=rng)
 
     # Generation plot: 
     CountryGeneration = filter_by_country(results['OutputPower'], inputs, c)
@@ -643,7 +754,7 @@ def get_result_analysis(inputs, results):
     """
 
     # inputs into the dataframe format:
-    dfin = ds_to_df(inputs)
+    dfin = inputs['param_df']
 
     StartDate = inputs['config']['StartDate']
     StopDate = inputs['config']['StopDate']
@@ -660,12 +771,15 @@ def get_result_analysis(inputs, results):
 
     print '\nAverage electricity cost : ' + str(Cost_kwh) + ' EUR/MWh'
 
-    for key in ['LostLoad_RampUp', 'LostLoad_Reserve2D', 'LostLoad_MinPower',
-                'LostLoad_RampDown', 'LostLoad_Reserve2U', 'LostLoad_MaxPower']:
+    for key in ['LostLoad_RampUp', 'LostLoad_2D', 'LostLoad_MinPower',
+                'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower']:
         LL = results[key].values.sum()
         if LL > 0.0001 * TotalLoad:
-            print '\nThere is a significant amount of lost load for ' + key + ': ' + str(
-                LL) + ' MWh. The results should be checked carefully'
+            logging.critical('\nThere is a significant amount of lost load for ' + key + ': ' + str(
+                LL) + ' MWh. The results should be checked carefully')
+        elif LL > 100:
+            logging.warning('\nThere is lost load for ' + key + ': ' + str(
+                LL) + ' MWh. The results should be checked')
 
     print '\nAggregated statistics for the considered area:'
     print 'Total consumption:' + str(TotalLoad / 1E6) + ' TWh'
@@ -698,9 +812,32 @@ def get_result_analysis(inputs, results):
     print "\nNumber of hours of congestion on each line: "
     import pprint
     pprint.pprint(Congestion)
-    return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-            'CountryData': CountryData, 'Congestion': Congestion}
 
+    # Country-specific storage data:
+    try:
+        StorageData = pd.DataFrame(index=inputs['sets']['n'])
+        List_tech_storage = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS']
+        for c in StorageData.index:
+            isstorage = pd.Series(index=inputs['units'].index)
+            for u in isstorage.index:
+                isstorage[u] = inputs['units'].Technology[u] in List_tech_storage
+            sto_units = inputs['units'][(inputs['units'].Zone == c) & isstorage]
+            StorageData.loc[c,'Storage Capacity [MWh]'] = (sto_units.Nunits*sto_units.StorageCapacity).sum()
+            StorageData.loc[c,'Storage Power [MW]'] = (sto_units.Nunits*sto_units.PowerCapacity).sum()
+            StorageData.loc[c,'Peak load shifting [hours]'] = StorageData.loc[c,'Storage Capacity [MWh]']/CountryData.loc[c,'PeakLoad']
+            AverageStorageOutput = 0
+            for u in results['OutputPower'].columns:
+                if u in sto_units.index:
+                    AverageStorageOutput += results['OutputPower'][u].mean()
+            StorageData.loc[c,'Average daily cycle depth [%]'] = AverageStorageOutput*24/StorageData.loc[c,'Storage Capacity [MWh]']
+        print '\nCountry-Specific storage data'
+        print StorageData    
+    except:
+        logging.error('Could compute storage data')
+        StorageData = None
+
+    return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
+            'CountryData': CountryData, 'Congestion': Congestion, 'StorageData': StorageData}    
 
 def get_indicators_powerplant(inputs, results):
     """
@@ -711,7 +848,7 @@ def get_indicators_powerplant(inputs, results):
     :param results:     DispaSET results
     :returns out:        Dataframe with the main power plants characteristics and the computed indicators
     """
-    out = inputs['units'].loc[:, ['PowerCapacity', 'Zone', 'Technology', 'Fuel']]
+    out = inputs['units'].loc[:, ['Nunits','PowerCapacity', 'Zone', 'Technology', 'Fuel']]
 
     out['startups'] = 0
     for u in out.index:
@@ -727,7 +864,7 @@ def get_indicators_powerplant(inputs, results):
     for u in out.index:
         if u in results['OutputPower']:
             # count the number of start-ups
-            out.loc[u, 'CF'] = results['OutputPower'][u].mean() / out.loc[u, 'PowerCapacity']
+            out.loc[u, 'CF'] = results['OutputPower'][u].mean() / (out.loc[u, 'PowerCapacity']*out.loc[u,'Nunits'])
             out.loc[u, 'Generation'] = results['OutputPower'][u].sum()
     return out
 
@@ -748,9 +885,11 @@ def ds_to_df(inputs):
         first_day = pd.datetime(config['StartDate'][0], config['StartDate'][1], config['StartDate'][2], 0)
         last_day = pd.datetime(config['StopDate'][0], config['StopDate'][1], config['StopDate'][2], 23)
         dates = pd.date_range(start=first_day, end=last_day, freq='1h')
+        timeindex=True
     except:
         logging.warn('Could not find the start/stop date information in the inputs. Using an integer index')
         dates = range(1, len(sets['z']) + 1)
+        timeindex=False
     if len(dates) > len(sets['h']):
         logging.error('The provided index has a length of ' + str(len(dates)) + ' while the data only comprises ' + str(
             len(sets['h'])) + ' time elements')
@@ -771,7 +910,7 @@ def ds_to_df(inputs):
     for p in parameters:
         var = parameters[p]
         dim = len(var['sets'])
-        if var['sets'][-1] == 'h' and isinstance(dates, pd.DatetimeIndex) and dim > 1:
+        if var['sets'][-1] == 'h' and timeindex and dim > 1:
             # if len(dates) != var['val'].shape[-1]:
             #    sys.exit('The date range in the Config variable (' + str(len(dates)) + ' time steps) does not match the length of the time index (' + str(var['val'].shape[-1]) + ') for variable ' + p)
             var['firstrow'] = 5

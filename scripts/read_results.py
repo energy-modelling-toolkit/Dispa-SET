@@ -15,11 +15,19 @@ import DispaSET as ds
 # Load the inputs and the results of the simulation
 inputs,results = ds.get_sim_results(path='Simulations/simulation_test',cache=True)
 
-#Format the inputs as a dictionary of dataframes:
-datain = ds.ds_to_df(inputs)
+# if needed, define the plotting range for the dispatch plot:
+#import pandas as pd
+#rng = pd.date_range(start='2015-01-03',end='2015-01-10',freq='h')
 
-# Generate plots
-ds.plot_country(inputs,results)
+# Generate country-specific plots
+ds.plot_country(inputs,results,rng=None)
+
+# Bar plot with the installed capacities in all countries:
+cap = ds.plot_country_capacities(inputs)
+
+# Bar plot with the energy balances in all countries:
+ds.plot_energy_country_fuel(inputs,results,ds.get_indicators_powerplant(inputs,results))
 
 # Analyse the results for each country and provide quantitative indicators:
 r = ds.get_result_analysis(inputs,results)
+

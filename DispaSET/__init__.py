@@ -46,13 +46,16 @@ _LOGCONFIG = {
 # Importing the main Dispa-SET functions so that they can be called with "ds.function"
 from .preprocessing.preprocessing import build_simulation
 from .solve import solve_GAMS, solve_pyomo
+from .misc.gdx_handler import write_variables
 from .preprocessing.data_handler import load_config_excel, load_config_yaml
 from .postprocessing.postprocessing import get_sim_results
 from .postprocessing.postprocessing import ds_to_df
 from .postprocessing.postprocessing import plot_country
 from .postprocessing.postprocessing import get_result_analysis
 from .postprocessing.postprocessing import get_indicators_powerplant
+from .postprocessing.postprocessing import aggregate_by_fuel
 from .postprocessing.postprocessing import plot_energy_country_fuel
+from .postprocessing.postprocessing import plot_country_capacities
 
 # Removeing log file:
 if os.path.isfile('warn.log'):
