@@ -148,8 +148,6 @@ TimeDownMinimum(u)               [h]      Minimum down time
 TimeUpLeft_initial(u)            [h]      Required time up left at the beginning of the simulated time period
 TimeUpInitial(u)                 [h]      Hours on before initial period
 TimeUpMinimum(u)                 [h]      Minimum up time
-FlexibilityUp(u)                 [MW\h]   Flexibility (up) of fast-starting power plants
-FlexibilityDown(u)               [MW\h]   Flexibility (down) of a committed power plant
 $If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment status as for the MILP
 * Parameter not read by input for now: number of units inside the cluster
 Nunits(u)                        [n.a.]   Number of units inside the cluster (upper bound value for integer variables)
@@ -212,6 +210,7 @@ $LOAD LineNode
 $LOAD LoadShedding
 $LOAD Location
 $LOAD Markup
+$LOAD Nunits
 $LOAD OutageFactor
 $LOAD PowerCapacity
 $LOAD PowerInitial
@@ -277,6 +276,7 @@ FlowMinimum,
 FuelPrice,
 Fuel,
 HeatDemand,
+HeatSlack,
 LineNode,
 Location,
 LoadShedding
@@ -292,6 +292,8 @@ StorageSelfDischarge,
 RampDownMaximum,
 RampShutDownMaximum,
 RampStartUpMaximum,
+RampShutDownMaximumH,
+RampStartUpMaximumH,
 RampUpMaximum,
 Reserve,
 StorageCapacity,
@@ -318,9 +320,6 @@ Committed(u,h)             [n.a.]  Unit committed at hour h {1 0} or integer
 StartUp(u,h)        [n.a.]  Unit start up at hour h {1 0}  or integer
 ShutDown(u,h)       [n.a.]  Unit shut down at hour h {1 0} or integer
 ;
-
-* temporary:
-Nunits(u) = 1;
 
 $If %LPFormulation% == 1 POSITIVE VARIABLES Committed (u,h) ; Committed.UP(u,h) = 1 ;
 $If not %LPFormulation% == 1 INTEGER VARIABLES Committed (u,h), StartUp(u,h), ShutDown(u,h) ; Committed.UP(u,h) = Nunits(u) ; StartUp.UP(u,h) = Nunits(u) ; ShutDown.UP(u,h) = Nunits(u) ;
@@ -905,15 +904,15 @@ if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, TimeU
 
 *Time counters
          Loop(i,
-              TimeUp(u,i)$(ord(i) = 1 and Committed.L(u,i) = 1)=TimeUpInitial(u)+1;
+              TimeUp(u,i)$(ord(i) = 1 and Committed.L(u,i) > 0)=TimeUpInitial(u)+1;
               TimeUp(u,i)$(ord(i) = 1 and Committed.L(u,i) = 0)=0;
-              TimeUp(u,i)$(ord(i) > 1 and Committed.L(u,i) = 1) = TimeUp(u,i-1)+1;
+              TimeUp(u,i)$(ord(i) > 1 and Committed.L(u,i) > 0) = TimeUp(u,i-1)+1;
               TimeUp(u,i)$(ord(i) > 1 and Committed.L(u,i) = 0) = 0;
 
               TimeDown(u,i)$(ord(i) = 1 and Committed.L(u,i) = 0) = TimeDownInitial(u)+1;
-              TimeDown(u,i)$(ord(i) = 1 and Committed.L(u,i) = 1) = 0;
+              TimeDown(u,i)$(ord(i) = 1 and Committed.L(u,i) > 0) = 0;
               TimeDown(u,i)$(ord(i) > 1 and Committed.L(u,i) = 0) = TimeDown(u,i-1)+1;
-              TimeDown(u,i)$(ord(i) > 1 and Committed.L(u,i) = 1) = 0;
+              TimeDown(u,i)$(ord(i) > 1 and Committed.L(u,i) > 0) = 0;
               );
 
          TimeUpInitial(u)=sum(i$(ord(i)=LastKeptHour-FirstHour+1),TimeUp(u,i));
