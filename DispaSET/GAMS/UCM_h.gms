@@ -357,7 +357,7 @@ HeatSlack(chp,h)           [MW]    Heat satisfied by other sources
 ;
 
 free variable
-SystemCostD               ![EUR]   Total system cost for one optimization period
+SystemCostD                ![EUR]   Total system cost for one optimization period
 ;
 
 *===============================================================================
@@ -407,6 +407,11 @@ EQ_CHP_max_heat
 EQ_Heat_Storage_balance
 EQ_Heat_Storage_minimum
 EQ_Heat_Storage_level
+EQ_Commitment
+EQ_MinUpTime
+EQ_MinDownTime
+EQ_RampUp_TC
+EQ_RampDown_TC
 EQ_CostStartUp
 EQ_CostShutDown
 EQ_CostRampUp
@@ -417,19 +422,11 @@ EQ_Demand_balance_3U
 EQ_Demand_balance_2D
 EQ_Power_must_run
 EQ_Power_available
-EQ_Ramp_up
-EQ_Ramp_down
 EQ_Reserve_2U_capability
 EQ_Reserve_2D_capability
 EQ_Reserve_3U_capability
-EQ_Minimum_time_up_A
-EQ_Minimum_time_up_B
-EQ_Minimum_time_up_C
-EQ_Minimum_time_up_JustStarted
-EQ_Minimum_time_down_A
-EQ_Minimum_time_down_B
-EQ_Minimum_time_down_C
-EQ_Minimum_time_down_JustStopped
+EQ_MaxShutDowns
+EQ_MaxStartUps
 EQ_Storage_minimum
 EQ_Storage_level
 EQ_Storage_input
@@ -481,16 +478,65 @@ EQ_Objective_function..
          sum(i,SystemCost(i))
 ;
 
-EQ_CostStartUp(u,i)$(CostStartUp(u) <> 0)..
-         CostStartUpH(u,i)
-         =G=
-         CostStartUp(u)*(Committed(u,i)-CommittedInitial(u)$(ord(i) = 1)-Committed(u,i-1)$(ord(i) > 1))
+* 3 binary commitment status
+EQ_Commitment(u,i)..
+         Committed(u,i)-CommittedInitial(u)$(ord(i) = 1)-Committed(u,i-1)$(ord(i) > 1)
+         =E=
+         StartUp(u,i) - ShutDown(u,i)
 ;
 
+* minimum up time
+EQ_MinUpTime(u,i)..
+         sum(ii$( (ord(ii) >= ord(i) - TimeUpMinimum(u)) and (ord(ii) <= ord(i)) ), StartUp(u,ii))
+         =L=
+         Committed(u,i)
+;
+
+* minimum down time
+EQ_MinDownTime(u,i)..
+         sum(ii$( (ord(ii) >= ord(i) - TimeDownMinimum(u)) and (ord(ii) <= ord(i)) ), ShutDown(u,ii))
+         =L=
+         Nunits(u)-Committed(u,i)
+;
+
+EQ_MaxShutDowns(u)..
+         sum(i$(ord(i) <= TimeUpLeft_initial(u)),ShutDown(u,i))
+         =E=
+         0
+;
+
+EQ_MaxStartUps(u)..
+         sum(i$(ord(i) <= TimeDownLeft_initial(u)),StartUp(u,i))
+         =E=
+         0
+;
+
+* ramp up constraints
+EQ_RampUp_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
+         - Power(u,i-1)$(ord(i) > 1) - PowerInitial(u)$(ord(i) = 1) + Power(u,i)
+         =L=
+         (Committed(u,i) - StartUp(u,i)) * RampUpMaximum(u) + RampStartUpMaximumH(u,i) * StartUp(u,i) - PowerMustRun(u,i) * ShutDown(u,i) + LL_RampUp(u,i)
+;
+
+* ramp down constraints
+EQ_RampDown_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
+         Power(u,i-1)$(ord(i) > 1) + PowerInitial(u)$(ord(i) = 1) - Power(u,i)
+         =L=
+         (Committed(u,i) - StartUp(u,i)) * RampDownMaximum(u) + RampShutDownMaximumH(u,i) * ShutDown(u,i) - PowerMustRun(u,i) * StartUp(u,i) + LL_RampDown(u,i)
+;
+
+* Start up cost
+EQ_CostStartUp(u,i)$(CostStartUp(u) <> 0)..
+         CostStartUpH(u,i)
+         =E=
+         CostStartUp(u)*StartUp(u,i)
+;
+
+* Start up cost
 EQ_CostShutDown(u,i)$(CostShutDown(u) <> 0)..
          CostShutDownH(u,i)
-         =G=
-         CostShutDown(u)*(CommittedInitial(u)$(ord(i) = 1)+Committed(u,i-1)$(ord(i) > 1)-Committed(u,i))
+         =E=
+         CostShutDown(u)*ShutDown(u,i)
 ;
 
 EQ_CostRampUp(u,i)$(CostRampUp(u) <> 0)..
@@ -573,89 +619,6 @@ EQ_Power_available(u,i)..
          PowerCapacity(u)
                  *LoadMaximum(u,i)
                         *Committed(u,i)
-;
-
-*Maximum power output with respect to power output in the previous period (ramping up constraint).
-EQ_Ramp_up(u,i)$(sum(tr,Technology(u,tr))=0)..
-         Power(u,i)
-         =L=
-         (PowerInitial(u)
-         +RampUpMaximum(u)
-                 *CommittedInitial(u)
-         +RampStartUpMaximum(u)
-                 *(1-CommittedInitial(u)))$(ord(i) = 1)
-         +(Power(u,i-1)
-         +RampUpMaximum(u)
-                 *Committed(u,i-1)
-         +RampStartUpMaximum(u)
-                 *(1-Committed(u,i-1)))$(ord(i) > 1)
-         +LL_RampUp(u,i)
-;
-
-*If the unit keeps committed the reduction in power output is lower than the
-*ramp-down limit. If the unit is de-committed the reduction is lower than the
-*shut-down ramp limit
-EQ_Ramp_down(u,i)$(sum(tr,Technology(u,tr))=0)..
-         (PowerInitial(u)-Power(u,i))$(ord(i) = 1)
-         +(Power(u,i-1)-Power(u,i))$(ord(i) > 1)
-         =L=
-         RampDownMaximum(u) * Committed(u,i)
-         + RampShutDownMaximum(u) * (1-Committed(u,i))
-         + LL_RampDown(u,i)
-;
-
-EQ_Minimum_time_up_A(u)..
-         sum(i$(ord(i) <= TimeUpLeft_initial(u)),1-Committed(u,i))
-         =E=
-         0
-;
-
-EQ_Minimum_time_up_B(u,i)$((TimeUpLeft_initial(u)+1 <= ord(i)) and (ord(i) <= card(i)-TimeUpMinimum(u)+1))..
-         sum(ii$((ord(i) <= ord(ii)) and (ord(ii) <= (ord(i)+TimeUpMinimum(u)-1))),Committed(u,ii))
-         =G=
-         TimeUpMinimum(u)
-                 *(Committed(u,i)-CommittedInitial(u)$(ord(i) = 1)-Committed(u,i-1)$(ord(i) > 1))
-;
-
-EQ_Minimum_time_up_C(u,i)$((card(i)-TimeUpMinimum(u)+2 <= ord(i)) and (ord(i)<=card(i)))..
-         sum(ii$((ord(i) <= ord(ii)) and (ord(ii) <= card(i))),Committed(u,ii)-(Committed(u,i)-CommittedInitial(u)$(ord(i) = 1)-Committed(u,i-1)$(ord(i) > 1)))
-         =G=
-         0
-;
-
-EQ_Minimum_time_up_JustStarted(u,i)$(ord(i) > 1)..
-         sum(ii$((ord(i) <= ord(ii)) and (ord(ii) <= (ord(i)+TimeUpLeft_JustStarted(u,i)-1))),Committed(u,ii))
-         =G=
-         TimeUpLeft_JustStarted(u,i)
-                 *(Committed(u,i)-CommittedInitial(u)$(ord(i) = 1)-Committed(u,i-1)$(ord(i) > 1))
-;
-
-
-EQ_Minimum_time_down_A(u)..
-         sum(i$(ord(i) <= TimeDownLeft_initial(u)),Committed(u,i))
-         =E=
-         0
-;
-
-EQ_Minimum_time_down_B(u,i)$((TimeDownLeft_initial(u)+1 <= ord(i)) and (ord(i) <= card(i)-TimeDownMinimum(u)+1))..
-         sum(ii$((ord(i) <= ord(ii)) and (ord(ii) <= (ord(i)+TimeDownMinimum(u)-1))),1-Committed(u,ii))
-         =G=
-         TimeDownMinimum(u)
-                 *(CommittedInitial(u)$(ord(i) = 1)+Committed(u,i-1)$(ord(i) > 1)-Committed(u,i))
-;
-
-EQ_Minimum_time_down_C(u,i)$((card(i)-TimeDownMinimum(u)+2 <= ord(i)) and (ord(i)<=card(i)))..
-         sum(ii$((ord(i) <= ord(ii)) and (ord(ii) <= card(i))),1-Committed(u,ii)-(CommittedInitial(u)$(ord(i) = 1)+Committed(u,i-1)$(ord(i) > 1)-Committed(u,i)))
-         =G=
-         0
-;
-
-*IH: why do we need this equation?, to replace the two previous?
-EQ_Minimum_time_down_JustStopped(u,i)$(TimeDownLeft_initial(u)+1 <= ord(i))..
-         sum(ii$((ord(i) <= ord(ii)) and (ord(ii) <= (ord(i)+TimeDownLeft_JustStopped(u,i)-1))),1-Committed(u,ii))
-         =G=
-         TimeDownLeft_JustStopped(u,i)
-                 *(CommittedInitial(u)$(ord(i) = 1)+Committed(u,i-1)$(ord(i) > 1)-Committed(u,i))
 ;
 
 *Storage level must be above a minimum
@@ -841,20 +804,22 @@ $If not %LPFormulation% == 1 EQ_CostStartUp,
 $If not %LPFormulation% == 1 EQ_CostShutDown,
 $If %LPFormulation% == 1 EQ_CostRampUp,
 $If %LPFormulation% == 1 EQ_CostRampDown,
+EQ_Commitment,
+EQ_MinUpTime,
+EQ_MinDownTime,
+EQ_RampUp_TC,
+EQ_RampDown_TC,
 EQ_Demand_balance_DA,
 EQ_Demand_balance_2U,
 EQ_Demand_balance_2D,
+EQ_Demand_balance_3U,
 $If not %LPFormulation% == 1 EQ_Power_must_run,
 EQ_Power_available,
 EQ_Heat_Storage_balance,
 EQ_Heat_Storage_minimum,
 EQ_Heat_Storage_level,
-EQ_Ramp_up,
-EQ_Ramp_down,
-$If not %LPFormulation% == 1 EQ_Minimum_time_up_A,
-$If not %LPFormulation% == 1 EQ_Minimum_time_up_JustStarted,
-$If not %LPFormulation% == 1 EQ_Minimum_time_down_A,
-$If not %LPFormulation% == 1 EQ_Minimum_time_down_JustStopped,
+$If not %LPFormulation% == 1 EQ_MaxShutDowns,
+$If not %LPFormulation% == 1 EQ_MaxStartUps,
 EQ_Reserve_2U_capability,
 EQ_Reserve_2D_capability,
 EQ_Reserve_3U_capability,
@@ -1114,8 +1079,8 @@ StorageFinalMin(s) = min(StorageFinalMin(s),StorageCapacity(s) - smax(i,StorageI
 $If %Verbose% == 1   Display TimeUpLeft_initial,TimeUpLeft_JustStarted,TimeDownLeft_initial,TimeDownLeft_JustStopped,TimeUpInitial,TimeDownInitial,PowerInitial,CommittedInitial,StorageFinalMin;
 $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
-$If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_Max_RampUp1.M, EQ_Max_RampUp2.M,EQ_Max_RampDown1.M, EQ_Max_RampDown2.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
-$If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Power_must_run.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_Minimum_time_up_A.M, EQ_Minimum_time_up_JustStarted.M, EQ_Minimum_time_down_A.M, EQ_Minimum_time_down_JustStopped.M, EQ_Max_RampUp1.M, EQ_Max_RampUp2.M, EQ_Max_RampDown1.M, EQ_Max_RampDown2.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
+$If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
+$If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Power_must_run.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_MaxShutDowns.M, EQ_MaxShutDowns_JustStarted.M, EQ_MaxStartUps.M, EQ_MaxStartUps_JustStopped.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
 
 display day,FirstHour,LastHour,LastKeptHour;
 Display StorageFinalMin,TimeUpLeft_initial,TimeUpLeft_JustStarted,TimeDownLeft_initial,TimeDownLeft_JustStopped,TimeUpInitial,TimeDownInitial,PowerInitial,CommittedInitial,StorageFinalMin;
