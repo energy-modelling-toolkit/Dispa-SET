@@ -11,6 +11,21 @@ import numpy as np
 import pandas as pd
 import logging
 
+
+def isVRE(tech):
+    '''
+    Function that returns true the technology is a variable renewable energy technology
+    '''
+    return tech in ['HROR','PHOT','WTON','WTOF']
+
+def isStorage(tech):
+    '''
+    Function that returns true the technology is a storage technology
+    '''
+    return tech in ['HDAM','HPHS','CAES','BATS','BEVS','THMS','P2GS']
+
+
+
 def check_AvailabilityFactors(plants,AF):
     '''
     Function that checks the validity of the provided availability factors and warns
@@ -30,6 +45,41 @@ def check_AvailabilityFactors(plants,AF):
             else:
                 logging.critical('Unit ' + str(u) + ' (technology ' + t + ') does not appear in the availbilityFactors table. Its values will be set to 100%!')
 
+def check_clustering(plants,plants_merged):
+    '''
+    Function that checks that the installed capacities are still equal after the clustering process
+
+    :param plants:  Non-clustered list of units
+    :param plants_merged:  clustered list of units
+    '''
+    # First, list all pairs of technology - fuel
+    techs = pd.DataFrame( [[plants.Technology[idx],plants.Fuel[idx]] for idx in plants.index] )
+    techs.drop_duplicates(inplace=True)
+    for i in techs.index:
+        tech = (techs.loc[i,0],techs.loc[i,1])
+        units_old = plants[(plants.Technology == tech[0]) & (plants.Fuel == tech[1])]
+        units_new = plants_merged[(plants_merged.Technology == tech[0]) & (plants_merged.Fuel == tech[1])]
+        P_old = (units_old.PowerCapacity * units_old.Nunits).sum()
+        P_new = (units_new.PowerCapacity * units_new.Nunits).sum()
+        if np.abs(P_old - P_new)/(P_old + 0.0001) > 0.01:
+            logging.error('The installed capacity for technology "' + tech[0] + '" and fuel "' + tech[1] + '" is not equal between the original units table (P = ' + str(P_old) + ') and the clustered table (P = ' + str(P_new) + ')')
+            sys.exit(1)
+    # Check the overall installed storage capacity:
+    List_tech_storage = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS']
+    isstorage = pd.Series(index=plants.index,dtype='bool')
+    for u in isstorage.index:
+        isstorage[u] = plants.Technology[u] in List_tech_storage
+    isstorage_merged = pd.Series(index=plants_merged.index,dtype='bool')
+    for u in isstorage_merged.index:
+        isstorage_merged[u] = plants_merged.Technology[u] in List_tech_storage
+    TotalStorage = (plants.STOCapacity[isstorage]*plants.Nunits[isstorage]).sum()
+    TotalStorage_merged = (plants_merged.STOCapacity[isstorage_merged]*plants_merged.Nunits[isstorage_merged]).sum()
+    if np.abs(TotalStorage - TotalStorage_merged)/(TotalStorage + 0.0001) > 0.01:
+        logging.error('The total installed storage capacity is not equal between the original units table (' + str(TotalStorage) + ') and the clustered table (' + str(TotalStorage_merged) + ')')
+        #sys.exit(1)
+    return True
+
+
 def check_MinMaxFlows(df_min,df_max):
     '''
     Function that checks that there is no incompatibility between the minimum and maximum flows
@@ -45,6 +95,38 @@ def check_MinMaxFlows(df_min,df_max):
         sys.exit(1)
 
     return True
+
+
+def check_sto(config, plants,raw_data=True):
+    """
+    Function that checks the storage plant characteristics
+    """   
+    if raw_data:
+        keys = ['STOCapacity','STOSelfDischarge','STOMaxChargingPower','STOChargingEfficiency']
+        NonNaNKeys = ['STOCapacity']
+    else:
+        keys = ['StorageCapacity','StorageSelfDischarge','StorageChargingCapacity','StorageChargingEfficiency']
+        NonNaNKeys = ['StorageCapacity']
+
+    if 'StorageInitial' in plants:
+        logging.warn('The "StorageInitial" column is present in the power plant table, although it is deprecated (it should now be defined in the ReservoirLevel data table). It will not be considered.')
+  
+    for key in keys:
+        if key not in plants:
+            logging.critical('The power plants data does not contain the field "' + key + '", which is mandatory for storage units')
+            sys.exit(1)
+
+    for key in NonNaNKeys:
+        for u in plants.index:
+            if type(plants.loc[u, key]) == str:
+                logging.critical('A non numeric value was detected in the power plants inputs for parameter "' + key + '"')
+                sys.exit(1)
+            if np.isnan(plants.loc[u, key]):
+                logging.critical('The power plants data is missing for unit number ' + str(u) + ' and parameter "' + key + '"')
+                sys.exit(1)
+
+    return True
+
 
 
 def check_chp(config, plants):
@@ -203,6 +285,11 @@ def check_units(config, plants):
     if 'Nunits' in plants:
         lower_hard['Nunits'] = 0
 
+    if not plants['Unit'].is_unique:
+        duplicates = plants['Unit'][plants['Unit'].duplicated()].tolist()
+        logging.error('The names of the power plants are not unique. The following names are duplicates: ' + str(duplicates) + '. "' + str(duplicates[0] + '" appears for example in the following countries: ' + str(plants.Zone[plants['Unit']==duplicates[0]].tolist())))
+        sys.exit(1)
+
     for key in lower:
         if any(plants[key] < lower[key]):
             plantlist = plants[plants[key] < lower[key]]
@@ -245,10 +332,18 @@ def check_units(config, plants):
 def check_heat_demand(plants,data):
     '''
     Function that checks the validity of the heat demand profiles
+
+    :param     plants:  List of CHP plants
     '''
     plants.index = plants['Unit']
     for u in data:
         if u in plants.index:
+            # Check if there is demand data for that unit:
+            if u not in data.columns:
+                logging.error('Heat demand data for CHP unit "' + u + '" could not be found.')
+                sys.exit(1)
+            elif (data[u] == 0).all():
+                logging.critical('Heat demand data for CHP unit "' + u + '" is either no found or always equal to zero')
             plant_CHP_type = plants.loc[u,'CHPType'].lower()
             if pd.isnull(plants.loc[u, 'CHPMaxHeat']):
                 plant_Qmax = +np.inf
@@ -294,6 +389,9 @@ def check_df(df, StartDate=None, StopDate=None, name=''):
             # idx_pos = [df.index[i] for i in pos]
             if missing != 0:
                 logging.warn('There are ' + str(missing) + ' missing entries in the column ' + key + ' of the dataframe ' + name)
+    if not df.columns.is_unique:
+        logging.error('The column headers of table "' + name + '" are not unique!. The following headers are duplicated: ' + str(df.columns.get_duplicates()))
+        sys.exit(1)
     return True
 
 
@@ -417,16 +515,4 @@ def check_simulation_environment(SimulationPath, store_type='pickle', firstline=
         logging.critical('The "type" parameter must be one of the following : "list", "excel", "pickle"')
         sys.exit(1)
 
-
-def isVRE(tech):
-    '''
-    Function that returns true the technology is a variable renewable energy technology
-    '''
-    return tech in ['HROR','PHOT','WTON','WTOF']
-
-def isStorage(tech):
-    '''
-    Function that returns true the technology is a storage technology
-    '''
-    return tech in ['HDAM','HPHS','CAES','BATS','BEVS','THMS','P2GS']
 
