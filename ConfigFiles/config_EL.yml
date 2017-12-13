@@ -1,7 +1,11 @@
 AllowCurtailment: 1
 Clustering: 1
+CostHeatSlack: ''
+CostLoadShedding: ''
 Demand:  'Database/Load_RealTime/##/1h/2015.csv'
 GAMS_folder:  ' '
+cplex_path: ''
+HeatDemand : ''
 HorizonLength: 3
 Interconnections:  'Database/CrossBorderFlows/1h/2015.csv'
 LoadShedding:  ''
@@ -51,6 +55,8 @@ WritePickle: 1
 countries:
 - 'EL'
 default:
+  CostHeatSlack: 0
+  CostLoadShedding: 500
   LoadShedding: 0.05
   PriceOfBiomass: 37.0
   PriceOfBlackCoal: 10.62

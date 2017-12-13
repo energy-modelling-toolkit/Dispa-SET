@@ -79,7 +79,7 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
 
 
 
-def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',default=None):
+def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',default=None,RestrictWarning=None):
     '''
     This function loads the tabular data stored in csv files and assigns the 
     proper values to each unit of the plants dataframe. If the unit-specific 
@@ -98,6 +98,7 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
     :param fallback:            List with the order of data source. 
     :param tablename:           String with the name of the table being processed
     :param default:             Default value to be applied if no data is found
+    :param RestrictWarning:     Only display the warnings if the unit belongs to the list of technologies provided in this parameter
     
     :return:           Dataframe with the time series for each unit
     '''
@@ -146,6 +147,11 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
         # For each plant and each fallback key, try to find the corresponding column in the data
         out = pd.DataFrame(index=idx)
         for j in plants.index:
+            warning = True
+            if not RestrictWarning is None:
+                warning = False
+                if plants.loc[j,'Technology'] in RestrictWarning:
+                    warning=True
             u = plants.loc[j,'Unit']
             found = False
             for i,key in enumerate(fallbacks):    
@@ -156,13 +162,17 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
                 if header in data:
                     out[u] = data[header]
                     found = True
-                    if i > 0:
+                    if i > 0 and warning:                        
                         logging.warn('No specific information was found for unit ' + u + ' in table ' + tablename + '. The generic information for ' + str(header) + ' has been used')
                     break
             if not found:
-                logging.info('No specific information was found for unit ' + u + ' in table ' + tablename + '. Using default value ' + str(default))
+                if warning:
+                    logging.info('No specific information was found for unit ' + u + ' in table ' + tablename + '. Using default value ' + str(default))
                 if not default is None:
-                    out[u] = default        
+                    out[u] = default     
+    if not out.columns.is_unique:
+        logging.error('The column headers of table "' + tablename + '" are not unique!. The following headers are duplicated: ' + str(out.columns.get_duplicates()))
+        sys.exit(1)        
     return out   
 
 
@@ -178,11 +188,17 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
     :param tablename:   Name of the table being processed (e.g. 'Outages'), used in the warnings
     :return merged:     Pandas dataframe with the merged time series when necessary
     """
-    Nunits = len(plants)
-    plants.index = range(Nunits)
+    # backward compatibility:
+    if not "Nunits" in plants:
+        plants['Nunits'] = 1
+
+    plants.index = range(len(plants))
     merged = pd.DataFrame(index=data.index)
     unitnames = [plants['Unit'][x] for x in mapping['NewIndex']]
     # First check the data:
+    if not isinstance(data,pd.DataFrame):
+        logging.error('The input "' + tablename + '" to the merge_series function must be a dataframe')
+        sys.exit(1)
     for key in data:
         if str(data[key].dtype) not in ['bool','int','float','float16', 'float32', 'float64', 'float128','int8', 'int16', 'int32', 'int64']:
             logging.critical('The column "' + str(key) + '" of table + "' + tablename + '" is not numeric!')
@@ -207,8 +223,8 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
                 if method == 'WeightedAverage':
                     for idx in oldindexes:
                         name = plants['Unit'][idx]
-                        value = value + subunits[idx] * np.maximum(1e-9, plants['PowerCapacity'][idx])
-                    P_j = np.sum(np.maximum(1e-9, plants['PowerCapacity'][oldindexes]))
+                        value = value + subunits[idx] * np.maximum(1e-9, plants['PowerCapacity'][idx]*plants['Nunits'][idx])
+                    P_j = np.sum(np.maximum(1e-9, plants['PowerCapacity'][oldindexes]*plants['Nunits'][oldindexes]))
                     merged[newunit] = value / P_j
                 elif method == 'Sum':
                     merged[newunit] = subunits.sum(axis=1)
@@ -469,7 +485,6 @@ def load_config_excel(ConfigFile):
     config['HorizonLength'] = int(sheet.cell_value(32, 2))
     config['LookAhead'] = int(sheet.cell_value(33, 2))
 
-    config['Clustering'] = sheet.cell_value(45, 2)
     config['SimulationType'] = sheet.cell_value(46, 2)
     config['ReserveCalculation'] = sheet.cell_value(47, 2)
     config['AllowCurtailment'] = sheet.cell_value(48, 2)
