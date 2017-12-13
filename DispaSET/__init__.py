@@ -1,7 +1,7 @@
 import logging.config
 import os
 
-__version__ = "2.2.0"
+__version__ = "2.3dev"
 
 # Logging: # TODO: Parametrize in dispacli or external config
 _LOGCONFIG = {
