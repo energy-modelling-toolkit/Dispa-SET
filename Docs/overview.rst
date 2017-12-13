@@ -3,12 +3,12 @@
 Overview
 ========
 
-:Organization:  `Joint Research Centre`_, 
+:Organization:  `Joint Research Centre`_,
 		`European Commission`_,
 :Version: |version|
 :Date: |today|
 
-The Dispa-SET model is mainly developed within the “Joint Research Centre” of the European Commission and focused on the balancing and flexibility problems in European grids [1]_. 
+The Dispa-SET model is mainly developed within the “Joint Research Centre” of the European Commission and focused on the balancing and flexibility problems in European grids [1]_.
 
 It is written in GAMS an Python (Pyomo) and uses csv files for input data handling. The optimisation is defined as a Linear Programming (LP) or Mixed-Integer Linear Programming (MILP) problem, depending on the desired level of accuracy and complexity. Continuous variables include the individual unit dispatched power, the shedded load and the curtailed power generation. The binary variables are the commitment status of each unit. The main model features can be summarized as follows:
 
@@ -29,6 +29,7 @@ Features
 - Constraints on the targets for renewables and/or CO2 emissions
 - Yearly schedules for the outages (forced and planned) of each units
 - CHP power plants and thermal storage
+- Different clustering methods
 
 The demand is assumed to be inelastic to the price signal. The MILP objective function is therefore the total generation cost over the optimization period. 
 
@@ -37,7 +38,7 @@ Libraries used
 --------------
 
 * `pyomo`_ Optimization object library, interface to LP solver (e.g. CPLEX)
-* `pandas`_ for input and result data handling 
+* `pandas`_ for input and result data handling
 * `matplotlib`_ for plotting
 * `GAMS_api`_ for the communication with GAMS
 
@@ -70,10 +71,10 @@ Main Developers
 
 References
 ----------
-.. [1] Quoilin, S., Hidalgo Gonzalez, I., & Zucker, A. (2017). Modelling Future EU Power Systems Under High Shares of Renewables: The Dispa-SET 2.1 open-source models. Publications Office of the European Union.  
-.. [2] Hidalgo González, I., Quoilin, S., & Zucker, A. (2014). Dispa-SET 2.0: unit commitment and power dispatch model (EUR 27015 EN). Petten, Netherlands: European Commission. 
-.. [3] Quoilin, S., Nijs, W., Hidalgo, I., & Thiel, C. (2015). Evaluation of simplified flexibility evaluation tools using a unit commitment model. IEEE Digital Library. 
-.. [4] Quoilin, S., Gonzalez Vazquez, I., Zucker, A., & Thiel, C. (2014). Available technical flexibility for balancing variable renewable energy sources: case study in Belgium. Proceedings of the 9th Conference on Sustainable Development of Energy, Water and Environment Systems. 
+.. [1] Quoilin, S., Hidalgo Gonzalez, I., & Zucker, A. (2017). Modelling Future EU Power Systems Under High Shares of Renewables: The Dispa-SET 2.1 open-source models. Publications Office of the European Union.
+.. [2] Hidalgo González, I., Quoilin, S., & Zucker, A. (2014). Dispa-SET 2.0: unit commitment and power dispatch model (EUR 27015 EN). Petten, Netherlands: European Commission.
+.. [3] Quoilin, S., Nijs, W., Hidalgo, I., & Thiel, C. (2015). Evaluation of simplified flexibility evaluation tools using a unit commitment model. IEEE Digital Library.
+.. [4] Quoilin, S., Gonzalez Vazquez, I., Zucker, A., & Thiel, C. (2014). Available technical flexibility for balancing variable renewable energy sources: case study in Belgium. Proceedings of the 9th Conference on Sustainable Development of Energy, Water and Environment Systems.
 
 .. _matplotlib: http://matplotlib.org
 .. _pandas: http://pandas.pydata.org
