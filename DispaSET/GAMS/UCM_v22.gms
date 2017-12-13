@@ -43,7 +43,7 @@ $set PrintResults 0
 $set InputFileName Inputs.gdx
 
 * Definition of the equations that will be present in LP or MIP
-* (1 for LP 0 for MIP TC)
+* (1 for LP 0 for MIP)
 $setglobal LPFormulation 0
 * Flag to retrieve status or not
 * (1 to retrieve 0 to not)
@@ -61,7 +61,7 @@ t                Generation technologies
 tr(t)            Renewable generation technologies
 f                Fuel types
 p                Pollutants
-s(u)             Storage Units (with reservoir)
+s(u)             Hydro Storage Units (with reservoir)
 chp(u)           CHP units
 h                Hours
 i(h)             Subset of simulated hours for one iteration
@@ -84,12 +84,11 @@ Alias(h,hh);
 Alias(i,ii);
 
 *Parameters as defined in the input file
-* \u indicate that the value is provided for one single unit
 PARAMETERS
 AvailabilityFactor(u,h)          [%]      Availability factor
-CHPPowerLossFactor(u)            [%]      Power loss when generating heat
-CHPPowerToHeat(u)                [%]      Nominal power-to-heat factor
-CHPMaxHeat(chp)                  [MW\u]     Maximum heat capacity of chp plant
+CHPPowerLossFactor(u)          [%]      Power loss when generating heat
+CHPPowerToHeat(u)              [%]      Nominal power-to-heat factor
+CHPMaxHeat(chp)                [MW]     Maximum heat capacity of chp plant
 CHPType
 CommittedInitial(u)              [n.a.]   Initial committment status
 Config
@@ -97,8 +96,8 @@ Config
 CostFixed(u)                     [EUR\h]    Fixed costs
 CostRampUp(u)                    [EUR\MW\h] Ramp-up costs
 CostRampDown(u)                  [EUR\MW\h] Ramp-down costs
-CostShutDown(u)                  [EUR\u]    Shut-down costs
-CostStartUp(u)                   [EUR\u]    Start-up costs
+CostShutDown(u)                  [EUR]      Shut-down costs
+CostStartUp(u)                   [EUR]      Start-up costs
 CostVariable(u,h)                [EUR\MW]   Variable costs
 CostHeatSlack(chp,h)             [EUR\MWh]  Cost of supplying heat via other means
 CostLoadShedding(n,h)            [EUR\MWh] Cost of load shedding
@@ -109,36 +108,34 @@ EmissionMaximum(n,p)             [tP]     Emission limit
 EmissionRate(u,p)                [tP\MWh] P emission rate
 FlowMaximum(l,h)                 [MW]     Line limits
 FlowMinimum(l,h)                 [MW]     Minimum flow
-FuelPrice(n,f,h)                 [EUR\F]  Fuel price
+FuelPrice(n,f,h)                 [EUR\F]    Fuel price
 Fuel(u,f)                        [n.a.]   Fuel type {1 0}
-HeatDemand(chp,h)                [MWh\u]  Heat demand profile for chp units
+HeatDemand(chp,h)                [MWh]    Heat demand profile for chp units
 LineNode(l,n)                    [n.a.]   Incidence matrix {-1 +1}
 LoadShedding(n,h)                [MW]   Load shedding capacity
 Location(u,n)                    [n.a.]   Location {1 0}
 Markup(u,h)                      [EUR\MW]   Markup
 OutageFactor(u,h)                [%]      Outage Factor (100% = full outage)
 PartLoadMin(u)                   [%]      Minimum part load
-PowerCapacity(u)                 [MW\u]     Installed capacity
-PowerInitial(u)                  [MW\u]     Power output before initial period
-PowerMinStable(u)                [MW\u]     Minimum power output
+PowerCapacity(u)                 [MW]     Installed capacity
+PowerInitial(u)                  [MW]     Power output before initial period
+PowerMinStable(u)                [MW]     Minimum power output
 PriceTransmission(l,h)           [EUR\MWh]  Transmission price
-StorageChargingCapacity(u)       [MW\u]     Storage capacity
+StorageChargingCapacity(u)       [MW]     Storage capacity
 StorageChargingEfficiency(u)     [%]      Charging efficiency
 StorageSelfDischarge(u)          [%\day]  Self-discharge of the storage units
-RampDownMaximum(u)               [MW\h\u]   Ramp down limit
-RampShutDownMaximum(u)           [MW\h\u]   Shut-down ramp limit
-RampStartUpMaximum(u)            [MW\h\u]   Start-up ramp limit
-RampStartUpMaximumH(u,h)       [MW\h\u]   Start-up ramp limit - Clustered formulation
-RampShutDownMaximumH(u,h)      [MW\h\u]   Shut-down ramp limit - Clustered formulation
-RampUpMaximum(u)                 [MW\h\u]   Ramp up limit
+RampDownMaximum(u)               [MW\h]   Ramp down limit
+RampShutDownMaximum(u)           [MW\h]   Shut-down ramp limit
+RampStartUpMaximum(u)            [MW\h]   Start-up ramp limit
+RampUpMaximum(u)                 [MW\h]   Ramp up limit
 Reserve(t)                       [n.a.]   Reserve technology {1 0}
-StorageCapacity(u)               [MWh\u]    Storage capacity
+StorageCapacity(u)               [MWh]    Storage capacity
 StorageDischargeEfficiency(u)    [%]      Discharge efficiency
-StorageOutflow(u,h)              [MWh\u]    Storage outflows
-StorageInflow(u,h)               [MWh\u]    Storage inflows (potential energy)
+StorageOutflow(u,h)              [MWh]    Storage outflows
+StorageInflow(u,h)               [MWh]    Storage inflows (potential energy)
 StorageInitial(u)                [MWh]    Storage level before initial period
 StorageProfile(u,h)              [MWh]    Storage level to be resepected at the end of each horizon
-StorageMinimum(u)                [MWh\u]    Storage minimum
+StorageMinimum(u)                [MWh]    Storage minimum
 Technology(u,t)                  [n.a.]   Technology type {1 0}
 TimeDown(u,h)                    [h]      Hours down
 TimeDownLeft_initial(u)          [h]      Required time down left at the beginning of the simulated time period
@@ -151,10 +148,6 @@ TimeUpMinimum(u)                 [h]      Minimum up time
 FlexibilityUp(u)                 [MW\h]   Flexibility (up) of fast-starting power plants
 FlexibilityDown(u)               [MW\h]   Flexibility (down) of a committed power plant
 $If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment status as for the MILP
-* Parameter not read by input for now: number of units inside the cluster
-Nunits(u)                        [n.a.]   Number of units inside the cluster (upper bound value for integer variables)
-K_QuickStart(n)                      [n.a.]   Percentage of reserve provided by nonsynchronised offline resources (e.g. quick start units or demand response
-QuickStartPower(u,h)            [MW\h\u]   Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
 ;
 
 *Parameters as used within the loop
@@ -163,8 +156,8 @@ TimeUpLeft_JustStarted(u,h)      [h]     Required time up left at hour h if the 
 CostLoadShedding(n,h)            [EUR\MW]  Value of lost load
 TimeUp(u,h)                      [h]     Hours up
 LoadMaximum(u,h)                 [%]     Maximum load given AF and OF
-PowerMustRun(u,h)                [MW\u]    Minimum power output
-StorageFinalMin(s)               [MWh]   Minimum storage level at the end of the optimization horizon
+PowerMustRun(u,h)                [MW]    Minimum power output
+StorageFinalMin(s)             [MWh]   Minimum storage level at the end of the optimization horizon
 ;
 
 *===============================================================================
@@ -185,6 +178,7 @@ $LOAD s
 $LOAD chp
 $LOAD h
 $LOAD z
+*$LOAD d
 $LOAD AvailabilityFactor
 $LOAD CHPPowerLossFactor
 $LOAD CHPPowerToHeat
@@ -277,6 +271,7 @@ FlowMinimum,
 FuelPrice,
 Fuel,
 HeatDemand,
+HeatSlack,
 LineNode,
 Location,
 LoadShedding
@@ -314,16 +309,11 @@ $label skipdisplay
 *Definition of variables
 *===============================================================================
 VARIABLES
-Committed(u,h)             [n.a.]  Unit committed at hour h {1 0} or integer
-StartUp(u,h)        [n.a.]  Unit start up at hour h {1 0}  or integer
-ShutDown(u,h)       [n.a.]  Unit shut down at hour h {1 0} or integer
+Committed(u,h)             [n.a.]  Unit committed at hour h {1 0}
 ;
 
-* temporary:
-Nunits(u) = 1;
-
 $If %LPFormulation% == 1 POSITIVE VARIABLES Committed (u,h) ; Committed.UP(u,h) = 1 ;
-$If not %LPFormulation% == 1 INTEGER VARIABLES Committed (u,h), StartUp(u,h), ShutDown(u,h) ; Committed.UP(u,h) = Nunits(u) ; StartUp.UP(u,h) = Nunits(u) ; ShutDown.UP(u,h) = Nunits(u) ;
+$If not %LPFormulation% == 1 BINARY VARIABLES Committed (u,h) ;
 
 POSITIVE VARIABLES
 CostStartUpH(u,h)          [EUR]   Cost of starting up
@@ -340,13 +330,12 @@ PowerMinimum(u,h)          [MW]    Power output
 ShedLoad(n,h)              [MW]    Shed load
 StorageInput(u,h)          [MWh]   Charging input for storage units
 StorageLevel(u,h)          [MWh]   Storage level of charge
-LL_MaxPower(n,h)           [MW]    Deficit in terms of maximum power
-LL_RampUp(u,h)             [MW]    Deficit in terms of ramping up for each plant
-LL_RampDown(u,h)           [MW]    Deficit in terms of ramping down
-LL_MinPower(n,h)           [MW]    Power exceeding the demand
-LL_2U(n,h)                 [MW]    Deficit in reserve up
-LL_3U(n,h)                 [MW]    Deficit in reserve up - non spinning
-LL_2D(n,h)                 [MW]    Deficit in reserve down
+LostLoad_MaxPower(n,h)     [MW]    Deficit in terms of maximum power
+LostLoad_RampUp(u,h)       [MW]    Deficit in terms of ramping up for each plant
+LostLoad_RampDown(u,h)     [MW]    Deficit in terms of ramping down
+LostLoad_MinPower(n,h)     [MW]    Power exceeding the demand
+LostLoad_Reserve2U(n,h)    [MW]    Deficit in reserve up
+LostLoad_Reserve2D(n,h)    [MW]    Deficit in reserve down
 spillage(s,h)              [MWh]   spillage from water reservoirs
 SystemCost(h)              [EUR]   Hourly system cost
 Heat(chp,h)                [MW]    Heat output by chp plant
@@ -361,14 +350,17 @@ SystemCostD               ![EUR]   Total system cost for one optimization period
 *Assignment of initial values
 *===============================================================================
 
+*Forecasted upwards reserve margin (UCTE). Only if not provided in the parameters
+Demand("2U",n,h)$(Demand("2U",n,h)=0)=sqrt(10*smax(hh,Demand("DA",n,hh))+150**2)-150;
+*Forecasted downwards reserve margin (UCTE)
+Demand("2D",n,h)$(Demand("2D",n,h)=0)=0.5*Demand("2U",n,h);
+
 *Initial commitment status
 CommittedInitial(u)=0;
 CommittedInitial(u)$(PowerInitial(u)>0)=1;
 
 * Definition of the minimum stable load:
 PowerMinStable(u) = PartLoadMin(u)*PowerCapacity(u);
-
-LoadMaximum(u,h)= AvailabilityFactor(u,h)*(1-OutageFactor(u,h));
 
 * Start-up and Shutdown ramping constraints. This remains to be solved
 RampStartUpMaximum(u) = max(RampStartUpMaximum(u),PowerMinStable(u));
@@ -381,19 +373,12 @@ FlexibilityUp(u) = RampStartUpMaximum(u)$(RampStartUpMaximum(u)>=PowerMinStable(
 *  RampDownMaximum(u)$(RampShutDownMaximum(u)<PowerMinStable(u)*4)
 FlexibilityDown(u) = RampShutDownMaximum(u)$(RampShutDownMaximum(u)>=PowerMinStable(u)*4);
 
-* parameters for clustered formulation (quickstart is defined as the capability to go to minimum power in 15 min)
-QuickStartPower(u,h) = 0;
-QuickStartPower(u,h)$(RampStartUpMaximum(u)>=PowerMinStable(u)*4) = PowerCapacity(u)*LoadMaximum(u,h);
-RampStartUpMaximumH(u,h) = min(PowerCapacity(u)*LoadMaximum(u,h),max(RampStartUpMaximum(u),PowerMinStable(u),QuickStartPower(u,h)));
-RampShutDownMaximumH(u,h) = min(PowerCapacity(u)*LoadMaximum(u,h),max(RampShutDownMaximum(u),PowerMinStable(u)));
+LoadMaximum(u,h)= AvailabilityFactor(u,h)*(1-OutageFactor(u,h));
 
 PowerMustRun(u,h)=PowerMinStable(u)*LoadMaximum(u,h);
 PowerMustRun(u,h)$(sum(tr,Technology(u,tr))>=1 and smin(n,Location(u,n)*(1-Curtailment(n)))=1) = PowerCapacity(u)*LoadMaximum(u,h);
 
-* Part of the reserve that can be provided by offline quickstart units:
-K_QuickStart(n) = 0.5;
-
-$If %Verbose% == 1 Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial;
+$If %Verbose% == 1 Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial, FlexibilityUp, FlexibilityDown;
 
 $offorder
 
@@ -450,6 +435,7 @@ EQ_Flow_limits_lower
 EQ_Flow_limits_upper
 EQ_Force_Commitment
 EQ_Force_DeCommitment
+*EQ_Curtailment
 EQ_LoadShedding
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 ;
@@ -476,9 +462,9 @@ EQ_SystemCost(i)..
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
          +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
-         +100E3*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
-         +80E3*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
-         +70E3*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
+         +100E3*(sum(n,LostLoad_MaxPower(n,i)+LostLoad_MinPower(n,i)))
+         +80E3*(sum(n,LostLoad_Reserve2U(n,i)+LostLoad_Reserve2D(n,i)))
+         +70E3*sum(u,LostLoad_RampUp(u,i)+LostLoad_RampDown(u,i))
          +1*sum(s,spillage(s,i))
 ;
 
@@ -527,8 +513,8 @@ EQ_Demand_balance_DA(n,i)..
          Demand("DA",n,i)
          +sum(s,StorageInput(s,i)*Location(s,n))
          -ShedLoad(n,i)
-         -LL_MaxPower(n,i)
-         +LL_MinPower(n,i)
+         -LostLoad_MaxPower(n,i)
+         +LostLoad_MinPower(n,i)
 ;
 
 * Maximum 15-min ramping up, in MW/h:
@@ -566,7 +552,7 @@ EQ_Demand_balance_2U(n,i)..
 *         +CurtailedPowerH(n,i)*Curtailment(n,i)
          =G=
          +Demand("2U",n,i)
-         -LL_2U(n,i)
+         -LostLoad_reserve2U(n,i)
 ;
 
 *Hourly demand balance in the downwards reserve market for each node
@@ -575,7 +561,7 @@ EQ_Demand_balance_2D(n,i)..
          =G=
          Demand("2D",n,i)
          -sum(s,(StorageChargingCapacity(s)-StorageInput(s,i)) )*4
-         -LL_2D(n,i)
+         -LostLoad_reserve2D(n,i)
 ;
 
 
@@ -610,7 +596,7 @@ EQ_Ramp_up(u,i)$(sum(tr,Technology(u,tr))=0)..
                  *Committed(u,i-1)
          +RampStartUpMaximum(u)
                  *(1-Committed(u,i-1)))$(ord(i) > 1)
-         +LL_RampUp(u,i)
+         +LostLoad_RampUp(u,i)
 ;
 
 *If the unit keeps committed the reduction in power output is lower than the
@@ -622,7 +608,7 @@ EQ_Ramp_down(u,i)$(sum(tr,Technology(u,tr))=0)..
          =L=
          RampDownMaximum(u) * Committed(u,i)
          + RampShutDownMaximum(u) * (1-Committed(u,i))
-         + LL_RampDown(u,i)
+         + LostLoad_RampDown(u,i)
 ;
 
 *Minimum time up constraints
@@ -694,7 +680,7 @@ EQ_Minimum_time_down_JustStopped(u,i)$(TimeDownLeft_initial(u)+1 <= ord(i))..
 
 *Storage level must be above a minimum
 EQ_Storage_minimum(s,i)..
-         StorageMinimum(s)* Nunits(s)
+         StorageMinimum(s)
          =L=
          StorageLevel(s,i)
 ;
@@ -703,21 +689,20 @@ EQ_Storage_minimum(s,i)..
 EQ_Storage_level(s,i)..
          StorageLevel(s,i)
          =L=
-         StorageCapacity(s)*AvailabilityFactor(s,i)*Nunits(s)
+         StorageCapacity(s)*AvailabilityFactor(s,i)
 ;
 
 * Storage charging is bounded by the maximum capacity
 EQ_Storage_input(s,i)..
          StorageInput(s,i)
          =L=
-         StorageChargingCapacity(s)*(Nunits(s)-Committed(s,i))
+         StorageChargingCapacity(s)*(1-Committed(s,i))
 ;
-* The system could curtail by pumping and turbining at the same time if Nunits>1. This should be included into the curtailment equation!
 
 *Discharge is limited by the storage level
 EQ_Storage_MaxDischarge(s,i)..
          Power(s,i)/(max(StorageDischargeEfficiency(s),0.0001))
-         +StorageOutflow(s,i)*Nunits(s) +Spillage(s,i) - StorageInflow(s,i)*Nunits(s)
+         +StorageOutflow(s,i) +Spillage(s,i) - StorageInflow(s,i)
          =L=
          StorageLevel(s,i)
 ;
@@ -725,9 +710,9 @@ EQ_Storage_MaxDischarge(s,i)..
 *Charging is limited by the remaining storage capacity
 EQ_Storage_MaxCharge(s,i)..
          StorageInput(s,i) * StorageChargingEfficiency(s)
-         -StorageOutflow(s,i)*Nunits(s) -spillage(s,i) + StorageInflow(s,i)*Nunits(s)
+         -StorageOutflow(s,i) -spillage(s,i) + StorageInflow(s,i)
          =L=
-         StorageCapacity(s)*AvailabilityFactor(s,i)*Nunits(s) - StorageLevel(s,i)
+         StorageCapacity(s)*AvailabilityFactor(s,i) - StorageLevel(s,i)
 ;
 
 *Storage balance
@@ -735,11 +720,11 @@ EQ_Storage_balance(s,i)..
          StorageInitial(s)$(ord(i) = 1)
          +StorageLevel(s,i-1)$(ord(i) > 1)
 *         +StorageLevelH(h--1,s)
-         +StorageInflow(s,i)*Nunits(s)
+         +StorageInflow(s,i)
          +StorageInput(s,i)*StorageChargingEfficiency(s)
          =E=
          StorageLevel(s,i)
-         +StorageOutflow(s,i)*Nunits(s)
+         +StorageOutflow(s,i)
          +spillage(s,i)
          +Power(s,i)/(max(StorageDischargeEfficiency(s),0.0001))
 ;
@@ -774,16 +759,24 @@ EQ_Flow_limits_upper(l,i)..
 
 *Force Unit commitment/decommitment:
 * E.g: renewable units with AF>0 must be committed
-EQ_Force_Commitment(u,i)$((sum(tr,Technology(u,tr))>=1 and LoadMaximum(u,i)>0))..
+EQ_Force_Commitment(u,i)$((sum(tr,Technology(u,tr))>=1 and LoadMaximum(u,i)>0) or (ord(i)=4 and ord(u)=129))..
          Committed(u,i)
-         =G=
+         =E=
          1;
 
 * E.g: renewable units with AF=0 must be decommitted
-EQ_Force_DeCommitment(u,i)$(LoadMaximum(u,i)=0)..
+EQ_Force_DeCommitment(u,i)$(LoadMaximum(u,i)=0 or ord(u)=200)..
          Committed(u,i)
          =E=
          0;
+
+*Curtailment allowed or not
+*EQ_Curtailment(n,i)..
+*         CurtailedPowerH(n,i)
+*         =L=
+*         sum(u,Power(u,i)*sum(tr,Technology(u,tr))*Location(u,n))
+*            *Curtailment(n)
+*;
 
 *Load shedding
 EQ_LoadShedding(n,i)..
@@ -912,6 +905,7 @@ EQ_Flow_limits_lower,
 EQ_Flow_limits_upper,
 EQ_Force_Commitment,
 EQ_Force_DeCommitment,
+*EQ_Curtailment,
 EQ_LoadShedding,
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 /
@@ -958,19 +952,17 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          TimeDownLeft_JustStopped(u,i) = min(card(i)-ord(i)+1,TimeDownMinimum(u));
 
 *        Defining the minimum level at the end of the horizon, ensuring that it is feasible with the provided inflows:
-         StorageFinalMin(s) =  min(StorageInitial(s) + (sum(i,StorageInflow(s,i)) - sum(i,StorageOutflow(s,i)))*Nunits(s), sum(i$(ord(i)=card(i)),StorageProfile(s,i)*Nunits(s)*StorageCapacity(s)*AvailabilityFactor(s,i)));
+         StorageFinalMin(s) =  min(StorageInitial(s) + sum(i,StorageInflow(s,i)) - sum(i,StorageOutflow(s,i)) , sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*AvailabilityFactor(s,i)));
 *        Correcting the minimum level to avoid the infeasibility in case it is too close to the StorageCapacity:
-         StorageFinalMin(s) = min(StorageFinalMin(s),Nunits(s)*StorageCapacity(s) - Nunits(s)*smax(i,StorageInflow(s,i)));
+         StorageFinalMin(s) = min(StorageFinalMin(s),StorageCapacity(s) - smax(i,StorageInflow(s,i)));
 
 $If %Verbose% == 1   Display TimeUpLeft_initial,TimeUpLeft_JustStarted,TimeDownLeft_initial,TimeDownLeft_JustStopped,TimeUpInitial,TimeDownInitial,PowerInitial,CommittedInitial,StorageFinalMin;
 
 $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
 
-$If %Verbose% == 0 $goto skipdisplay2
 $If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_Max_RampUp1.M, EQ_Max_RampUp2.M,EQ_Max_RampDown1.M, EQ_Max_RampDown2.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
 $If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Power_must_run.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_Minimum_time_up_A.M, EQ_Minimum_time_up_JustStarted.M, EQ_Minimum_time_down_A.M, EQ_Minimum_time_down_JustStopped.M, EQ_Max_RampUp1.M, EQ_Max_RampUp2.M, EQ_Max_RampDown1.M, EQ_Max_RampDown2.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
-$label skipdisplay2
 
          status("model",i) = UCM_SIMPLE.Modelstat;
          status("solver",i) = UCM_SIMPLE.Solvestat;
@@ -1006,9 +998,9 @@ $If %Verbose% == 1 Display LastKeptHour,PowerInitial,TimeUp,TimeDown,MaxRamp2D.L
 
 );
 
-CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n));
+CurtailedPower.L(n,z)=sum(u,(PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n));
 
-$If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,StorageLevel.L,StorageInput.L,SystemCost.L,MaxRamp2U.L,MaxRamp2D.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
+$If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,StorageLevel.L,StorageInput.L,SystemCost.L,MaxRamp2U.L,MaxRamp2D.L,LostLoad_MaxPower.L,LostLoad_MinPower.L,LostLoad_reserve2U.L,LostLoad_reserve2D.L,LostLoad_RampUP.L,LostLoad_RampDown.L;
 
 
 *===============================================================================
@@ -1022,21 +1014,15 @@ OutputFlow(l,h)
 OutputPower(u,h)
 OutputStorageInput(u,h)
 OutputStorageLevel(u,h)
+*OutputTimeDown(u,i)
+*OutputTimeUp(u,i)
 OutputSystemCost(h)
 OutputSpillage(s,h)
 OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
-ShadowPrice(n,h)
-LostLoad_MaxPower(n,h)
-LostLoad_MinPower(n,h)
-LostLoad_2D(n,h)
-LostLoad_2U(n,h)
-LostLoad_3U(n,h)
-LostLoad_RampUp(n,h)
-LostLoad_RampDown(n,h)
-OutputGenMargin(n,h)
 OutputHeat(chp,h)
 OutputHeatSlack(chp,h)
+ShadowPrice(n,h)
 ;
 
 OutputCommitted(u,z)=Committed.L(u,z);
@@ -1048,17 +1034,12 @@ OutputStorageInput(s,z)=StorageInput.L(s,z);
 OutputStorageInput(chp,z)=StorageInput.L(chp,z);
 OutputStorageLevel(s,z)=StorageLevel.L(s,z);
 OutputStorageLevel(chp,z)=StorageLevel.L(chp,z);
+*OutputTimeDown(u,i)=TimeDown(u,i);
+*OutputTimeUp(u,h)=TimeUp(u,i);
 OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(s,z)  = Spillage.L(s,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
-LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
-LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
-LostLoad_2D(n,z) = LL_2D.L(n,z);
-LostLoad_2U(n,z) = LL_2U.L(n,z);
-LostLoad_3U(n,z) = LL_3U.L(n,z);
-LostLoad_RampUp(n,z)    = sum(u,LL_RampUp.L(u,z)*Location(u,n));
-LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
 
 EXECUTE_UNLOAD "Results.gdx"
@@ -1069,16 +1050,16 @@ OutputHeat,
 OutputHeatSlack,
 OutputStorageInput,
 OutputStorageLevel,
+*OutputTimeDown,
+*OutputTimeUp,
 OutputSystemCost,
 OutputSpillage,
 OutputShedLoad,
 OutputCurtailedPower,
-OutputGenMargin,
 LostLoad_MaxPower,
 LostLoad_MinPower,
-LostLoad_2D,
-LostLoad_2U,
-LostLoad_3U,
+LostLoad_Reserve2D,
+LostLoad_Reserve2U,
 LostLoad_RampUp,
 LostLoad_RampDown,
 ShadowPrice,
@@ -1111,6 +1092,10 @@ EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=Y par=OutageFacto
 EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=N par=Demand rng=Demand!A1 rdim=2 cdim=1'
 EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=N par=PartLoadMin rng=PartLoadMin!A1 rdim=1 cdim=0'
 
+*EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=DayOutput rng=Power!B3 cdim=1'
+*EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=MonthOutput rng=Power!B2 cdim=1'
+*EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=YearOutput rng=Power!B1 cdim=1'
+
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N var=CurtailedPower rng=CurtailedPower!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N var=ShedLoad rng=ShedLoad!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputCommitted rng=Committed!A1 rdim=1 cdim=1'
@@ -1121,8 +1106,8 @@ EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputStorageLe
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputSystemCost rng=SystemCost!A1 rdim=1 cdim=0'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_MaxPower rng=LostLoad_MaxPower!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_MinPower rng=LostLoad_MinPower!A1 rdim=1 cdim=1'
-EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_2D rng=LostLoad_2D!A1 rdim=1 cdim=1'
-EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_2U rng=LostLoad_2U!A1 rdim=1 cdim=1'
+EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_Reserve2D rng=LostLoad_Reserve2D!A1 rdim=1 cdim=1'
+EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_Reserve2U rng=LostLoad_Reserve2U!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_RampUp rng=LostLoad_RampUp!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_RampDown rng=LostLoad_RampDown!A1 rdim=1 cdim=1'
 
@@ -1160,4 +1145,4 @@ $If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartU
 
 display day,FirstHour,LastHour,LastKeptHour;
 Display StorageFinalMin,TimeUpLeft_initial,TimeUpLeft_JustStarted,TimeDownLeft_initial,TimeDownLeft_JustStopped,TimeUpInitial,TimeDownInitial,PowerInitial,CommittedInitial,StorageFinalMin;
-Display Flow.L,Power.L,Committed.L,ShedLoad.L,StorageLevel.L,StorageInput.L,SystemCost.L,MaxRamp2U.L,MaxRamp2D.L,Spillage.L,StorageLevel.L,StorageInput.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
+Display Flow.L,Power.L,Committed.L,ShedLoad.L,StorageLevel.L,StorageInput.L,SystemCost.L,MaxRamp2U.L,MaxRamp2D.L,Spillage.L,StorageLevel.L,StorageInput.L,LostLoad_MaxPower.L,LostLoad_MinPower.L,LostLoad_reserve2U.L,LostLoad_reserve2D.L,LostLoad_RampUP.L,LostLoad_RampDown.L;
