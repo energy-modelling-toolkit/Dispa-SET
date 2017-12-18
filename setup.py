@@ -24,7 +24,7 @@ def define_data_files():
 setup(
     name='Dispa-SET',
     version=__version__,
-    author='Sylvain Quoilin, Konstantino Kavvadias',
+    author='Sylvain Quoilin, Konstantinos Kavvadias',
     author_email='squoilin@uliege.be',
     description='An open-source unit commitment and optimal dispatch model ',
     license='EUPL v1.1.',
@@ -38,11 +38,7 @@ setup(
         "numpy >= 1.12",
         "pandas >= 0.19"
     ],
-    entry_points={
-        'console_scripts': [
-            'DispaSET = dispacli:cli'
-        ]
-    },
+    scripts=['dispaset'],
     classifiers=[
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: EUPL Software License',
