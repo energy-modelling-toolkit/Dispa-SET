@@ -36,7 +36,7 @@ setup(
     install_requires=[
         "click >= 3.3",
         "numpy >= 1.12",
-        "pandas >= 0.19, < 0.20"
+        "pandas >= 0.19"
     ],
     entry_points={
         'console_scripts': [
