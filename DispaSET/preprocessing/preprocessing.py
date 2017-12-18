@@ -415,8 +415,6 @@ def build_simulation(config,plot_load=False):
     sets_param['Technology'] = ['u', 't']
     sets_param['TimeUpMinimum'] = ['u']
     sets_param['TimeDownMinimum'] = ['u']
-    sets_param['TimeUpInitial'] = ['u']
-    sets_param['TimeDownInitial'] = ['u']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -428,8 +426,8 @@ def build_simulation(config,plot_load=False):
         parameters[var] = define_parameter(sets_param[var], sets, value=1)
 
     # List of parameters whose default value is very high
-    for var in ['RampUpMaximum', 'RampDownMaximum', 'RampStartUpMaximum', 'RampShutDownMaximum', 'EmissionMaximum',
-                'TimeUpInitial', 'TimeDownInitial']:
+    for var in ['RampUpMaximum', 'RampDownMaximum', 'RampStartUpMaximum', 'RampShutDownMaximum', 
+                'EmissionMaximum']:
         parameters[var] = define_parameter(sets_param[var], sets, value=1e7)
 
     # Boolean parameters:
