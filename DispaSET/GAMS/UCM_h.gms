@@ -68,10 +68,6 @@ i(h)             Subset of simulated hours for one iteration
 z(h)             Subset of all simulated hours
 ;
 
-*$if %LookAhead%==1 SET i   TimeStep    /1*48/ ;
-*$if %LookAhead%==0 SET i   TimeStep    /1*24/ ;
-
-
 Alias(mk,mkmk);
 Alias(n,nn);
 Alias(l,ll);
@@ -140,16 +136,9 @@ StorageInitial(u)                [MWh]    Storage level before initial period
 StorageProfile(u,h)              [MWh]    Storage level to be resepected at the end of each horizon
 StorageMinimum(u)                [MWh\u]    Storage minimum
 Technology(u,t)                  [n.a.]   Technology type {1 0}
-TimeDown(u,h)                    [h]      Hours down
-TimeDownLeft_initial(u)          [h]      Required time down left at the beginning of the simulated time period
-TimeDownLeft_JustStopped(u,h)    [h]      Required time down left at hour h if the Unit has just been stopped
-TimeDownInitial(u)               [h]      Hours down before initial period
 TimeDownMinimum(u)               [h]      Minimum down time
-TimeUpLeft_initial(u)            [h]      Required time up left at the beginning of the simulated time period
-TimeUpInitial(u)                 [h]      Hours on before initial period
 TimeUpMinimum(u)                 [h]      Minimum up time
 $If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment status as for the MILP
-* Parameter not read by input for now: number of units inside the cluster
 Nunits(u)                        [n.a.]   Number of units inside the cluster (upper bound value for integer variables)
 K_QuickStart(n)                      [n.a.]   Percentage of reserve provided by nonsynchronised offline resources (e.g. quick start units or demand response
 QuickStartPower(u,h)            [MW\h\u]   Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
@@ -157,13 +146,15 @@ QuickStartPower(u,h)            [MW\h\u]   Available max capacity in tertiary re
 
 *Parameters as used within the loop
 PARAMETERS
-TimeUpLeft_JustStarted(u,h)      [h]     Required time up left at hour h if the Unit has just been started
 CostLoadShedding(n,h)            [EUR\MW]  Value of lost load
-TimeUp(u,h)                      [h]     Hours up
 LoadMaximum(u,h)                 [%]     Maximum load given AF and OF
 PowerMustRun(u,h)                [MW\u]    Minimum power output
 StorageFinalMin(s)               [MWh]   Minimum storage level at the end of the optimization horizon
 ;
+
+* Scalar variables necessary to the loop:
+scalar FirstHour,LastHour,LastKeptHour,day,ndays,failed;
+FirstHour = 1;
 
 *===============================================================================
 *Data import
@@ -231,9 +222,7 @@ $LOAD StorageProfile
 $LOAD StorageMinimum
 $LOAD StorageOutflow
 $LOAD Technology
-$LOAD TimeDownInitial
 $LOAD TimeDownMinimum
-$LOAD TimeUpInitial
 $LOAD TimeUpMinimum
 $LOAD CostRampUp
 $LOAD CostRampDown
@@ -276,7 +265,6 @@ FlowMinimum,
 FuelPrice,
 Fuel,
 HeatDemand,
-HeatSlack,
 LineNode,
 Location,
 LoadShedding
@@ -292,8 +280,6 @@ StorageSelfDischarge,
 RampDownMaximum,
 RampShutDownMaximum,
 RampStartUpMaximum,
-RampShutDownMaximumH,
-RampStartUpMaximumH,
 RampUpMaximum,
 Reserve,
 StorageCapacity,
@@ -303,9 +289,7 @@ StorageProfile,
 StorageMinimum,
 StorageOutflow,
 Technology,
-TimeDownInitial,
 TimeDownMinimum,
-TimeUpInitial,
 TimeUpMinimum
 $If %RetrieveStatus% == 1 , CommittedCalc
 ;
@@ -331,8 +315,6 @@ CostRampUpH(u,h)           [EUR]   Ramping cost
 CostRampDownH(u,h)         [EUR]   Ramping cost
 CurtailedPower(n,h)        [MW]    Curtailed power at node n
 Flow(l,h)                  [MW]    Flow through lines
-MaxRamp2U(u,h)             [MW\h]  Maximum 15-min Ramp-up capbility
-MaxRamp2D(u,h)             [MW\h]  Maximum 15-min Ramp-down capbility
 Power(u,h)                 [MW]    Power output
 PowerMaximum(u,h)          [MW]    Power output
 PowerMinimum(u,h)          [MW]    Power output
@@ -371,10 +353,6 @@ CommittedInitial(u)$(PowerInitial(u)>0)=1;
 PowerMinStable(u) = PartLoadMin(u)*PowerCapacity(u);
 
 LoadMaximum(u,h)= AvailabilityFactor(u,h)*(1-OutageFactor(u,h));
-
-* Start-up and Shutdown ramping constraints. This remains to be solved
-RampStartUpMaximum(u) = max(RampStartUpMaximum(u),PowerMinStable(u));
-RampShutDownMaximum(u) = max(RampShutDownMaximum(u),PowerMinStable(u));
 
 * parameters for clustered formulation (quickstart is defined as the capability to go to minimum power in 15 min)
 QuickStartPower(u,h) = 0;
@@ -424,8 +402,6 @@ EQ_Power_available
 EQ_Reserve_2U_capability
 EQ_Reserve_2D_capability
 EQ_Reserve_3U_capability
-EQ_MaxShutDowns
-EQ_MaxStartUps
 EQ_Storage_minimum
 EQ_Storage_level
 EQ_Storage_input
@@ -487,6 +463,7 @@ EQ_Commitment(u,i)..
 * minimum up time
 EQ_MinUpTime(u,i)..
          sum(ii$( (ord(ii) >= ord(i) - TimeUpMinimum(u)) and (ord(ii) <= ord(i)) ), StartUp(u,ii))
+         + sum(h$( (ord(h) >= FirstHour - TimeUpMinimum(u) -1) and (ord(h) < FirstHour)),StartUp.L(u,h))
          =L=
          Committed(u,i)
 ;
@@ -494,20 +471,9 @@ EQ_MinUpTime(u,i)..
 * minimum down time
 EQ_MinDownTime(u,i)..
          sum(ii$( (ord(ii) >= ord(i) - TimeDownMinimum(u)) and (ord(ii) <= ord(i)) ), ShutDown(u,ii))
+         + sum(h$( (ord(h) >= FirstHour - TimeDownMinimum(u) -1) and (ord(h) < FirstHour)),ShutDown.L(u,h))
          =L=
          Nunits(u)-Committed(u,i)
-;
-
-EQ_MaxShutDowns(u)..
-         sum(i$(ord(i) <= TimeUpLeft_initial(u)),ShutDown(u,i))
-         =E=
-         0
-;
-
-EQ_MaxStartUps(u)..
-         sum(i$(ord(i) <= TimeDownLeft_initial(u)),StartUp(u,i))
-         =E=
-         0
 ;
 
 * ramp up constraints
@@ -817,8 +783,6 @@ EQ_Power_available,
 EQ_Heat_Storage_balance,
 EQ_Heat_Storage_minimum,
 EQ_Heat_Storage_level,
-$If not %LPFormulation% == 1 EQ_MaxShutDowns,
-$If not %LPFormulation% == 1 EQ_MaxStartUps,
 EQ_Reserve_2U_capability,
 EQ_Reserve_2D_capability,
 EQ_Reserve_3U_capability,
@@ -848,14 +812,12 @@ UCM_SIMPLE.optcr = 0.01;
 *Solving loop
 *===============================================================================
 
-* Scalar variables necessary to the loop:
-scalar FirstHour,LastHour,LastKeptHour,day,ndays,failed;
 ndays = floor(card(h)/24);
 if (Config("RollingHorizon LookAhead","day") > ndays -1, abort "The look ahead period is longer than the simulation length";);
 
 * Some parameters used for debugging:
 failed=0;
-parameter TimeUpInitial_dbg(u), TimeDownInitial_dbg(u), CommittedInitial_dbg(u), PowerInitial_dbg(u), StorageInitial_dbg(s);
+parameter CommittedInitial_dbg(u), PowerInitial_dbg(u), StorageInitial_dbg(s);
 
 * Fixing the initial guesses:
 *PowerH.L(u,i)=PowerInitial(u);
@@ -875,48 +837,28 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
          display day,FirstHour,LastHour,LastKeptHour;
 
-         TimeUpLeft_initial(u)=min(card(i),(TimeUpMinimum(u)-TimeUpInitial(u))*CommittedInitial(u));
-         TimeUpLeft_JustStarted(u,i) = min(card(i)-ord(i)+1,TimeUpMinimum(u));
-         TimeDownLeft_initial(u)=min(card(i),(TimeDownMinimum(u)-TimeDownInitial(u))*(1-CommittedInitial(u)));
-         TimeDownLeft_JustStopped(u,i) = min(card(i)-ord(i)+1,TimeDownMinimum(u));
-
 *        Defining the minimum level at the end of the horizon, ensuring that it is feasible with the provided inflows:
          StorageFinalMin(s) =  min(StorageInitial(s) + (sum(i,StorageInflow(s,i)) - sum(i,StorageOutflow(s,i)))*Nunits(s), sum(i$(ord(i)=card(i)),StorageProfile(s,i)*Nunits(s)*StorageCapacity(s)*AvailabilityFactor(s,i)));
 *        Correcting the minimum level to avoid the infeasibility in case it is too close to the StorageCapacity:
          StorageFinalMin(s) = min(StorageFinalMin(s),Nunits(s)*StorageCapacity(s) - Nunits(s)*smax(i,StorageInflow(s,i)));
 
-$If %Verbose% == 1   Display TimeUpLeft_initial,TimeUpLeft_JustStarted,TimeDownLeft_initial,TimeDownLeft_JustStopped,TimeUpInitial,TimeDownInitial,PowerInitial,CommittedInitial,StorageFinalMin;
+$If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
 
 $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
 
 $If %Verbose% == 0 $goto skipdisplay2
 $If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
-$If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Commitment.M, EQ_MinUpTime.M, EQ_MinDownTime.M, EQ_MaxShutDowns.M, EQ_MaxStartUps.M, EQ_RampUp_TC.M, EQ_RampDown_TC.M, EQ_Demand_balance_DA.M, EQ_Demand_balance_2U.M, EQ_Demand_balance_2D.M, EQ_Demand_balance_3U.M, EQ_Reserve_2U_capability.M, EQ_Reserve_2D_capability.M, EQ_Reserve_3U_capability.M, EQ_Power_must_run.M, EQ_Power_must_run_update.M, EQ_Power_available.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_SystemCost.M, EQ_Flow_limits_lower.M, EQ_Flow_limits_upper.M, EQ_Force_Commitment.M, EQ_Force_DeCommitment.M, EQ_LoadShedding.M ;
+$If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Commitment.M, EQ_MinUpTime.M, EQ_MinDownTime.M, EQ_RampUp_TC.M, EQ_RampDown_TC.M, EQ_Demand_balance_DA.M, EQ_Demand_balance_2U.M, EQ_Demand_balance_2D.M, EQ_Demand_balance_3U.M, EQ_Reserve_2U_capability.M, EQ_Reserve_2D_capability.M, EQ_Reserve_3U_capability.M, EQ_Power_must_run.M, EQ_Power_available.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_SystemCost.M, EQ_Flow_limits_lower.M, EQ_Flow_limits_upper.M, EQ_Force_Commitment.M, EQ_Force_DeCommitment.M, EQ_LoadShedding.M ;
 $label skipdisplay2
 
          status("model",i) = UCM_SIMPLE.Modelstat;
          status("solver",i) = UCM_SIMPLE.Solvestat;
 
-if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, TimeUpInitial_dbg(u) = TimeUpInitial(u); TimeDownInitial_dbg(u) = TimeDownInitial(u); CommittedInitial_dbg(u) = CommittedInitial(u); PowerInitial_dbg(u) = PowerInitial(u); StorageInitial_dbg(s) = StorageInitial(s);
-                                                                           EXECUTE_UNLOAD "debug.gdx" day, status, TimeUpInitial_dbg, TimeDownInitial_dbg, CommittedInitial_dbg, PowerInitial_dbg, StorageInitial_dbg;
+if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, CommittedInitial_dbg(u) = CommittedInitial(u); PowerInitial_dbg(u) = PowerInitial(u); StorageInitial_dbg(s) = StorageInitial(s);
+                                                                           EXECUTE_UNLOAD "debug.gdx" day, status, CommittedInitial_dbg, PowerInitial_dbg, StorageInitial_dbg;
                                                                            failed=1;);
 
-*Time counters
-         Loop(i,
-              TimeUp(u,i)$(ord(i) = 1 and Committed.L(u,i) > 0)=TimeUpInitial(u)+1;
-              TimeUp(u,i)$(ord(i) = 1 and Committed.L(u,i) = 0)=0;
-              TimeUp(u,i)$(ord(i) > 1 and Committed.L(u,i) > 0) = TimeUp(u,i-1)+1;
-              TimeUp(u,i)$(ord(i) > 1 and Committed.L(u,i) = 0) = 0;
-
-              TimeDown(u,i)$(ord(i) = 1 and Committed.L(u,i) = 0) = TimeDownInitial(u)+1;
-              TimeDown(u,i)$(ord(i) = 1 and Committed.L(u,i) > 0) = 0;
-              TimeDown(u,i)$(ord(i) > 1 and Committed.L(u,i) = 0) = TimeDown(u,i-1)+1;
-              TimeDown(u,i)$(ord(i) > 1 and Committed.L(u,i) > 0) = 0;
-              );
-
-         TimeUpInitial(u)=sum(i$(ord(i)=LastKeptHour-FirstHour+1),TimeUp(u,i));
-         TimeDownInitial(u)=sum(i$(ord(i)=LastKeptHour-FirstHour+1),TimeDown(u,i));
          CommittedInitial(u)=sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(u,i));
          PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
 
@@ -925,14 +867,13 @@ if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, TimeU
 
 
 *Loop variables to display after solving:
-$If %Verbose% == 1 Display LastKeptHour,PowerInitial,TimeUp,TimeDown,MaxRamp2D.L,MaxRamp2U.L,CostStartUpH.L,CostShutDownH.L,CostRampUpH.L;
+$If %Verbose% == 1 Display LastKeptHour,PowerInitial,CostStartUpH.L,CostShutDownH.L,CostRampUpH.L;
 
 );
 
 CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n));
 
-$If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,StorageLevel.L,StorageInput.L,SystemCost.L,MaxRamp2U.L,MaxRamp2D.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
-
+$If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
 
 *===============================================================================
 *Result export
@@ -1019,8 +960,6 @@ EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=N par=RampDownMax
 EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=N par=RampShutDownMaximum rng=RampShutDownMaximum!A1 rdim=1 cdim=0'
 EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=N par=RampStartUpMaximum rng=RampStartUpMaximum!A1 rdim=1 cdim=0'
 EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=N par=RampUpMaximum rng=RampUpMaximum!A1 rdim=1 cdim=0'
-EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=N par=TimeUpInitial rng=TimeUpInitial!A1 rdim=1 cdim=0'
-EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=N par=TimeDownInitial rng=TimeDownInitial!A1 rdim=1 cdim=0'
 EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=N par=TimeUpMinimum rng=TimeUpMinimum!A1 rdim=1 cdim=0'
 EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=N par=TimeDownMinimum rng=TimeDownMinimum!A1 rdim=1 cdim=0'
 EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=N par=Reserve rng=Reserve!A1 rdim=1 cdim=0'
@@ -1060,27 +999,21 @@ $LOAD day
 $LOAD PowerInitial_dbg
 $LOAD CommittedInitial_dbg
 $LOAD StorageInitial_dbg
-$LOAD TimeDownInitial_dbg
-$LOAD TimeUpInitial_dbg
 ;
-PowerInitial(u) = PowerInitial_dbg(u); CommittedInitial(u) = CommittedInitial_dbg(u); StorageInitial(s) = StorageInitial_dbg(s); TimeDownInitial(u) = TimeDownInitial_dbg(u); TimeUpInitial(u) = TimeUpInitial_dbg(u);
+PowerInitial(u) = PowerInitial_dbg(u); CommittedInitial(u) = CommittedInitial_dbg(u); StorageInitial(s) = StorageInitial_dbg(s);
 FirstHour = (day-1)*24+1;
 LastHour = min(card(h),FirstHour + (Config("RollingHorizon Length","day")+Config("RollingHorizon LookAhead","day")) * 24 - 1);
 LastKeptHour = LastHour - Config("RollingHorizon LookAhead","day") * 24;
 i(h) = no;
 i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
-TimeUpLeft_initial(u)=min(card(i),(TimeUpMinimum(u)-TimeUpInitial(u))*CommittedInitial(u));
-TimeUpLeft_JustStarted(u,i) = min(card(i)-ord(i)+1,TimeUpMinimum(u));
-TimeDownLeft_initial(u)=min(card(i),(TimeDownMinimum(u)-TimeDownInitial(u))*(1-CommittedInitial(u)));
-TimeDownLeft_JustStopped(u,i) = min(card(i)-ord(i)+1,TimeDownMinimum(u));
 StorageFinalMin(s) =  min(StorageInitial(s) + sum(i,StorageInflow(s,i)) - sum(i,StorageOutflow(s,i)) , sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*AvailabilityFactor(s,i)));
 StorageFinalMin(s) = min(StorageFinalMin(s),StorageCapacity(s) - smax(i,StorageInflow(s,i)));
-$If %Verbose% == 1   Display TimeUpLeft_initial,TimeUpLeft_JustStarted,TimeDownLeft_initial,TimeDownLeft_JustStopped,TimeUpInitial,TimeDownInitial,PowerInitial,CommittedInitial,StorageFinalMin;
+$If %Verbose% == 1   Display TimeUpLeft_initial,TimeUpLeft_JustStarted,PowerInitial,CommittedInitial,StorageFinalMin;
 $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
 $If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
 $If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Power_must_run.M, EQ_Power_available.M, EQ_Ramp_up.M, EQ_Ramp_down.M, EQ_MaxShutDowns.M, EQ_MaxShutDowns_JustStarted.M, EQ_MaxStartUps.M, EQ_MaxStartUps_JustStopped.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
 
 display day,FirstHour,LastHour,LastKeptHour;
-Display StorageFinalMin,TimeUpLeft_initial,TimeUpLeft_JustStarted,TimeDownLeft_initial,TimeDownLeft_JustStopped,TimeUpInitial,TimeDownInitial,PowerInitial,CommittedInitial,StorageFinalMin;
-Display Flow.L,Power.L,Committed.L,ShedLoad.L,StorageLevel.L,StorageInput.L,SystemCost.L,MaxRamp2U.L,MaxRamp2D.L,Spillage.L,StorageLevel.L,StorageInput.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
+Display StorageFinalMin,PowerInitial,CommittedInitial,StorageFinalMin;
+Display Flow.L,Power.L,Committed.L,ShedLoad.L,StorageLevel.L,StorageInput.L,SystemCost.L,Spillage.L,StorageLevel.L,StorageInput.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
