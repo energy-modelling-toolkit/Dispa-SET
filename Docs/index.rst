@@ -43,13 +43,13 @@ Contents
    :maxdepth: 1
 
    overview
+   releases
    workflow
    model
    implementation
    data
    developers
    DispaSET
-   releases
 
 
 Indices and tables
