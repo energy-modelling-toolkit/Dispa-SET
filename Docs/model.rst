@@ -632,12 +632,16 @@ The vertical dotted line BC corresponds to the minimum condensation line (as def
 
     StorageInput_{chp,i} \cdot CHPPowerLossFactor_{chp}
 
+.. math::
+    Power_{chp,i}
+    \geq
+    PowerMustRun_{chp,i} - StorageInput_{chp,i} * CHPPowerLossFactor_{chp}
 
 
 Power plant coupled with any power to heat option
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This option includes power plants coupled with resistance heater or heat pumps. The feasible operating line is between AB. The slope of the line is the inverse of the COP or efficiency.
+This option includes power plants coupled with resistance heater or heat pumps. The feasible operating region is between ABCD. The slope of the AB and CD line is the inverse of the COP or efficiency.
 The vertical dotted line corresponds to the heat pump (or resistance heater) thermal capacity (as defined by *CHPMaxHeat*)
 
 .. figure:: figures/p2h.png
@@ -648,10 +652,13 @@ The vertical dotted line corresponds to the heat pump (or resistance heater) the
 .. math::
 
     Power_{chp,i}
-    =
+    \leq
     PowerCapacity_{chp} - StorageInput_{chp,i} \cdot CHPPowerLossFactor_{chp}
 
-
+.. math::
+    Power_{chp,i}
+    \geq
+    PowerMustRun_{chp,i} - StorageInput_{chp,i} * CHPPowerLossFactor_{chp}
 
 Heat Storage
 ~~~~~~~~~~~~

@@ -12,3 +12,7 @@ Simulations/*
 .ipynb*
 Docs/_build/*
 Docs/_static/*
+*.egg-info/*
+dist/*
+build/*
+
