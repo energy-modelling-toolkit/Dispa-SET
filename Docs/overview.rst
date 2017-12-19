@@ -9,7 +9,7 @@ Overview
 :Git Revision: |release|
 :Date: |today|
 
-The Dispa-SET model is mainly developed within the “Joint Research Centre” of the European Commission and focused on the balancing and flexibility problems in European grids [1]_.
+The Dispa-SET model is mainly developed within the “Joint Research Centre” of the European Commission and focuses on the balancing and flexibility problems in European grids [1]_.
 
 It is written in GAMS an Python (Pyomo) and uses csv files for input data handling. The optimisation is defined as a Linear Programming (LP) or Mixed-Integer Linear Programming (MILP) problem, depending on the desired level of accuracy and complexity. Continuous variables include the individual unit dispatched power, the shedded load and the curtailed power generation. The binary variables are the commitment status of each unit. The main model features can be summarized as follows:
 

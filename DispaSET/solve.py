@@ -46,7 +46,7 @@ def solve_GAMS(sim_folder, gams_folder=None, work_dir=None, output_lst=False):
     '''
     Function used to run the optimization using the GAMS engine. 
     
-    :param sim_folcer: path to a valid Dispa-SET simulation folder
+    :param sim_folder: path to a valid Dispa-SET simulation folder
     :param gams_folder: path to the gams folder. If not provided, the script will try to find it automatically
     :param work_dir: path to the working directory (does not need to be provided)
     :param output_lst: Set to True to conserve a copy of the GAMS lst file in the simulation folder
@@ -108,7 +108,7 @@ def solve_pyomo(sim_folder):
     '''
     Function used to run the optimization using the PYOMO engine. 
     
-    :param sim_folcer: path to a valid Dispa-SET simulation folder
+    :param sim_folder: path to a valid Dispa-SET simulation folder
     '''
     import pickle
     from .pyomo.model import DispaSolve
