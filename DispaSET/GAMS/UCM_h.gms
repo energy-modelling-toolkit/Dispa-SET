@@ -463,7 +463,7 @@ EQ_Commitment(u,i)..
 * minimum up time
 EQ_MinUpTime(u,i)..
          sum(ii$( (ord(ii) >= ord(i) - TimeUpMinimum(u)) and (ord(ii) <= ord(i)) ), StartUp(u,ii))
-         + sum(h$( (ord(h) >= FirstHour - TimeUpMinimum(u) -1) and (ord(h) < FirstHour)),StartUp.L(u,h))
+         + sum(h$( (ord(h) >= FirstHour + ord(i) - TimeUpMinimum(u) -1) and (ord(h) < FirstHour)),StartUp.L(u,h))
          =L=
          Committed(u,i)
 ;
@@ -471,7 +471,7 @@ EQ_MinUpTime(u,i)..
 * minimum down time
 EQ_MinDownTime(u,i)..
          sum(ii$( (ord(ii) >= ord(i) - TimeDownMinimum(u)) and (ord(ii) <= ord(i)) ), ShutDown(u,ii))
-         + sum(h$( (ord(h) >= FirstHour - TimeDownMinimum(u) -1) and (ord(h) < FirstHour)),ShutDown.L(u,h))
+         + sum(h$( (ord(h) >= FirstHour + ord(i) - TimeDownMinimum(u) -1) and (ord(h) < FirstHour)),ShutDown.L(u,h))
          =L=
          Nunits(u)-Committed(u,i)
 ;

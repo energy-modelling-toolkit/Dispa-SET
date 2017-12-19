@@ -20,9 +20,15 @@ from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_par
 
 from ..misc.gdx_handler import write_variables
 
-
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
+def get_git_revision_tag():
+    """Get version of DispaSET used for this run. tag + commit hash"""
+    from subprocess import check_output
+    try:
+        return check_output(["git", "describe"]).strip()
+    except:
+        return 'NA'
 
 def build_simulation(config,plot_load=False):
     """
@@ -172,10 +178,10 @@ def build_simulation(config,plot_load=False):
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['countries'], NTC, flows)
 
     if len(Interconnections_sim.columns) > 0:
-        NTCs = Interconnections_sim.loc[idx_utc_noloc, :]
+        NTCs = Interconnections_sim.reindex(idx_utc_noloc)
     else:
         NTCs = pd.DataFrame(index=idx_utc_noloc)
-    Inter_RoW = Interconnections_RoW.loc[idx_utc_noloc, :]
+    Inter_RoW = Interconnections_RoW.reindex(idx_utc_noloc)
 
     # Clustering of the plants:
     Plants_merged, mapping = clustering(plants, method=config['SimulationType'])
@@ -705,14 +711,6 @@ def build_simulation(config,plot_load=False):
 
     return SimData
 
-def get_git_revision_tag():
-    """Get version of DispaSET used for this run. tag + commit hash"""
-    from subprocess import check_output
-    try:
-        return check_output(["git", "describe"]).strip()
-    except:
-        return 'NA'
-
 def adjust_capacity(inputs,tech_fuel,scaling=1,value=None,singleunit=False,write_gdx=False,dest_path=''):
     '''
     Function used to modify the installed capacities in the Dispa-SET generated input data
@@ -864,12 +862,6 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
             os.remove('Inputs.gdx')
     return SimData
 
-def get_git_revision_tag():
-    """Get version of DispaSET used for this run. tag + commit hash"""
-    from subprocess import check_output
-    try:
-        return check_output(["git", "describe"]).strip()
-    except:
-        return 'NA'
+
 
 

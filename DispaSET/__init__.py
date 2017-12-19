@@ -1,7 +1,13 @@
 import logging.config
 import os
 
-__version__ = "2.3dev"
+__version__ = None
+# Sets the __version__ variable
+import _version
+__version__ = _version.__version__
+
+from .preprocessing.preprocessing import get_git_revision_tag 
+__gitversion__ = get_git_revision_tag()   
 
 # Logging: # TODO: Parametrize in dispacli or external config
 _LOGCONFIG = {

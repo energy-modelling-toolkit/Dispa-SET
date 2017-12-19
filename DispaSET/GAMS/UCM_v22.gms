@@ -226,9 +226,7 @@ $LOAD StorageProfile
 $LOAD StorageMinimum
 $LOAD StorageOutflow
 $LOAD Technology
-$LOAD TimeDownInitial
 $LOAD TimeDownMinimum
-$LOAD TimeUpInitial
 $LOAD TimeUpMinimum
 $LOAD CostRampUp
 $LOAD CostRampDown
@@ -296,9 +294,7 @@ StorageProfile,
 StorageMinimum,
 StorageOutflow,
 Technology,
-TimeDownInitial,
 TimeDownMinimum,
-TimeUpInitial,
 TimeUpMinimum
 $If %RetrieveStatus% == 1 , CommittedCalc
 ;
@@ -358,6 +354,9 @@ Demand("2D",n,h)$(Demand("2D",n,h)=0)=0.5*Demand("2U",n,h);
 *Initial commitment status
 CommittedInitial(u)=0;
 CommittedInitial(u)$(PowerInitial(u)>0)=1;
+
+TimeUpInitial(u) = 1E7;
+TimeDownInitial(u) = 1E7;
 
 * Definition of the minimum stable load:
 PowerMinStable(u) = PartLoadMin(u)*PowerCapacity(u);
