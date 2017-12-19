@@ -20,7 +20,14 @@ import time
 from .misc.gdx_handler import get_gams_path, import_local_lib, package_exists
 
 def is_sim_folder_ok(sim_folder):
-
+    '''
+    Function that checks if the provided path is a valid Dispa-SET simulation folder
+    The following files are required:
+        - Inputs.gdx
+        - UCM_h.gms
+        
+    :param sim_folder: path (absolute or relative) to the simulation folder
+    '''
     if not os.path.exists(sim_folder):
         logging.error('The provided DispaSET simulation environment folder (' + sim_folder + ') does not exist')
         return False
@@ -36,6 +43,15 @@ def is_sim_folder_ok(sim_folder):
 
 
 def solve_GAMS(sim_folder, gams_folder=None, work_dir=None, output_lst=False):
+    '''
+    Function used to run the optimization using the GAMS engine. 
+    
+    :param sim_folcer: path to a valid Dispa-SET simulation folder
+    :param gams_folder: path to the gams folder. If not provided, the script will try to find it automatically
+    :param work_dir: path to the working directory (does not need to be provided)
+    :param output_lst: Set to True to conserve a copy of the GAMS lst file in the simulation folder
+    '''
+        
     if not package_exists('gams'):
         logging.warning('Could not import gams. Trying to automatically locate gdxcc folder')
         if not import_local_lib('gams'):
@@ -89,6 +105,11 @@ def solve_GAMS(sim_folder, gams_folder=None, work_dir=None, output_lst=False):
 
 
 def solve_pyomo(sim_folder):
+    '''
+    Function used to run the optimization using the PYOMO engine. 
+    
+    :param sim_folcer: path to a valid Dispa-SET simulation folder
+    '''
     import pickle
     from .pyomo.model import DispaSolve
 

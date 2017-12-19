@@ -6,4 +6,4 @@ pandas==0.21.0
 Sphinx==1.6.5
 sphinx-rtd-theme==0.1.9
 xlrd==0.9.4
-
+Pyomo==5.3
