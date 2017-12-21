@@ -161,11 +161,10 @@ def get_plot_data(inputs, results, c):
     plotdata = aggregate_by_fuel(tmp, inputs)
 
     if 'OutputStorageInput' in results:
-        tmp = filter_by_country(results['OutputStorageInput'], inputs, c)
+        #onnly take the columns that correspond to storage units (StorageInput is also used for CHP plants):
+        cols = [col for col in results['OutputStorageInput'] if inputs['units'].loc[col,'Technology'] in commons['tech_storage']]
+        tmp = filter_by_country(results['OutputStorageInput'][cols], inputs, c)
         plotdata['Storage'] = -tmp.sum(axis=1)
-    #        tmp = AggregateByFuel(tmp,inputs,SpecifyFuels=['WAT'])
-    #        for col in tmp:
-    #            plotdata[col+'_pump'] = -tmp[col]
     else:
         plotdata['Storage'] = 0
     plotdata.fillna(value=0, inplace=True)
@@ -220,7 +219,11 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
         pdrng = rng
     alpha = '0.3'        
     idx = [d.to_pydatetime() for d in pdrng]  
-        
+
+    # Netting the interconnections:
+    if 'FlowIn' in plotdata and 'FlowOut' in plotdata:
+        plotdata['FlowIn'],plotdata['FlowOut'] = (np.maximum(0,plotdata['FlowIn']-plotdata['FlowOut']),np.maximum(0,plotdata['FlowOut']-plotdata['FlowIn']))
+      
     # find the zero line position:
     cols = plotdata.columns.tolist()
     idx_zero = 0
@@ -334,7 +337,10 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
     else:
         pdrng = rng
     alpha = '0.3'        
-        
+    
+    # Netting the interconnections:
+    if 'FlowIn' in plotdata and 'FlowOut' in plotdata:
+        plotdata['FlowIn'],plotdata['FlowOut'] = (np.maximum(0,plotdata['FlowIn']-plotdata['FlowOut']),np.maximum(0,plotdata['FlowOut']-plotdata['FlowIn']))
         
     # find the zero line position:
     cols = plotdata.columns.tolist()
