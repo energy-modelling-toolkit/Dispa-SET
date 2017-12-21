@@ -171,7 +171,7 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
         if not OnlyOnes:
             logging.warn("The LP clustering method aggregates all the units of the same type. Individual units are not considered")
             # Modifying the table to remove multiple-units plants:
-            for key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower']:
+            for key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower','CHPMaxHeat']:
                 if key in plants:
                     plants.loc[:,key] = plants.loc[:,'Nunits'] * plants.loc[:,key]
             plants['Nunits'] = 1
@@ -249,7 +249,7 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
                         # Do a weighted average:
                         plants_merged.loc[j, key] = (plants_merged[key][j] * P_old + plants[key][i] * P_add) / (
                         P_add + P_old)
-                    elif key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower']:
+                    elif key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower','CHPMaxHeat']:
                         # Do a sum:
                         plants_merged.loc[j, key] = plants_merged[key][j] + plants[key][i]
                     elif key in ['PartLoadMin', 'StartUpTime']:
@@ -276,7 +276,7 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
                         # Do a weighted average:
                         plants_merged.loc[j, key] = (plants_merged[key][j] * P_old + plants[key][i] * P_add) / (
                         P_add + P_old)
-                    elif key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower']:
+                    elif key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower','CHPMaxHeat']:
                         # Do a sum:
                         plants_merged.loc[j, key] = plants_merged[key][j] + plants[key][i]
                     elif key in ['PartLoadMin', 'StartUpTime']:
@@ -297,7 +297,8 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
                 for key in plants_merged:
                     if key in ['PowerCapacity','RampUpRate', 'RampDownRate', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'Efficiency',
                                'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge', 
-                               'STOCapacity', 'STOMaxChargingPower','InitialPower','PartLoadMin', 'StartUpTime','RampingCost']:
+                               'STOCapacity', 'STOMaxChargingPower','InitialPower','PartLoadMin', 'StartUpTime','RampingCost',
+                               'CHPPowerToHeat','CHPPowerLossFactor','CHPMaxHeat']:
                         # Do a weighted average:
                         plants_merged.loc[j, key] = (plants_merged.loc[j,key] * plants_merged.loc[j,'Nunits'] + plants.loc[i,key] * plants.loc[i,'Nunits']) / (plants_merged.loc[j,'Nunits'] + plants.loc[i,'Nunits'])
                 plants_merged.loc[j, 'Nunits'] = plants_merged.loc[j,'Nunits'] + plants.loc[i,'Nunits']

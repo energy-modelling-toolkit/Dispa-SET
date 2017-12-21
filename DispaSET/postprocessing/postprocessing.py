@@ -19,11 +19,10 @@ import pandas as pd
 
 from ..misc.gdx_handler import gdx_to_list, gdx_to_dataframe, get_gams_path
 from ..misc.str_handler import shrink_to_64, clean_strings
+from ..common import commonvars
 
-
-COLORS = {'NUC': 'orange', 'LIG': 'brown', 'HRD': 'grey', 'BIO': 'darkgreen', 'GAS': 'lightcoral', 'OIL': 'chocolate',
-          'WST': 'dodgerblue', 'SUN': 'yellow', 'WIN': 'red', 'FlowIn': 'green', 'WAT': 'blue', 'Storage': 'blue',
-          'FlowOut': 'green'}
+ # get color definitions: 
+commons= commonvars()
 
 def GAMSstatus(statustype,num):
     '''
@@ -89,7 +88,7 @@ def get_load_data(inputs, c):
     # Listing power plants with non-dispatchable power generation:
     VREunits = []
     VRE = np.zeros(len(out))
-    for t in ['WTON', 'WTOF', 'PHOT', 'HROR']:
+    for t in commons['tech_renewables']:
         for u in datain['Technology']:
             if datain['Technology'].loc[t, u]:
                 VREunits.append(u)
@@ -181,8 +180,13 @@ def get_plot_data(inputs, results, c):
             plotdata['FlowOut'] = plotdata['FlowOut'] - results['OutputFlow'][col]
 
     # re-ordering columns:
-    plotdata = plotdata[[u'Storage', u'FlowOut', u'NUC', u'LIG', u'HRD', u'BIO',
-                         u'GAS', u'OIL', u'WST', u'SUN', u'WIN', u'FlowIn', u'WAT']]
+    OrderedColumns = [col for col in commons['MeritOrder'] if col in plotdata.columns]
+    plotdata = plotdata[OrderedColumns]
+    
+    # remove empty columns:
+    for col in plotdata.columns:
+        if plotdata[col].max() == 0 and plotdata[col].min()==0:
+            del plotdata[col]
 
     return plotdata
 
@@ -199,10 +203,6 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
     :param rng:         Indexes of the values to be plotted. If undefined, the first week is plotted
     """
     logging.critical('Error in when drawing the dispatch plot. Trying a safer mode without x-axis')
-    import itertools
-    # loop through colors. 
-    colors = itertools.cycle([COLORS[x] for x in plotdata.columns])
-    hatches = itertools.cycle(['x', '//', '\\', '/'])
 
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
@@ -257,8 +257,8 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
     for j in range(idx_zero):
         col1 = sumplot_neg.columns[j]
         col2 = sumplot_neg.columns[j + 1]
-        color = next(colors)
-        hatch = next(hatches)
+        color = commons['colors'][col2]
+        hatch = commons['hatches'][col2]
         plt.fill_between(idx, sumplot_neg.loc[pdrng, col1].values, sumplot_neg.loc[pdrng, col2].values, color=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col1)
@@ -269,8 +269,8 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
     for j in range(len(sumplot_pos.columns) - 1):
         col1 = sumplot_pos.columns[j]
         col2 = sumplot_pos.columns[j + 1]
-        color = next(colors)
-        hatch = next(hatches)
+        color = commons['colors'][col2]
+        hatch = commons['hatches'][col2]
         plt.fill_between(idx, sumplot_pos.loc[pdrng, col1].values, sumplot_pos.loc[pdrng, col2].values, color=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col2)
@@ -319,11 +319,6 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
     :param curtailment: Optional pandas series with the value of the curtailment 
     :param rng:         Indexes of the values to be plotted. If undefined, the first week is plotted
     """
-    import itertools
-    # loop through colors. 
-    colors = itertools.cycle([COLORS[x] for x in plotdata.columns])
-    hatches = itertools.cycle(['x', '//', '\\', '/'])
-
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
     import matplotlib.lines as mlines
@@ -377,8 +372,8 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
     for j in range(idx_zero):
         col1 = sumplot_neg.columns[j]
         col2 = sumplot_neg.columns[j + 1]
-        color = next(colors)
-        hatch = next(hatches)
+        color = commons['colors'][col2]
+        hatch = commons['hatches'][col2]
         plt.fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2], color=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col1)
@@ -389,8 +384,8 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
     for j in range(len(sumplot_pos.columns) - 1):
         col1 = sumplot_pos.columns[j]
         col2 = sumplot_pos.columns[j + 1]
-        color = next(colors)
-        hatch = next(hatches)
+        color = commons['colors'][col2]
+        hatch = commons['hatches'][col2]
         plt.fill_between(pdrng, sumplot_pos.loc[pdrng, col1], sumplot_pos.loc[pdrng, col2], color=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col2)
@@ -521,14 +516,14 @@ def plot_energy_country_fuel(inputs, results, PPindicators):
         if NetImports > 0:
             GenPerCountry.loc[c, 'FlowIn'] = NetImports
 
-    GenPerCountry = GenPerCountry[['NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL',
-                                   'WST', 'SUN', 'WIN', 'FlowIn', 'WAT']] / 1E6
-    colors = [COLORS[tech] for tech in GenPerCountry.columns]
+    cols = [col for col in commons['MeritOrder'] if col in GenPerCountry]
+    GenPerCountry = GenPerCountry[cols] / 1E6
+    colors = [commons['colors'][tech] for tech in GenPerCountry.columns]
     ax = GenPerCountry.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
                             title='Generation per country (the horizontal lines indicate the demand)')
     ax.set_ylabel('Generation [TWh]')
     demand = inputs['param_df']['Demand']['DA'].sum() / 1E6
-    ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=demand.values * 0, linewidth=2,
+    ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1]*0.005, linewidth=2,
             color='k')
     return ax
 
@@ -551,15 +546,15 @@ def plot_country_capacities(inputs,plot=True):
         PowerCapacity.loc[n,f] = (units.PowerCapacity[idx]*units.Nunits[idx]).sum()
         StorageCapacity.loc[n,f] = (units.StorageCapacity[idx]*units.Nunits[idx]).sum()
 
-    PowerCapacity = PowerCapacity[['NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL',
-                                   'WST', 'SUN', 'WIN', 'WAT']]
+    cols = [col for col in commons['MeritOrder'] if col in PowerCapacity]
+    PowerCapacity = PowerCapacity[cols]
     if plot:
-        colors = [COLORS[tech] for tech in PowerCapacity.columns]
+        colors = [commons['colors'][tech] for tech in PowerCapacity.columns]
         ax = PowerCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
                                 title='Installed capacity per country (the horizontal lines indicate the peak demand)')
         ax.set_ylabel('Capacity [MW]')
         demand = inputs['param_df']['Demand']['DA'].max() 
-        ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=demand.values * 0, linewidth=2,
+        ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1]*0.005, linewidth=2,
                 color='k')
     return {'PowerCapacity':PowerCapacity,'StorageCapacity':StorageCapacity}
 

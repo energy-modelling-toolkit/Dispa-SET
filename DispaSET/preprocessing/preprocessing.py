@@ -19,6 +19,7 @@ from .utils import clustering, interconnections, incidence_matrix
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, write_to_excel, load_csv
 
 from ..misc.gdx_handler import write_variables
+from ..common import commonvars
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
@@ -55,24 +56,12 @@ def build_simulation(config,plot_load=False):
     y_end, m_end, d_end, _, _, _ = config['StopDate']
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
 
-    # Timestep
-    TimeStep = '1h'
-
-    # DispaSET technologies:
-    Technologies = ['COMC', 'GTUR', 'HDAM', 'HROR', 'HPHS', 'ICEN', 'PHOT', 'STUR', 'WTOF', 'WTON', 'CAES', 'BATS',
-                    'BEVS', 'THMS', 'P2GS']
-    # List of renewable technologies:
-    List_tech_renewables = ['WTON', 'WTOF', 'PHOT', 'HROR']
-    # List of storage technologies:
-    List_tech_storage = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS']
-    # List of CHP types:
-    List_types_CHP = ['extraction','back-pressure', 'p2h']
-    # DispaSET fuels:
-    Fuels = ['BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH']
+    # Load fuel types, technologies, timestep, etc:
+    commons = commonvars()
 
     # Indexes of the simualtion:
     idx_std = pd.DatetimeIndex(start=pd.datetime(*config['StartDate']), end=pd.datetime(*config['StopDate']),
-                               freq=TimeStep)
+                               freq=commons['TimeStep'])
     idx_utc_noloc = idx_std - dt.timedelta(hours=1)
     idx_utc = idx_utc_noloc.tz_localize('UTC')
 
@@ -135,15 +124,15 @@ def build_simulation(config,plot_load=False):
             plants[key] = np.nan
 
     # Defining the hydro storages:
-    plants_sto = plants[[u in List_tech_storage for u in plants['Technology']]]
+    plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
     # check storage plants:
     check_sto(config, plants_sto)
     
     # Defining the CHPs:
-    plants_chp = plants[[str(x).lower() in List_types_CHP for x in plants['CHPType']]]
+    plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
 
     Outages = UnitBasedTable(plants,config['Outages'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='Outages')
-    AF = UnitBasedTable(plants,config['RenewablesAF'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1,RestrictWarning=List_tech_renewables)
+    AF = UnitBasedTable(plants,config['RenewablesAF'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1,RestrictWarning=commons['tech_renewables'])
     ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='ReservoirLevels',default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='ReservoirScaledInflows',default=0)
     HeatDemand = UnitBasedTable(plants_chp,config['HeatDemand'],idx_utc_noloc,config['countries'],fallbacks=['Unit'],tablename='HeatDemand',default=0)
@@ -231,11 +220,11 @@ def build_simulation(config,plot_load=False):
                 Plants_merged.loc[u, 'StorageChargingCapacity'] = Plants_merged.loc[u, 'StorageChargingCapacity'] * config['modifiers']['Storage']
 
     # Defining the hydro storages:
-    Plants_sto = Plants_merged[[u in List_tech_storage for u in Plants_merged['Technology']]]
+    Plants_sto = Plants_merged[[u in commons['tech_storage'] for u in Plants_merged['Technology']]]
     # check storage plants:
     check_sto(config, Plants_sto,raw_data=False)
     # Defining the CHPs:
-    Plants_chp = Plants_merged[[x.lower() in List_types_CHP for x in Plants_merged['CHPType']]].copy()
+    Plants_chp = Plants_merged[[x.lower() in commons['types_CHP'] for x in Plants_merged['CHPType']]].copy()
     # check chp plants:
     check_chp(config, Plants_chp)
     # For all the chp plants correct the PowerCapacity, which is defined in cogeneration mode in the inputs and in power generation model in the optimization model
@@ -256,12 +245,12 @@ def build_simulation(config,plot_load=False):
         
     # Get the hydro time series corresponding to the original plant list:
     StorageFormerIndexes = [s for s in plants.index if
-                            plants['Technology'][s] in List_tech_storage]
+                            plants['Technology'][s] in commons['tech_storage']]
 
     # Same with the CHPs:
     # Get the heat demand time series corresponding to the original plant list:
     CHPFormerIndexes = [s for s in plants.index if
-                            plants['CHPType'][s] in List_types_CHP]
+                            plants['CHPType'][s] in commons['types_CHP']]
     for s in CHPFormerIndexes:  # for all the old plant indexes
         # get the old plant name corresponding to s:
         oldname = plants['Unit'][s]
@@ -288,11 +277,6 @@ def build_simulation(config,plot_load=False):
     AF_merged = merge_series(plants, AF, mapping, tablename='AvailabilityFactors')
     CostHeatSlack_merged = merge_series(plants, CostHeatSlack, mapping, tablename='CostHeatSlack')
     
-    # Correcting heat demands in case of outages:
-    for key in HeatDemand_merged:
-        if key in Outages_merged and Outages_merged[key].max() > 0:
-            HeatDemand_merged[key] = HeatDemand_merged[key].values * (1 - Outages_merged[key].values)
-            logging.info('Corrected the heat demand profile for chp unit ' + key + ' with the outage values')
 
     # %%
     # checking data
@@ -324,7 +308,7 @@ def build_simulation(config,plot_load=False):
 
     # Extending the data to include the look-ahead period (with constant values assumed)
     enddate_long = idx_utc_noloc[-1] + dt.timedelta(days=config['LookAhead'])
-    idx_long = pd.DatetimeIndex(start=idx_utc_noloc[0], end=enddate_long, freq=TimeStep)
+    idx_long = pd.DatetimeIndex(start=idx_utc_noloc[0], end=enddate_long, freq=commons['TimeStep'])
     Nhours_long = len(idx_long)
 
     # re-indexing with the longer index and filling possibly missing data at the beginning and at the end::
@@ -355,12 +339,12 @@ def build_simulation(config,plot_load=False):
     sets['n'] = config['countries']
     sets['u'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
-    sets['f'] = Fuels
+    sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
-    sets['t'] = Technologies
-    sets['tr'] = List_tech_renewables
+    sets['t'] = commons['Technologies']
+    sets['tr'] = commons['tech_renewables']
 
     ###################################################################################################################
     ############################################   Parameters    ######################################################
@@ -530,7 +514,7 @@ def build_simulation(config,plot_load=False):
 
     # %%#################################################################################################################################################################################################
     # Variable Cost
-    # Equivalence dictionnary between fuel types and price entries in the config sheet:
+    # Equivalence dictionary between fuel types and price entries in the config sheet:
     FuelEntries = {'BIO':'PriceOfBiomass', 'GAS':'PriceOfGas', 'HRD':'PriceOfBlackCoal', 'LIG':'PriceOfLignite', 'NUC':'PriceOfNuclear', 'OIL':'PriceOfFuelOil', 'PEA':'PriceOfPeat'}
     for unit in range(Nunits):
         found = False
