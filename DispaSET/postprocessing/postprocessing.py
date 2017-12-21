@@ -511,7 +511,7 @@ def plot_energy_country_fuel(inputs, results, PPindicators):
 
     GenPerCountry = pd.DataFrame(index=countries, columns=fuels)
     # First make sure that all fuels are present. If not, initialize an empty series
-    for f in ['NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'WST', 'SUN', 'WIN', 'FlowIn', 'WAT']:
+    for f in commons['Fuels'] + ['FlowIn']:
         if f not in GenPerCountry:
             GenPerCountry[f] = 0
     for c in countries:

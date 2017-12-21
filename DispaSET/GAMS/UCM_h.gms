@@ -696,7 +696,7 @@ EQ_CHP_extraction(chp,i)$(CHPType(chp,'Extraction'))..
 EQ_CHP_extraction_Pmax(chp,i)$(CHPType(chp,'Extraction'))..
          Power(chp,i)
          =L=
-         PowerCapacity(chp)  - StorageInput(chp,i) * CHPPowerLossFactor(chp)
+         PowerCapacity(chp)*Nunits(chp)  - StorageInput(chp,i) * CHPPowerLossFactor(chp)
 ;
 
 EQ_CHP_backpressure(chp,i)$(CHPType(chp,'Back-Pressure'))..
@@ -714,7 +714,7 @@ EQ_CHP_P2H(chp,i)$(CHPType(chp,'P2H'))..
 EQ_CHP_max_heat(chp,i)..
          StorageInput(chp,i)
          =L=
-         CHPMaxHeat(chp)
+         CHPMaxHeat(chp)*Nunits(chp)
 ;
 
 EQ_CHP_demand_satisfaction(chp,i)..
@@ -736,7 +736,7 @@ EQ_Heat_Storage_balance(chp,i)..
 
 *Storage level must be above a minimum
 EQ_Heat_Storage_minimum(chp,i)..
-         StorageMinimum(chp)
+         StorageMinimum(chp)*Nunits(chp)
          =L=
          StorageLevel(chp,i)
 ;
@@ -745,7 +745,7 @@ EQ_Heat_Storage_minimum(chp,i)..
 EQ_Heat_Storage_level(chp,i)..
          StorageLevel(chp,i)
          =L=
-         StorageCapacity(chp)
+         StorageCapacity(chp)*Nunits(chp)
 ;
 
 * Minimum level at the end of the optimization horizon:
