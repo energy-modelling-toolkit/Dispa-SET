@@ -1,0 +1,3 @@
+include *.md LICENSE
+graft DispaSET
+global-exclude *.py[co]
