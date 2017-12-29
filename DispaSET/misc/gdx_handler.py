@@ -39,11 +39,17 @@ def import_local_lib(lib):
     path_script = os.path.dirname(__file__)
     path_ext = os.path.join(path_script,'../../Externals')
 
+    if sys.platform == 'win32' and platform.architecture()[0] == '32bit':
+        sys.path.append(os.path.join(path_ext,'gams_api/win32/'))
+    elif sys.platform == 'win32' and platform.architecture()[0] == '64bit':
+        sys.path.append(os.path.join(path_ext,'gams_api/win64/'))
+    else:
+        logging.error('Pre-compiled libraries are not available for platform ' + sys.platform + ' and '
+                      ' architecture ' + platform.architecture()[0] +
+                      'Please install the gams API from the /apifiles/Python/api/ folder in the GAMS directory')
+        sys.exit(1)
+
     if lib == 'gams':
-        if sys.platform == 'linux2' and platform.architecture()[0] == '64bit':
-            sys.path.append(os.path.join(path_ext,'gams_api/linux64/'))
-        elif sys.platform == 'win32' and platform.architecture()[0] == '64bit':
-            sys.path.append(os.path.join(path_ext,'gams_api/win64/'))
         try:
             import gams
             return True
@@ -52,22 +58,12 @@ def import_local_lib(lib):
                           'Please install if from the /apifiles/Python/api/ folder in the GAMS directory')
             sys.exit(1)
     elif lib == 'gdxcc':
-        if sys.platform == 'linux2' and platform.architecture()[0] == '32bit':
-            sys.path.append(os.path.join(path_ext,'gdxcc/linux32/'))
-        elif sys.platform == 'linux2' and platform.architecture()[0] == '64bit':
-            sys.path.append(os.path.join(path_ext,'gams_api/linux64/'))
-        elif sys.platform == 'win32' and platform.architecture()[0] == '32bit':
-            sys.path.append(os.path.join(path_ext,'gdxcc/win32/'))
-        elif sys.platform == 'win32' and platform.architecture()[0] == '64bit':
-            sys.path.append(os.path.join(path_ext,'gams_api/win64/'))
-        elif sys.platform == 'darwin':
-            sys.path.append(os.path.join(path_ext,'gdxcc/osx64/'))
         try:
             import gdxcc
             return True
         except ImportError:
-            print [x for x in sys.path]
-            logging.critical("gdxcc module could not be found. GDX cannot be produced or read")
+            logging.critical("gdxcc module could not be imported from Externals. GDX cannot be produced or read"
+                            'Please install the gams API from the /apifiles/Python/api/ folder in the GAMS directory')
             sys.exit(1)
     else:
         logging.error('Only "gams" and "gdxcc" are present')
