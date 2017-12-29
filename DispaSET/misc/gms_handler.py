@@ -2,13 +2,16 @@ import time
 import logging
 import sys
 import os
+import shutil
 
 def solve_high_level(gams_folder,sim_folder,output_lst=False):
     """Use higher level apis to run GAMSy"""
     # create GAMS workspace:
     from gams import GamsWorkspace
     try:
-        ws = GamsWorkspace(system_directory=gams_folder, working_directory=sim_folder, debug=3)
+        ws = GamsWorkspace(system_directory=gams_folder, debug=3)
+        shutil.copy(os.path.join(sim_folder, 'UCM_h.gms'), ws.working_directory)
+        shutil.copy(os.path.join(sim_folder, 'Inputs.gdx'), ws.working_directory)
         t1 = ws.add_job_from_file('UCM_h.gms')
         opt = ws.add_options()
         # Do not create .lst file
@@ -26,6 +29,12 @@ def solve_high_level(gams_folder,sim_folder,output_lst=False):
         else:
             logging.error('The following error occured when trying to solve the model in gams: ' + str(e))
             sys.exit(1)
+    # copy the result file to the simulation environment folder:
+    shutil.copy(os.path.join(ws.working_directory, 'Results.gdx'), sim_folder)
+    for filename in ['UCM_h.lst','UCM_h.log','debug.gdx']:
+        if os.path.isfile(os.path.join(ws.working_directory, filename)):
+            shutil.copy(os.path.join(ws.working_directory, 'debug.gdx'), sim_folder)
+
     logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
     return status
 
