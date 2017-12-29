@@ -33,8 +33,7 @@ def solve_high_level(gams_folder,sim_folder,output_lst=False):
     shutil.copy(os.path.join(ws.working_directory, 'Results.gdx'), sim_folder)
     for filename in ['UCM_h.lst','UCM_h.log','debug.gdx']:
         if os.path.isfile(os.path.join(ws.working_directory, filename)):
-            shutil.copy(os.path.join(ws.working_directory, 'debug.gdx'), sim_folder)
-
+            shutil.copy(os.path.join(ws.working_directory, filename), sim_folder)
     logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
     return status
 
