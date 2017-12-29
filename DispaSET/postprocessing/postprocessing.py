@@ -538,7 +538,7 @@ def plot_country_capacities(inputs,plot=True):
     """
     Plots the installed capacity for each country, disaggregated by fuel type
 
-    :param inputs :         Dictionnary with the inputs of the model (output of the function GetResults)
+    :param inputs:         Dictionnary with the inputs of the model (output of the function GetResults)
     """
     units = inputs['units']
     CountryFuels = {}

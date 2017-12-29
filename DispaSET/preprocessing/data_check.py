@@ -285,7 +285,7 @@ def check_units(config, plants):
     if 'Nunits' in plants:
         lower_hard['Nunits'] = 0
 
-    if not plants['Unit'].is_unique:
+    if len(plants['Unit'].unique()) != len(plants['Unit']):
         duplicates = plants['Unit'][plants['Unit'].duplicated()].tolist()
         logging.error('The names of the power plants are not unique. The following names are duplicates: ' + str(duplicates) + '. "' + str(duplicates[0] + '" appears for example in the following countries: ' + str(plants.Zone[plants['Unit']==duplicates[0]].tolist())))
         sys.exit(1)

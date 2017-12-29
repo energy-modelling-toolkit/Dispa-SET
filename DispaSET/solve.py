@@ -63,6 +63,7 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
         if package_exists('gamsxcc') and package_exists('optcc'):
             solv_func = solve_low_level
         else:
+            solv_func = solve_high_level
             logging.warning('Could not import lower level APIs. Trying to locate local version')
             if not import_local_lib('gams'):
                 return False

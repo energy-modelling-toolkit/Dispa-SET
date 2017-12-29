@@ -1,7 +1,6 @@
 import logging.config
 import os
 
-__version__ = None
 # Sets the __version__ variable
 from ._version import __version__
 
