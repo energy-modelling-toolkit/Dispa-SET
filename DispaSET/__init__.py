@@ -3,8 +3,7 @@ import os
 
 __version__ = None
 # Sets the __version__ variable
-import _version
-__version__ = _version.__version__
+from ._version import __version__
 
 from .preprocessing.preprocessing import get_git_revision_tag 
 __gitversion__ = get_git_revision_tag()   
@@ -63,13 +62,14 @@ from .postprocessing.postprocessing import get_indicators_powerplant
 from .postprocessing.postprocessing import aggregate_by_fuel
 from .postprocessing.postprocessing import plot_energy_country_fuel
 from .postprocessing.postprocessing import plot_country_capacities
+from .cli import *
 
 # Removeing log file:
 if os.path.isfile('warn.log'):
     try:
         os.remove('warn.log')
     except:
-        print 'Could not erase previous log file "warn.log"'
+        print ('Could not erase previous log file "warn.log"')
         
 # Setting logging configuration:
 try: 

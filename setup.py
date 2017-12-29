@@ -34,8 +34,13 @@ setup(
         "numpy >= 1.12",
         "pandas >= 0.19",
         "xlrd >= 0.9",
-        "matplotlib >= 1.5.1"
+        "matplotlib >= 1.5.1",
+        "gdxcc >= 7",
+        "gamsxcc",
+        "optcc"
     ],
+    extras_require={'pyomo': ['pyomo>=5.2'],
+                    },
     entry_points={
         'console_scripts': [
             'dispaset = DispaSET.cli:cli'
