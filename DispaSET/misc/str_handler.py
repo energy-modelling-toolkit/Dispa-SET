@@ -39,6 +39,8 @@ def clean_strings(x, exclude_digits=False, exclude_punctuation=False):
         df['DisplayName'].apply(clean_strings)
 
     """
+    if sys.version_info >= (3,0): # Skip this funcion if python version is >3. Have to test better TODO
+        return x
     import unicodedata
     import string
     def clean_singlestring(x):
@@ -64,7 +66,6 @@ def clean_strings(x, exclude_digits=False, exclude_punctuation=False):
         # x = x.upper() #to UPPERCASE
         x = ''.join(ch for ch in x if ch not in exclude)  # remove numbers and punctuation
         return x
-
     if type(x) == str:
         return clean_singlestring(x)
     elif type(x) == list:
@@ -72,3 +73,12 @@ def clean_strings(x, exclude_digits=False, exclude_punctuation=False):
     else:
         logging.error('Argument type not supported')
         sys.exit(1)
+
+def force_str(x):
+    """ Used to get a str object both in python 2 and 3 although they represent different objects (byte vs unicode)
+    It is small hack for py2->3 compatibility of gams APIs which require a str object
+    """
+    if type(x) == str:
+        return x
+    else:
+        return x.encode()

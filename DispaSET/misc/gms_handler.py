@@ -4,11 +4,13 @@ import sys
 import os
 import shutil
 
+from .str_handler import force_str
+
 def solve_high_level(gams_folder,sim_folder,output_lst=False):
     """Use higher level apis to run GAMSy"""
     # create GAMS workspace:
-    from gams import GamsWorkspace
     try:
+        from gams import GamsWorkspace
         ws = GamsWorkspace(system_directory=gams_folder, debug=3)
         shutil.copy(os.path.join(sim_folder, 'UCM_h.gms'), ws.working_directory)
         shutil.copy(os.path.join(sim_folder, 'Inputs.gdx'), ws.working_directory)
@@ -44,7 +46,9 @@ def solve_low_level(gams_folder,sim_folder,output_lst=False,logoption=3):
     from optcc import new_optHandle_tp, optReadDefinition, optSetStrStr, optSetIntStr, optHandleToPtr, optFree, \
         optCreateD
 
-    model = os.path.join(sim_folder,'UCM_h.gms')
+    sim_folder = force_str(sim_folder)
+    gams_folder = force_str(gams_folder)
+    model = os.path.join(sim_folder, 'UCM_h.gms')
 
     def terminate(gamsxHandle, optHandle, rc):
         optFree(optHandle)
@@ -52,10 +56,10 @@ def solve_low_level(gams_folder,sim_folder,output_lst=False,logoption=3):
         os._exit(rc)
 
     def callGams(gamsxHandle, optHandle, sysDir, model):
-        deffile = sysDir + "/optgams.def"
+        deffile = force_str(sysDir + u'/optgams.def')
 
         if optReadDefinition(optHandle, deffile):
-            print("*** Error ReadDefinition, cannot read def file:" + deffile)
+            logging.error("*** Error ReadDefinition, cannot read def file:" + deffile)
             return False
 
         optSetStrStr(optHandle, "SysDir", sysDir)
@@ -64,7 +68,7 @@ def solve_low_level(gams_folder,sim_folder,output_lst=False,logoption=3):
         optSetIntStr(optHandle, "LogOption", logoption)
         ret = gamsxRunExecDLL(gamsxHandle, optHandleToPtr(optHandle), sysDir, 1)
         if ret[0] != 0:
-            print("*** Error RunExecDLL: Error in GAMS call = " + str(ret[1]))
+            logging.error("*** Error RunExecDLL: Error in GAMS call = " + str(ret[1]))
             return False
 
         return True

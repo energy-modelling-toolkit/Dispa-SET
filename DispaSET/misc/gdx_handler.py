@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 import logging
 
-from .str_handler import shrink_to_64
+from .str_handler import shrink_to_64, force_str
 
 def package_exists(package):
     # http://stackoverflow.com/questions/14050281/how-to-check-if-a-python-module-exists-without-importing-it
@@ -174,10 +174,11 @@ def write_variables(gams_dir, gdx_out, list_vars):
     if not os.path.isdir(gams_dir):
         logging.critical('GDXCC: Could not find the specified gams directory: ' + gams_dir)
         sys.exit(1)
-    gams_dir = gams_dir.encode()
+    gams_dir = force_str(gams_dir)
+    gdx_out = force_str(gdx_out)
 
     gdxHandle = gdxcc.new_gdxHandle_tp()
-    gdxcc.gdxCreateD(gdxHandle, gams_dir, gdxcc.GMS_SSSIZE)
+    gdxcc.gdxCreateD(gdxHandle, gams_dir, gdxcc.GMS_SSSIZE) #it accepts only str type
     gdxcc.gdxOpenWrite(gdxHandle, gdx_out, "")
 
     [sets, parameters] = list_vars
@@ -190,7 +191,7 @@ def write_variables(gams_dir, gdx_out, list_vars):
 
 
 def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
-    """
+    """original
     This function loads the gdx with the results of the simulation
     All results are stored in an unordered list
 
@@ -336,10 +337,9 @@ def get_gams_path():
     """
     import subprocess
     out = ''
-    if sys.platform == 'linux2':
+    if sys.platform == 'linux2' or sys.platform == 'linux':
         try:
-            proc = subprocess.Popen(['locate', '-i', 'libgamscall64.so'], stdout=subprocess.PIPE)
-            tmp = proc.stdout.read()
+            tmp = subprocess.check_output(['locate', '-i', 'libgamscall64.so']).decode()
         except:
             tmp = ''
         lines = tmp.split('\n')
@@ -388,8 +388,7 @@ def get_gams_path():
                                      tmp.startswith('sysdir') and os.path.isfile(
                                          path1 + os.sep + tmp + os.sep + 'gams')]
         if len(lines) == 0:
-            proc = subprocess.Popen(['mdfind', '-name', 'libgamscall64.dylib'], stdout=subprocess.PIPE)
-            tmp = proc.stdout.read()
+            tmp = subprocess.check_output(['mdfind', '-name', 'libgamscall64.dylib'])
             lines = [x.strip('libgamscall64.dylib') for x in tmp.split('\n')]
         for line in lines:
             if os.path.exists(line):

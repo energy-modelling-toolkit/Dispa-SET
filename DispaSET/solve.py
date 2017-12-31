@@ -34,12 +34,12 @@ def is_sim_folder_ok(sim_folder):
         logging.error('The provided DispaSET simulation environment folder (' + sim_folder + ') does not exist')
         return False
 
-    if not os.path.exists(os.path.join(sim_folder, 'Inputs.gdx')):
+    if not os.path.exists(os.path.join(sim_folder, u'Inputs.gdx')):
         logging.error(
             'There is no Inputs.gdx file within the specified DispaSET simulation environment folder (' + sim_folder + '). Check that the GDX output is activated in the option file and that no error stated during the pre-processing')
         return False
 
-    if not os.path.exists(os.path.join(sim_folder, 'UCM_h.gms')):
+    if not os.path.exists(os.path.join(sim_folder, u'UCM_h.gms')):
         logging.error(
             'There is no UCM_h.gms file within the specified DispaSET simulation environment folder (' + sim_folder + ')')
         return False
@@ -73,8 +73,8 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
         if not os.path.exists(gams_folder):
             logging.error('GAMS path cannot be located. Simulation is stopped')
             return False
-    sim_folder = os.path.abspath(sim_folder).encode()
-    gams_folder = os.path.abspath(gams_folder).encode()
+    sim_folder = os.path.abspath(sim_folder)
+    gams_folder = os.path.abspath(gams_folder)
 
     if is_sim_folder_ok(sim_folder):
         ret = solv_func(gams_folder, sim_folder, output_lst=output_lst)

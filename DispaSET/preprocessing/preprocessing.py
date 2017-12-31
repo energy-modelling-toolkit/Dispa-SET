@@ -4,7 +4,7 @@ This is the main file of the DispaSET pre-processing tool. It comprises a single
 
 @author: S. Quoilin
 """
-
+from future.builtins import int
 import datetime as dt
 import logging
 import os
@@ -75,9 +75,9 @@ def build_simulation(config,plot_load=False):
     hours_simulation = 24 * days_simulation
 
     # Defining missing configuration fields for backwards compatibility:
-    if not isinstance(config['default']['CostLoadShedding'],(float,int,long)):
+    if not isinstance(config['default']['CostLoadShedding'],(float,int)):
         config['default']['CostLoadShedding'] = 1000
-    if not isinstance(config['default']['CostHeatSlack'],(float,int,long)):
+    if not isinstance(config['default']['CostHeatSlack'],(float,int)):
         config['default']['CostHeatSlack'] = 50
     
     # Load :
@@ -149,7 +149,7 @@ def build_simulation(config,plot_load=False):
         if os.path.isfile(config[fuel]):
             tmp = load_csv(config[fuel], header=None, index_col=0, parse_dates=True)
             FuelPrices[fuel] = tmp[1][idx_utc_noloc].values
-        elif isinstance(config['default'][fuel], (int, long, float, complex)):
+        elif isinstance(config['default'][fuel], (int, float, complex)):
             logging.warn('No data file found for "' + fuel + '. Using default value ' + str(config['default'][fuel]) + ' EUR')
             FuelPrices[fuel] = pd.Series(config['default'][fuel], index=idx_utc_noloc)
         # Special case for lignite and peat, for backward compatibility
@@ -660,9 +660,12 @@ def build_simulation(config,plot_load=False):
         write_to_excel(sim, [sets, parameters])
 
     if config['WritePickle']:
-        import cPickle
+        try:
+            import cPickle as pickle
+        except ImportError:
+            import pickle
         with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
-            cPickle.dump(SimData, pfile, protocol=cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
     logging.info('Build finished')
     
     if os.path.isfile('warn.log'):
@@ -771,9 +774,8 @@ def adjust_capacity(inputs,tech_fuel,scaling=1,value=None,singleunit=False,write
             shutil.copytree(path,dest_path)
             logging.info('Created simulation environment directory ' + dest_path)
         logging.info('Writing input files to ' + dest_path)
-        import cPickle
         with open(os.path.join(dest_path, 'Inputs.p'), 'wb') as pfile:
-            cPickle.dump(SimData, pfile, protocol=cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
         if write_gdx:
             write_variables(SimData['config']['GAMS_folder'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
             shutil.copy('Inputs.gdx', dest_path + '/')

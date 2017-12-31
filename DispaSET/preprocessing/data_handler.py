@@ -1,3 +1,4 @@
+from future.builtins import int
 import logging
 import os
 import sys
@@ -39,7 +40,7 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
         logging.info('No data file found for the table ' + tablename + '. Using default value ' + str(default))
         if default is None:
             pass
-        elif isinstance(default,(float,int,long)):
+        elif isinstance(default,(float,int)):
             data = pd.DataFrame(default,index=idx,columns=countries)
         else:
             logging.error('Default value provided for table ' + tablename + ' is not valid')
@@ -121,7 +122,7 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
         logging.info('No data file found for the table ' + tablename + '. Using default value ' + str(default))
         if default is None:
             out = pd.DataFrame(index=idx)
-        elif isinstance(default,(float,int,long)):
+        elif isinstance(default,(float,int)):
             out = pd.DataFrame(default,index=idx,columns=plants['Unit'])
         else:
             logging.error('Default value provided for table ' + tablename + ' is not valid')

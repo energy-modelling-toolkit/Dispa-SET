@@ -143,7 +143,7 @@ try:
     logging.critical('This is critical')
     logging.error('This is an error')
     print('Logging seems to be fine')
-except Exception, e:
+except Exception as e:
     print('Logging cannot be handled. The following error msg was generated:')
     print(e)
 
@@ -156,7 +156,7 @@ print('\n \nCHECK THE GDXCC LIBRARY')
 success_gdxcc = True
 try:
     import gdxcc
-except Exception, e:
+except Exception as e:
     if str(e) == 'No module named gdxcc':
         print('Could not find the gdxcc library in the standard python PATH. Trying to import the pre-compiled libraries')
         path_script = os.path.dirname(__file__)
@@ -183,7 +183,7 @@ except Exception, e:
             sys.path.append(path)
         try:
             import gdxcc
-        except ImportError, ee:
+        except ImportError as ee:
             print('ERROR: Could not load the precompiled gdxcc library. The following error was issued: ' + str(ee))
             success_gdxcc = False
     else:
@@ -210,7 +210,7 @@ success_path = True
 success_sim = True
 try:
     import gams
-except Exception, e:
+except Exception as e:
     if str(e) == 'No module named gams':
         print('Could not find the gams library in the standard python PATH. Trying to import the pre-compiled libraries')
         path_script = os.path.dirname(__file__)
@@ -226,7 +226,7 @@ except Exception, e:
             sys.path.append(path)
         try:
             import gams
-        except ImportError, ee:
+        except ImportError as ee:
             print('ERROR: Could not load the precompiled gams library. The following error was issued: ' + str(ee))
             success_lib = False
     else:
@@ -257,9 +257,9 @@ if success_path and success_lib:
         t1 = ws.add_job_from_file("trnsport.gms")
         t1.run()
         for rec in t1.out_db["x"]:
-            print "x(" + rec.keys[0] + "," + rec.keys[1] + "): level=" + str(rec.level) + " marginal=" + str(rec.marginal)
+            print ("x(" + rec.keys[0] + "," + rec.keys[1] + "): level=" + str(rec.level) + " marginal=" + str(rec.marginal))
         print('The optimization seems to have run properly')
-    except Exception, e:
+    except Exception as e:
         print('ERROR while trying to run the optimization: ' + str(e))
         success_sim = False
 
@@ -286,12 +286,12 @@ if success_gdxcc and success_path:
     
         try:
             success = gdxcc.gdxDataWriteStr(gdxHandle, keys, gdxValues)
-        except Exception, e:
+        except Exception as e:
             success = False
             print('ERROR: the set could not be written to the gdx file. Error msg: ' + str(e))
         gdxcc.gdxDataWriteDone(gdxHandle)
         gdxcc.gdxClose(gdxHandle)
-    except Exception, ee:
+    except Exception as ee:
         print('ERROR: the gdxfile could not be created. Error msg: ' + str(ee))
         success = False
     if success and os.path.isfile('test.gdx'):
@@ -305,7 +305,7 @@ print('\n \nCHECK PYOMO')
 try:
     import pyomo
     print('Pyomo is available')
-except Exception, e:
+except Exception as e:
     print('ERROR: Pyomo could not be load. Erros msg: ' + str(e))
     
     

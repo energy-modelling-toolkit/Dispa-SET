@@ -770,7 +770,7 @@ def get_result_analysis(inputs, results):
 
     Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports)
 
-    print '\nAverage electricity cost : ' + str(Cost_kwh) + ' EUR/MWh'
+    print ('\nAverage electricity cost : ' + str(Cost_kwh) + ' EUR/MWh')
 
     for key in ['LostLoad_RampUp', 'LostLoad_2D', 'LostLoad_MinPower',
                 'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower']:
@@ -782,10 +782,10 @@ def get_result_analysis(inputs, results):
             logging.warning('\nThere is lost load for ' + key + ': ' + str(
                 LL) + ' MWh. The results should be checked')
 
-    print '\nAggregated statistics for the considered area:'
-    print 'Total consumption:' + str(TotalLoad / 1E6) + ' TWh'
-    print 'Peak load:' + str(PeakLoad) + ' MW'
-    print 'Net importations:' + str(NetImports / 1E6) + ' TWh'
+    print ('\nAggregated statistics for the considered area:')
+    print ('Total consumption:' + str(TotalLoad / 1E6) + ' TWh')
+    print ('Peak load:' + str(PeakLoad) + ' MW')
+    print ('Net importations:' + str(NetImports / 1E6) + ' TWh')
 
     # Country-specific values:
     CountryData = pd.DataFrame(index=inputs['sets']['n'])
@@ -799,8 +799,8 @@ def get_result_analysis(inputs, results):
 
     CountryData['LoadShedding'] = results['OutputShedLoad'].sum(axis=0) / 1E6
     CountryData['Curtailment'] = results['OutputCurtailedPower'].sum(axis=0) / 1E6
-    print '\nCountry-Specific values (in TWh or in MW):'
-    print CountryData
+    print('\nCountry-Specific values (in TWh or in MW):')
+    print(CountryData)
 
     # Congestion:
     Congestion = {}
@@ -810,7 +810,7 @@ def get_result_analysis(inputs, results):
                 Congestion[l] = np.sum(
                     (results['OutputFlow'][l] == dfin['FlowMaximum'].loc[results['OutputFlow'].index, l]) & (
                     dfin['FlowMaximum'].loc[results['OutputFlow'].index, l] > 0))
-    print "\nNumber of hours of congestion on each line: "
+    print("\nNumber of hours of congestion on each line: ")
     import pprint
     pprint.pprint(Congestion)
 
@@ -831,8 +831,8 @@ def get_result_analysis(inputs, results):
                 if u in sto_units.index:
                     AverageStorageOutput += results['OutputPower'][u].mean()
             StorageData.loc[c,'Average daily cycle depth [%]'] = AverageStorageOutput*24/StorageData.loc[c,'Storage Capacity [MWh]']
-        print '\nCountry-Specific storage data'
-        print StorageData    
+        print('\nCountry-Specific storage data')
+        print(StorageData)
     except:
         logging.error('Could compute storage data')
         StorageData = None
