@@ -10,7 +10,7 @@ import os
 os.chdir('..')
 
 # Import Dispa-SET
-import DispaSET as ds
+import dispaset as ds
 
 # Load the inputs and the results of the simulation
 inputs,results = ds.get_sim_results(path='Simulations/simulation_test',cache=True)

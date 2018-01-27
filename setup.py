@@ -15,7 +15,7 @@ def read(*parts):
 
 # Sets the __version__ variable
 __version__ = None
-exec(open('DispaSET/_version.py').read())
+exec(open('dispaset/_version.py').read())
 
 setup(
     name='dispaset',
@@ -44,7 +44,7 @@ setup(
                     },
     entry_points={
         'console_scripts': [
-            'dispaset = DispaSET.cli:cli'
+            'dispaset = dispaset.cli:cli'
         ]},
     classifiers=[
         'Intended Audience :: Science/Research',
