@@ -48,7 +48,7 @@ def solve_low_level(gams_folder,sim_folder,output_lst=False,logoption=3):
 
     sim_folder = force_str(sim_folder)
     gams_folder = force_str(gams_folder)
-    model = os.path.join(sim_folder, 'UCM_h.gms')
+    model = os.path.abspath(os.path.join(sim_folder, 'UCM_h.gms'))
 
     def callGams(gamsxHandle, optHandle, sysDir, model):
         deffile = force_str(sysDir + u'/optgams.def')

@@ -124,7 +124,8 @@ def solve_pyomo(sim_folder):
     '''
     import pickle
     from .pyomo.model import DispaSolve
-
+    raise NotImplementedError('Pyomo is currently outdated and does not work with the latest features.'
+                              'Please use an older version of dispaset.')
     with open(os.path.join(sim_folder, 'Inputs.p'), 'rb') as pyomo_input_file:
         SimData = pickle.load(pyomo_input_file)
     if SimData['config']['SimulationType'] == 'MILP':

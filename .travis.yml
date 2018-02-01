@@ -1,0 +1,43 @@
+language: python
+
+python:
+- '2.7'
+- '3.6'
+
+env:
+  global:
+    - GAMS=24.9
+    - GAMS_URL=https://d37drm4t2jghv5.cloudfront.net/distributions/24.9.2/linux/linux_x64_64_sfx.exe
+
+
+before_install:
+- sudo apt-get update
+- if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+    wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+  else
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  fi
+- bash miniconda.sh -b -p $HOME/miniconda
+- export PATH="$HOME/miniconda/bin:$PATH"
+- hash -r
+- conda config --set always_yes yes --set changeps1 no
+- conda update -q conda
+- conda info -a
+
+# Install GAMS
+- wget -N $GAMS_URL -O gams.zip
+- unzip -qu gams.zip -d $HOME
+- ln -s $HOME/gams${GAMS}_linux_x64_64_sfx $HOME/gams
+- export PATH="$HOME/gams:$PATH"
+- cd $HOME/gams
+- gamsinst -a
+- cd -
+
+install:
+- conda env create -q -f environment.yml
+- source activate dispaset
+- python setup.py develop
+
+script:
+- pytest
+

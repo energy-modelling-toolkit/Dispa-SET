@@ -37,6 +37,7 @@ cd Dispa-SET
 conda env create  # Automatically creates environment based on environment.yml
 source activate dispaset # in Windows: activate dispaset
 pip install -e . # Install editable local version
+pytest # Ensure that the test cases are running
 ```
 
 The above commands create a dedicated environment so that your anconda configuration remains clean from the required dependencies installed.
