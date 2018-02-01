@@ -378,7 +378,6 @@ EQ_Objective_function
 EQ_CHP_extraction_Pmax
 EQ_CHP_extraction
 EQ_CHP_backpressure
-EQ_CHP_P2H
 EQ_CHP_demand_satisfaction
 EQ_CHP_max_heat
 EQ_Heat_Storage_balance
@@ -572,7 +571,7 @@ EQ_Reserve_3U_capability(u,i)$(QuickStartPower(u,i) > 0)..
 
 *Minimum power output is above the must-run output level for each unit in all periods
 EQ_Power_must_run(u,i)..
-         PowerMustRun(u,i) * Committed(u,i) - (StorageInput(u,i) * CHPPowerLossFactor(u) )$(chp(u) and CHPType(u,'Extraction'))
+         PowerMustRun(u,i) * Committed(u,i) - (StorageInput(u,i) * CHPPowerLossFactor(u) )$(chp(u) and (CHPType(u,'Extraction') or CHPType(u,'P2H')))
          =L=
          Power(u,i)
 ;
@@ -693,7 +692,7 @@ EQ_CHP_extraction(chp,i)$(CHPType(chp,'Extraction'))..
          StorageInput(chp,i) * CHPPowerToHeat(chp)
 ;
 
-EQ_CHP_extraction_Pmax(chp,i)$(CHPType(chp,'Extraction'))..
+EQ_CHP_extraction_Pmax(chp,i)$(CHPType(chp,'Extraction') or CHPType(chp,'P2H'))..
          Power(chp,i)
          =L=
          PowerCapacity(chp)*Nunits(chp)  - StorageInput(chp,i) * CHPPowerLossFactor(chp)
@@ -703,12 +702,6 @@ EQ_CHP_backpressure(chp,i)$(CHPType(chp,'Back-Pressure'))..
          Power(chp,i)
          =E=
          StorageInput(chp,i) * CHPPowerToHeat(chp)
-;
-
-EQ_CHP_P2H(chp,i)$(CHPType(chp,'P2H'))..
-         Power(chp,i)
-         =E=
-         PowerCapacity(chp) - StorageInput(chp,i) * CHPPowerLossFactor(chp)
 ;
 
 EQ_CHP_max_heat(chp,i)..
@@ -762,7 +755,6 @@ EQ_Objective_function,
 EQ_CHP_extraction_Pmax,
 EQ_CHP_extraction,
 EQ_CHP_backpressure,
-EQ_CHP_P2H,
 EQ_CHP_demand_satisfaction,
 EQ_CHP_max_heat,
 $If not %LPFormulation% == 1 EQ_CostStartUp,
