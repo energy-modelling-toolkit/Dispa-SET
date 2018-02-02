@@ -1,5 +1,6 @@
-Dispa-SET [![Documentation](https://readthedocs.org/projects/dispa-set/badge/?branch=master)](http://dispa-set.readthedocs.io/en/latest/)
+Dispa-SET 
 ===================
+ ![Documentation](https://img.shields.io/badge/python-2.7,%203.6-blue.svg) [![License](https://img.shields.io/badge/License-EUPL--1.1-blue.svg)](https://opensource.org/licenses/EUPL-1.1) [![Documentation](https://readthedocs.org/projects/dispa-set/badge/?branch=master)](http://dispa-set.readthedocs.io/en/latest/)
 
 ### Description
 The Dispa-SET model is a unit commitment and dispatch model developed within the “Joint Research Centre” and focused on the balancing and flexibility problems in European grids. It is written in GAMS and coupled to Matlab and Excel for input/output data handling and visualization. The selected Mixed-Integer Linear Programming (MILP) solver is CPLEX.
@@ -39,7 +40,7 @@ pip install -e . # Install editable local version
 ```
 
 The above commands create a dedicated environment so that your anconda configuration remains clean from the required dependencies installed.
-In order to see if everything runs fine, you can build and run a test case by typing:
+To check that everything runs fine, you can build and run a test case by typing:
 ```bash
 dispaset -c ConfigFiles/ConfigTest.xlsx build simulate
 ```
