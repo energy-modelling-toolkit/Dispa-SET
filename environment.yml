@@ -1,0 +1,16 @@
+name: dispaset
+
+dependencies:
+  - future >= 0.15
+  - click >= 3.3
+  - numpy>=1.10
+  - scipy>=0.15
+  - matplotlib>=1.5.1
+  - pandas>= 0.19
+  - xlrd >= 0.9
+  - pyyaml
+  - pytest
+  - pip:
+    - gdxcc
+    - gamsxcc
+    - optcc

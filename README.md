@@ -1,4 +1,4 @@
-Dispa-SET
+Dispa-SET [![Documentation](https://readthedocs.org/projects/dispa-set/badge/?branch=master)](http://dispa-set.readthedocs.io/en/latest/)
 ===================
 
 ### Description
@@ -26,6 +26,24 @@ The model is expressed as an optimization problem. Continuous variables include 
 
 The demand is assumed to be inelastic to the price signal. The MILP objective function is therefore the total generation cost over the optimization period. 
 
+### Quick start
+
+If you want to download the latest version from github for use or development purposes, make sure that you have git and the [anaconda distribution](https://www.continuum.io/downloads) installed and type the following:
+
+```bash
+git clone https://github.com/energy-modelling-toolkit/Dispa-SET.git
+cd Dispa-SET
+conda env create  # Automatically creates environment based on environment.yml
+source activate dispaset # in Windows: activate dispaset
+pip install -e . # Install editable local version
+```
+
+The above commands create a dedicated environment so that your anconda configuration remains clean from the required dependencies installed.
+In order to see if everything runs fine, you can build and run a test case by typing:
+```bash
+dispaset -c ConfigFiles/ConfigTest.xlsx build simulate
+```
+
 ### Documentation
 The documentation and the stable releases are available on the main Dispa-SET website: http://www.dispaset.eu
 
@@ -44,13 +62,13 @@ The Dispa-SET project is relatively recent, and a number of improvements will be
 This project is an open-source project. Interested users are therefore invited to test, comment or contribute to the tool. Submitting issues is the best way to get in touch with the development team, which will address your comment, question, or development request in the best possible possible. We are also looking for contributors to the main code, willing to contibute to its capabilities, computational-efficiency, formulation, etc. Finally, we are willing to collaborate with national agencies, reseach centers, or academic institutions on the use on the model for different data sets relative to EU countries.
 
 ### Public administration reference
-This software is primarily developed and used within the Institute for Energy and Transport, which is one of the 7 scientific institutes of the Joint Research Centre (JRC) of the European Commission. The IET is based both in Petten, the Netherlands, and Ispra, Italy. The Dispa-SET model is developed in the framework of the "Energy Systems Modelling" (ESM) project.
+This software has been developed initially within the Directorate C Energy, Transport and Climate, which is one of the 7 scientific directorates of the Joint Research Centre (JRC) of the European Commission. Directorate C is based both in Petten, the Netherlands, and Ispra, Italy. 
 
 ### Licence
 Dispa-SET is a free software licensed under the “European Union Public Licence" EUPL v1.1. It 
 can be redistributed and/or modified under the terms of this license.
 
-### Main developpers
+### Main developers
 - Sylvain Quoilin (University of Liège)
 - Konstantinos Kavvadias (Joint Research Centre, European Commission)
 - Andreas Zucker (Joint Research Centre, European Commission)
