@@ -1,10 +1,14 @@
-from future.builtins import int
 import logging
 import os
 import sys
 
 import numpy as np
 import pandas as pd
+
+try:
+    from future.builtins import int
+except:
+    pass
 
 
 def NodeBasedTable(path,idx,countries,tablename='',default=None):

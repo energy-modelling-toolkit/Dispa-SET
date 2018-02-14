@@ -4,7 +4,7 @@ This is the main file of the DispaSET pre-processing tool. It comprises a single
 
 @author: S. Quoilin
 """
-from future.builtins import int
+
 import datetime as dt
 import logging
 import os
@@ -13,6 +13,10 @@ import sys
 
 import numpy as np
 import pandas as pd
+try:
+    from future.builtins import int
+except:
+    pass
 
 from .data_check import check_units, check_chp, check_sto, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering
 from .utils import clustering, interconnections, incidence_matrix
