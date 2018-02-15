@@ -2,8 +2,37 @@
 """
 This worksheet contains the two main functions to solve the DispaSET optimization problem using PYOMO or GAMS.
 
+Solve with GAMS and the high level API
+--------------------------------------
+The high level interface is recommended for Linux users because it solves
+the "whitespace in the simulation folder" issue. Moreover, the "terminate" 
+comamnd tends to crash on linux with the low-level apis.   
 
-@author: 'Sylvain Quoilin'
+Installation:
+    To install the high-level API in Python 2.x::
+    
+        cd gams24.4_linux_x64_64_sfx/apifiles/Python/api
+        python gamssetup.py install
+
+    To install the high-level API in Python 3.x::
+    
+        cd gams24.6_linux_x64_64_sfx/apifiles/Python/api_34
+        python setup.py install    
+        
+Solve with GAMS and the low level APIs
+--------------------------------------
+Use lower level apis to run GAMS. BAsed on GAMS xpexample2.py
+
+The advantage of the low level API is that it can easily be installed from pip::
+    
+    pip install gdxcc
+    pip install gamsxcc
+    pip install optcc
+    
+Solve with PYOMO
+----------------
+The Pyomo version of Dispa-SET is currently not up-to-date. Use at your own risk.
+
 """
 
 #######################################################################################################################
