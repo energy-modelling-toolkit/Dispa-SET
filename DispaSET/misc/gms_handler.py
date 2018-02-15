@@ -11,7 +11,7 @@ def solve_high_level(gams_folder,sim_folder,output_lst=False):
     # create GAMS workspace:
     try:
         from gams import GamsWorkspace
-        ws = GamsWorkspace(system_directory=gams_folder, debug=3)
+        ws = GamsWorkspace(system_directory=str(gams_folder), debug=3)
         shutil.copy(os.path.join(sim_folder, 'UCM_h.gms'), ws.working_directory)
         shutil.copy(os.path.join(sim_folder, 'Inputs.gdx'), ws.working_directory)
         t1 = ws.add_job_from_file('UCM_h.gms')
