@@ -111,6 +111,7 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
             logging.warning('A debug file was created. There has probably been an optimization error')
         if os.path.isfile('warn.log'):
             shutil.copy('warn.log', os.path.join(sim_folder, 'warn_solve.log'))
+        return ret
     else:
         return False
 

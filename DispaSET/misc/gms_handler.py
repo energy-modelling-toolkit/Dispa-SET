@@ -50,11 +50,6 @@ def solve_low_level(gams_folder,sim_folder,output_lst=False,logoption=3):
     gams_folder = force_str(gams_folder)
     model = os.path.join(sim_folder, 'UCM_h.gms')
 
-    def terminate(gamsxHandle, optHandle, rc):
-        optFree(optHandle)
-        gamsxFree(gamsxHandle)
-        os._exit(rc)
-
     def callGams(gamsxHandle, optHandle, sysDir, model):
         deffile = force_str(sysDir + u'/optgams.def')
 
@@ -85,6 +80,7 @@ def solve_low_level(gams_folder,sim_folder,output_lst=False,logoption=3):
         logging.error('The following error occured when trying to solve the model in gams: ' + str(e))
         sys.exit(1)
     finally:
-        terminate(gamsxHandle, optHandle, 0)
+        optFree(optHandle)
+        gamsxFree(gamsxHandle)
     logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
     return status
