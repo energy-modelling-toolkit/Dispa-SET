@@ -25,7 +25,7 @@ def commonvars():
     # List of CHP types:
     commons['types_CHP'] = ['extraction','back-pressure', 'p2h']
     # DispaSET fuels:
-    commons['Fuels'] = ['BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH']
+    commons['Fuels'] = ['BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH', 'GEO']
     # Ordered list of fuels for plotting (the first ones are negative):
     commons['MeritOrder'] = ['Storage','FlowOut','NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'SUN', 'WIN', 'FlowIn', 'WAT']
     # Colors associated with each fuel:
