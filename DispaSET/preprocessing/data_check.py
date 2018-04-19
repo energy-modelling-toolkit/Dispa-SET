@@ -118,11 +118,15 @@ def check_sto(config, plants,raw_data=True):
 
     for key in NonNaNKeys:
         for u in plants.index:
+            if 'Unit' in plants:
+                unitname = plants.loc[u,'Unit']
+            else:
+                unitname = str(u)
             if type(plants.loc[u, key]) == str:
                 logging.critical('A non numeric value was detected in the power plants inputs for parameter "' + key + '"')
                 sys.exit(1)
             if np.isnan(plants.loc[u, key]):
-                logging.critical('The power plants data is missing for unit number ' + str(u) + ' and parameter "' + key + '"')
+                logging.critical('The power plants data is missing for unit ' + unitname + ' and parameter "' + key + '"')
                 sys.exit(1)
 
     return True
@@ -144,25 +148,37 @@ def check_chp(config, plants):
 
     for key in NonNaNKeys:
         for u in plants.index:
+            if 'Unit' in plants:
+                unitname = plants.loc[u,'Unit']
+            else:
+                unitname = str(u)
             if type(plants.loc[u, key]) == str:
                 logging.critical('A non numeric value was detected in the power plants inputs for parameter "' + key + '"')
                 sys.exit(1)
             if np.isnan(plants.loc[u, key]):
-                logging.critical('The power plants data is missing for unit number ' + str(u) + ' and parameter "' + key + '"')
+                logging.critical('The power plants data is missing for unit number ' + unitname + ' and parameter "' + key + '"')
                 sys.exit(1)
 
     for key in StrKeys:
         for u in plants.index:
+            if 'Unit' in plants:
+                unitname = plants.loc[u,'Unit']
+            else:
+                unitname = str(u)
             if not type(plants.loc[u, key]) == str:
                 logging.critical(
                     'A numeric value was detected in the power plants inputs for parameter "' + key + '". This column should contain strings only.')
                 sys.exit(1)
             elif plants.loc[u, key] == '':
-                logging.critical('An empty value was detected in the power plants inputs for unit "' + str(u) + '" and parameter "' + key + '"')
+                logging.critical('An empty value was detected in the power plants inputs for unit "' + unitname + '" and parameter "' + key + '"')
                 sys.exit(1) 
     
     # Check the efficiency values:
     for u in plants.index:
+        if 'Unit' in plants:
+            unitname = plants.loc[u,'Unit']
+        else:
+            unitname = str(u)
         plant_PowerCapacity = plants.loc[u,'PowerCapacity']
         plant_MaxHeat = plants.loc[u, 'CHPMaxHeat']
         plant_powertoheat =  plants.loc[u,'CHPPowerToHeat']
@@ -196,10 +212,10 @@ def check_chp(config, plants):
             TotalEfficiency = (plant_PowerCapacity + plant_MaxHeat) / Fuel             # eta_tot = (P + Q) / F
             logging.debug('Highest overall efficiency of CHP plant {} is {:.2f}'.format(u,TotalEfficiency))
             if TotalEfficiency < 0 or TotalEfficiency > 1.14:
-                logging.critical('The calculated value of the total CHP efficiency for unit ' + u + ' is ' + str(TotalEfficiency) + ', which is unrealistic!')
+                logging.critical('The calculated value of the total CHP efficiency for unit ' + unitname + ' is ' + str(TotalEfficiency) + ', which is unrealistic!')
                 sys.exit(1)
             if TotalEfficiency > 0.95:
-                logging.warn('The calculated value of the total CHP efficiency for unit ' + u + ' is ' + str(TotalEfficiency) + ', which is very high!')
+                logging.warn('The calculated value of the total CHP efficiency for unit ' + unitname + ' is ' + str(TotalEfficiency) + ', which is very high!')
 
     # Check the optional MaxHeatCapacity parameter. While it adds another realistic boundary it is not a required parameter for the definition of the CHP's operational envelope.:
     if 'CHPMaxHeat' in plants:
@@ -212,19 +228,19 @@ def check_chp(config, plants):
         for u in plants.index:     
             Qdot = plants.loc[u,'PowerCapacity']/plants.loc[u,'CHPPowerToHeat']
             if plants.loc[u,'STOCapacity'] < Qdot * 0.5 :
-                logging.warn('Unit ' + u + ': The value of the thermal storage capacity (' + str(plants.loc[u,'STOCapacity']) + 'MWh) seems very low compared to its thermal power (' + str(Qdot) + 'MW).')
+                logging.warn('Unit ' + unitname + ': The value of the thermal storage capacity (' + str(plants.loc[u,'STOCapacity']) + 'MWh) seems very low compared to its thermal power (' + str(Qdot) + 'MW).')
             elif plants.loc[u,'STOCapacity'] > Qdot * 24:
-                logging.warn('Unit ' + u + ': The value of the thermal storage capacity (' + str(plants.loc[u,'STOCapacity']) + 'MWh) seems very high compared to its thermal power (' + str(Qdot) + 'MW).')
+                logging.warn('Unit ' + unitname + ': The value of the thermal storage capacity (' + str(plants.loc[u,'STOCapacity']) + 'MWh) seems very high compared to its thermal power (' + str(Qdot) + 'MW).')
 
     if 'STOSelfDischarge' in plants:
         for u in plants.index:     
             if plants.loc[u,'STOSelfDischarge'] < 0 :
-                logging.error('Unit ' + u + ': The value of the thermal storage self-discharge (' + str(plants.loc[u,'STOSelfDischarge']*100) + '%/day) cannot be negative')
+                logging.error('Unit ' + unitname + ': The value of the thermal storage self-discharge (' + str(plants.loc[u,'STOSelfDischarge']*100) + '%/day) cannot be negative')
                 sys.exit(1)
             elif plants.loc[u,'STOSelfDischarge'] > 1:
-                logging.warn('Unit ' + u + ': The value of the thermal storage self-discharge (' + str(plants.loc[u,'STOSelfDischarge']*100) + '%/day) seems very high')
+                logging.warn('Unit ' + unitname + ': The value of the thermal storage self-discharge (' + str(plants.loc[u,'STOSelfDischarge']*100) + '%/day) seems very high')
             elif plants.loc[u,'STOSelfDischarge'] > 24:
-                logging.error('Unit ' + u + ': The value of the thermal storage self-discharge (' + str(plants.loc[u,'STOSelfDischarge']*100) + '%/day) is too high')
+                logging.error('Unit ' + unitname + ': The value of the thermal storage self-discharge (' + str(plants.loc[u,'STOSelfDischarge']*100) + '%/day) is too high')
                 sys.exit(1)                           
 
     return True
@@ -237,7 +253,7 @@ def check_units(config, plants):
     keys = ['Unit', 'Fuel', 'Zone', 'Technology', 'PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate',
             'StartUpTime', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost', 'Efficiency', 'CO2Intensity']
     NonNaNKeys = ['PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate', 'Efficiency', 'RampingCost',
-                  'StartUpTime', 'CO2Intensity']
+                  'CO2Intensity']
     StrKeys = ['Unit', 'Zone', 'Fuel', 'Technology']
 
     # Special treatment for the Optional key Nunits:
