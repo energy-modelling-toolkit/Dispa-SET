@@ -120,12 +120,21 @@ def build_simulation(config,plot_load=False):
     plants = plants[pd.notnull(plants['PowerCapacity'])]
     plants.index = range(len(plants))
 
+    # Some columns can be in two format (absolute or per unit). If not specified, they are set to zero:
+    for key in ['StartUpCost','NoLoadCost']:
+        if key in plants:
+            pass
+        elif key+'_pu' in plants:
+            plants[key] = plants[key+'_pu'] * plants['PowerCapacity']
+        else:
+            plants[key] = 0
     # check plant list:
     check_units(config, plants)
-    # If not present, add the non-compulsory fields to the units table:
+    # If not present, add the non-compulsory fields to the units table: 
     for key in ['CHPPowerLossFactor','CHPPowerToHeat','CHPType','STOCapacity','STOSelfDischarge','STOMaxChargingPower','STOChargingEfficiency', 'CHPMaxHeat']:
         if key not in plants.columns:
             plants[key] = np.nan
+
 
     # Defining the hydro storages:
     plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
@@ -137,8 +146,8 @@ def build_simulation(config,plot_load=False):
 
     Outages = UnitBasedTable(plants,config['Outages'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='Outages')
     AF = UnitBasedTable(plants,config['RenewablesAF'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1,RestrictWarning=commons['tech_renewables'])
-    ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='ReservoirLevels',default=0)
-    ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='ReservoirScaledInflows',default=0)
+    ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
+    ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirScaledInflows',default=0)
     HeatDemand = UnitBasedTable(plants_chp,config['HeatDemand'],idx_utc_noloc,config['countries'],fallbacks=['Unit'],tablename='HeatDemand',default=0)
     CostHeatSlack = UnitBasedTable(plants_chp,config['CostHeatSlack'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default']['CostHeatSlack'])
 
