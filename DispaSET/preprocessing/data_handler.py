@@ -119,7 +119,7 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
                 paths[str(c)] = path_c
             else:
                 logging.error('No data file found for the table ' + tablename + ' and country ' + c + '. File ' + path_c + ' does not exist')
-                sys.exit(1)
+#                sys.exit(1)
         SingleFile=False
     data = pd.DataFrame(index=idx)
     if len(paths) == 0:
@@ -528,7 +528,7 @@ def load_config_excel(ConfigFile):
         return out
 
     config['countries'] = read_truefalse(sheet, 86, 1, 101, 3)
-    config['countries'] = config['countries'] + read_truefalse(sheet, 86, 4, 101, 6)
+    config['countries'] = config['countries'] + read_truefalse(sheet, 86, 4, 102, 6)
 
     config['modifiers'] = {}
     config['modifiers']['Demand'] = sheet.cell_value(111, 2)
