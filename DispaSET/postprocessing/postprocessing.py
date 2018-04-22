@@ -340,7 +340,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
     
     # Netting the interconnections:
     if 'FlowIn' in plotdata and 'FlowOut' in plotdata:
-        plotdata['FlowIn'],plotdata['FlowOut'] = (np.maximum(0,plotdata['FlowIn']-plotdata['FlowOut']),np.maximum(0,plotdata['FlowOut']-plotdata['FlowIn']))
+        plotdata['FlowOut'],plotdata['FlowIn'] = (np.minimum(0,plotdata['FlowIn']+plotdata['FlowOut']),np.maximum(0,plotdata['FlowOut']+plotdata['FlowIn']))
         
     # find the zero line position:
     cols = plotdata.columns.tolist()
@@ -708,6 +708,10 @@ def plot_country(inputs, results, c='', rng=None):
 
     demand = inputs['param_df']['Demand'][('DA', c)]
     sum_generation = plotdata.sum(axis=1)
+    diff = (sum_generation - demand).abs()
+    if diff.max() > 0.01 * demand.max():
+        logging.critical('There is more than 1% difference in the energy balance \
+                         of country ' + c)
 
     try:
         if 'OutputCurtailedPower' in results and c in results['OutputCurtailedPower']:

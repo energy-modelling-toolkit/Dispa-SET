@@ -27,10 +27,10 @@ def commonvars():
     # DispaSET fuels:
     commons['Fuels'] = ['BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH', 'GEO']
     # Ordered list of fuels for plotting (the first ones are negative):
-    commons['MeritOrder'] = ['Storage','FlowOut','NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'SUN', 'WIN', 'FlowIn', 'WAT']
+    commons['MeritOrder'] = ['Storage','FlowOut','NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT']
     # Colors associated with each fuel:
     commons['colors'] = {'NUC': 'orange', 'LIG': 'brown', 'HRD': 'grey', 'BIO': 'darkgreen', 'GAS': 'lightcoral', 
-           'OIL': 'chocolate','PEA':'green', 'WST': 'dodgerblue', 'SUN': 'yellow', 'WIN': 'red', 'FlowIn': 'green', 'WAT': 'blue', 
+           'OIL': 'chocolate','PEA':'green', 'WST': 'dodgerblue', 'OTH':'grey', 'SUN': 'yellow', 'WIN': 'red', 'FlowIn': 'green', 'WAT': 'blue', 
            'Storage': 'blue','FlowOut': 'green'}
     # Hatches associated with each fuel (random):
     hatches = itertools.cycle(['x', '//', '\\', '/'])
