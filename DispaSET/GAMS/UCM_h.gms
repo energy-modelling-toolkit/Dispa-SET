@@ -44,7 +44,7 @@ $set InputFileName Inputs.gdx
 
 * Definition of the equations that will be present in LP or MIP
 * (1 for LP 0 for MIP TC)
-$setglobal LPFormulation 1
+$setglobal LPFormulation 0
 * Flag to retrieve status or not
 * (1 to retrieve 0 to not)
 $setglobal RetrieveStatus 0
