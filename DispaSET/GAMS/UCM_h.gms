@@ -1,7 +1,7 @@
 $Title UCM model
 
 $eolcom //
-Option threads=2;
+Option threads=8;
 Option IterLim=1000000000;
 Option ResLim = 10000000000;
 *Option optca=0.0;
@@ -44,7 +44,7 @@ $set InputFileName Inputs.gdx
 
 * Definition of the equations that will be present in LP or MIP
 * (1 for LP 0 for MIP TC)
-$setglobal LPFormulation 0
+$setglobal LPFormulation 1
 * Flag to retrieve status or not
 * (1 to retrieve 0 to not)
 $setglobal RetrieveStatus 0
@@ -429,6 +429,24 @@ EQ_CommittedCalc(u,z)..
 $label skipequation
 
 *Objective function
+
+$ifthen [%LPFormulation% == 1]
+EQ_SystemCost(i)..
+         SystemCost(i)
+         =E=
+         sum(u,CostFixed(u)*Committed(u,i))
+         +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
+         +sum(u,CostVariable(u,i) * Power(u,i))
+         +sum(l,PriceTransmission(l,i)*Flow(l,i))
+         +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
+         +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
+         +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
+         +100E3*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
+         +80E3*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
+         +70E3*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
+         +1*sum(s,spillage(s,i));
+$else
+
 EQ_SystemCost(i)..
          SystemCost(i)
          =E=
@@ -443,8 +461,12 @@ EQ_SystemCost(i)..
          +100E3*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
          +80E3*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
          +70E3*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
-         +1*sum(s,spillage(s,i))
+         +1*sum(s,spillage(s,i));
+
+$endIf
 ;
+
+
 
 EQ_Objective_function..
          SystemCostD
@@ -762,8 +784,8 @@ $If not %LPFormulation% == 1 EQ_CostShutDown,
 $If %LPFormulation% == 1 EQ_CostRampUp,
 $If %LPFormulation% == 1 EQ_CostRampDown,
 EQ_Commitment,
-EQ_MinUpTime,
-EQ_MinDownTime,
+$If not %LPFormulation% == 1 EQ_MinUpTime,
+$If not %LPFormulation% == 1 EQ_MinDownTime,
 EQ_RampUp_TC,
 EQ_RampDown_TC,
 EQ_Demand_balance_DA,
@@ -820,6 +842,13 @@ set  tmp   "tpm"  / "model", "solver" /  ;
 parameter status(tmp,h);
 
 $if %Debug% == 1 $goto DebugSection
+
+display "OK";
+
+scalar starttime;
+set days /1,'ndays'/; 
+display days;
+PARAMETER elapsed(days);
 
 FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("RollingHorizon Length","day"),
          FirstHour = (day-1)*24+1;
