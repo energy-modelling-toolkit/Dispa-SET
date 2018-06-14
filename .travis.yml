@@ -28,7 +28,8 @@ before_install:
 - wget -N $GAMS_URL -O gams.zip
 - unzip -qu gams.zip -d $HOME
 - ln -s $HOME/gams${GAMS}_linux_x64_64_sfx $HOME/gams
-- export PATH="$HOME/gams:$PATH"
+- export GAMS_PATH="$HOME/gams"
+- export PATH="$GAMS_PATH:$PATH"
 - cd $HOME/gams
 - gamsinst -a
 - cd -
