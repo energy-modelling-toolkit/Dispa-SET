@@ -1,6 +1,6 @@
 Dispa-SET 
 ===================
- ![Documentation](https://img.shields.io/badge/python-2.7,%203.6-blue.svg) [![License](https://img.shields.io/badge/License-EUPL--1.1-blue.svg)](https://opensource.org/licenses/EUPL-1.1) [![Documentation](https://readthedocs.org/projects/dispa-set/badge/?branch=master)](http://dispa-set.readthedocs.io/en/latest/)
+ ![Documentation](https://img.shields.io/badge/python-2.7,%203.6-blue.svg) [![License](https://img.shields.io/badge/License-EUPL--1.1-blue.svg)](https://opensource.org/licenses/EUPL-1.1) [![Documentation](https://readthedocs.org/projects/dispa-set/badge/?branch=master)](http://dispa-set.readthedocs.io/en/latest/) [![Build Status](https://travis-ci.org/energy-modelling-toolkit/Dispa-SET.svg)](https://travis-ci.org/energy-modelling-toolkit/Dispa-SET)
 
 ### Description
 The Dispa-SET model is a unit commitment and dispatch model developed within the “Joint Research Centre” and focused on the balancing and flexibility problems in European grids. It is written in GAMS and coupled to Matlab and Excel for input/output data handling and visualization. The selected Mixed-Integer Linear Programming (MILP) solver is CPLEX.

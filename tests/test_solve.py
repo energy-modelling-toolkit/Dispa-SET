@@ -15,6 +15,8 @@ def test_build():
     SimData = ds.build_simulation(config)
     assert isinstance(SimData, dict) #how to test if sucessful build?
 
+@pytest.mark.skipif('TRAVIS' in os.environ,
+                    reason='This test is too long for the demo GAMS license version which is currently installed in Travis')
 def test_solve_gams():
     from dispaset.misc.gdx_handler import get_gams_path
     config = ds.load_config_yaml(conf_file)
