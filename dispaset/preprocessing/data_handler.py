@@ -439,7 +439,7 @@ def write_to_excel(xls_out, list_vars):
     logging.info('Data Successfully written to the ' + xls_out + ' directory.')
 
 
-def load_csv(filename, TempPath='.pickle', header=0, skiprows=[], skip_footer=0, index_col=None, parse_dates=False):
+def load_csv(filename, TempPath='.pickle', header=0, skiprows=[], skipfooter=0, index_col=None, parse_dates=False):
     """
     Function that loads an xls sheet into a dataframe and saves a temporary pickle version of it.
     If the pickle is newer than the sheet, do no load the sheet again.
@@ -458,7 +458,7 @@ def load_csv(filename, TempPath='.pickle', header=0, skiprows=[], skip_footer=0,
     else:
         time_pd = os.path.getmtime(filepath_pandas)
     if os.path.getmtime(filename) > time_pd:
-        data = pd.read_csv(filename, header=header, skiprows=skiprows, skip_footer=skip_footer, index_col=index_col,
+        data = pd.read_csv(filename, header=header, skiprows=skiprows, skipfooter=skipfooter, index_col=index_col,
                            parse_dates=parse_dates)
         data.to_pickle(filepath_pandas)
     else:
