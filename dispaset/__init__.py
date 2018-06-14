@@ -61,6 +61,7 @@ from .postprocessing.postprocessing import get_indicators_powerplant
 from .postprocessing.postprocessing import aggregate_by_fuel
 from .postprocessing.postprocessing import plot_energy_country_fuel
 from .postprocessing.postprocessing import plot_country_capacities
+from .postprocessing.postprocessing import CostExPost
 from .cli import *
 
 # Removeing log file:

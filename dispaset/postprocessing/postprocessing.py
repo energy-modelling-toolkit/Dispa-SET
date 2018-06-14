@@ -340,7 +340,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
     
     # Netting the interconnections:
     if 'FlowIn' in plotdata and 'FlowOut' in plotdata:
-        plotdata['FlowIn'],plotdata['FlowOut'] = (np.maximum(0,plotdata['FlowIn']-plotdata['FlowOut']),np.maximum(0,plotdata['FlowOut']-plotdata['FlowIn']))
+        plotdata['FlowOut'],plotdata['FlowIn'] = (np.minimum(0,plotdata['FlowIn']+plotdata['FlowOut']),np.maximum(0,plotdata['FlowOut']+plotdata['FlowIn']))
         
     # find the zero line position:
     cols = plotdata.columns.tolist()
@@ -708,6 +708,10 @@ def plot_country(inputs, results, c='', rng=None):
 
     demand = inputs['param_df']['Demand'][('DA', c)]
     sum_generation = plotdata.sum(axis=1)
+    diff = (sum_generation - demand).abs()
+    if diff.max() > 0.01 * demand.max():
+        logging.critical('There is more than 1% difference in the energy balance \
+                         of country ' + c)
 
     try:
         if 'OutputCurtailedPower' in results and c in results['OutputCurtailedPower']:
@@ -948,3 +952,142 @@ def ds_to_df(inputs):
             logging.error('Only three dimensions currently supported. Parameter ' + p + ' has ' + str(dim) + ' dimensions.')
             sys.exit(1)
     return out
+
+def CostExPost(inputs,results):
+    '''
+    Ex post computation of the operational costs with plotting. This allows breaking down
+    the cost into its different components and check that it matches with the objective 
+    function from the optimization.
+    
+    The cost objective function is the following:
+             SystemCost(i)
+             =E=
+             sum(u,CostFixed(u)*Committed(u,i))
+             +sum(u,CostStartUpH(u,i) + CostShutDownH(u,i))
+             +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
+             +sum(u,CostVariable(u,i) * Power(u,i))
+             +sum(l,PriceTransmission(l,i)*Flow(l,i))
+             +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
+             +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
+             +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
+             +100E3*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
+             +80E3*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
+             +70E3*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
+             +1*sum(s,spillage(s,i))
+             
+    :returns: tuple with the cost components and their cumulative sums in two dataframes.
+    '''
+    import datetime
+    
+    dfin = inputs['param_df']
+    timeindex = results['OutputPower'].index
+    
+    costs = pd.DataFrame(index=timeindex)
+    
+    #%% Fixed Costs:
+    costs['FixedCosts'] = 0
+    for u in results['OutputCommitted']:
+        if u in dfin:
+            costs['FixedCosts'] =+ dfin[u] * results['OutputCommited'][u]
+    
+            
+    #%% Ramping and startup costs:
+    indexinitial = timeindex[0] - datetime.timedelta(hours=1)
+    powerlong = results['OutputPower'].copy()
+    powerlong.loc[indexinitial,:] = 0 
+    powerlong.sort_index(inplace=True)
+    committedlong = results['OutputCommitted'].copy()
+    for u in powerlong:
+        if u in dfin['PowerInitial'].index:
+            powerlong.loc[indexinitial,u] = dfin['PowerInitial'].loc[u,'PowerInitial']
+            committedlong.loc[indexinitial,u] = dfin['PowerInitial'].loc[u,'PowerInitial']>0
+    committedlong.sort_index(inplace=True)
+            
+    powerlong_shifted = powerlong.copy()
+    powerlong_shifted.iloc[1:,:] = powerlong.iloc[:-1,:].values
+    committedlong_shifted = committedlong.copy()
+    committedlong_shifted.iloc[1:,:] = committedlong.iloc[:-1,:].values
+    
+    ramping = powerlong - powerlong_shifted
+    startups = committedlong - committedlong_shifted
+    ramping.drop([ramping.index[0]],inplace=True); startups.drop([startups.index[0]],inplace=True)
+    
+    CostStartUp = pd.DataFrame(index=startups.index,columns=startups.columns)
+    for u in CostStartUp:
+        if u in dfin['CostStartUp'].index:
+            CostStartUp[u] = startups[startups>0][u].fillna(0) * dfin['CostStartUp'].loc[u,'CostStartUp']
+        else:
+            print('Unit ' + u + ' not found in input table CostStartUp!')
+            
+    CostShutDown = pd.DataFrame(index=startups.index,columns=startups.columns)
+    for u in CostShutDown:
+        if u in dfin['CostShutDown'].index:
+            CostShutDown[u] = startups[startups<0][u].fillna(0) * dfin['CostShutDown'].loc[u,'CostShutDown']
+        else:
+            print('Unit ' + u + ' not found in input table CostShutDown!')
+            
+    CostRampUp = pd.DataFrame(index=ramping.index,columns=ramping.columns)
+    for u in CostRampUp:
+        if u in dfin['CostRampUp'].index:
+            CostRampUp[u] = ramping[ramping>0][u].fillna(0) * dfin['CostRampUp'].loc[u,'CostRampUp']
+        else:
+            print('Unit ' + u + ' not found in input table CostRampUp!')
+            
+    CostRampDown = pd.DataFrame(index=ramping.index,columns=ramping.columns)
+    for u in CostRampDown:
+        if u in dfin['CostRampDown'].index:
+            CostRampDown[u] = ramping[ramping<0][u].fillna(0) * dfin['CostRampDown'].loc[u,'CostRampDown']
+        else:
+            print('Unit ' + u + ' not found in input table CostRampDown!')
+    
+    costs['CostStartUp'] = CostStartUp.sum(axis=1).fillna(0)
+    costs['CostShutDown'] = CostShutDown.sum(axis=1).fillna(0)
+    costs['CostRampUp'] = CostRampUp.sum(axis=1).fillna(0)
+    costs['CostRampDown'] = CostRampDown.sum(axis=1).fillna(0)
+    
+    #%% Variable cost:
+    costs['CostVariable'] = (results['OutputPower'] * dfin['CostVariable']).fillna(0).sum(axis=1)
+    
+    #%% Transmission cost:
+    costs['CostTransmission'] = (results['OutputFlow'] * dfin['PriceTransmission']).fillna(0).sum(axis=1)
+    
+    #%% Shedding cost:
+    costs['CostLoadShedding'] = (results['OutputShedLoad'] * dfin['CostLoadShedding']).fillna(0).sum(axis=1)
+    
+    #%% Heating costs:
+    costs['CostHeatSlack'] = (results['OutputHeatSlack'] * dfin['CostHeatSlack']).fillna(0).sum(axis=0)
+    CostHeat = (results['OutputHeatSlack'] * dfin['CostHeatSlack']).fillna(0)
+    CostHeat = pd.DataFrame(index=results['OutputHeat'].index,columns=results['OutputHeat'].columns)
+    for u in CostHeat:
+        if u in dfin['CHPPowerLossFactor'].index:
+            CostHeat[u] = dfin['CostVariable'][u].fillna(0) * results['OutputHeat'][u].fillna(0) * dfin['CHPPowerLossFactor'].loc[u,'CHPPowerLossFactor']
+        else:
+            print('Unit ' + u + ' not found in input table CHPPowerLossFactor!')
+    costs['CostHeat'] = CostHeat.sum(axis=1).fillna(0)
+    
+    #%% Lost loads:
+    costs['LostLoad'] = 80e3* (results['LostLoad_2D'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_2U'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0))  \
+                       + 100e3*(results['LostLoad_MaxPower'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_MinPower'].reindex(timeindex).sum(axis=1).fillna(0)) \
+                       + 70e3*(results['LostLoad_RampDown'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_RampUp'].reindex(timeindex).sum(axis=1).fillna(0))
+        
+    #%% Spillage:
+    costs['Spillage'] = 1 * results['OutputSpillage'].sum(axis=1).fillna(0)
+    
+    #%% Plotting
+    # Drop na columns:
+    costs.dropna(axis=1, how='all',inplace=True)
+    # Delete all-zero columns:
+    costs = costs.loc[:, (costs != 0).any(axis=0)]
+    
+    sumcost = costs.cumsum(axis=1)
+    sumcost['OutputSystemCost'] = results['OutputSystemCost']
+    
+    sumcost.plot(title='Cumulative sum of the cost components')
+    
+    #%% Warning if significant error:
+    diff = (costs.sum(axis=1) - results['OutputSystemCost']).abs()
+    if diff.max() > 0.01 * results['OutputSystemCost'].max():
+        logging.critical('There are significant differences between the cost computed ex post and and the cost provided by the optimization results!')
+    return costs,sumcost
+
+
