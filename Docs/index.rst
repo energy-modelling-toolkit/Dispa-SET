@@ -58,7 +58,7 @@ Contents
    implementation
    data
    developers
-   DispaSET
+   dispaset
 
 
 Indices and tables

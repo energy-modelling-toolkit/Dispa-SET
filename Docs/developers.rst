@@ -8,7 +8,7 @@ Folders organization
 --------------------
 
 * GAMS code and scripts are included within the "GAMS-files" folder. The code should only be modified in that folder!
-* Python code and scripts are included within the "DispaSET" folder. 
+* Python code and scripts are included within the "dispaset" folder.
 * DispaSET configuration files are included within the "ConfigFiles" folder (one file per simulation).
 * Input files for each country are stored in the "Database" folder
 * Simulation directories can be written into the "Simulations" folder, which is not tracked by git

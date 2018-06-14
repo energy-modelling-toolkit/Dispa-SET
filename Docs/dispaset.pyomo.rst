@@ -1,21 +1,21 @@
-DispaSET.pyomo package
+dispaset.pyomo package
 ======================
 
 Submodules
 ----------
 
-DispaSET.pyomo.model module
+dispaset.pyomo.model module
 ---------------------------
 
-.. automodule:: DispaSET.pyomo.model
+.. automodule:: dispaset.pyomo.model
     :members:
     :undoc-members:
     :show-inheritance:
 
-DispaSET.pyomo.utils module
+dispaset.pyomo.utils module
 ---------------------------
 
-.. automodule:: DispaSET.pyomo.utils
+.. automodule:: dispaset.pyomo.utils
     :members:
     :undoc-members:
     :show-inheritance:
@@ -24,7 +24,7 @@ DispaSET.pyomo.utils module
 Module contents
 ---------------
 
-.. automodule:: DispaSET.pyomo
+.. automodule:: dispaset.pyomo
     :members:
     :undoc-members:
     :show-inheritance:

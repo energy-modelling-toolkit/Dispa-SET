@@ -52,10 +52,11 @@ from .misc.gms_handler import solve_high_level, solve_low_level
 
 def is_sim_folder_ok(sim_folder):
     '''
-    Function that checks if the provided path is a valid Dispa-SET simulation folder
+    Function that checks if the provided path is a valid Dispa-SET simulation folder.
     The following files are required:
-        - Inputs.gdx
-        - UCM_h.gms
+
+      - Inputs.gdx
+      - UCM_h.gms
 
     :param sim_folder: path (absolute or relative) to the simulation folder
     '''
