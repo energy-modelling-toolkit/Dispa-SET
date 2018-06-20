@@ -710,8 +710,7 @@ def plot_country(inputs, results, c='', rng=None):
     sum_generation = plotdata.sum(axis=1)
     diff = (sum_generation - demand).abs()
     if diff.max() > 0.01 * demand.max():
-        logging.critical('There is more than 1% difference in the energy balance \
-                         of country ' + c)
+        logging.critical('There is up to ' + str(diff.max()/demand.max()*100) + '% difference in the instantaneous energy balance of country ' + c)
 
     try:
         if 'OutputCurtailedPower' in results and c in results['OutputCurtailedPower']:
