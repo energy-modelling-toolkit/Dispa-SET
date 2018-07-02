@@ -23,7 +23,8 @@ from .utils import clustering, interconnections, incidence_matrix
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, write_to_excel, load_csv
 
 from ..misc.gdx_handler import write_variables
-from ..common import commonvars
+from ..common import commons  # Load fuel types, technologies, timestep, etc
+
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
@@ -60,8 +61,6 @@ def build_simulation(config,plot_load=False):
     y_end, m_end, d_end, _, _, _ = config['StopDate']
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
 
-    # Load fuel types, technologies, timestep, etc:
-    commons = commonvars()
 
     # Indexes of the simualtion:
     idx_std = pd.DatetimeIndex(start=pd.datetime(*config['StartDate']), end=pd.datetime(*config['StopDate']),

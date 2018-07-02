@@ -5,11 +5,9 @@ import sys
 import numpy as np
 import pandas as pd
 
-from ..common import commonvars
 from ..misc.gdx_handler import get_gams_path, gdx_to_dataframe, gdx_to_list
 from ..misc.str_handler import clean_strings
 
-commons= commonvars()
 col_keys = {'OutputCommitted':('u','h'),
             'OutputFlow':('l','h'),
             'OutputPower':('u','h'),

@@ -6,9 +6,10 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from ..misc.str_handler import clean_strings
+from ..common import commons
+
 
 from .postprocessing import get_imports, get_plot_data, filter_by_country
-from .data_handler import commons
 
 
 def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None):
