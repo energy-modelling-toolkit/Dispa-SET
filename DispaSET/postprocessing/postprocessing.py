@@ -13,7 +13,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-from .data_handler import commons
+from ..common import commons
 
 
 # get color definitions:

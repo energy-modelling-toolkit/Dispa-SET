@@ -171,6 +171,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
 
     if return_xarray:
         results = results_to_xarray(results)
+        inputs = inputs_to_xarray(inputs)
     out = (inputs, results)
 
     if return_status:
@@ -217,7 +218,8 @@ def inputs_to_xarray(inputs):
         for k,v in inputs['parameters'].items():
             in_keys[k] = tuple(v['sets'])
         #Remove config from dict and add it later as dataset attribute (metadata)
-        config = in_keys.pop('Config')
+        __ = in_keys.pop('Config')
+        config = inputs['config']
 
         all_ds = []
         # Iterate all and build values nad coordinates
@@ -239,6 +241,13 @@ def inputs_to_xarray(inputs):
             all_ds.append(ds)
         inputs = xr.merge(all_ds)
         inputs.attrs['config'] = config
+        # Replace h with DateTimeIndex
+        StartDate = config['StartDate']
+        StopDate = config['StopDate']  # last day of the simulation with look-ahead period
+        StopDate_long = dt.datetime(*StopDate) + dt.timedelta(days=config['LookAhead'])
+        index_long = pd.DatetimeIndex(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
+        inputs.coords['h'] = index_long
+
     except ImportError:
         logging.warn('Cannot find xarray package. Falling back to dict of dataframes')
     return inputs
