@@ -1,6 +1,7 @@
 import datetime as dt
 import logging
 import sys
+from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -207,6 +208,40 @@ def results_to_xarray(results):
             logging.warn('Cannot find xarray package. Falling back to dict of dataframes')
         return results
 
+def inputs_to_xarray(inputs):
+    """Read crude input dispaset dictionary and return a structured xarray dataset"""
+    try:
+        import xarray as xr
+        # build set dictionary {parameter:set}
+        in_keys = {}
+        for k,v in inputs['parameters'].items():
+            in_keys[k] = tuple(v['sets'])
+        #Remove config from dict and add it later as dataset attribute (metadata)
+        config = in_keys.pop('Config')
+
+        all_ds = []
+        # Iterate all and build values nad coordinates
+        for k,v in in_keys.items():
+            val = inputs['parameters'][k]['val']
+            var_name = k
+            ind = v
+            coords = OrderedDict()
+            # Build dictionary for the specific parameter {sets:set elements}
+            for sett in ind:
+                coords[sett] = inputs['sets'][sett]
+            dims = coords.keys()
+
+            ds = xr.DataArray(val,
+                           coords=coords,
+                           dims=dims,
+                           name=var_name)
+
+            all_ds.append(ds)
+        inputs = xr.merge(all_ds)
+        inputs.attrs['config'] = config
+    except ImportError:
+        logging.warn('Cannot find xarray package. Falling back to dict of dataframes')
+    return inputs
 
 def ds_to_df(inputs):
     """
