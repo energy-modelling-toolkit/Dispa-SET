@@ -55,6 +55,7 @@ Contents
    releases
    workflow
    model
+   formulations
    implementation
    data
    developers

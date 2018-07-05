@@ -27,7 +27,7 @@ Sets
 	t       Power generation technologies
 	tr      Renewable power generation technologies
 	u       Units
-	s       Storage units (including hydro reservoirs)
+	s(u)    Storage units (including hydro reservoirs)
 	chp(u)  CHP units
 	======= =================================================================================
 
@@ -49,56 +49,51 @@ Parameters
 	CostLoadShedding(n,h)                   EUR/MWh Shedding costs
 	CostRampDown(u)                         EUR/MW  Ramp-down costs
 	CostRampUp(u)                           EUR/MW  Ramp-up costs
-	CostShutDown(u)                         EUR/h   Shut-down costs
-	CostStartUp(u)                          EUR/h   Start-up costs
+	CostShutDown(u)                         EUR/u   Shut-down costs for one unit
+	CostStartUp(u)                          EUR/u   Start-up costs for one unit
 	CostVariableH(u,i)                      EUR/MWh Variable costs
+	CostHeatSlack(chp,h)              	EUR/MWh Cost of supplying heat via other means
 	Curtailment(n)                          n.a.    Curtailment {binary: 1 allowed}
 	Demand(mk,n,i)                          MW      Hourly demand in each zone
 	Efficiency(u)                           %       Power plant efficiency
 	EmissionMaximum(n,p)                    EUR/tP  Emission limit per zone for pollutant p
 	EmissionRate(u,p)                       tP/MW   Emission rate of pollutant p from unit u
-	FlexibilityDown(u)                      MW/h    Available fast shut-down ramping capacity
-	FlexibilityUp(u)                        MW/h    Available fast start-up ramping capacity
 	Fuel(u,f)                               n.a.    Fuel type used by unit u {binary: 1 u uses f}
+	HeatDemand(chp,h)                	MWh/u   Heat demand profile for chp units
+	K_QuickStart(n)                      	n.a.	Part of the reserve that can be provided by offline quickstart units
 	LineNode(l,n)                           n.a.    Line-zone incidence matrix {-1,+1}
-	LoadMaximum(u,h)                        %       Maximum load for each unit
 	LoadShedding(n,h)                       MW      Load that may be shed per zone in 1 hour
 	Location(u,n)                           n.a.    Location {binary: 1 u located in n}
+	Nunits(u)                        	n.a.    Number of units inside the cluster
 	OutageFactor(u,h)                       %       Outage factor (100 % = full outage) per hour
 	PartLoadMin(u)                          %       Percentage of minimum nominal capacity
-	PowerCapacity(u)                        MW      Installed capacity
-	PowerInitial(u)                         MW      Power output before initial period
-	PowerMinStable(u)                       MW      Minimum power for stable generation
+	PowerCapacity(u)                        MW/u    Installed capacity
+	PowerInitial(u)                         MW/u    Power output before initial period
+	PowerMinStable(u)                       MW/u    Minimum power for stable generation
 	PowerMustRun(u)                         MW      Minimum power output
 	PriceTransmission(l,h)                  EUR/MWh	Price of transmission between zones
-	RampDownMaximum(u)                      MW/h    Ramp down limit
-	RampShutDownMaximum(u)                  MW/h    Shut-down ramp limit
-	RampStartUpMaximum(u)                   MW/h    Start-up ramp limit
-	RampUpMaximum(u)                        MW/h    Ramp up limit
+	QuickStartPower(u,h)            	MW/h/u  Available max capacity for tertiary reserve
+	RampDownMaximum(u)                      MW/h/u  Ramp down limit
+	RampShutDownMaximum(u)                  MW/h/u  Shut-down ramp limit
+	RampStartUpMaximum(u)                   MW/h/u  Start-up ramp limit
+	RampUpMaximum(u)                        MW/h/u  Ramp up limit
 	Reserve(t)                              n.a.    Reserve provider {binary}
-	StorageCapacity(s)                      MWh     Storage capacity (reservoirs)
-	StorageChargingCapacity(s)              MW      Maximum charging capacity
+	StorageCapacity(s)                      MWh/u   Storage capacity (reservoirs)
+	StorageChargingCapacity(s)              MW/u    Maximum charging capacity
 	StorageChargingEfficiency(s)            %       Charging efficiency
 	StorageDischargeEfficiency(s)           %       Discharge efficiency
-	StorageInflow(s,h)                      MWh     Storage inflows
+	StorageInflow(s,h)                      MWh/u   Storage inflows
 	StorageInitial(s)                       MWh     Storage level before initial period
-	StorageMinimum(s)                       MWh     Minimum storage level
-	StorageOutflow(s,h)                     MWh     Storage outflows (spills)
+	StorageMinimum(s)                       MWh/u   Minimum storage level
+	StorageOutflow(s,h)                     MWh/u   Storage outflows (spills)
 	StorageProfile(u,h)                     MWh     Storage long-term level profile
 	Technology(u,t)                         n.a.    Technology type {binary: 1: u belongs to t}
-	TimeDownInitial(u)                      h       Hours down before initial period
-	TimeDownLeftInitial(u)                  h       Time down remaining at initial time
-	TimeDownLeftJustStopped(u,i)            h       Time down remaining if started at time i
 	TimeDownMinimum(u)                      h       Minimum down time
-	TimeDown(u,h)                           h       Number of hours down
-	TimeUpInitial(u)                        h       Number of hours up before initial period
-	TimeUpLeftInitial(u)                    h       Time up remaining at initial time
-	TimeUpLeftJustStarted(u,i)              h       Time up remaining if started at time i
 	TimeUpMinimum(u)                        h       Minimum up time
-	TimeUp(u,h)                             h       Number of hours up
-	VOLL ()                                 EUR/MWh	Value of lost load
+	VOLL()                                  EUR/MWh	Value of lost load
 	======================================= ======= =============================================================
 
+NB: When the parameter is expressed per unit ("/u"), its value must be provided for one single unit (even in the case of a clustered formulation).
 
 Optimization Variables
 ----------------------
@@ -117,25 +112,38 @@ Optimization Variables
     Flow(l,h)               MW      Flow through lines
     Heat(chp,h)             MW      Heat output by chp plant
     HeatSlack(chp,h)        MW      Heat satisfied by other sources
-    MaxRamp2U(u,h)          MW/h    Maximum 15-min Ramp-up capbility
-    MaxRamp2D(u,h)          MW/h    Maximum 15-min Ramp-down capbility
     Power(u,h)              MW      Power output
     PowerMaximum(u,h)       MW      Power output
     PowerMinimum(u,h)       MW      Power output
+    Reserve_2U(u,h)         MW      Spinning reserve up
+    Reserve_2D(u,h)         MW      Spinning reserve down
+    Reserve_3U(u,h)         MW      Non spinning quick start reserve up
     ShedLoad(n,h)           MW      Shed load
     StorageInput(s,h)       MWh     Charging input for storage units
     StorageLevel(s,h)       MWh     Storage level of charge
     Spillage(s,h)           MWh     Spillage from water reservoirs
-    SystemCostD             EUR     Total system cost  for one optimization period
-    LostLoadMaxPower(n,h)   MW      Deficit in terms of maximum power
-    LostLoadRampUp(u,h)     MW      Deficit in terms of ramping up for each plant
-    LostLoadRampDown(u,h)   MW      Deficit in terms of ramping down
-    LostLoadMinPower(n,h)   MW      Power exceeding the demand
-    LostLoadReserve2U(n,h)  MW      Deficit in reserve up
+    SystemCost(h)           EUR     Total system cost
+    LL_MaxPower(n,h)        MW      Deficit in terms of maximum power
+    LL_RampUp(u,h)          MW      Deficit in terms of ramping up for each plant
+    LL_RampDown(u,h)        MW      Deficit in terms of ramping down
+    LL_MinPower(n,h)        MW      Power exceeding the demand
+    LL_2U(n,h)              MW      Deficit in reserve up
+    LL_3U(n,h)              MW      Deficit in reserve up - non spinning
+    LL_2D(n,h)              MW      Deficit in reserve down
     ======================= ======= =============================================================
 
+Integer Variables
+-----------------
 
+.. table::
 
+    ======================= ======= =============================================================
+    Name                    Units   Description
+    ======================= ======= =============================================================
+    Committed(u,h)          n.a.    Number of unit committed at hour h {1 0} or integer 
+    StartUp(u,h)            n.a.    Number of unit startups at hour h {1 0}  or integer
+    ShutDown(u,h)           n.a.    Number of unit shutdowns at hour h {1 0} or integer
+    ======================= ======= =============================================================
 
 Optimisation model
 ^^^^^^^^^^^^^^^^^^
@@ -161,9 +169,9 @@ The goal of the unit commitment problem is to minimize the total power system co
 	& + PriceTransimission_{i,l} \cdot Flow_{i,l} + \left( CostLoadShedding_{i,n} \cdot ShedLoad_{i,n} \right)  \\
 	& + \sum _{chp} CostHeatSlack_{chp,i} \cdot  HeatSlack_{chp,i}) \\
 	& + \sum _{chp} CostVariable_{chp,i} \cdot CHPPowerLossFactor_{chp} \cdot Heat_{chp,i}) \\
-	& + VOLL_{Power} \cdot \left( LostLoadMaxPower_{i,n} + LostLoadMinPower_{i,n} \right) \\
-	& + VOLL_{Reserve} \cdot \left( LostLoadReserve2U_{i,n} + LostLoadReserve2D_{i,n} \right) \\
-	& + VOLL_{Ramp} \cdot \left( LostLoadRampUp_{u,i} + LostLoadRampDown_{u,i} \right) \Big]
+	& + VOLL_{Power} \cdot \left( \mathit{LL}_{MaxPower,i,n} + \mathit{LL}_{MinPower,i,n} \right) \\
+	& + VOLL_{Reserve} \cdot \left( LL_{2U,i,n} + LL_{2D,i,n}+ LL_{3U,i,n} \right) \\
+	& + VOLL_{Ramp} \cdot \left( LL_{RampUp,u,i} + LL_{RampDown,u,i} \right) \Big]
 	\end{split}
 
 The costs can be broken down as:  
@@ -189,34 +197,24 @@ The variable production costs (in EUR/MWh), are determined by fuel and emission 
 
 The variable cost includes an additional mark-up parameter that can be used for calibration and validation purposes.
 
-The start-up and shut-down costs are positive variables, active when the commitment status between two consecutive time periods is modified:
+From version 2.3, Dispa-SET uses a 3 integers formulations of the up/down status of all units. According to this formulation, the number of start-ups and shut-downs is at each time step is computed by:
 
 .. math::
-	 i=1:
 
-	 \mathit{CostStartUp}_{u,i} \geq \mathit{CostStartUp}_u \cdot \left(\mathit{Committed}_{u,i}-\mathit{CommittedInitial}_u\right)
+	\mathit{Committed}_{u,i}-\mathit{Committed}_{u,i-1} = \mathit{StartUp}_{u,i} - \mathit{ShutDown}_{u,i}
 
-	 \mathit{CostShutDown}_{u,i} \geq \mathit{CostShutDown}_u \cdot (\mathit{CommittedInitial}_u-\mathit{Committed}_{u,i})
+The start-up and shut-down costs are positive variables, calculated from the number of startups/shutdowns at each time step:
 
-	 i>1:
+.. math::
 
-	 \mathit{CostStartUp}_{u,i} \geq \mathit{CostStartUp}_u \cdot \left(\mathit{Committed}_{u,i}-\mathit{Committed}_{u,i-1}\right)
+	 \mathit{CostStartUp}_{u,i} = \mathit{CostStartUp}_u \cdot \mathit{StartUp}_{u,i}
 
-	 \mathit{CostShutDown}_{u,i} \geq \mathit{CostShutDown}_u \cdot (\mathit{Committed}_{u,i-1}-\mathit{Committed}_{u,i})
+	 \mathit{CostShutDown}_{u,i} = \mathit{CostShutDown}_u \cdot \mathit{ShutDown}_{u,i}
 	 
 
-In the previous equation, as in some of the following, a distinction is made between the equation for the first and subsequent periods. The equation for the first period takes into account the commitment status of the unit before the beginning of the simulation, which is part of the information fed into the model.
-
-Ramping costs are computed in the same manner:
+Ramping costs are defined as positive variables (i.e. negative costs are not allowed) and are computed with the following equations:
 
 .. math:: 
-	 i=1:
-
-	 \mathit{CostRampUp}_{u,i} \geq \mathit{CostRampUp}_u \cdot \left(\mathit{Power}_{u,i}-\mathit{PowerInitial}_u\right)
-
-	 \mathit{CostRampDown}_{u,i} \geq \mathit{CostRampDown}_u \cdot (\mathit{PowerInitial}_u-\mathit{Power}_{u,i})
-
-	 i>1:
 
 	 \mathit{CostRampUp}_{u,i} \geq \mathit{CostRampUp}_u \cdot \left(\mathit{Power}_{u,i}-\mathit{Power}_{u,i-1}\right)
 
@@ -225,12 +223,12 @@ Ramping costs are computed in the same manner:
 
 It should be noted that in case of start-up and shut-down, the ramping costs are added to the objective function. Using start-up, shut-down and ramping costs at the same time should therefore be performed with care.
 
-In the current formulation all other costs (fixed and variable costs, transmission costs, load shedding costs) are considered as exogenous parameters. 
+In the current formulation, all other costs (fixed and variable costs, transmission costs, load shedding costs) are considered as exogenous parameters. 
 
 As regards load shedding, the model considers the possibility of voluntary load shedding resulting from contractual arrangements between generators and consumers. Additionally, in order to facilitate tracking and debugging of errors, the model also considers some variables representing the capacity the system is not able to provide when the minimum/maximum power, reserve, or ramping constraints are reached. These lost loads are a very expensive last resort of the system used when there is no other choice available. The different lost loads are assigned very high values (with respect to any other costs). This allows running the simulation without infeasibilities, thus helping to detect the origin of the loss of load. In a normal run of the model, without errors, all these variables are expected to be equal to zero.
 
-Demand-related constraints
---------------------------
+Day-ahead energy balance
+------------------------
 
 The main constraint to be met is the supply-demand balance, for each period and each zone, in the day-ahead market (equation ). According to this restriction, the sum of all the power produced by all the units present in the node (including the power generated by the storage units), the power injected from neighbouring nodes, and the curtailed power from intermittent sources is equal to the load in that node, plus the power consumed for energy storage, minus the load interrupted and the load shed.
 
@@ -243,59 +241,72 @@ The main constraint to be met is the supply-demand balance, for each period and 
 	
 	  -\mathit{ShedLoad}_{n,i} 
 
-	  - \mathit{LostLoadMaxPower}_{n,i} + \mathit{LostLoadMinPower}_{n,i}
+	  - \mathit{LL_{MaxPower}}_{n,i} + \mathit{LL_{MinPower}}_{n,i}
 
-Besides that balance, the reserve requirements (upwards and downwards) in each node must be met as well. In Dispa-SET, the reserve requirements are defined as an aggregation of secondary and tertiary reserves, which are typically brought online in periods shorter than an hour, the time step of this model. Therefore, additional equations and constraints are defined to account for the up/down ramping requirements, by computing the ability of each unit to adapt its power output within a period of 15 min.
+Reserve constraints
+-------------------
 
-For each power plant, the ability to increase its power (in MW/h) is the ramp-up capability if it is already committed or the nominal power if it is stopped and its starting time is lower than 15 minutes. This is to take into account that fast starting units could provide reserve (hydro units for secondary reserve, gas turbine for tertiary reserve).
+Besides the production/demand balance, the reserve requirements (upwards and downwards) in each node must be met as well. In Dispa-SET, three types of reserve requirements are taken into account:
 
-.. math::
+- Upward secondary reserve (2U): reserve that can only be covered by spinning units
+- Downward secondary reserve (2D): reserve that can only be covered by spinning units
+- Upward tertiary reserve (3U): reserve that can be covered either by spinning units or by quick-start offline units
 
-	\mathit{MaxRamp}2U_{u,i} 
-
-	\leq \mathit{RampUpMaximum}_u  \cdot  \mathit{Committed}_{u,i} 
-
-	+ \mathit{FlexibilityUp}_u  \cdot  \left(1-\mathit{Committed}_{u,i} \right)
-
-where FlexibilityUp is the maximum flexibility (in MW/h) that can be provided by the unit in 15 min in case of cold start:
+The secondary reserve capability of committed units is limited by the capacity margin between current and maximum power output:
 
 .. math::
 
-	 If ~ \mathit{RampStartUpMaximum}_u \geq \mathit{PowerMinStable}_u  \cdot  4 
+	\mathit{Reserve_{2U}}_{u,i} 
 
-	 Then ~ \mathit{FlexibilityUp}_u = \mathit{RampStartUpMaximum}_u
+	\leq \mathit{PowerCapacity}_u \cdot \mathit{AvailabilityFactor}_{u,i}
 
-	 Else ~ \mathit{FlexibilityUp}_u = 0
+	\cdot (1-\mathit{OutageFactor}_{u,i})  \cdot  \mathit{Committed}_{u,i} 
 
-where the factor 4 is used to convert the ramping rate from MW/15min to MW/h.
+	- \mathit{Power}_{u,i}
 
-The maximum ramping rate is also limited by the available capacity margin between current and maximum power output:
 
-.. math::
-
-	\mathit{MaxRamp2U}_{u,i} \leq (\mathit{PowerCapacit}y_u \cdot \mathit{AvailabilityFactor}_{u,i}
-
-	 \cdot  (1-\mathit{OutageFactor}_{u,i})-\mathit{Power}_{u,i}) \cdot 4
-
-The same applies to the 15 min ramping down capabilities:
+The same applies to the downwards secondary reserve capability, with an additional term to take into account the downard reserve capability of pumping storage units:
 
 .. math::
 
-	\mathit{MaxRamp}2D_{u,i}
+	\mathit{Reserve_{2D}}_{u,i} 
 	
-	 \leq \mathit{max}\left(\mathit{RampDownMaximu}m_u,\mathit{Flexibility}\mathit{Down}_u\right) \cdot \mathit{Committed}_{u,i}
+	 \leq \mathit{Power}_{u,i} - \mathit{PowerMustRun}_{u,i} \cdot  \mathit{Committed}_{u,i} 
 
-The parameter FlexibilityDown is defined as the maximum ramp down rate at which the unit can shut down in 15 minutes. In case the unit cannot be shut-down in 15 minutes (and only in this case) the maximum ramping down capability is limited by the capacity margin between actual and minimum power:
+	+ (\mathit{StorageChargingCapacity}_u \cdot \mathit{Nunits}_u - \mathit{StorageInput}_{u,i})
+
+The quick start (non-spining) reserve capability is given by:
 
 .. math::
 
-	 If \mathit{RampShutDownMaximu}m_u<\mathit{PowerMinStabl}e_u \cdot 4 :
+	\mathit{Reserve_{3U}}_{u,i} 
 
-	 \mathit{MaxRamp}2D_{u,i} \leq \left(\mathit{Power}_{u,i}-\mathit{PowerMinStable}_u \cdot \mathit{Committed}_{u,i}\right) \cdot 4
+	\leq (\mathit{Nunits}_u - \mathit{Committed}_{u,i}) \cdot  \mathit{QuickStartPower}_{u,i}
 
-	 Else :
 
-	\mathit{MaxRamp}2D_{u,i} \leq \mathit{Power}_{u,i} \cdot 4 
+The secondary reserve demand should be fulfilled at all times by all the plants allowed to participate in the reserve market:
+
+.. math::
+
+	\mathit{Demand}_{2U,n,h}
+	
+	 \leq \sum _{u,t}\left(\mathit{Reserve_{2U}}_{u,i} \cdot \mathit{Technology}_{u,t} \cdot \mathit{Reserve}_t \cdot \mathit{Locatio}n_{u,n}\right)
+
+	+ \mathit{LL_{2U}}_{n,i}
+
+The same equation applies to downward reserve requirements (2D).
+
+The tertiary reserve can also be provided by non-spinning units. The inequality is thus transformed into:
+
+.. math::
+
+	\mathit{Demand}_{3U,n,h}
+	
+	 \leq \sum _{u,t}\left[(\mathit{Reserve_{2U}}_{u,i} + \mathit{Reserve_{3U}}_{u,i} )
+
+	 \cdot \mathit{Technology}_{u,t} \cdot \mathit{Reserve}_t \cdot \mathit{Locatio}n_{u,n} \right]
+
+	+ \mathit{LL_{3U}}_{n,i}
 
 The reserve requirements are defined by the users. In case no input is provided a default formula is used to evaluate the needs for secondary reserves as a function of the maximum expected load for each day. The default formula is described by:
 
@@ -309,18 +320,6 @@ Downward reserves are defined as 50\% of the upward margin:
 
 	\mathit{Demand}_{2D,n,h}=0.5 \cdot \mathit{Demand}_{2U,n,h}
 
-The reserve demand should be fulfilled at all times by all the plants allowed to participate in the reserve market:
-
-.. math::
-
-	\mathit{Demand}_{2U,n,h}
-	
-	 \leq \sum _{u,t}\left(\mathit{MaxRamp}2U_{u,i} \cdot \mathit{Technology}_{u,t} \cdot \mathit{Reserv}e_t \cdot \mathit{Locatio}n_{u,n}\right)
-
-	+ \mathit{LostLoadReserve2UH}_{n,i}
-
-The same equation applies to downward reserve requirements (2D).
-
 
 Power output bounds
 -------------------
@@ -333,7 +332,17 @@ The minimum power output is determined by the must-run or stable generation leve
 
 	 \leq \mathit{Power}_{u,i}
 
-On the other hand, the output is limited by the available capacity, if the unit is committed:
+In the particular case of CHP unit (extration type or power-to-heat type), the minimum power is defined for for a heat demand equal to zero. If the unit produces heat, the minimum power must be reduced according to the power loss factor and the previous equation is replaced by:
+
+.. math::
+
+	\mathit{Power}\mathit{MustRun}_{chp,i} \cdot \mathit{Committed}_{chp,i}
+
+	- \mathit{StorageInput}_{chp,i} \cdot \mathit{CHPPowerLossFactor}_u
+
+	 \leq \mathit{Power}_{chp,i}
+
+The power output is limited by the available capacity, if the unit is committed:
 
 .. math::
 
@@ -345,65 +354,59 @@ On the other hand, the output is limited by the available capacity, if the unit 
 
 The availability factor is used for renewable technologies to set the maximum time-dependent generation level. It is set to one for the traditional power plants. The outage factor accounts for the share of unavailable power due to planned or unplanned outages.
 
-The power output in a given period also depends on the output levels in the previous and the following periods and on the ramping capabilities of the unit. If the unit was down, the ramping capability is given by the maximum start up ramp, while if the unit was online the limit is defined by the maximum ramp up rate. Those bounds are given with respect to the previous time step by the equation :
+Ramping Constraints
+-------------------
+Each unit is characterized by a maximum ramp up and ramp down capability. This is translated into the following inequality for the case of ramping up:
 
 .. math::
 
-	 i=1:
+	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq 
 
-	 \mathit{Power}_{u,i} \leq 
+	(\mathit{Committed}_{u,i} - \mathit{StartUp}_{u,i}) \cdot \mathit{RampUpMaximum}_{u}
 
-	 \mathit{PowerInitial}_u
+	+ \mathit{StartUp}_{u,i} \cdot \mathit{RampStartUpMaximum}_{u}
 
-	  + \mathit{CommittedInitial}_u \cdot \mathit{RampUpMaximum}_u
+	- \mathit{ShutDown}_{u,i} \cdot \mathit{PowerMustRun}_{u,i}
 
-	  + \left(1-\mathit{CommittedInitial}_u\right) \cdot \mathit{RampStartUpMaximum}_u
+	+ \mathit{LL_{RampUp}}_{u,i}
 
-	  + \mathit{LostLoadRampUp}_{u,i}
-
-	 i>1:
-
-	 \mathit{Power}_{u,i} \leq 
-
-	 \mathit{Power}_{u,i-1}
-
-	  + \mathit{Committed}_{u,i-1} \cdot \mathit{RampUpMaximum}_u
-
-	  + \left(1-\mathit{Committed}_{u,i-1}\right) \cdot \mathit{RampStartUpMaximum}_u
-
-	  + \mathit{LostLoadRampUp}_{u,i}
-
-
-Where the LoadMaximum parameter is calculated taking into account the availability factor and the outage factor:
+and for the case of ramping down:
 
 .. math::
 
-	\mathit{LoadMaximum}_{u,h}=\mathit{AvailabilityFactor}_{u,h} \cdot (1-\mathit{OutageFactor}_{u,h})
+	\mathit{Power}_{u,i-1} - \mathit{Power}_{u,i} \leq 
 
-Similarly, the ramp down capability is limited by the maximum ramp down or the maximum shut down ramp rate:
+	(\mathit{Committed}_{u,i} - \mathit{ShutDown}_{u,i}) \cdot \mathit{RampDownMaximum}_{u}
+
+	+ \mathit{ShutDown}_{u,i} \cdot \mathit{RampShutDownMaximum}_{u}
+
+	- \mathit{StartUp}_{u,i} \cdot \mathit{PowerMustRun}_{u,i}
+
+	+ \mathit{LL_{RampDown}}_{u,i}
+
+Note that this formulation is valid for both the clustered formulation and the binary formulation. In the latter case (there is only one unit u), if the unit remains committed, the inequality simplifies into:
 
 .. math::
 
-	 i=1:
+	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq 
 
-	 \mathit{PowerInitial}_u-\mathit{Power}_{u,i} \leq 
+	\mathit{RampUpMaximum}_{u} + \mathit{LL_{RampUp}}_{u,i}
 
-	 \mathit{Committed}_{u,i} \cdot \mathit{RampDownMaximum}_u
+If the unit has just been committed, the inequality becomes:
 
-	  + \left(1-\mathit{Committed}_{u,i}\right) \cdot \mathit{RampShutDownMaximum}_u
+.. math::
 
-	  + \mathit{LostLoadRampDown}_{u,i}
+	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq 
 
-	 i>1:
+	\mathit{RampStartUpMaximum}_{u} + \mathit{LL_{RampUp}}_{u,i}
 
-	 \mathit{Power}_{u,i-1}-\mathit{Power}_{u,i} \leq 
+And if the unit has just been stopped:
 
-	 \mathit{Committed}_{u,i} \cdot \mathit{RampDownMaximum}_u
+.. math::
 
-	  + \left(1-\mathit{Committed}_{u,i}\right) \cdot \mathit{RampShutDownMaximum}_u
+	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq 
 
-	  + \mathit{LostLoadRampDown}_{u,i}
-
+	- \mathit{PowerMustRun}_{u,i} + \mathit{LL_{RampUp}}_{u,i}
 
 
 Minimum up and down times
@@ -411,87 +414,19 @@ Minimum up and down times
 
 The operation of the generation units is also limited as well by the amount of time the unit has been running or stopped. In order to avoid excessive ageing of the generators, or because of their physical characteristics, once a unit is started up, it cannot be shut down immediately. Reciprocally, if the unit is shut down it may not be started immediately. 
 
-That is, the value of the time counter with respect to the minimum up time and down times determines the commitment status of the unit. In order to model theses constraints linearly, it is necessary to keep track of the number of hours the unit must be online at the beginning of the simulation:
+To model this in MILP, the number of startups/shutdowns in the last N hours must be limited, N being the minimum up or down time. For the minimum up time, the number of startups during this period cannot be higher than the number of currently committed units:
 
 .. math::
 
-	\mathit{TimeUpLeftInitial}_u =
+	\sum _{ii=i-\mathit{TimeUpMinimum}_u}^{i} \mathit{StartUp}_{u,ii} \leq \mathit{Committed}_{u,i}
 
-	\mathit{min}\left\{N,\left(\mathit{TimeUpMinimum}_u - \mathit{TimeUpInitial}_u\right) \cdot \mathit{CommittedInitial}_u\right\}
+i.e. the currently committed units are not allowed to have performed multiple on/off cycles during the last TimeUpMinimum periods. In case of a binary formulation (Nunits=1), if the unit is ON at time i, only one startup is allowed in the last TimeUpMinimum periods. If the unit is OFF at time i, no startup is allowed.
 
-where N is the number of time steps in the current optimisation horizon.
-
-If the unit is initially started up, it has to remain committed until reaching the minimum up time:
+A similar inequality can be written for the ninimum down time:
 
 .. math::
 
-	\sum _{i=1}^{\mathit{TimeUpLeftInitial}_u}\left(1-\mathit{Committed}_{u,i}\right)=0
-
-If the unit is started during the considered horizon, the time it has to remain online is TimeUpMinimum, but cannot exceed the time remaining in the simulated period. This is expressed in equation  and is pre-calculated for each time step of the period.
-
-.. math::
-
-	\mathit{TimeUpLeftJustStarted}_{u,i}=
-
-	\mathit{min}\left\{N -i + 1,\mathit{TimeUpMinimum}_u\right\}
-
-The equation imposing the unit to remain committed is written:
-
-.. math::
-
-	 i=1:
-
-	 \sum _{\mathit{ii}=i}^{i + \mathit{TimeUpLeftJustStarted}_{u,i}-1}\mathit{Committed}_{u,\mathit{ii}} \geq 
-
-	 \mathit{TimeUpLeftJustStarted}_{u,i} \cdot \left(\mathit{Committed}_{u,i}-\mathit{CommittedInitial}_u\right)
-
-	 i>1:
-
-	 \sum _{\mathit{ii}=i}^{i + \mathit{TimeUpLeftJustStarted}_u-1}\mathit{Committed}_{u,\mathit{ii}} \geq 
-
-	\mathit{TimeUpLeftJustStarted}_{u,i} \cdot \left(\mathit{Committed}_{u,i}-\mathit{Committed}_{u,i-1}\right)
-
-The same method can be applied to the minimum down time constraint:
-
-.. math::
-
-	 \mathit{TimeDownLeft}_u = 
-
-	 \mathit{min}\{N,(\mathit{TimeDownMinimum}_u-\mathit{TimeDownInitial}_u) 
-
-	 \cdot (1-\mathit{CommittedInitial}_u)\}
-
-Related to the initial status of the unit:
-
-.. math::
-
-	\sum _{i=1}^{\mathit{TimeDownLeft}_u}\mathit{Committed}_{u,i}=0
-
-The TimeDownLeftJustStopped parameter is computed by:
-
-.. math::
-
-	\mathit{TimeDownLeftJustStopped}_{u,i} = 
-
-	\mathit{min}\left\{N - i + 1,\mathit{TimeDownMinimum}_u\right\}
-
-Finally, the equation imposing the time the unit has to remain de-committed is defined as:
-
-.. math:: 
-
-	 i=1:
-
-	 \sum _{\mathit{ii}=i}^{i + \mathit{TimeDownLeftJustStopped}_{i,u}-1}\left(1-\mathit{Committed}_{u,i}\right) \geq 
-
-	 \mathit{TimeDownLeftJustStopped}_{u,i} \cdot \left(\mathit{CommittedInitial}_u-\mathit{Committed}_{u,i}\right)
-
-	 i>1:
-
-	 \sum _{\mathit{ii}=i}^{i + \mathit{TimeDownLeftJustStopped}_u-1}\left(1-\mathit{Committed}_{u,i}\right) \geq 
-
-	 \mathit{TimeDownLeftJustStopped}_{u,i} \cdot \left(\mathit{Committed}_{u,i-1}-\mathit{Committed}_{u,i}\right)
-
-This formulation avoids the use of additional binary variables to describe the start-up and shut-down of each unit. 
+	\sum _{ii=i-\mathit{TimeDownMinimum}_u}^{i} \mathit{ShutDown}_{u,ii} \leq \mathit{Nunits}_u - \mathit{Committed}_{u,i}
 
 
 Storage-related constraints
@@ -499,68 +434,63 @@ Storage-related constraints
 
 Generation units with energy storage capabilities (mostly large hydro reservoirs and pumped hydro storage units) must meet additional restrictions related to the amount of energy stored. Storage units are considered to be subject to the same constraints as non-storage power plants. In addition to those constraints, storage-specific restrictions are added for the set of storage units (i.e. a subset of all units). These restrictions include the storage capacity, inflow, outflow, charging, charging capacity, charge/discharge efficiencies, etc. Discharging is considered as the standard operation mode and is therefore linked to the Power variable, common to all units.
 
-The first constrain imposes that the energy stored by a given unit is bounded by a minimum value:
+The first constraint imposes that the energy stored by a given unit is bounded by a minimum value:
 
 .. math::
 
-	\mathit{StorageMinimum}_s \leq \mathit{StorageLevel}_{s,i}
+	\mathit{StorageMinimum}_s \leq \mathit{StorageLevel}_{s,i} \cdot \mathit{Nunits}_s
 
 In the case of a storage unit, the availability factor applies to the charging/discharging power, but also to the storage capacity. The storage level is thus limited by:
 
 .. math::
 
-	\mathit{StorageLevel}_{s,i} \leq \mathit{StorageCapacity}_s \cdot \mathit{AvailabilityFactor}_{s,i}
+	\mathit{StorageLevel}_{s,i} \leq \mathit{StorageCapacity}_s \cdot \mathit{AvailabilityFactor}_{s,i} \cdot \mathit{Nunits}_s
 
 The energy added to the storage unit is limited by the charging capacity. Charging is allowed only if the unit is not producing (discharging) at the same time (i.e. if Committed, corresponding to the {\textquotedbl}normal{\textquotedbl} mode, is equal to 0).
 
 .. math::
 
-	\mathit{StorageInput}_{s,i} \leq \mathit{StorageChargingCapacity}_s 
+	\mathit{StorageInput}_{s,i} \leq 
 
-	\cdot \mathit{AvailabilityFactor}_{s,i} \cdot (1-\mathit{Committed}_{s,i})
+	\mathit{StorageChargingCapacity}_s \cdot (\mathit{Nunits}_s-\mathit{Committed}_{s,i})
 
 Discharge is limited by the level of charge of the storage unit:
 
 .. math::
 
-	\frac{\mathit{Power}_{i,s}}{\mathit{StorageDischargeEfficienc}y_s} + \mathit{StorageOutflow}_{s,i}
+	\frac{\mathit{Power}_{i,s}}{\mathit{StorageDischargeEfficienc}y_s} + \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s
 
-	+ \mathit{Spillage}_{s,i} -\mathit{StorageInflow}_{s,i} 
+	+ \mathit{Spillage}_{s,i} -\mathit{StorageInflow}_{s,i} \cdot \mathit{Nunits}_s 
 
 	\leq \mathit{StorageLevel}_{s,i}
 
+It is worthwhile to note that StorageInflow and StorageOuflow must be multiplied by the number of units because they are defined for a single storage plant. On the contrary StorageLevel, Spillage and Power are defined for all units s.
 
 Charge is limited by the level of charge of the storage unit:
 
 .. math::
 
-	\mathit{StorageInput}_{s,i} \cdot \mathit{StorageChargingEfficienc}y_s
+	\mathit{StorageInput}_{s,i} \cdot \mathit{StorageChargingEfficiency}_s
 
-	- \mathit{StorageOutflow}_{s,i} -  \mathit{Spillage}_{s,i}
+	- \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s -  \mathit{Spillage}_{s,i}
 	
-	+ \mathit{StorageInflow}_{s,i} 
+	+ \mathit{StorageInflow}_{s,i} \cdot \mathit{Nunits}_s 
 
-	\leq \mathit{StorageCapacity}_s-\mathit{StorageLevel}_{s,i}
+	\leq \mathit{StorageCapacity}_s \cdot \mathit{AvailabilityFactor}_{s,i} 
+
+	- \mathit{StorageLevel}_{s,i}
 
 Besides, the energy stored in a given period is given by the energy stored in the previous period, net of charges and discharges:
 
 .. math::
-
-	i=1:
-
-	\mathit{StorageLevelInitial}_s + \mathit{StorageInflow}_{s,i} 
-
-	+ \mathit{StorageInput}_{s,i} \cdot \mathit{StorageChargingEfficiency}_s
-
-	= \mathit{StorageLevel}_{s,i} + \mathit{StorageOutflow}_{s,i} + \frac{\mathit{Power}_{s,i}}{\mathit{StorageDischargeEfficienc}y_s}
-
-	i>1:
 	
-	\mathit{StorageLevel}_{s,i-1} + \mathit{StorageInflow}_{s,i} 
+	\mathit{StorageLevel}_{s,i-1} + \mathit{StorageInflow}_{s,i}  \cdot \mathit{Nunits}_s 
 
 	+ \mathit{StorageInput}_{s,i} \cdot \mathit{StorageChargingEfficiency}_s
 
-	= \mathit{StorageLevel}_{s,i} + \mathit{StorageOutflow}_{s,i} + \frac{\mathit{Power}_{s,i}}{\mathit{StorageDischargeEfficienc}y_s}
+	= \mathit{StorageLevel}_{s,i} + \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s  
+
+	+ \frac{\mathit{Power}_{s,i}}{\mathit{StorageDischargeEfficienc}y_s}
 
 Some storage units are equiped with large reservoirs, whose capacity at full load might be longer than the optimisation horizon. Therefore, a minimum level constraint is required for the last hour of the optimisation, which otherwise wouls systematically tend to empty the reservoir as much a possible. An exogenous minimum profile is thus provided and the following constraint is applied:
 
@@ -568,11 +498,11 @@ Some storage units are equiped with large reservoirs, whose capacity at full loa
 
 	\mathit{StorageLevel}_{s,N} \geq min( \mathit{StorageProfile}_{s,N} 
 
-	\cdot \mathit{AvailabilityFactor}_{s,N} \cdot \mathit{StorageCapacity}_{s}, 
+	\cdot \mathit{AvailabilityFactor}_{s,N} \cdot \mathit{StorageCapacity}_{s} \cdot \mathit{Nunits}_s , 
 
-	\mathit{StorageLevel}_{s,0} + \sum\limits_{i=1}^N InFlows_{s,i} )
+	\mathit{StorageLevel}_{s,0} + (\sum\limits_{i=1}^N InFlows_{s,i} - \sum\limits_{i=1}^N OutFlows_{s,i}) \cdot \mathit{Nunits}_s)
 
-where StorageProfile is a non-dimensional minimum storage level provided as an exogenous input. The minimum is taken to avoid unfeasibilities in case the provided inflows are not sufficient to comply with the imposed storage level at the end of the horizon.
+where N is the last period of the optimization horizon and StorageProfile is a non-dimensional minimum storage level provided as an exogenous input. The minimum is taken to avoid unfeasibilities in case the provided inflows are not sufficient to comply with the imposed storage level at the end of the horizon.
 
 Heat production constraints (CHP plants only)
 ---------------------------------------------
@@ -590,7 +520,7 @@ The following two heat balance constraints are used for any CHP plant type.
 
 .. math::
 
-    StorageInput_{chp,i} \leq CHPMaxHeat_{chp}
+    StorageInput_{chp,i} \leq CHPMaxHeat_{chp} \cdot \mathit{Nunits}_{chp} 
 
 The constraints between heat and power production differ for each plant design and explained within the following subsections.
 
@@ -669,17 +599,6 @@ Heat Storage balance:
 
 .. math::
 
-    i=1:
-
-     StorageInitial_{chp}
-     +StorageInput_{chp,i}
-     =
-
-     StorageLevel_{chp,i}
-     +Heat_{chp,i} + StorageSelfDischarge_{chp} \cdot StorageLevel_{chp,i}/24
-
-    i>1:
-
     +StorageLevel_{chp,i-1}
     +StorageInput_{chp,i}
     =
@@ -696,7 +615,7 @@ Storage level must be above a minimum and below storage capacity:
     \leq
     StorageLevel_{chp,i}
     \leq
-    StorageCapacity_{chp}
+    StorageCapacity_{chp} \cdot \mathit{Nunits}_{chp}
 
 
 
@@ -758,66 +677,6 @@ The following figure shows an example of such approach, in which the optimizatio
 .. image:: figures/rolling_horizon.png
 
 Although the previous example corresponds to an optimization horizon and an overlap of one day, these two values can be adjusted by the user in the Dispa-SET configuration file. As a rule of thumb, the optimization horizon plus the overlap period should as least twice the maximum duration of the time-dependent constraints (e.g. the minimum up and down times). In terms of computational efficiency, small power systems can be simulated with longer optimization horizons, while larger systems should reduce this horizon, the minimum being one day.
-
-
-Power plant clustering
-^^^^^^^^^^^^^^^^^^^^^^
-For computational efficiency reasons, it is useful to cluster some of the original units into larger units. This reduces the number of continuous and binary variables and can, in some conditions, be performed without significant loss of simulation accuracy.
-
-The clustering occurs at the beginning of the pre-processing phase (i.e. the units in the Dispa-SET database do not need to be clustered).
-
-In Dispa-SET, different clustering options are availble and can be automatically generated from the same input data. They are described in the two next sections.
-
-MILP clustering
----------------
-In this formulation, the units that are either very small or very flexible are aggregated into larger units. Some of these units (e.g. the turbojets) indeed present a low capacity or a high flexibility: their output power does not exceed a few MW and/or they can reach full power in less than 15 minutes (i.e. less than the simulation time step). For these units, a unit commitment model with a time step of 1 hour is unnecessary and computationally inefficient. They are therefore merged into one single, highly flexible unit with averaged characteristics.
-
-The condition for the clustering of two units is a combination of subconditions regarding their type, maximum power, flexiblity and technical similarities. They are summarized in the figure below (NB: the thresholds are for indicative purpose only, they can be user-defined).
-
-.. image:: figures/clustering.png
-
-When two units are clustered, the minimum and maximum capacities of new aggregated units (indicated by the star) are given by:
-
-.. math::
-
-	P_{min}^* = min(P_{j,min})
-
-.. math::
-
-	P_{max}^* = \sum_j (P_{j,min})
-
-The last equation is also applied for the storage capacity or for the storage charging power.
-
-The unit marginal (or variable cost) is given by:
-
-.. math::
-
-	Cost_{Variable}^* = \frac{\sum_j ( P_{j,max} \cdot Cost_{Variable,j} )}{P_{max}^*}
-
-The start-up/shut-down costs are transformed into ramping costs (example with ramp-up):
-
-.. math::
-
-	Cost_{RampUp}^* = \frac{\sum_j ( P_{j,max} \cdot Cost_{RampUp,j} )}{P_{max}^*} + \frac{\sum_j ( Cost_{StartUp,j} )}{P_{max}^*}
-
-Other characteristics, such as the plant efficiency, the minimum up/down times or the CO2 emissions are computed as a weighted averaged: 
-
-.. math::
-
-	Efficiency^* = \frac{\sum_j ( P_{j,max} \cdot Efficiency_{j} )}{P_{max}^*}
-
-It should be noted that only very similar units are aggregated (i.e. their quantitative characteristics should be similar), which avoids errors due to excessive aggregation. 
-
-
-LP clustering
--------------
-Dispa-SET provides the possibility to generate the optimisation model as an LP problem (i.e. withtout the binary variables). In that case, the following constraints are removed since they can only be expressed in an MILP formulation: 
-
-* Minimum up and down times
-* Start-up costs
-* Minimum stable load
-
-Since the start-up of individual units is not considered anymore, it is not useful to disaggrate them in the optimisation. All units of a similar technology, fuel and zone can be aggregated into a single unit using the equations proposed in the previous section.
 
 
 References
