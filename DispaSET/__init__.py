@@ -4,8 +4,8 @@ import os
 # Sets the __version__ variable
 from ._version import __version__
 
-from .preprocessing.preprocessing import get_git_revision_tag 
-__gitversion__ = get_git_revision_tag()   
+from .preprocessing.preprocessing import get_git_revision_tag
+__gitversion__ = get_git_revision_tag()
 
 # Logging: # TODO: Parametrize in dispacli or external config
 _LOGCONFIG = {
@@ -19,7 +19,7 @@ _LOGCONFIG = {
         'notime': {
             'format': '[%(levelname)-8s] (%(funcName)s): %(message)s',
             'datefmt': '%y/%m/%d %H:%M:%S'
-        },                
+        },
      },
      "handlers": {
          "console": {
@@ -49,7 +49,7 @@ _LOGCONFIG = {
 
 # Importing the main Dispa-SET functions so that they can be called with "ds.function"
 from .preprocessing.preprocessing import build_simulation
-from .preprocessing.preprocessing import adjust_capacity,adjust_storage
+from .preprocessing.preprocessing import adjust_capacity, adjust_storage
 from .solve import solve_GAMS, solve_pyomo
 from .misc.gdx_handler import write_variables
 from .preprocessing.data_handler import load_config_excel, load_config_yaml
@@ -68,13 +68,13 @@ from .cli import *
 if os.path.isfile('warn.log'):
     try:
         os.remove('warn.log')
-    except:
+    except OSError:
         print ('Could not erase previous log file "warn.log"')
-        
+
 # Setting logging configuration:
-try: 
+try:
     logging.config.dictConfig(_LOGCONFIG)
-except:
+except Exception:
     # if it didn't work, it might be due to ipython messing with the output
     # typical error: Unable to configure handler 'console': IOStream has no fileno
     # try without console output:

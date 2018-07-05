@@ -18,7 +18,6 @@ def get_gams_path():
 
     Currently works for Windows, Linux and OSX. More searching rules and patterns should be added in the future
     """
-    import subprocess
     out = ''
     if sys.platform == 'linux2':
         try:
@@ -84,14 +83,14 @@ def get_gams_path():
 
 
 def cmd_exists(cmd):
-    return subprocess.call("type " + cmd, shell=True, 
+    return subprocess.call("type " + cmd, shell=True,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0
 
 
 
-'''
-First check logging:
-'''
+
+# ## First check logging:
+
 print('CHECK LOGGING')
 import logging
 import logging.config
@@ -108,7 +107,7 @@ _LOGCONFIG = {
         'notime': {
             'format': '[%(levelname)-8s] (%(funcName)s): %(message)s',
             'datefmt': '%y/%m/%d %H:%M:%S'
-        },                
+        },
      },
      "handlers": {
          "console": {
@@ -156,7 +155,7 @@ print('\n \nCHECK THE GDXCC LIBRARY')
 success_gdxcc = True
 try:
     import gdxcc
-except Exception as e:
+except ImportError as e:
     if str(e) == 'No module named gdxcc':
         print('Could not find the gdxcc library in the standard python PATH. Trying to import the pre-compiled libraries')
         path_script = os.path.dirname(__file__)
@@ -194,16 +193,8 @@ if success_gdxcc:
 
 
 
+# ## Check the gams library:
 
-
-
-
-
-
-
-'''
-Check the gams library:
-'''
 print('\n \nCHECK GAMS library')
 success_lib = True
 success_path = True
@@ -305,10 +296,8 @@ print('\n \nCHECK PYOMO')
 try:
     import pyomo
     print('Pyomo is available')
-except Exception as e:
+except ImportError as e:
     print('ERROR: Pyomo could not be load. Erros msg: ' + str(e))
-    
-    
 
 
 print('\n \nCHECK CPLEX')

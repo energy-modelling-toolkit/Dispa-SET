@@ -300,6 +300,7 @@ def gdx_to_dataframe(data, fixindex=False, verbose=False):
         try:
             out[symbol].fillna(value=0, inplace=True)
         except:
+            logging.error('Error while trying to remove nan')
             pass
     if fixindex:
         for symbol in out:

@@ -7,7 +7,7 @@ import pandas as pd
 
 try:
     from future.builtins import int
-except:
+except ImportError:
     pass
 
 
@@ -19,10 +19,10 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
     :param path:                Path to the data to be loaded
     :param idx:                 Pandas datetime index to be used for the output
     :param countries:           List with the country codes to be considered
-    :param fallback:            List with the order of data source. 
+    :param fallback:            List with the order of data source.
     :param tablename:           String with the name of the table being processed
     :param default:             Default value to be applied if no data is found
-    
+
     :return:           Dataframe with the time series for each unit
     '''
               
@@ -49,7 +49,7 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
         else:
             logging.error('Default value provided for table ' + tablename + ' is not valid')
             sys.exit(1)
-    elif SingleFile:   
+    elif SingleFile:
         # If it is only one file, there is a header with the country code
         tmp = load_csv(paths['all'], index_col=0, parse_dates=True)
         if not tmp.index.is_unique:
@@ -57,7 +57,7 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
             sys.exit(1)
         for key in countries:
             if key in tmp:
-                data[key] = tmp[key]  
+                data[key] = tmp[key]
             elif len(tmp.columns) == 1:    # if the country code is not in the header, it can also be because it is a single country simulation and no header is needed:
                 data[key] = tmp.iloc[:,0]
             else:
@@ -80,19 +80,19 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
                 sys.exit(1)
             data[c] = tmp.iloc[:,0]
      
-    return data   
+    return data
 
 
 
 def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',default=None,RestrictWarning=None):
     '''
-    This function loads the tabular data stored in csv files and assigns the 
+    This function loads the tabular data stored in csv files and assigns the
     proper values to each unit of the plants dataframe. If the unit-specific 
-    value is not found in the data, the script can fallback on more generic 
+    value is not found in the data, the script can fallback on more generic
     data (e.g. fuel-based, technology-based, zone-based) or to the default value.
     The order in which the data should be loaded is specified in the fallback
     list. For example, ['Unit','Technology'] means that the script will first
-    try to find a perfect match for the unit name in the data table. If not found, 
+    try to find a perfect match for the unit name in the data table. If not found,
     a column with the unit technology as header is search. If not found, the
     default value is assigned.
 
@@ -159,7 +159,7 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
                     warning=True
             u = plants.loc[j,'Unit']
             found = False
-            for i,key in enumerate(fallbacks):    
+            for i,key in enumerate(fallbacks):
                 if SingleFile:
                     header = plants.loc[j,key]
                 else:
@@ -167,18 +167,18 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
                 if header in data:
                     out[u] = data[header]
                     found = True
-                    if i > 0 and warning:                        
+                    if i > 0 and warning:
                         logging.warn('No specific information was found for unit ' + u + ' in table ' + tablename + '. The generic information for ' + str(header) + ' has been used')
                     break
             if not found:
                 if warning:
                     logging.info('No specific information was found for unit ' + u + ' in table ' + tablename + '. Using default value ' + str(default))
                 if not default is None:
-                    out[u] = default     
+                    out[u] = default
     if not out.columns.is_unique:
         logging.error('The column headers of table "' + tablename + '" are not unique!. The following headers are duplicated: ' + str(out.columns.get_duplicates()))
-        sys.exit(1)        
-    return out   
+        sys.exit(1)
+    return out
 
 
 
@@ -237,12 +237,10 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
                     logging.critical('Method "' + str(method) + '" unknown in function MergeSeries')
                     sys.exit(1)
         elif key in plants['Unit']:
-            if not type(
-                    key) == tuple:  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
-                logging.warn('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the mapping between original and clustered units. Skipping')         
+            if not isinstance(key, tuple):  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
+                logging.warn('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the mapping between original and clustered units. Skipping')
         else:
-            if not type(
-                    key) == tuple:  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
+            if not isinstance(key, tuple):  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
                 logging.warn('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the table of power plants. Skipping')
     return merged
 
@@ -276,7 +274,7 @@ def invert_dic_df(dic,tablename=''):
     :returns: dictionary of dataframes, with swapped headers
     """
     # keys are defined as the keys of the original dictionary, cols are the columns of the original dataframe
-    # items are the keys of the output dictionary, i.e. the columns of the original dataframe    
+    # items are the keys of the output dictionary, i.e. the columns of the original dataframe
     dic_out = {}
     # First, check that all indexes have the same length:
     index = dic[dic.keys()[0]].index
@@ -292,7 +290,7 @@ def invert_dic_df(dic,tablename=''):
             if item not in dic[key].columns:
                 logging.warn('The column "' + item + '" is not present in "' + key + '" for the "' + tablename + '" data. Zero will be assumed')
         dic_out[item] = panel[item].fillna(0)
-    return dic_out  
+    return dic_out
 
 
 def write_to_excel(xls_out, list_vars):
@@ -304,7 +302,6 @@ def write_to_excel(xls_out, list_vars):
     :returns: Binary variable (True)
     """
 
-    import pandas as pd
 
     # import sys
     reload(sys)
@@ -439,7 +436,7 @@ def write_to_excel(xls_out, list_vars):
     logging.info('Data Successfully written to the ' + xls_out + ' directory.')
 
 
-def load_csv(filename, TempPath='.pickle', header=0, skiprows=[], skipfooter=0, index_col=None, parse_dates=False):
+def load_csv(filename, TempPath='.pickle', header=0, skiprows=None, skipfooter=0, index_col=None, parse_dates=False):
     """
     Function that loads an xls sheet into a dataframe and saves a temporary pickle version of it.
     If the pickle is newer than the sheet, do no load the sheet again.
@@ -448,7 +445,6 @@ def load_csv(filename, TempPath='.pickle', header=0, skiprows=[], skipfooter=0, 
     :param TempPath: path to store the temporary data files
     """
     #TODO: this can be replaced by a leaner version using: import tempfile
-    import os
 
     filepath_pandas = TempPath + '/' + filename.replace('/', '-') + '-' + '.p'
     if not os.path.isdir(TempPath):
@@ -548,7 +544,7 @@ def load_config_yaml(filename):
     import yaml
     with open(filename, 'r') as f:
         try:
-            return yaml.load(f)
+            return yaml.safe_load(f)
         except yaml.YAMLError as exc:
             logging.error('Cannot parse config file: {}'.format(filename))
-            raise
+            raise exc

@@ -37,5 +37,5 @@ def commonvars():
     commons['hatches'] = {}
     for x in commons['colors']:
         commons['hatches'][x] = next(hatches)
-        
+
     return commons
