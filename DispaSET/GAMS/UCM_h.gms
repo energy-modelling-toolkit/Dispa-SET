@@ -140,7 +140,7 @@ TimeDownMinimum(u)               [h]      Minimum down time
 TimeUpMinimum(u)                 [h]      Minimum up time
 $If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment status as for the MILP
 Nunits(u)                        [n.a.]   Number of units inside the cluster (upper bound value for integer variables)
-K_QuickStart(n)                      [n.a.]   Percentage of reserve provided by nonsynchronised offline resources (e.g. quick start units or demand response
+K_QuickStart(n)                      [n.a.]   Part of the reserve that can be provided by offline quickstart units
 QuickStartPower(u,h)            [MW\h\u]   Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
 ;
 
@@ -508,7 +508,7 @@ EQ_RampUp_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
 EQ_RampDown_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
          Power(u,i-1)$(ord(i) > 1) + PowerInitial(u)$(ord(i) = 1) - Power(u,i)
          =L=
-         (Committed(u,i) - StartUp(u,i)) * RampDownMaximum(u) + RampShutDownMaximumH(u,i) * ShutDown(u,i) - PowerMustRun(u,i) * StartUp(u,i) + LL_RampDown(u,i)
+         (Committed(u,i) - ShutDown(u,i)) * RampDownMaximum(u) + RampShutDownMaximumH(u,i) * ShutDown(u,i) - PowerMustRun(u,i) * StartUp(u,i) + LL_RampDown(u,i)
 ;
 
 * Start up cost
