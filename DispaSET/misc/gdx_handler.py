@@ -169,8 +169,7 @@ def write_variables(gams_dir, gdx_out, list_vars):
     :param gdx_out:         (Relative) path to the gdx file to be written
     :param list_vars:       List with the sets and parameters to be written
     """
-    if not os.path.isdir(gams_dir):
-        gams_dir = get_gams_path()
+    gams_dir = get_gams_path(gams_dir)
     if not os.path.isdir(gams_dir):
         logging.critical('GDXCC: Could not find the specified gams directory: ' + gams_dir)
         sys.exit(1)

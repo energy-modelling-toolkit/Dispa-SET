@@ -25,13 +25,12 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
     """
     logging.critical('Error in when drawing the dispatch plot. Trying a safer mode without x-axis')
 
-    import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
     import matplotlib.lines as mlines
 
     if rng is None:
         pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
-    elif not type(rng) == type(demand.index):
+    elif not isinstance(rng, pd.DatetimeIndex):
         logging.error('The "rng" variable must be a pandas DatetimeIndex')
         sys.exit(1)
     elif rng[0] < plotdata.index[0] or rng[0] > plotdata.index[-1] or rng[-1] < plotdata.index[0] or rng[-1] > plotdata.index[-1]:
@@ -299,7 +298,7 @@ def plot_rug(df_series, on_off=False, cmap='Greys'):
     else:
         raise AssertionError("Has to be either Series or Dataframe")
 
-    fig, axes = plt.subplots(nrows=rows, ncols=1, sharex=True,
+    __, axes = plt.subplots(nrows=rows, ncols=1, sharex=True,
                              figsize=(16, 0.25 * rows), squeeze=False,
                              frameon=False, gridspec_kw={'hspace': 0.15})
 
