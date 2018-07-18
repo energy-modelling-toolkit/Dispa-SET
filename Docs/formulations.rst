@@ -106,7 +106,7 @@ In this formulation, all units of a similar technology, fuel and zone are cluste
 	WindOn_Z1	200		1	Z1	WTON		WIN
 	=============== =============== ======= ======= =============== =====
 
-where the total capacity and number of units for each technology/fuel is conserved.
+where the total capacity and number of units for each technology/fuel is conserved. More details regarding the formulation and the implementation of the integer clustering are available in [1]_
 
 LP clustering
 ^^^^^^^^^^^^^
@@ -117,4 +117,6 @@ Dispa-SET provides the possibility to generate the optimisation model as an LP p
 * Minimum stable load
 
 Since the start-up of individual units is not considered anymore, it is not useful to disaggrate them in the optimisation. All units of a similar technology, fuel and zone are merged into a single unit using the equations proposed in the previous sections.
+
+.. [1] Incorporating Operational Flexibility Into Electric Generation Planning: Impacts and Methods for System Design and Policy Analysis, Palmintier, B.S. (2012). Ph.D. Thesis, Engineering Systems Division, MIT
 

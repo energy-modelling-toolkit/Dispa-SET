@@ -302,9 +302,9 @@ The tertiary reserve can also be provided by non-spinning units. The inequality 
 
 	\mathit{Demand}_{3U,n,h}
 	
-	 \leq \sum _{u,t}\left[(\mathit{Reserve_{2U}}_{u,i} + \mathit{Reserve_{3U}}_{u,i} )
+	 \leq \sum _{u,t}[(\mathit{Reserve_{2U}}_{u,i} + \mathit{Reserve_{3U}}_{u,i} )
 
-	 \cdot \mathit{Technology}_{u,t} \cdot \mathit{Reserve}_t \cdot \mathit{Locatio}n_{u,n} \right]
+	 \cdot \mathit{Technology}_{u,t} \cdot \mathit{Reserve}_t \cdot \mathit{Locatio}n_{u,n} ]
 
 	+ \mathit{LL_{3U}}_{n,i}
 
