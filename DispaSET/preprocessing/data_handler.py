@@ -490,12 +490,24 @@ def load_config_excel(ConfigFile):
     config['ReserveCalculation'] = sheet.cell_value(47, 2)
     config['AllowCurtailment'] = sheet.cell_value(48, 2)
 
+    # List of parameters for which an external file path must be specified:
     params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
               'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
               'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
               'CostHeatSlack','CostLoadShedding']
     for i, param in enumerate(params):
         config[param] = sheet.cell_value(61 + i, 2)
+
+
+    # Changing all relative paths to absolute paths. Relative paths must be defined 
+    # relative to the parent folder of the config file.
+    abspath = os.path.abspath(ConfigFile)
+    basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath),os.pardir))
+    if not os.path.isabs(config['SimulationDirectory']):
+        config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
+    for param in params:
+        if not os.path.isabs(config[param]):
+            config[param] = os.path.join(basefolder,config[param])
 
     config['default'] = {}
     config['default']['PriceOfNuclear'] = sheet.cell_value(69, 5)
@@ -536,6 +548,7 @@ def load_config_excel(ConfigFile):
     config['ReserveParticipation'] = read_truefalse(sheet, 131, 1, 145, 3)
 
     logging.info("Using config file " + ConfigFile + " to build the simulation environment")
+    logging.info("Using " + config['SimulationDirectory'] + " as simulation folder")
 
     return config
 
