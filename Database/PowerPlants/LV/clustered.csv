@@ -1,0 +1,4 @@
+,PowerCapacity,Unit,Zone,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost_pu,NoLoadCost_pu,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency,Nunits
+LV_COMC_GAS,374.592485947,LV_COMC_GAS,LV,COMC,GAS,0.57,2,4,0.03,0.03,55,0.0,0,0.36,0.57,1.0,0.42,,,,,,,3.0
+LV_HROR_WAT,1538.62,LV_HROR_WAT,LV,HROR,WAT,1.0,0,0,0.02,0.02,0,0.0,0,0.0,1.0,0.0,0.0,,,,,,,1
+LV_WTON_WIN,53.15,LV_WTON_WIN,LV,WTON,WIN,1.0,0,0,0.02,0.02,0,0.0,0,0.0,1.0,0.0,0.0,,,,,,,1
