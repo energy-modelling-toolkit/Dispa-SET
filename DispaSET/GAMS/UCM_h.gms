@@ -508,7 +508,7 @@ EQ_RampUp_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
 EQ_RampDown_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
          Power(u,i-1)$(ord(i) > 1) + PowerInitial(u)$(ord(i) = 1) - Power(u,i)
          =L=
-         (Committed(u,i) - ShutDown(u,i)) * RampDownMaximum(u) + RampShutDownMaximumH(u,i) * ShutDown(u,i) - PowerMustRun(u,i) * StartUp(u,i) + LL_RampDown(u,i)
+         (Committed(u,i) - StartUp(u,i)) * RampDownMaximum(u) + RampShutDownMaximumH(u,i) * ShutDown(u,i) - PowerMustRun(u,i) * StartUp(u,i) + LL_RampDown(u,i)
 ;
 
 * Start up cost
