@@ -16,7 +16,7 @@ os.chdir('..')
 import DispaSET as ds
 
 # Load the configuration file
-config = ds.load_config_excel('ConfigFiles/ConfigTest.xlsx')
+config = ds.load_config_excel('ConfigFiles/ConfigWB_2015.xlsx')
 
 # Build the simulation environment:
 SimData = ds.build_simulation(config)

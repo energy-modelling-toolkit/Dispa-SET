@@ -1,0 +1,12 @@
+,PowerCapacity,Unit,Zone,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost,NoLoadCost,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency
+0,360,HE Piva,ME,HDAM,WAT,0.85,0,0,1,1,0,0,0,0,0.5,1,0,,,360000,,,
+1,310,HE Perucica,ME,HDAM,WAT,0.8464697,0,0,1,1,0,0,0,0,0.5,1,0,,,255000,,,
+2,210,TE Pljevlja,ME,STUR,LIG,0.3425,6,1.5,0.025,0.025,22050,0,1.8,0.4,0.29,6,1.062,,,,,,
+3,5.36,HE Glava Zete,ME,HROR,WAT,0.85,0,0,0.07,0.07,0,0,0,0,0.85,0.3,0,,,,,,
+4,2.961,HE Pljevlja,ME,HDAM,WAT,0.779934,0,0,1,1,0,0,0,0,0.5,1,0,,,2894,,,
+5,1.2,HE Slap Zete,ME,HROR,WAT,0.85,0,0,1,1,0,0,0,0,0.5,1,0,,,,,,
+6,0.84,HE Muskovica Rijeka,ME,HROR,WAT,0.85,0,0,1,1,0,0,0,0,0.5,1,0,,,,,,
+7,0.2,HE Savnik,ME,HROR,WAT,0.85,0,0,1,1,0,0,0,0,0.5,1,0,,,,,,
+8,0.055,HE Lijeva Rijeka,ME,HROR,WAT,0.85,0,0,1,1,0,0,0,0,0.5,1,0,,,,,,
+9,0.395,HE Podgor,ME,HROR,WAT,0.85,0,0,1,1,0,0,0,0,0.5,1,0,,,,,,
+10,0.555,HE Rijeka Crnojevica,ME,HROR,WAT,0.85,0,0,1,1,0,0,0,0,0.5,1,0,,,,,,

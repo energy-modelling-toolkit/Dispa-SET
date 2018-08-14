@@ -13,7 +13,7 @@ os.chdir('..')
 import DispaSET as ds
 
 # Load the inputs and the results of the simulation
-inputs,results = ds.get_sim_results(path='Simulations/simulation_test',cache=True)
+inputs,results = ds.get_sim_results(path='Simulations/simulationWB_2015',cache=True)
 
 # if needed, define the plotting range for the dispatch plot:
 #import pandas as pd
