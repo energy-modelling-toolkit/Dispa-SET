@@ -300,6 +300,7 @@ def gdx_to_dataframe(data, fixindex=False, verbose=False):
         try:
             out[symbol].fillna(value=0, inplace=True)
         except:
+            logging.error('Error while trying to remove nan')
             pass
     if fixindex:
         for symbol in out:
@@ -327,7 +328,7 @@ def get_gdx(gams_dir, resultfile):
                             fixindex=True, verbose=True)
 
 
-def get_gams_path(gams_dir=None):
+def get_gams_path():
     """
     Function that attempts to search for the GAMS installation path (required to write the GDX or run gams)
 
@@ -335,13 +336,6 @@ def get_gams_path(gams_dir=None):
 
     Currently works for Windows, Linux and OSX. More searching rules and patterns should be added in the future
     """
-
-    if gams_dir is not None:
-        if not os.path.exists(gams_dir):
-            logging.warn('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
-        else:
-            return str(os.path.dirname(gams_dir))
-
     import subprocess
     out = ''
     if sys.platform == 'linux2' or sys.platform == 'linux':
@@ -412,15 +406,15 @@ def get_gams_path(gams_dir=None):
                     out = tmp
                 else:
                     logging.critical('The provided path is not a valid windows gams folder')
-                    return False
+                    sys.exit(1)
             elif sys.platform == 'linux2':
                 if os.path.isfile(tmp + os.sep + 'gamslib'):  # does not always work... gamslib_ml
                     out = tmp
                 else:
                     logging.critical('The provided path is not a valid linux gams folder')
-                    return False
+                    sys.exit(1)
             else:
                 if os.path.isdir(tmp):
                     out = tmp
 
-    return out.encode()
+    return out
