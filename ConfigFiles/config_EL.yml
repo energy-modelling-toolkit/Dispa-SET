@@ -1,0 +1,73 @@
+AllowCurtailment: 1
+Clustering: 1
+CostHeatSlack: ''
+CostLoadShedding: ''
+Demand:  'Database/Load_RealTime/##/1h/2015.csv'
+GAMS_folder:  ' '
+cplex_path: ''
+HeatDemand : ''
+HorizonLength: 3
+Interconnections:  'Database/CrossBorderFlows/1h/2015.csv'
+LoadShedding:  ''
+LookAhead: 1
+NTC:  'Database/DayAheadNTC/1h/2015.csv'
+Outages:  'Database/OutageFactors/EL/outages_EL_final.csv'
+PowerPlantData:  'Database/PowerPlants/##/2015.csv'
+PriceOfBiomass:  'Database/FuelPrices/Biomass/2015.csv'
+PriceOfBlackCoal:  ''
+PriceOfCO2:  ''
+PriceOfFuelOil:  'Database/FuelPrices/Oil/2015.csv'
+PriceOfGas:  'Database/FuelPrices/Gas/EL/2015.csv'
+PriceOfLignite:  ''
+PriceOfNuclear:  ''
+PriceOfPeat:  ''
+RenewablesAF:  'Database/AvailabilityFactors/##/1h/2015.csv'
+ReserveCalculation:  'Generic'
+ReserveParticipation:
+-  'GTUR'
+-  'HDAM'
+-  'HPHS'
+-  'ICEN'
+-  'CAES'
+-  'BATS'
+-  'BEVS'
+ReservoirLevels:  'Database/HydroData/ReservoirLevel/EL/1h/dry09.csv'
+ReservoirScaledInflows:  'Database/HydroData/ScaledInflows/EL/1h/dry09.csv'
+SimulationDirectory:  'Simulations/simulationEL'
+SimulationType:  'MILP'
+StartDate: !!python/tuple
+- 2015
+- 1
+- 1
+- 0
+- 0
+- 0
+StopDate: !!python/tuple
+- 2015
+- 12
+- 31
+- 0
+- 0
+- 0
+WriteExcel: 0
+WriteGDX: 1
+WritePickle: 1
+countries:
+- 'EL'
+default:
+  CostHeatSlack: 0
+  CostLoadShedding: 500
+  LoadShedding: 0.05
+  PriceOfBiomass: 37.0
+  PriceOfBlackCoal: 10.62
+  PriceOfCO2: 7.5
+  PriceOfFuelOil: 35.0
+  PriceOfGas: 25.0
+  PriceOfLignite:  ''
+  PriceOfNuclear: 3.0
+  PriceOfPeat:  ''
+modifiers:
+  Demand: 1.0
+  Solar: 1.0
+  Storage: 1.0
+  Wind: 1.0
