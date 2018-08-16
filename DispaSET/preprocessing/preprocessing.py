@@ -669,7 +669,7 @@ def build_simulation(config):
                      'relaxfixedinfeas': 0}
 
     lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
-    with open(os.path.join(GMS_FOLDER, 'cplex.opt', 'w')) as f:
+    with open(os.path.join(GMS_FOLDER, 'cplex.opt'), 'w') as f:
         for line in lines_to_write:
             f.write(line + '\n')
 
