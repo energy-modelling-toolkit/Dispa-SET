@@ -387,7 +387,6 @@ def build_simulation(config):
     sets_param['EmissionRate'] = ['u', 'p']
     sets_param['FlowMaximum'] = ['l', 'h']
     sets_param['FlowMinimum'] = ['l', 'h']
-    sets_param['FuelPrice'] = ['n', 'f', 'h']
     sets_param['Fuel'] = ['u', 'f']
     sets_param['HeatDemand'] = ['chp','h']
     sets_param['LineNode'] = ['l', 'n']
