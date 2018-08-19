@@ -438,15 +438,18 @@ def write_to_excel(xls_out, list_vars):
 
 def load_csv(filename, TempPath='.pickle', header=0, skiprows=None, skipfooter=0, index_col=None, parse_dates=False):
     """
-    Function that loads an xls sheet into a dataframe and saves a temporary pickle version of it.
+    Function that loads acsv sheet into a dataframe and saves a temporary pickle version of it.
     If the pickle is newer than the sheet, do no load the sheet again.
 
-    :param file_excel: path to the excel file
+    :param filename: path to csv file
     :param TempPath: path to store the temporary data files
     """
-    #TODO: this can be replaced by a leaner version using: import tempfile
 
-    filepath_pandas = TempPath + '/' + filename.replace('/', '-') + '-' + '.p'
+    import hashlib
+    m = hashlib.new('md5', filename)
+    resultfile_hash = m.hexdigest()
+    filepath_pandas = TempPath + os.sep + resultfile_hash + '.p'
+    
     if not os.path.isdir(TempPath):
         os.mkdir(TempPath)
     if not os.path.isfile(filepath_pandas):
