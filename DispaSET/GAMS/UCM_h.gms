@@ -818,9 +818,7 @@ $If %RetrieveStatus% == 1 EQ_CommittedCalc
 /
 ;
 UCM_SIMPLE.optcr = 0.01;
-*UCM_SIMPLE.epgap = 0.005
-*UCM_SIMPLE.probe = 3
-*UCM_SIMPLE.optfile=1;
+UCM_SIMPLE.optfile=1;
 
 *===============================================================================
 *Solving loop

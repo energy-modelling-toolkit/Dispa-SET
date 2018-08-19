@@ -36,7 +36,7 @@ def get_git_revision_tag():
     except:
         return 'NA'
 
-def build_simulation(config,plot_load=False):
+def build_simulation(config):
     """
     This function reads the DispaSET config, loads the specified data,
     processes it when needed, and formats it in the proper DispaSET format.
@@ -661,6 +661,21 @@ def build_simulation(config,plot_load=False):
     gmsfile.close()
     shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
                     os.path.join(sim, 'writeresults.gms'))
+    # Create cplex option file
+    cplex_options = {'epgap': 0.05, # TODO: For the moment hardcoded, it has to be moved to a config file
+                     'numericalemphasis': 0,
+                     'scaind': 1,
+                     'lpmethod': 4,
+                     'relaxfixedinfeas': 0}
+
+    lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
+    with open(os.path.join(GMS_FOLDER, 'cplex.opt'), 'w') as f:
+        for line in lines_to_write:
+            f.write(line + '\n')
+
+    shutil.copyfile(os.path.join(GMS_FOLDER, 'cplex.opt'),
+                    os.path.join(sim, 'cplex.opt'))
+
     logging.debug('Using gams file from ' + GMS_FOLDER)
     if config['WriteGDX']:
         shutil.copy(gdx_out, sim + '/')
@@ -683,30 +698,7 @@ def build_simulation(config,plot_load=False):
     
     if os.path.isfile('warn.log'):
         shutil.copy('warn.log', os.path.join(sim, 'warn_preprocessing.log'))
-    # %%################################################################################################################
-    #####################################   Plotting load and VRE      ################################################
-    ###################################################################################################################
 
-    if plot_load:
-        import matplotlib.pyplot as plt
-        fig = plt.figure()
-        ax1 = fig.add_subplot(111)
-    
-        # Plotting the 15-min load data for a visual check:
-        N = len(Load[config['countries']])
-        for i in config['countries']:
-            ax1.plot(Load[i].resample('h').mean(), label='Load ' + i)
-    
-        plt.xticks(rotation='vertical')
-        plt.ylabel('Power (MW)')
-        fig.subplots_adjust(bottom=0.2)
-    
-        ax1.legend()
-        # plt.show() # Removed it for now because it caused problems to headless boxes
-        logging.debug('Plotted 15-min load data in ' + sim + '/ALL_YEAR.pdf')
-    
-        fig.set_size_inches(15, 12)
-        fig.savefig(sim + '/ALL_YEAR.pdf', dpi=300, bbox_inches='tight')
 
     return SimData
 

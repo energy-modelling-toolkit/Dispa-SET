@@ -199,7 +199,7 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
 
     plants.index = range(len(plants))
     merged = pd.DataFrame(index=data.index)
-    unitnames = [plants['Unit'][x] for x in mapping['NewIndex']]
+    unitnames = plants.Unit.values.tolist()
     # First check the data:
     if not isinstance(data,pd.DataFrame):
         logging.error('The input "' + tablename + '" to the merge_series function must be a dataframe')
