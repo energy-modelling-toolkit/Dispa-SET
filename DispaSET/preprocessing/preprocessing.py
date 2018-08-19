@@ -69,6 +69,9 @@ def build_simulation(config):
                                freq=commons['TimeStep'])
     idx_utc_noloc = idx_std - dt.timedelta(hours=1)
     idx_utc = idx_utc_noloc.tz_localize('UTC')
+    
+    # Indexes for the whole year considered in StartDate
+    idx_utc_year_noloc = pd.DatetimeIndex(start=pd.datetime(*(config['StartDate'][0],1,1,0,0)), end=pd.datetime(*(config['StartDate'][0],12,31,23,59,59)), freq=commons['TimeStep'])
 
     # %%#################################################################################################################
     #####################################   Data Loading    ###########################################################
@@ -86,10 +89,13 @@ def build_simulation(config):
     
     # Load :
     Load = NodeBasedTable(config['Demand'],idx_utc_noloc,config['countries'],tablename='Demand')
+    # For the peak load, the whole year is considered:
+    PeakLoad = NodeBasedTable(config['Demand'],idx_utc_year_noloc,config['countries'],tablename='PeakLoad').max()
     
     if config['modifiers']['Demand'] != 1:
         logging.info('Scaling load curve by a factor ' + str(config['modifiers']['Demand']))
         Load = Load * config['modifiers']['Demand']
+        PeakLoad = PeakLoad * config['modifiers']['Demand']
 
     # Interconnections:
     if os.path.isfile(config['Interconnections']):
@@ -506,7 +512,7 @@ def build_simulation(config):
 
     # Demand
     # Dayahead['NL'][1800:1896] = Dayahead['NL'][1632:1728]
-    reserve_2U_tot = {i: (np.sqrt(10 * max(Load[i]) + 150 ** 2) - 150) for i in Load.columns}
+    reserve_2U_tot = {i: (np.sqrt(10 * PeakLoad[i] + 150 ** 2) - 150) for i in Load.columns}
     reserve_2D_tot = {i: (0.5 * reserve_2U_tot[i]) for i in Load.columns}
 
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])
@@ -521,7 +527,7 @@ def build_simulation(config):
 
     # Load Shedding:
     for i, c in enumerate(sets['n']):
-        parameters['LoadShedding']['val'][i] = LoadShedding[c] * Load[c].max()
+        parameters['LoadShedding']['val'][i] = LoadShedding[c] * PeakLoad[c]
         parameters['CostLoadShedding']['val'][i] = CostLoadShedding[c]
 
     # %%#################################################################################################################################################################################################
