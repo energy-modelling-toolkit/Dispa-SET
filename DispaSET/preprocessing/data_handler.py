@@ -446,7 +446,7 @@ def load_csv(filename, TempPath='.pickle', header=0, skiprows=None, skipfooter=0
     """
 
     import hashlib
-    m = hashlib.new('md5', filename)
+    m = hashlib.new('md5', filename.encode('utf-8'))
     resultfile_hash = m.hexdigest()
     filepath_pandas = TempPath + os.sep + resultfile_hash + '.p'
     
@@ -465,12 +465,13 @@ def load_csv(filename, TempPath='.pickle', header=0, skiprows=None, skipfooter=0
     return data
 
 
-def load_config_excel(ConfigFile):
+def load_config_excel(ConfigFile,AbsPath=True):
     """
     Function that loads the DispaSET excel config file and returns a dictionary
     with the values
 
     :param ConfigFile: String with (relative) path to the DispaSET excel configuration file
+    :param AbsPath:    If true, relative paths are automatically changed into absolute paths (recommended)
     """
     import xlrd
     wb = xlrd.open_workbook(filename=ConfigFile)  # Option for csv to be added later
@@ -501,16 +502,16 @@ def load_config_excel(ConfigFile):
     for i, param in enumerate(params):
         config[param] = sheet.cell_value(61 + i, 2)
 
-
+    if AbsPath:
     # Changing all relative paths to absolute paths. Relative paths must be defined 
     # relative to the parent folder of the config file.
-    abspath = os.path.abspath(ConfigFile)
-    basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath),os.pardir))
-    if not os.path.isabs(config['SimulationDirectory']):
-        config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
-    for param in params:
-        if not os.path.isabs(config[param]):
-            config[param] = os.path.join(basefolder,config[param])
+        abspath = os.path.abspath(ConfigFile)
+        basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath),os.pardir))
+        if not os.path.isabs(config['SimulationDirectory']):
+            config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
+        for param in params:
+            if not os.path.isabs(config[param]):
+                config[param] = os.path.join(basefolder,config[param])
 
     config['default'] = {}
     config['default']['PriceOfNuclear'] = sheet.cell_value(69, 5)
