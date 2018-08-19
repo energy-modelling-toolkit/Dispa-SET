@@ -671,7 +671,8 @@ def build_simulation(config):
                      'numericalemphasis': 0,
                      'scaind': 1,
                      'lpmethod': 0,
-                     'relaxfixedinfeas': 0}
+                     'relaxfixedinfeas': 0,
+                     'mipstart':1}
 
     lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
     with open(os.path.join(sim, 'cplex.opt'), 'w') as f:
