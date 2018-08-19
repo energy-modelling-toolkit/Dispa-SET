@@ -105,7 +105,6 @@ EmissionMaximum(n,p)             [tP]     Emission limit
 EmissionRate(u,p)                [tP\MWh] P emission rate
 FlowMaximum(l,h)                 [MW]     Line limits
 FlowMinimum(l,h)                 [MW]     Minimum flow
-FuelPrice(n,f,h)                 [EUR\F]  Fuel price
 Fuel(u,f)                        [n.a.]   Fuel type {1 0}
 HeatDemand(chp,h)                [MWh\u]  Heat demand profile for chp units
 LineNode(l,n)                    [n.a.]   Incidence matrix {-1 +1}
@@ -194,7 +193,6 @@ $LOAD EmissionMaximum
 $LOAD EmissionRate
 $LOAD FlowMaximum
 $LOAD FlowMinimum
-$LOAD FuelPrice
 $LOAD Fuel
 $LOAD HeatDemand
 $LOAD LineNode
@@ -262,7 +260,6 @@ EmissionMaximum,
 EmissionRate,
 FlowMaximum,
 FlowMinimum,
-FuelPrice,
 Fuel,
 HeatDemand,
 LineNode,
