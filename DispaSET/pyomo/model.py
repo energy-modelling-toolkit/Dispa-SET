@@ -667,11 +667,12 @@ def after_solver(results):
     pass
 
 
+#%%
 #######################################################################################################################
 ############################### Main wrapper (rolling horizon optimization) ###########################################
 #######################################################################################################################
 
-def DispaSolve(sets, parameters, LPFormulation=False, path_cplex = ''):
+def DispaSolve(SimData, path_cplex = ''):
     """
     The DispaSolve function defines the rolling horizon optimization and saves each result variable in a pandas dataframe
     The definition of the rolling horizon must be included into the DispaSET Config parameter'
@@ -685,14 +686,16 @@ def DispaSolve(sets, parameters, LPFormulation=False, path_cplex = ''):
     # Initialize the results dictionnary:
 
     # Load the config parameter in the pyomo format (easier to read):
-    config = pyomo_format(sets, parameters['Config'])
+    sets = SimData['sets']
+    parameters = SimData['parameters']
+    config = SimData['config']
 
     # Time parameters:
     Nhours = len(sets['h'])
 
-    # Build pandas indexes based on the config variables:
-    first = pd.datetime(config['FirstDay', 'year'], config['FirstDay', 'month'], config['FirstDay', 'day'], 0, 0, 0)
-    last = pd.datetime(config['LastDay', 'year'], config['LastDay', 'month'], config['LastDay', 'day'], 23, 59, 59)
+    # Build indexes based on the config variables:
+    first = pd.datetime(*config['StartDate'])
+    last = pd.datetime(*config['StopDate'])
 
     # Index corresponding to the data:
     index_all = pd.DatetimeIndex(start=first, end=last, freq='h')
@@ -706,19 +709,6 @@ def DispaSolve(sets, parameters, LPFormulation=False, path_cplex = ''):
     Nhours_sim = len(index_sim)
 
     Nunits = len(sets['u'])
-    parameters['Demand']['val'][1:2, :, :] = np.zeros(parameters['Demand']['val'][1:2, :, :].shape)
-
-    # Pre-processing of model parameters:
-    # Forecasted upwards reserve margin (UCTE). Only if not provided in the parameters
-    # Forecasted downwards reserve margin (UCTE)
-    if (parameters['Demand']['val'][1:2, :,
-        :] == 0).all():  # only applys if all upward/downard reserve requirement are zero!!!
-        shape = parameters['Demand']['val'][1, :, :].shape
-        maximum = np.max(parameters['Demand']['val'])
-        parameters['Demand']['val'][1, :, :] = 1 * (np.sqrt(10 * maximum + pow(150, 2))
-                                                    - 150 * np.ones(shape))  # reserve up
-        parameters['Demand']['val'][2, :, :] = 0.5 * (np.sqrt(10 * maximum + pow(150, 2))
-                                                      - 150 * np.ones(shape))  # reserve down
 
     # Definition of the minimum stable load
     parameters['PowerMinStable'] = {'sets': ['u'],
@@ -777,8 +767,8 @@ def DispaSolve(sets, parameters, LPFormulation=False, path_cplex = ''):
                 parameters[p]['val'] = np.array(parameters[p]['val'], dtype='int')
 
     range_start = index_all.get_loc(first)
-    days = range(range_start / 24, Nhours_sim / 24 - 1 - config['RollingHorizon LookAhead', 'day'],
-                 config['RollingHorizon Length', 'day'])
+    days = range(range_start / 24, Nhours_sim / 24 - 1 - int(config['RollingHorizon LookAhead', 'day']),
+                 int(config['RollingHorizon Length', 'day']))
 
     results = {}
 

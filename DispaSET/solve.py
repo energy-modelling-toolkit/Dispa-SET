@@ -125,10 +125,6 @@ def solve_pyomo(sim_folder):
 
     with open(os.path.join(sim_folder, 'Inputs.p'), 'rb') as pyomo_input_file:
         SimData = pickle.load(pyomo_input_file)
-    if SimData['config']['SimulationType'] == 'MILP':
-        LPFormulation = False
-    else:
-        LPFormulation = True
 
     if os.path.isfile(SimData['config']['cplex_path']):
         path_cplex = SimData['config']['cplex_path']
@@ -139,7 +135,7 @@ def solve_pyomo(sim_folder):
                 'cplex_path'] + ') is not valid. It will be ignored')
 
     time0 = time.time()
-    results = DispaSolve(SimData['sets'], SimData['parameters'], LPFormulation=LPFormulation, path_cplex=path_cplex)
+    results = DispaSolve(SimData, path_cplex=path_cplex)
     logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
     if os.path.isfile('warn.log'):
         shutil.copy('warn.log', os.path.join(sim_folder, 'warn_solve.log'))
