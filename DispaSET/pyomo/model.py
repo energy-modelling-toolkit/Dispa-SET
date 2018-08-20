@@ -718,39 +718,25 @@ def DispaSolve(SimData, path_cplex = ''):
     parameters['LoadMaximum'] = {'sets': ['u', 'h'],
                                  'val': parameters['AvailabilityFactor']['val'] * (1 - parameters['OutageFactor']['val'])}
 
+    parameters['QuickStartPower'] = {'sets': ['u', 'h'],
+                                 'val': (parameters['RampStartUpMaximum']['val'] >= 4 * parameters['PowerMinStable']['val'])
+                                 * (parameters['PowerCapacity']['val'] * parameters['LoadMaximum']['val'])}
+
     # Start-up and Shutdown ramping constraints (minimum value is the PowerMinStable)
-    parameters['RampShutDownMaximum']['val'] = np.maximum(parameters['RampShutDownMaximum']['val'],
-                                                          parameters['PowerMinStable']['val'])
-    parameters['RampStartUpMaximum']['val'] = np.maximum(parameters['RampStartUpMaximum']['val'],
-                                                         parameters['PowerMinStable']['val'])
+    parameters['RampStartUpMaximum']['val'] = np.minimum(
+                                                parameters['PowerCapacity']['val'] * parameters['LoadMaximum']['val'], 
+                                                np.maximum(parameters['RampStartUpMaximum']['val'], parameters['PowerMinStable']['val'], parameters['QuickStartPower']['val']))
+                        
+    parameters['RampShutDownMaximum']['val'] = np.minimum(
+                                                parameters['PowerCapacity']['val'] * parameters['LoadMaximum']['val'], 
+                                                np.maximum(parameters['RampShutDownMaximum']['val'], parameters['PowerMinStable']['val']))
 
-    # If the plant is stopped, its 15-min ramp-up capability is RampStartUpMaximum if it can start in this timeframe
-    parameters['FlexibilityUp'] = {'sets': parameters['RampShutDownMaximum']['sets'],
-                                   'val': np.zeros(parameters['RampStartUpMaximum']['val'].shape)}
-    flexible_plants_up = parameters['RampStartUpMaximum']['val'] >= 4 * parameters['PowerMinStable']['val']
-    parameters['FlexibilityUp']['val'][flexible_plants_up] = parameters['RampStartUpMaximum']['val'][flexible_plants_up]
-
-    # If the plant is started, its 15-min ramp-down capability is either RampShutDownMaximum if it is fast enough, or RampDownMaximum otherwise
-    parameters['FlexibilityDown'] = {'sets': parameters['RampShutDownMaximum']['sets'],
-                                     'val': np.zeros(parameters['RampShutDownMaximum']['val'].shape)}
-    flexible_plants_down = parameters['RampShutDownMaximum']['val'] >= 4 * parameters['PowerMinStable']['val']
-    parameters['FlexibilityDown']['val'][flexible_plants_down] = parameters['RampShutDownMaximum']['val'][flexible_plants_up]
-
-    # Set the ramping costs to zero if not defined:
-    if not 'CostRampUp' in parameters:
-        parameters['CostRampUp'] = {'sets': parameters['PowerCapacity']['sets'],
-                                    'val': np.zeros(parameters['PowerCapacity']['val'].shape)}
-    if not 'CostRampDown' in parameters:
-        parameters['CostRampDown'] = {'sets': parameters['PowerCapacity']['sets'],
-                                      'val': np.zeros(parameters['PowerCapacity']['val'].shape)}
-
-    # Initialize CostLoadShedding:
-    parameters['CostLoadShedding'] = {'sets': ['n', 'h'],
-                                      'val': 1000 * np.ones([len(sets['n']), Nhours])}
+    parameters['K_QuickStart'] = 0.5
 
     # calculate the minimum must run power for renewable technologies
     parameters['PowerMustRun'] = {'sets': ['u', 'h'],
                                   'val': np.zeros([Nunits, Nhours])}
+    
     for u in range(Nunits):
         # find technology:
         tech = sets['t'][np.where(parameters['Technology']['val'][u, :] == 1)[0][0]]
@@ -870,7 +856,7 @@ def DispaSolve(SimData, path_cplex = ''):
         results_sliced['LostLoad_MinPower'] = pyomo_to_pandas(opt, 'LostLoad_MinPower')
         results_sliced['LostLoad_Reserve2U'] = pyomo_to_pandas(opt, 'LostLoad_Reserve2U')
         results_sliced['LostLoad_Reserve2D'] = pyomo_to_pandas(opt, 'LostLoad_Reserve2D')
-        # Defining the main results dictionnary:
+        # Defining the main results dictionary:
         if len(results) == 0:
             for r in results_sliced:
                 results[r] = pd.DataFrame(index=index_sim, columns=results_sliced[r].columns)
