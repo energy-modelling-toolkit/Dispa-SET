@@ -99,7 +99,7 @@ Heat demand timeseries is needed where CHP plants are used. In the current formu
 
 Countries
 ---------
-Although the nodes names can be freely user-defined in the database, for the Dispa-SET EU model, the ISO 3166-1 standard has been adopted to describe each country at the NUTS1 level. The list of countries is defined as:
+Although the nodes names can be freely user-defined in the database, for the Dispa-SET EU model, the ISO 3166-1 standard has been adopted to describe each country at the NUTS1 level (except for Greece and the United Kingdom, for which the abbreviations EL and UK are used according to `EU Interinstitutional style guide <http://publications.europa.eu/code/pdf/370000en.htm>`_ ). The list of countries is defined as:
 
 ======= =======
 Code	Country
@@ -117,7 +117,6 @@ EL	Greece
 ES	Spain
 FI	Finland
 FR	France
-GB	Great Britain
 HR	Croatia
 HU	Hungary
 IE	Ireland
@@ -134,9 +133,9 @@ RO	Romania
 SE	Sweden	
 SI	Slovenia
 SK	Slovakia
+UK      United Kingdom
 ======= =======
 
-It should be noted that 'UK' (United Kingdom) has been replaced by 'GB' (Great Britain) in this list, i.e. northern Ireland is not considered and is instead included within the 'IE' node.
 
 Power plant data
 ----------------
