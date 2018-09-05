@@ -16,31 +16,11 @@ from ..misc.str_handler import clean_strings, shrink_to_64
 
 
 def incidence_matrix(sets, set_used, parameters, param_used):
-    """ 
+    """
     This function generates the incidence matrix of the lines within the nodes
     A particular case is considered for the node "Rest Of the World", which is no explicitely defined in DispaSET
     """
-#
-#    for i in range(len(sets[set_used])):
-#        if 'RoW' not in sets[set_used][i]:
-#            first_country = sets[set_used][i][0:2]
-#            second_country = sets[set_used][i][6:8]
-#        elif 'RoW' == sets[set_used][i][0:3]:
-#            first_country = sets[set_used][i][0:3]
-#            second_country = sets[set_used][i][7:9]
-#        elif 'RoW' == sets[set_used][i][6:9]:
-#            first_country = sets[set_used][i][0:2]
-#            second_country = sets[set_used][i][6:9]
-#        else:
-#            logging.error('The format of the interconnection is not valid.')
-#            sys.exit(1)
-#
-#        for j in range(len(sets['n'])):
-#            if first_country == sets['n'][j]:
-#                parameters[param_used]['val'][i, j] = -1
-#            elif second_country == sets['n'][j]:
-#                parameters[param_used]['val'][i, j] = 1
-    
+
     for i in range(len(sets[set_used])):
         [from_node, to_node] = sets[set_used][i].split('->')
         if (from_node.strip() in sets['n']) and (to_node.strip() in sets['n']):
@@ -48,8 +28,6 @@ def incidence_matrix(sets, set_used, parameters, param_used):
             parameters[param_used]['val'][i, sets['n'].index(from_node.strip())] = -1
         else:
             logging.warn("The line " + str(sets[set_used][i]) + " contains unrecognized nodes")
-
-
     return parameters[param_used]
 
 
