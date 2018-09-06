@@ -430,30 +430,25 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
         plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_SOC] + patches[::-1], loc=4)
 
 
-def plot_rug(df_series, on_off=False, cmap='Greys'):
+def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=False):
     """Create multiaxis rug plot from pandas Dataframe
-    
-    Parameters:
-        df_series: 2D pandas with timed index
-        
-        on_off: 
-            * If True all points that are above 0 will be plotted as one color.
-            * If False all values will be colored based on their value.
-                
-        cmap: palette name (from colorbrewer, matplotlib etc.)
-        
+
+    Arguments:
+        df_series (pd.DataFrame): 2D pandas with timed index
+        on_off (bool): if True all points that are above 0 will be plotted as one color. If False all values will be colored based on their value.
+        cmap (str): palette name (from colorbrewer, matplotlib etc.)
+        fig_title (str): Figure title
+        normalized (bool): if True, all series colormaps will be normalized based on the maximum value of the dataframe
     Returns:
         plot
         
-    Function written by K. Kavvadias
+    Function copied from enlopy v0.1 www.github.com/kavvkon/enlopy. Install with `pip install enlopy` for latest version.
     """
 
     def format_axis(iax):
         # Formatting: remove all lines (not so elegant)
-        iax.axes.spines['top'].set_visible(False)
-        iax.spines['right'].set_visible(False)
-        iax.spines['left'].set_visible(False)
-        iax.spines['bottom'].set_visible(False)
+        for spine in ['top', 'right', 'left', 'bottom']:
+            iax.axes.spines[spine].set_visible(False)
         # iax.xaxis.set_ticks_position('none')
         iax.yaxis.set_ticks_position('none')
         iax.get_yaxis().set_ticks([])
@@ -466,37 +461,54 @@ def plot_rug(df_series, on_off=False, cmap='Greys'):
             return True
 
     # check if Series or dataframe
-    if len(df_series.shape) == 2:
-        df_series2 = df_series
-        df_series2.columns = [clean_strings(x) for x in df_series.columns]
-        rows = len(df_series2.columns)
-    elif len(df_series.shape) == 1:
-        df_series2 = df_series.to_frame()
+    if isinstance(df_series, pd.DataFrame):
+        rows = len(df_series.columns)
+    elif isinstance(df_series, pd.Series):
+        df_series = df_series.to_frame()
         rows = 1
     else:
-        raise AssertionError("Has to be either Series or Dataframe")
+        raise ValueError("Has to be either Series or Dataframe")
+    if len(df_series) < 1:
+        raise ValueError("Has to be non empty Series or Dataframe")
 
-    fig, axes = plt.subplots(nrows=rows, ncols=1, sharex=True,
-                             figsize=(16, 0.25 * rows), squeeze=False,
-                             frameon=False, gridspec_kw={'hspace': 0.15})
+    max_color = np.nanmax(df_series.values)
+    min_color = np.nanmin(df_series.values)
 
-    for (item, iseries), iax in zip(df_series2.iteritems(), axes.ravel()):
+    __, axes = plt.subplots(nrows=rows, ncols=1, sharex=True,
+                            figsize=(16, 0.25 * rows), squeeze=False,
+                            frameon=False, gridspec_kw={'hspace': 0.15})
+
+    for (item, iseries), iax in zip(df_series.iteritems(), axes.ravel()):
         format_axis(iax)
-        iax.set_ylabel(item, rotation=0)
-        if iseries.sum() > 0:
+        iax.set_ylabel(str(item)[:30], rotation='horizontal',
+                       rotation_mode='anchor',
+                       horizontalalignment='right', x=-0.01)
+        x = iseries.index
+
+        if iseries.sum() > 0:  # if series is not empty
             if on_off:
                 i_on_off = iseries.apply(flag_operation).replace(False, np.nan)
                 i_on_off.plot(ax=iax, style='|', lw=.7, cmap=cmap)
             else:
-                x = [d.to_pydatetime() for d in iseries.index]
                 y = np.ones(len(iseries))
-                iax.scatter(x, y, marker='|', s=100,
-                            c=iseries.values * 100, cmap=cmap)
+                # Define (truncated) colormap:
+                if not normalized:  # Replace max_color (frame) with series max
+                    max_color = np.nanmax(iseries.values)
+                    min_color = np.nanmin(iseries.values)
+                # Hack to plot max color when all series are equal
+                if np.isclose(min_color, max_color):
+                    min_color = min_color * 0.99
 
-    iax.spines['bottom'].set_visible(True)
-    plt.xticks(rotation=45)
-    #iax.set_xlim(min(x), max(x))
+                iax.scatter(x, y,
+                            marker='|', s=100,
+                            c=iseries.values,
+                            vmin=min_color,
+                            vmax=max_color,
+                            cmap=cmap)
 
+    axes.ravel()[0].set_title(fig_title)
+    axes.ravel()[-1].spines['bottom'].set_visible(True)
+    axes.ravel()[-1].set_xlim(np.min(x), np.max(x))
 
 
 def plot_energy_country_fuel(inputs, results, PPindicators):
@@ -725,8 +737,11 @@ def plot_country(inputs, results, c='', rng=None):
 
     # Generation plot: 
     CountryGeneration = filter_by_country(results['OutputPower'], inputs, c)
-
-    plot_rug(CountryGeneration, on_off=False, cmap='Greys')
+    try:
+        import enlopy as el  # try to get latest version
+        el.plot_rug(CountryGeneration, on_off=False, cmap='gist_heat_r', fig_title=c)
+    except ImportError:
+        plot_rug(CountryGeneration, on_off=False, cmap='gist_heat_r', fig_title=c)
 
     return True
 
