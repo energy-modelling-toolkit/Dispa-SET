@@ -172,10 +172,10 @@ def get_plot_data(inputs, results, c):
     plotdata['FlowIn'] = 0
     plotdata['FlowOut'] = 0
     for col in results['OutputFlow']:
-        if col[-2:] == c:
+        if col[-3:] == c:
             plotdata['FlowIn'] = plotdata['FlowIn'] + results['OutputFlow'][col]
     for col in results['OutputFlow']:
-        if col[:2] == c:
+        if col[:3] == c:
             plotdata['FlowOut'] = plotdata['FlowOut'] - results['OutputFlow'][col]
 
     # re-ordering columns:
