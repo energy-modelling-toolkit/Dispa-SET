@@ -19,10 +19,10 @@ import pandas as pd
 
 from ..misc.gdx_handler import gdx_to_list, gdx_to_dataframe, get_gams_path
 from ..misc.str_handler import shrink_to_64, clean_strings
-from ..common import commonvars
+from ..common import commons
 
  # get color definitions: 
-commons= commonvars()
+
 
 def GAMSstatus(statustype,num):
     '''
