@@ -285,10 +285,9 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
         if not curtailment.index.equals(demand.index):
             logging.error('The curtailment time series must have the same index as the demand')
             sys.exit(1)
-        color = 'red'
-        plt.fill_between(idx, sumplot_neg.loc[pdrng, 'sum'].values-curtailment[pdrng].values, sumplot_neg.loc[pdrng, 'sum'].values, color='red', alpha=0.7)
+        plt.fill_between(idx, sumplot_neg.loc[pdrng, 'sum'].values-curtailment[pdrng].values, sumplot_neg.loc[pdrng, 'sum'].values, color=commons['colors']['curtailment'], alpha=0.7)
         labels.append('Curtailment')
-        patches.append(mpatches.Patch(color='red', alpha=0.7, label='Curtailment'))
+        patches.append(mpatches.Patch(color=commons['colors']['curtailment'], alpha=0.7, label='Curtailment'))
    
     plt.xticks(rotation=45)
     ax.set_ylabel('Power [MW]')
@@ -403,10 +402,9 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
         if not curtailment.index.equals(demand.index):
             logging.error('The curtailment time series must have the same index as the demand')
             sys.exit(1)
-        color = 'red'
-        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum']-curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'], color='red', alpha=0.7)
+        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum']-curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'], color=commons['colors']['curtailment'], alpha=0.7)
         labels.append('Curtailment')
-        patches.append(mpatches.Patch(color='red', alpha=0.7, label='Curtailment'))
+        patches.append(mpatches.Patch(color=commons['colors']['curtailment'], alpha=0.7, label='Curtailment'))
    
 
     ax.set_ylabel('Power [MW]')
