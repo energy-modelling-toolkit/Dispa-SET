@@ -708,7 +708,11 @@ def plot_country(inputs, results, c='', rng=None):
 
     demand = inputs['param_df']['Demand'][('DA', c)]
     sum_generation = plotdata.sum(axis=1)
-    diff = (sum_generation - demand).abs()
+    if 'OutputShedLoad' in results:
+        shed_load = results['OutputShedLoad'][c]
+    else:
+        shed_load = pd.Series(0,index=demand.index)
+    diff = (sum_generation - demand + shed_load).abs()
     if diff.max() > 0.01 * demand.max():
         logging.critical('There is up to ' + str(diff.max()/demand.max()*100) + '% difference in the instantaneous energy balance of country ' + c)
 
