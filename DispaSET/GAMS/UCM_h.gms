@@ -434,13 +434,14 @@ EQ_SystemCost(i)..
          sum(u,CostFixed(u)*Committed(u,i))
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i))
-         +sum(l,PriceTransmission(l,i)*Flow(l,i))
+*         +sum(l,PriceTransmission(l,i)*Flow(l,i))
+         +1E6*sum(l,Flow(l,i))
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
          +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
-         +100E3*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
-         +80E3*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
-         +70E3*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
+         +100E6*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
+         +80E6*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
+         +70E6*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
          +1*sum(s,spillage(s,i));
 $else
 
@@ -451,13 +452,15 @@ EQ_SystemCost(i)..
          +sum(u,CostStartUpH(u,i) + CostShutDownH(u,i))
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i))
-         +sum(l,PriceTransmission(l,i)*Flow(l,i))
+*         +sum(l,PriceTransmission(l,i)*Flow(l,i))
+        +1E6*sum(l,Flow(l,i))
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
          +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
-         +100E3*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
-         +80E3*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
-         +70E3*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
+         +100E6*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
+         +80E6*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
+         +70E6*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
+
          +1*sum(s,spillage(s,i));
 
 $endIf
