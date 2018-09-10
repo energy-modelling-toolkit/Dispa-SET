@@ -708,7 +708,8 @@ def plot_country(inputs, results, c='', rng=None):
 
     demand = inputs['param_df']['Demand'][('DA', c)]
     sum_generation = plotdata.sum(axis=1)
-    if 'OutputShedLoad' in results:
+    #if 'OutputShedLoad' in results:
+    if 'OutputShedLoad' in results and c in results['OutputShedLoad']:
         shed_load = results['OutputShedLoad'][c]
     else:
         shed_load = pd.Series(0,index=demand.index)
