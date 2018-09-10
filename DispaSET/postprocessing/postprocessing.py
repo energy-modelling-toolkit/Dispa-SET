@@ -190,7 +190,7 @@ def get_plot_data(inputs, results, c):
     return plotdata
 
 
-def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None):
+def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None,alpha=1.0):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum.
     In this case, the Pandas index is not used since it can cause a bug in matplotlib
@@ -217,7 +217,6 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
         pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
     else:
         pdrng = rng
-    alpha = 1.0
     idx = [d.to_pydatetime() for d in pdrng]  
 
     # Netting the interconnections:
@@ -311,7 +310,7 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
     else:
         plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_SOC] + patches[::-1], loc=4)
 
-def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
+def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None, alpha=1.0):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
     
@@ -335,7 +334,6 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
         pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
     else:
         pdrng = rng
-    alpha = 1.0
     
     # Netting the interconnections:
     if 'FlowIn' in plotdata and 'FlowOut' in plotdata:
