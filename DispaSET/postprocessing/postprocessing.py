@@ -217,7 +217,7 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
         pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
     else:
         pdrng = rng
-    alpha = '1.0'
+    alpha = 1.0
     idx = [d.to_pydatetime() for d in pdrng]  
 
     # Netting the interconnections:
@@ -335,7 +335,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
         pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
     else:
         pdrng = rng
-    alpha = '1.0'
+    alpha = 1.0
     
     # Netting the interconnections:
     if 'FlowIn' in plotdata and 'FlowOut' in plotdata:
