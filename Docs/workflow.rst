@@ -42,6 +42,9 @@ Using Dispa-SET with PYOMO:
 	pip install pyomo
 * Install a solver and add it to the PATH environment variable (e.g. if cplex is installed, the "cplex" command should be callable from any command prompt).
 
+.. warning::
+    The PYOMO version of Dispa-SET is currently outdated. The changes implemented in Dispa-SET version 2.2 and 2.3 will not work in the Pyomo solver. It is recommended using the GAMS solver to benefit from the latest improvements of the model.
+
 
 Step-by-step example of a Dispa-SET run
 ---------------------------------------

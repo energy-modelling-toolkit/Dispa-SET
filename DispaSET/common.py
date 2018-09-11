@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This file defines the global variables to be used in Dispa-SET such as fluids, technologies, etc.
-dictionary with the common variable definitions to be used in Dispa-SET
-
+This file defines a dictionary with global variables to be used in Dispa-SET such as fluids, technologies, etc.
 """
 import itertools
 

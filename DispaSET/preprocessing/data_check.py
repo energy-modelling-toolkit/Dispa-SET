@@ -88,7 +88,7 @@ def check_MinMaxFlows(df_min,df_max):
         pos = np.where(df_min > df_max)
         logging.critical('ERROR: At least one minimum flow is higher than the maximum flow, for example in line number ' + str(pos[0][0]) + ' and time step ' + str(pos[1][0]))
         sys.exit(1)
-        
+
     if (df_max < 0).any():
         pos = np.where(df_max < 0)
         logging.critical('ERROR: At least one maximum flow is negative, for example in line number ' + str(pos[0][0]) + ' and time step ' + str(pos[1][0]))
@@ -100,7 +100,7 @@ def check_MinMaxFlows(df_min,df_max):
 def check_sto(config, plants,raw_data=True):
     """
     Function that checks the storage plant characteristics
-    """   
+    """
     if raw_data:
         keys = ['STOCapacity','STOSelfDischarge','STOMaxChargingPower','STOChargingEfficiency']
         NonNaNKeys = ['STOCapacity']
@@ -122,7 +122,7 @@ def check_sto(config, plants,raw_data=True):
                 unitname = plants.loc[u,'Unit']
             else:
                 unitname = str(u)
-            if type(plants.loc[u, key]) == str:
+            if isinstance(plants.loc[u, key], str):
                 logging.critical('A non numeric value was detected in the power plants inputs for parameter "' + key + '"')
                 sys.exit(1)
             if np.isnan(plants.loc[u, key]):
@@ -165,13 +165,13 @@ def check_chp(config, plants):
                 unitname = plants.loc[u,'Unit']
             else:
                 unitname = str(u)
-            if not type(plants.loc[u, key]) == str:
+            if not isinstance(plants.loc[u, key], str):
                 logging.critical(
                     'A numeric value was detected in the power plants inputs for parameter "' + key + '". This column should contain strings only.')
                 sys.exit(1)
             elif plants.loc[u, key] == '':
                 logging.critical('An empty value was detected in the power plants inputs for unit "' + unitname + '" and parameter "' + key + '"')
-                sys.exit(1) 
+                sys.exit(1)
     
     # Check the efficiency values:
     for u in plants.index:
@@ -225,7 +225,7 @@ def check_chp(config, plants):
                 logging.warn('CHPMaxHeat for plant {} is {} which shuts down any heat production.'.format(u, plant_MaxHeat))
     # Check the optional heat storage values:
     if 'STOCapacity' in plants:
-        for u in plants.index:     
+        for u in plants.index:
             Qdot = plants.loc[u,'PowerCapacity']/plants.loc[u,'CHPPowerToHeat']
             if plants.loc[u,'STOCapacity'] < Qdot * 0.5 :
                 logging.warn('Unit ' + unitname + ': The value of the thermal storage capacity (' + str(plants.loc[u,'STOCapacity']) + 'MWh) seems very low compared to its thermal power (' + str(Qdot) + 'MW).')
@@ -488,7 +488,6 @@ def check_simulation_environment(SimulationPath, store_type='pickle', firstline=
                 if var not in SimulationPath_vars:
                     logging.critical('The variable "' + var + '" has not been found in the list of input variables')
                     sys.exit(1)
-            vars = SimulationPath  # FIXME: vars not used
         else:
             logging.critical('The argument must a list. Please correct or change the "type" argument')
             sys.exit(1)
@@ -511,9 +510,7 @@ def check_simulation_environment(SimulationPath, store_type='pickle', firstline=
 
     elif store_type == 'excel':
         if os.path.exists(SimulationPath):
-            if os.path.isfile(os.path.join(SimulationPath, 'InputDispa-SET - Sets.xlsx')):
-                a = 1
-            else:
+            if not os.path.isfile(os.path.join(SimulationPath, 'InputDispa-SET - Sets.xlsx')):
                 logging.critical("Could not find the file 'InputDispa-SET - Sets.xlsx'")
                 sys.exit(1)
             for var in list_param:

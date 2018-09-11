@@ -66,9 +66,9 @@ def clean_strings(x, exclude_digits=False, exclude_punctuation=False):
         # x = x.upper() #to UPPERCASE
         x = ''.join(ch for ch in x if ch not in exclude)  # remove numbers and punctuation
         return x
-    if type(x) == str:
+    if isinstance(x, str):
         return clean_singlestring(x)
-    elif type(x) == list:
+    elif isinstance(x, list):
         return [clean_singlestring(xx) for xx in x]
     else:
         logging.error('Argument type not supported')
@@ -78,7 +78,7 @@ def force_str(x):
     """ Used to get a str object both in python 2 and 3 although they represent different objects (byte vs unicode)
     It is small hack for py2->3 compatibility of gams APIs which require a str object
     """
-    if type(x) == str:
+    if isinstance(x, str):
         return x
     else:
         return x.encode()

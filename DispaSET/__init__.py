@@ -4,8 +4,8 @@ import os
 # Sets the __version__ variable
 from ._version import __version__
 
-from .preprocessing.preprocessing import get_git_revision_tag 
-__gitversion__ = get_git_revision_tag()   
+from .preprocessing.preprocessing import get_git_revision_tag
+__gitversion__ = get_git_revision_tag()
 
 # Logging: # TODO: Parametrize in dispacli or external config
 _LOGCONFIG = {
@@ -19,7 +19,7 @@ _LOGCONFIG = {
         'notime': {
             'format': '[%(levelname)-8s] (%(funcName)s): %(message)s',
             'datefmt': '%y/%m/%d %H:%M:%S'
-        },                
+        },
      },
      "handlers": {
          "console": {
@@ -63,13 +63,13 @@ from .cli import *
 if os.path.isfile('warn.log'):
     try:
         os.remove('warn.log')
-    except:
+    except OSError:
         print ('Could not erase previous log file "warn.log"')
-        
+
 # Setting logging configuration:
-try: 
+try:
     logging.config.dictConfig(_LOGCONFIG)
-except:
+except Exception:
     # if it didn't work, it might be due to ipython messing with the output
     # typical error: Unable to configure handler 'console': IOStream has no fileno
     # try without console output:

@@ -15,7 +15,8 @@ import numpy as np
 import pandas as pd
 try:
     from future.builtins import int
-except:
+except ImportError:
+    logging.warning("Couldn't import future package. Numeric operations may differ among different versions due to incompatible variable types")
     pass
 
 from .data_check import check_units, check_chp, check_sto, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering
@@ -23,8 +24,7 @@ from .utils import clustering, interconnections, incidence_matrix
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, write_to_excel, load_csv
 
 from ..misc.gdx_handler import write_variables
-from ..common import commons  # Load fuel types, technologies, timestep, etc
-
+from ..common import commons  # Load fuel types, technologies, timestep, etc:
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
@@ -36,12 +36,12 @@ def get_git_revision_tag():
     except:
         return 'NA'
 
-def build_simulation(config,plot_load=False):
+def build_simulation(config):
     """
     This function reads the DispaSET config, loads the specified data,
     processes it when needed, and formats it in the proper DispaSET format.
     The output of the function is a directory with all inputs and simulation files required to run a DispaSET simulation
-    
+
     :param config: Dictionary with all the configuration fields loaded from the excel file. Output of the 'LoadConfig' function.
     :param plot_load: Boolean used to display a plot of the demand curves in the different zones
     """
@@ -55,12 +55,11 @@ def build_simulation(config,plot_load=False):
     LP = config['SimulationType'] == 'LP' or config['SimulationType'] == 'LP clustered'
 
     # Day/hour corresponding to the first and last days of the simulation:
-    # Note that the first available data corresponds to 2015.01.31 (23.00) and the 
-    # last day with data is 2015.12.31 (22.00)    
-    y_start, m_start, d_start, _, _, _ = config['StartDate']
+    # Note that the first available data corresponds to 2015.01.31 (23.00) and the
+    # last day with data is 2015.12.31 (22.00)
+    __, m_start, d_start, __, __, __ = config['StartDate']
     y_end, m_end, d_end, _, _, _ = config['StopDate']
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
-
 
     # Indexes of the simualtion:
     idx_std = pd.DatetimeIndex(start=pd.datetime(*config['StartDate']), end=pd.datetime(*config['StopDate']),
@@ -75,7 +74,6 @@ def build_simulation(config,plot_load=False):
     # Start and end of the simulation:
     delta = idx_utc[-1] - idx_utc[0]
     days_simulation = delta.days + 1
-    hours_simulation = 24 * days_simulation
 
     # Defining missing configuration fields for backwards compatibility:
     if not isinstance(config['default']['CostLoadShedding'],(float,int)):
@@ -84,7 +82,7 @@ def build_simulation(config,plot_load=False):
         config['default']['CostHeatSlack'] = 50
     
     # Load :
-    Load = NodeBasedTable(config['Demand'],idx_utc_noloc,config['countries'],tablename='Demand')    
+    Load = NodeBasedTable(config['Demand'],idx_utc_noloc,config['countries'],tablename='Demand')
     
     if config['modifiers']['Demand'] != 1:
         logging.info('Scaling load curve by a factor ' + str(config['modifiers']['Demand']))
@@ -103,8 +101,8 @@ def build_simulation(config,plot_load=False):
         NTC = pd.DataFrame(index=idx_utc_noloc)
 
     # Load Shedding:
-    LoadShedding = NodeBasedTable(config['LoadShedding'],idx_utc_noloc,config['countries'],tablename='LoadShedding',default=config['default']['LoadShedding'])    
-    CostLoadShedding = NodeBasedTable(config['CostLoadShedding'],idx_utc_noloc,config['countries'],tablename='CostLoadShedding',default=config['default']['CostLoadShedding'])    
+    LoadShedding = NodeBasedTable(config['LoadShedding'],idx_utc_noloc,config['countries'],tablename='LoadShedding',default=config['default']['LoadShedding'])
+    CostLoadShedding = NodeBasedTable(config['CostLoadShedding'],idx_utc_noloc,config['countries'],tablename='CostLoadShedding',default=config['default']['CostLoadShedding'])
 
     # Power plants:
     plants = pd.DataFrame()
@@ -129,7 +127,7 @@ def build_simulation(config,plot_load=False):
             plants[key] = 0
     # check plant list:
     check_units(config, plants)
-    # If not present, add the non-compulsory fields to the units table: 
+    # If not present, add the non-compulsory fields to the units table:
     for key in ['CHPPowerLossFactor','CHPPowerToHeat','CHPType','STOCapacity','STOSelfDischarge','STOMaxChargingPower','STOChargingEfficiency', 'CHPMaxHeat']:
         if key not in plants.columns:
             plants[key] = np.nan
@@ -165,12 +163,12 @@ def build_simulation(config,plot_load=False):
             logging.warn('No data file found for "' + fuel + '. Using default value ' + str(config['default'][fuel]) + ' EUR')
             FuelPrices[fuel] = pd.Series(config['default'][fuel], index=idx_utc_noloc)
         # Special case for lignite and peat, for backward compatibility
-        elif fuel == 'PriceOfLignite':             
+        elif fuel == 'PriceOfLignite':
             logging.warn('No price data found for "' + fuel + '. Using the same value as for Black Coal')
             FuelPrices[fuel] = FuelPrices['PriceOfBlackCoal']
-        elif fuel == 'PriceOfPeat':             
+        elif fuel == 'PriceOfPeat':
             logging.warn('No price data found for "' + fuel + '. Using the same value as for biomass')
-            FuelPrices[fuel] = FuelPrices['PriceOfBiomass']       
+            FuelPrices[fuel] = FuelPrices['PriceOfBiomass']
         else:
             logging.warn('No data file or default value found for "' + fuel + '. Assuming zero marginal price!')
             FuelPrices[fuel] = pd.Series(0, index=idx_utc_noloc)
@@ -255,9 +253,9 @@ def build_simulation(config,plot_load=False):
         Plants_merged.loc[u,'PartLoadMin'] = Plants_merged.loc[u,'PartLoadMin'] * PowerCapacity / PurePowerCapacity  # FIXME: Is this correct?
         Plants_merged.loc[u,'PowerCapacity'] = PurePowerCapacity
         
-    # Get the hydro time series corresponding to the original plant list:
-    StorageFormerIndexes = [s for s in plants.index if
-                            plants['Technology'][s] in commons['tech_storage']]
+    # Get the hydro time series corresponding to the original plant list: #FIXME Unused variable ?
+    #StorageFormerIndexes = [s for s in plants.index if
+    #                        plants['Technology'][s] in commons['tech_storage']]
 
     # Same with the CHPs:
     # Get the heat demand time series corresponding to the original plant list:
@@ -266,7 +264,7 @@ def build_simulation(config,plot_load=False):
     for s in CHPFormerIndexes:  # for all the old plant indexes
         # get the old plant name corresponding to s:
         oldname = plants['Unit'][s]
-        newname = mapping['NewIndex'][s]
+        # newname = mapping['NewIndex'][s] #FIXME Unused variable ?
         if oldname not in HeatDemand:
             logging.warn('No heat demand profile found for CHP plant "' + str(oldname) + '". Assuming zero')
             HeatDemand[oldname] = 0
@@ -386,7 +384,6 @@ def build_simulation(config,plot_load=False):
     sets_param['EmissionRate'] = ['u', 'p']
     sets_param['FlowMaximum'] = ['l', 'h']
     sets_param['FlowMinimum'] = ['l', 'h']
-    sets_param['FuelPrice'] = ['n', 'f', 'h']
     sets_param['Fuel'] = ['u', 'f']
     sets_param['HeatDemand'] = ['chp','h']
     sets_param['LineNode'] = ['l', 'n']
@@ -404,7 +401,7 @@ def build_simulation(config,plot_load=False):
     sets_param['RampStartUpMaximum'] = ['u']
     sets_param['RampShutDownMaximum'] = ['u']
     sets_param['Reserve'] = ['t']
-    sets_param['StorageCapacity'] = ['u']            
+    sets_param['StorageCapacity'] = ['u']
     sets_param['StorageChargingCapacity'] = ['s']
     sets_param['StorageChargingEfficiency'] = ['s']
     sets_param['StorageDischargeEfficiency'] = ['s']
@@ -428,7 +425,7 @@ def build_simulation(config,plot_load=False):
         parameters[var] = define_parameter(sets_param[var], sets, value=1)
 
     # List of parameters whose default value is very high
-    for var in ['RampUpMaximum', 'RampDownMaximum', 'RampStartUpMaximum', 'RampShutDownMaximum', 
+    for var in ['RampUpMaximum', 'RampDownMaximum', 'RampStartUpMaximum', 'RampShutDownMaximum',
                 'EmissionMaximum']:
         parameters[var] = define_parameter(sets_param[var], sets, value=1e7)
 
@@ -481,7 +478,7 @@ def build_simulation(config,plot_load=False):
     # CHP time series:
     for i, u in enumerate(sets['chp']):
         if u in HeatDemand_merged:
-            parameters['HeatDemand']['val'][i, :] = HeatDemand_merged[u][idx_long].values 
+            parameters['HeatDemand']['val'][i, :] = HeatDemand_merged[u][idx_long].values
             parameters['CostHeatSlack']['val'][i, :] = CostHeatSlack_merged[u][idx_long].values
 
     # Ramping rates are reconstructed for the non dimensional value provided (start-up and normal ramping are not differentiated)
@@ -530,7 +527,7 @@ def build_simulation(config,plot_load=False):
     FuelEntries = {'BIO':'PriceOfBiomass', 'GAS':'PriceOfGas', 'HRD':'PriceOfBlackCoal', 'LIG':'PriceOfLignite', 'NUC':'PriceOfNuclear', 'OIL':'PriceOfFuelOil', 'PEA':'PriceOfPeat'}
     for unit in range(Nunits):
         found = False
-        for FuelEntry in FuelEntries:            
+        for FuelEntry in FuelEntries:
             if Plants_merged['Fuel'][unit] == FuelEntry:
                 parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]] / Plants_merged['Efficiency'][unit] + \
                                                              Plants_merged['EmissionRate'][unit] * FuelPrices['PriceOfCO2']
@@ -538,7 +535,7 @@ def build_simulation(config,plot_load=False):
         # Special case for biomass plants, which are not included in EU ETS:
         if Plants_merged['Fuel'][unit] == 'BIO':
             parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'] / Plants_merged['Efficiency'][
-                unit]  
+                unit]
             found = True
         if not found:
             logging.warn('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] + ' in unit ' + \
@@ -626,7 +623,7 @@ def build_simulation(config,plot_load=False):
     ######################################   Simulation Environment     ################################################
     ####################################################################################################################
 
-    # Output folder: 
+    # Output folder:
     sim = config['SimulationDirectory']
 
     # Simulation data:
@@ -660,6 +657,21 @@ def build_simulation(config,plot_load=False):
     gmsfile.close()
     shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
                     os.path.join(sim, 'writeresults.gms'))
+    # Create cplex option file
+    cplex_options = {'epgap': 0.05, # TODO: For the moment hardcoded, it has to be moved to a config file
+                     'numericalemphasis': 0,
+                     'scaind': 1,
+                     'lpmethod': 4,
+                     'relaxfixedinfeas': 0}
+
+    lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
+    with open(os.path.join(GMS_FOLDER, 'cplex.opt'), 'w') as f:
+        for line in lines_to_write:
+            f.write(line + '\n')
+
+    shutil.copyfile(os.path.join(GMS_FOLDER, 'cplex.opt'),
+                    os.path.join(sim, 'cplex.opt'))
+
     logging.debug('Using gams file from ' + GMS_FOLDER)
     if config['WriteGDX']:
         shutil.copy(gdx_out, sim + '/')
@@ -682,31 +694,7 @@ def build_simulation(config,plot_load=False):
     
     if os.path.isfile('warn.log'):
         shutil.copy('warn.log', os.path.join(sim, 'warn_preprocessing.log'))
-    # %%################################################################################################################
-    #####################################   Plotting load and VRE      ################################################
-    ###################################################################################################################
 
-    if plot_load:
-        import matplotlib.pyplot as plt
-        fig = plt.figure()
-        ax1 = fig.add_subplot(111)
-    
-        # Plotting the 15-min load data for a visual check:
-        N = len(Load[config['countries']])
-        for i in config['countries']:
-            ax1.plot(Load[i].resample('h').mean(), label='Load ' + i)
-    
-        x_ticks = np.linspace(0, N - 1, 20, dtype='int32')
-        plt.xticks(rotation='vertical')
-        plt.ylabel('Power (MW)')
-        fig.subplots_adjust(bottom=0.2)
-    
-        ax1.legend()
-        # plt.show() # Removed it for now because it caused problems to headless boxes
-        logging.debug('Plotted 15-min load data in ' + sim + '/ALL_YEAR.pdf')
-    
-        fig.set_size_inches(15, 12)
-        fig.savefig(sim + '/ALL_YEAR.pdf', dpi=300, bbox_inches='tight')
 
     return SimData
 

@@ -16,7 +16,7 @@ from ..misc.str_handler import clean_strings, shrink_to_64
 
 
 def incidence_matrix(sets, set_used, parameters, param_used):
-    """ 
+    """
     This function generates the incidence matrix of the lines within the nodes
     A particular case is considered for the node "Rest Of the World", which is no explicitely defined in DispaSET
     """
@@ -48,17 +48,17 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
     """
     Function that checks for the possible interconnections of the countries included
     in the simulation. If the interconnections occurs between two of the countries
-    defined by the user to perform the simulation with, it extracts the NTC between 
+    defined by the user to perform the simulation with, it extracts the NTC between
     those two countries. If the interconnection occurs between one of the countries
-    selected by the user and one country outside the simulation, it extracts the 
-    physical flows; it does so for each pair (country inside-country outside) and 
+    selected by the user and one country outside the simulation, it extracts the
+    physical flows; it does so for each pair (country inside-country outside) and
     sums them together creating the interconnection of this country with the RoW.
 
     :param Simulation_list:     List of simulated countries
     :param NTC:                 Day-ahead net transfer capacities (pd dataframe)
     :param Historical_flows:    Historical flows (pd dataframe)
     """
-    
+
     index = NTC_inter.index.intersection(Historical_flows.index)
     if len(index)==0:
         logging.error('The two input dataframes (NTCs and Historical flows) must have the same index. No common values have been found')
@@ -155,9 +155,9 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
     # Checking the the required columns are present in the input pandas dataframe:
     required_inputs = ['Unit', 'PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate', 'StartUpTime',
                        'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost', 'Efficiency']
-    for input in required_inputs:
-        if input not in plants.columns:
-            logging.error("The plants dataframe requires a '" + input + "' column for clustering")
+    for input_value in required_inputs:
+        if input_value not in plants.columns:
+            logging.error("The plants dataframe requires a '" + input_value + "' column for clustering")
             sys.exit(1)
     if not "Nunits" in plants:
         plants['Nunits'] = 1
@@ -292,11 +292,11 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
                 map_old_new[i] = j
                 map_plant_orig[j].append(i)
                 merged = True
-                break        
+                break
             elif method == 'Integer clustering' and same_type:
                 for key in plants_merged:
                     if key in ['PowerCapacity','RampUpRate', 'RampDownRate', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'Efficiency',
-                               'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge', 
+                               'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge',
                                'STOCapacity', 'STOMaxChargingPower','InitialPower','PartLoadMin', 'StartUpTime','RampingCost',
                                'CHPPowerToHeat','CHPPowerLossFactor','CHPMaxHeat']:
                         # Do a weighted average:

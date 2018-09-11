@@ -105,7 +105,6 @@ EmissionMaximum(n,p)             [tP]     Emission limit
 EmissionRate(u,p)                [tP\MWh] P emission rate
 FlowMaximum(l,h)                 [MW]     Line limits
 FlowMinimum(l,h)                 [MW]     Minimum flow
-FuelPrice(n,f,h)                 [EUR\F]  Fuel price
 Fuel(u,f)                        [n.a.]   Fuel type {1 0}
 HeatDemand(chp,h)                [MWh\u]  Heat demand profile for chp units
 LineNode(l,n)                    [n.a.]   Incidence matrix {-1 +1}
@@ -140,7 +139,7 @@ TimeDownMinimum(u)               [h]      Minimum down time
 TimeUpMinimum(u)                 [h]      Minimum up time
 $If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment status as for the MILP
 Nunits(u)                        [n.a.]   Number of units inside the cluster (upper bound value for integer variables)
-K_QuickStart(n)                      [n.a.]   Percentage of reserve provided by nonsynchronised offline resources (e.g. quick start units or demand response
+K_QuickStart(n)                      [n.a.]   Part of the reserve that can be provided by offline quickstart units
 QuickStartPower(u,h)            [MW\h\u]   Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
 ;
 
@@ -194,7 +193,6 @@ $LOAD EmissionMaximum
 $LOAD EmissionRate
 $LOAD FlowMaximum
 $LOAD FlowMinimum
-$LOAD FuelPrice
 $LOAD Fuel
 $LOAD HeatDemand
 $LOAD LineNode
@@ -262,7 +260,6 @@ EmissionMaximum,
 EmissionRate,
 FlowMaximum,
 FlowMinimum,
-FuelPrice,
 Fuel,
 HeatDemand,
 LineNode,
@@ -818,9 +815,7 @@ $If %RetrieveStatus% == 1 EQ_CommittedCalc
 /
 ;
 UCM_SIMPLE.optcr = 0.01;
-*UCM_SIMPLE.epgap = 0.005
-*UCM_SIMPLE.probe = 3
-*UCM_SIMPLE.optfile=1;
+UCM_SIMPLE.optfile=1;
 
 *===============================================================================
 *Solving loop

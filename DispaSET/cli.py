@@ -40,7 +40,7 @@ def build(ctx):
     engine = ctx.obj['engine']
     if engine == 'gams' and conf['WriteGDX']:
         logging.warning('The config specifies that a gdx file should be written, although PYOMO is selected as engine. This a properly installed version of GAMS. Desactivate the option if it is not the case')
-    SimData = build_simulation(ctx.obj['conf'] )
+    __ = build_simulation(ctx.obj['conf'] )
 
 
 @cli.command()
