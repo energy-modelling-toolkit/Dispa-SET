@@ -261,10 +261,10 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None,
         col2 = sumplot_neg.columns[j + 1]
         color = commons['colors'][col2]
         hatch = commons['hatches'][col2]
-        plt.fill_between(idx, sumplot_neg.loc[pdrng, col1].values, sumplot_neg.loc[pdrng, col2].values, color=color, alpha=alpha,
+        plt.fill_between(idx, sumplot_neg.loc[pdrng, col1].values, sumplot_neg.loc[pdrng, col2].values, facecolor=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col1)
-        patches.append(mpatches.Patch(color=color, alpha=alpha, hatch=hatch, label=col2))
+        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
 
     # Plot Positive values:
@@ -273,10 +273,10 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None,
         col2 = sumplot_pos.columns[j + 1]
         color = commons['colors'][col2]
         hatch = commons['hatches'][col2]
-        plt.fill_between(idx, sumplot_pos.loc[pdrng, col1].values, sumplot_pos.loc[pdrng, col2].values, color=color, alpha=alpha,
+        plt.fill_between(idx, sumplot_pos.loc[pdrng, col1].values, sumplot_pos.loc[pdrng, col2].values, facecolor=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col2)
-        patches.append(mpatches.Patch(color=color, alpha=alpha, hatch=hatch, label=col2))
+        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
     
     # Plot curtailment:    
@@ -284,9 +284,9 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None,
         if not curtailment.index.equals(demand.index):
             logging.error('The curtailment time series must have the same index as the demand')
             sys.exit(1)
-        plt.fill_between(idx, sumplot_neg.loc[pdrng, 'sum'].values-curtailment[pdrng].values, sumplot_neg.loc[pdrng, 'sum'].values, color=commons['colors']['curtailment'], alpha=1.0)
+        plt.fill_between(idx, sumplot_neg.loc[pdrng, 'sum'].values-curtailment[pdrng].values, sumplot_neg.loc[pdrng, 'sum'].values, facecolor=commons['colors']['curtailment'])
         labels.append('Curtailment')
-        patches.append(mpatches.Patch(color=commons['colors']['curtailment'], alpha=1.0, label='Curtailment'))
+        patches.append(mpatches.Patch(facecolor=commons['colors']['curtailment'], label='Curtailment'))
    
     plt.xticks(rotation=45)
     ax.set_ylabel('Power [MW]')
@@ -377,10 +377,10 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None, alph
         col2 = sumplot_neg.columns[j + 1]
         color = commons['colors'][col2]
         hatch = commons['hatches'][col2]
-        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2], color=color, alpha=alpha,
+        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2], facecolor=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col1)
-        patches.append(mpatches.Patch(color=color, alpha=alpha, hatch=hatch, label=col2))
+        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
 
     # Plot Positive values:
@@ -389,10 +389,10 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None, alph
         col2 = sumplot_pos.columns[j + 1]
         color = commons['colors'][col2]
         hatch = commons['hatches'][col2]
-        plt.fill_between(pdrng, sumplot_pos.loc[pdrng, col1], sumplot_pos.loc[pdrng, col2], color=color, alpha=alpha,
+        plt.fill_between(pdrng, sumplot_pos.loc[pdrng, col1], sumplot_pos.loc[pdrng, col2], facecolor=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col2)
-        patches.append(mpatches.Patch(color=color, alpha=alpha, hatch=hatch, label=col2))
+        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
     
     # Plot curtailment:    
@@ -400,9 +400,9 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None, alph
         if not curtailment.index.equals(demand.index):
             logging.error('The curtailment time series must have the same index as the demand')
             sys.exit(1)
-        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum']-curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'], color=commons['colors']['curtailment'], alpha=1.0)
+        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum'] - curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'], facecolor=commons['colors']['curtailment'])
         labels.append('Curtailment')
-        patches.append(mpatches.Patch(color=commons['colors']['curtailment'], alpha=1.0, label='Curtailment'))
+        patches.append(mpatches.Patch(facecolor=commons['colors']['curtailment'], label='Curtailment'))
    
 
     ax.set_ylabel('Power [MW]')

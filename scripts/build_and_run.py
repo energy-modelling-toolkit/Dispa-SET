@@ -16,11 +16,11 @@ os.chdir('..')
 import DispaSET as ds
 
 # Load the configuration file
-config = ds.load_config_excel('ConfigFiles/ConfigTest.xlsx')
+config = ds.load_config_excel('ConfigFiles/ConfigEU.xlsx')
 
 # Build the simulation environment:
 SimData = ds.build_simulation(config)
 
 # Solve using PYOMO/GAMS:
 #r = ds.solve_pyomo(config['SimulationDirectory'])
-r = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
+#r = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
