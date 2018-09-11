@@ -190,7 +190,7 @@ def get_plot_data(inputs, results, c):
     return plotdata
 
 
-def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None,alpha=1.0):
+def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None,alpha=None):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum.
     In this case, the Pandas index is not used since it can cause a bug in matplotlib
@@ -310,7 +310,7 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None,
     else:
         plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_SOC] + patches[::-1], loc=4)
 
-def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None, alpha=1.0):
+def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None, alpha=None):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
     
