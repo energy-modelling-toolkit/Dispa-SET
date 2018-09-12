@@ -578,7 +578,7 @@ def plot_country_capacities(inputs,plot=True):
 
 
 
-def get_sim_results(path='.', cache=False, temp_path='.pickle'):
+def get_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickle'):
     """
     This function reads the simulation environment folder once it has been solved and loads
     the input variables together with the results.
@@ -604,15 +604,14 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
     if not 'param_df' in inputs:
         inputs['param_df'] = ds_to_df(inputs)
 
+    if gams_dir is None:  # Use user-defined gams_dir else try to use the one defined in config
+        gams_dir = inputs['config']['GAMS_folder'].encode()
 
-    gams_dir = inputs['config']['GAMS_folder'].encode() # We need to pass the dir in config if we run it in clusters. PBS script fail to autolocate
-    if not os.path.exists(gams_dir):
-        logging.warn('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
-        gams_dir = get_gams_path()
-        if not os.path.exists(gams_dir):
-            logging.error('GAMS path cannot be located. Simulation is stopped')
-            return False
-    gams_dir = gams_dir.encode()
+    gams_dir = get_gams_path(gams_dir)
+    # We need to pass the dir in config if we run it in clusters. PBS script fail to autolocate
+    if not gams_dir:  # couldn't locate
+        logging.error('GAMS path cannot be located. Cannot parse gdx files')
+        return False
 
     # Load results and store in cache file in the .pickle folder:
     if cache:
