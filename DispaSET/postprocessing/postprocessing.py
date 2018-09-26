@@ -190,7 +190,7 @@ def get_plot_data(inputs, results, c):
     return plotdata
 
 
-def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None):
+def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None,alpha=None):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum.
     In this case, the Pandas index is not used since it can cause a bug in matplotlib
@@ -217,7 +217,6 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
         pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
     else:
         pdrng = rng
-    alpha = '0.3'        
     idx = [d.to_pydatetime() for d in pdrng]  
 
     # Netting the interconnections:
@@ -262,10 +261,10 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
         col2 = sumplot_neg.columns[j + 1]
         color = commons['colors'][col2]
         hatch = commons['hatches'][col2]
-        plt.fill_between(idx, sumplot_neg.loc[pdrng, col1].values, sumplot_neg.loc[pdrng, col2].values, color=color, alpha=alpha,
+        plt.fill_between(idx, sumplot_neg.loc[pdrng, col1].values, sumplot_neg.loc[pdrng, col2].values, facecolor=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col1)
-        patches.append(mpatches.Patch(color=color, alpha=0.3, hatch=hatch, label=col2))
+        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
 
     # Plot Positive values:
@@ -274,10 +273,10 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
         col2 = sumplot_pos.columns[j + 1]
         color = commons['colors'][col2]
         hatch = commons['hatches'][col2]
-        plt.fill_between(idx, sumplot_pos.loc[pdrng, col1].values, sumplot_pos.loc[pdrng, col2].values, color=color, alpha=alpha,
+        plt.fill_between(idx, sumplot_pos.loc[pdrng, col1].values, sumplot_pos.loc[pdrng, col2].values, facecolor=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col2)
-        patches.append(mpatches.Patch(color=color, alpha=0.3, hatch=hatch, label=col2))
+        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
     
     # Plot curtailment:    
@@ -285,10 +284,9 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
         if not curtailment.index.equals(demand.index):
             logging.error('The curtailment time series must have the same index as the demand')
             sys.exit(1)
-        color = 'red'
-        plt.fill_between(idx, sumplot_neg.loc[pdrng, 'sum'].values-curtailment[pdrng].values, sumplot_neg.loc[pdrng, 'sum'].values, color='red', alpha=0.7)
+        plt.fill_between(idx, sumplot_neg.loc[pdrng, 'sum'].values-curtailment[pdrng].values, sumplot_neg.loc[pdrng, 'sum'].values, facecolor=commons['colors']['curtailment'])
         labels.append('Curtailment')
-        patches.append(mpatches.Patch(color='red', alpha=0.7, label='Curtailment'))
+        patches.append(mpatches.Patch(facecolor=commons['colors']['curtailment'], label='Curtailment'))
    
     plt.xticks(rotation=45)
     ax.set_ylabel('Power [MW]')
@@ -297,12 +295,12 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
     if level is not None:
         # Create right axis:
         ax2 = fig.add_subplot(111, sharex=ax, frameon=False, label='aa')
-        ax2.plot(idx, level[pdrng].values, color='k', alpha=0.3, linestyle='--')
+        ax2.plot(idx, level[pdrng].values, color='k', alpha=alpha, linestyle='--')
         ax2.yaxis.tick_right()
         ax2.yaxis.set_label_position("right")
         ax2.set_ylabel('Level [MWh]')
         ax2.yaxis.label.set_fontsize(16)
-        line_SOC = mlines.Line2D([], [], color='black', alpha=0.3, label='Reservoir', linestyle='--')
+        line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Reservoir', linestyle='--')
 
     plt.xticks(rotation=45)
     line_demand = mlines.Line2D([], [], color='black', label='Load')
@@ -312,7 +310,7 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
     else:
         plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_SOC] + patches[::-1], loc=4)
 
-def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
+def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None, alpha=None):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
     
@@ -336,7 +334,6 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
         pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
     else:
         pdrng = rng
-    alpha = '0.3'        
     
     # Netting the interconnections:
     if 'FlowIn' in plotdata and 'FlowOut' in plotdata:
@@ -380,10 +377,10 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
         col2 = sumplot_neg.columns[j + 1]
         color = commons['colors'][col2]
         hatch = commons['hatches'][col2]
-        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2], color=color, alpha=alpha,
+        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2], facecolor=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col1)
-        patches.append(mpatches.Patch(color=color, alpha=0.3, hatch=hatch, label=col2))
+        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
 
     # Plot Positive values:
@@ -392,10 +389,10 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
         col2 = sumplot_pos.columns[j + 1]
         color = commons['colors'][col2]
         hatch = commons['hatches'][col2]
-        plt.fill_between(pdrng, sumplot_pos.loc[pdrng, col1], sumplot_pos.loc[pdrng, col2], color=color, alpha=alpha,
+        plt.fill_between(pdrng, sumplot_pos.loc[pdrng, col1], sumplot_pos.loc[pdrng, col2], facecolor=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col2)
-        patches.append(mpatches.Patch(color=color, alpha=0.3, hatch=hatch, label=col2))
+        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
     
     # Plot curtailment:    
@@ -403,10 +400,9 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
         if not curtailment.index.equals(demand.index):
             logging.error('The curtailment time series must have the same index as the demand')
             sys.exit(1)
-        color = 'red'
-        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum']-curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'], color='red', alpha=0.7)
+        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum'] - curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'], facecolor=commons['colors']['curtailment'])
         labels.append('Curtailment')
-        patches.append(mpatches.Patch(color='red', alpha=0.7, label='Curtailment'))
+        patches.append(mpatches.Patch(facecolor=commons['colors']['curtailment'], label='Curtailment'))
    
 
     ax.set_ylabel('Power [MW]')
@@ -415,12 +411,12 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
     if level is not None:
         # Create right axis:
         ax2 = fig.add_subplot(111, sharex=ax, frameon=False, label='aa')
-        ax2.plot(pdrng, level[pdrng], color='k', alpha=0.3, linestyle='--')
+        ax2.plot(pdrng, level[pdrng], color='k', alpha=alpha, linestyle='--')
         ax2.yaxis.tick_right()
         ax2.yaxis.set_label_position("right")
         ax2.set_ylabel('Level [MWh]')
         ax2.yaxis.label.set_fontsize(16)
-        line_SOC = mlines.Line2D([], [], color='black', alpha=0.3, label='Reservoir', linestyle='--')
+        line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Reservoir', linestyle='--')
 
     line_demand = mlines.Line2D([], [], color='black', label='Load')
     plt.legend(handles=[line_demand] + patches[::-1], loc=4)
@@ -568,7 +564,7 @@ def plot_country_capacities(inputs,plot=True):
     PowerCapacity = PowerCapacity[cols]
     if plot:
         colors = [commons['colors'][tech] for tech in PowerCapacity.columns]
-        ax = PowerCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
+        ax = PowerCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=1.0, legend='reverse',
                                 title='Installed capacity per country (the horizontal lines indicate the peak demand)')
         ax.set_ylabel('Capacity [MW]')
         demand = inputs['param_df']['Demand']['DA'].max() 
