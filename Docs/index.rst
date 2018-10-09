@@ -60,6 +60,7 @@ Contents
    data
    developers
    DispaSET
+   cases
 
 
 Indices and tables
