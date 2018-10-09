@@ -32,7 +32,7 @@ from subprocess import check_output
 try:
     __release__ = check_output(["git", "describe"]).strip()
 except:
-    __release__ = None
+    __release__ = ''
 
 # -- General configuration ------------------------------------------------
 
@@ -43,7 +43,7 @@ except:
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-#    'sphinx.ext.autodoc',
+    'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
 #    'sphinx.ext.pngmath',
