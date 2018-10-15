@@ -80,5 +80,7 @@ def force_str(x):
     """
     if isinstance(x, str):
         return x
+    elif isinstance(x,bytes):
+        return str(x.decode('utf-8'))
     else:
         return x.encode()

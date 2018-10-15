@@ -336,7 +336,8 @@ def get_gams_path(gams_dir=None):
 
     Currently works for Windows, Linux and OSX. More searching rules and patterns should be added in the future
     """
-
+    if isinstance(gams_dir, bytes):
+        gams_dir = gams_dir.decode()
     if gams_dir is not None:
         if not os.path.exists(gams_dir):
             logging.warn('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
