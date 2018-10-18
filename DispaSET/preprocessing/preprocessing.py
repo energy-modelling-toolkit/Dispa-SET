@@ -848,6 +848,6 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
             os.remove('Inputs.gdx')
     return SimData
 
-
+##
 
 
