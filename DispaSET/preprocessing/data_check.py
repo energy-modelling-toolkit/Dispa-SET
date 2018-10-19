@@ -392,6 +392,8 @@ def check_df(df, StartDate=None, StopDate=None, name=''):
     """
     Function that check the time series provided as inputs
     """
+    for i in range(0, len(df.columns)):
+        df.iloc[:,i] = pd.to_numeric(df.iloc[:,i], errors='ignore')
 
     if isinstance(df.index, pd.DatetimeIndex):
         if not StartDate in df.index:
@@ -404,10 +406,10 @@ def check_df(df, StartDate=None, StopDate=None, name=''):
             # pos = np.where(np.isnan(df.sum(axis=1)))
             # idx_pos = [df.index[i] for i in pos]
             if missing != 0:
-                logging.warn('There are ' + str(missing) + ' missing entries in the column ' + key + ' of the dataframe ' + name)
-    if not df.columns.is_unique:
-        logging.error('The column headers of table "' + name + '" are not unique!. The following headers are duplicated: ' + str(df.columns.get_duplicates()))
-        sys.exit(1)
+                if name=='FuelPrices':
+                    logging.warn('There are ' + str(missing) + ' missing entries in the column ' + key[1] + ' of the zone ' + key[0] + 'of the dataframe ' + name)
+                else:
+                    logging.warn('There are ' + str(missing) + ' missing entries in the column ' + key + ' of the dataframe ' + name)
     return True
 
 
