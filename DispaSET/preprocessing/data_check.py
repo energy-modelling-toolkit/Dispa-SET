@@ -407,7 +407,10 @@ def check_df(df, StartDate=None, StopDate=None, name=''):
             # idx_pos = [df.index[i] for i in pos]
             if missing != 0:
                 if name=='FuelPrices':
-                    logging.warn('There are ' + str(missing) + ' missing entries in the column ' + key[1] + ' of the zone ' + key[0] + 'of the dataframe ' + name)
+                    if len(key)==2:
+                        logging.warn('There are ' + str(missing) + ' missing entries in the column ' + key[1] + ' of the zone ' + key[0] + 'of the dataframe ' + name)
+                    else:
+                        logging.warn('There are ' + str(missing) + ' missing entries in the column ' + key + ' of the dataframe ' + name)
                 else:
                     logging.warn('There are ' + str(missing) + ' missing entries in the column ' + key + ' of the dataframe ' + name)
     return True

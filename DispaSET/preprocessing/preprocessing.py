@@ -154,37 +154,35 @@ def build_simulation(config):
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
-    FuelPrices = pd.DataFrame(columns=fuels, index=idx_utc_noloc)
     fuel_series = list(fuels*len(config['countries']))
     zone_series = []
     for zone in config['countries']:
         zone_series = zone_series+[zone]*len(fuels)
     zonefuels_array = [zone_series, fuel_series]
     FuelPrices = pd.DataFrame(columns=zonefuels_array, index=idx_utc_noloc)
-    #FuelPrices = pd.DataFrame(columns=fuels, index=idx_utc_noloc)
     idx = pd.IndexSlice
     tmp = pd.DataFrame()
     for zone in config['countries']:
         for fuel in fuels:
-        try:
-        tmp = load_csv(config[fuel], header=0, index_col=0, parse_dates=True)
-    except:
-    pass
-    if os.path.isfile(config[fuel]) and zone in tmp.columns:
-        FuelPrices.loc[idx[idx_utc_noloc], idx[zone, fuel]] = tmp[zone][idx_utc_noloc].values
-    elif isinstance(config['default'][fuel], (int, long, float, complex)):
-    logging.warn('No data file found for "' + fuel + '. Using default value ' + str(config['default'][fuel]) + ' EUR')
-    FuelPrices.loc[idx[idx_utc_noloc], idx[zone, fuel]] = pd.Series(config['default'][fuel], index=idx_utc_noloc)
-    # Special case for lignite and peat, for backward compatibility
-    elif fuel == 'PriceOfLignite':
-    logging.warn('No price data found for "' + fuel + '. Using the same value as for Black Coal')
-    FuelPrices.loc[idx[idx_utc_noloc], idx[zone, fuel]] = FuelPrices[zone]['PriceOfBlackCoal']
-    elif fuel == 'PriceOfPeat':
-    logging.warn('No price data found for "' + fuel + '. Using the same value as for biomass')
-    FuelPrices.loc[idx[idx_utc_noloc], idx[zone, fuel]] = FuelPrices[zone]['PriceOfBiomass']
-    else:
-    logging.warn('No data file or default value found for "' + fuel + '. Assuming zero marginal price!')
-    FuelPrices.loc[idx[idx_utc_noloc], idx[zone, fuel]] = pd.Series(0, index=idx_utc_noloc)
+            try:
+                tmp = load_csv(config[fuel], header=0, index_col=0, parse_dates=True)
+            except:
+                pass
+            if os.path.isfile(config[fuel]) and zone in tmp.columns:
+                FuelPrices.loc[idx[idx_utc_noloc], idx[zone, fuel]] = tmp[zone][idx_utc_noloc].values
+            elif isinstance(config['default'][fuel], (int, long, float, complex)):
+                logging.warn('No data file found for "' + fuel + '. Using default value ' + str(config['default'][fuel]) + ' EUR')
+                FuelPrices.loc[idx[idx_utc_noloc], idx[zone, fuel]] = pd.Series(config['default'][fuel], index=idx_utc_noloc)
+            # Special case for lignite and peat, for backward compatibility
+            elif fuel == 'PriceOfLignite':
+                logging.warn('No price data found for "' + fuel + '. Using the same value as for Black Coal')
+                FuelPrices.loc[idx[idx_utc_noloc], idx[zone, fuel]] = FuelPrices[zone]['PriceOfBlackCoal']
+            elif fuel == 'PriceOfPeat':
+                logging.warn('No price data found for "' + fuel + '. Using the same value as for biomass')
+                FuelPrices.loc[idx[idx_utc_noloc], idx[zone, fuel]] = FuelPrices[zone]['PriceOfBiomass']
+            else:
+                logging.warn('No data file or default value found for "' + fuel + '. Assuming zero marginal price!')
+                FuelPrices.loc[idx[idx_utc_noloc], idx[zone, fuel]] = pd.Series(0, index=idx_utc_noloc)
 
 
     # Interconnections:
@@ -544,14 +542,13 @@ def build_simulation(config):
         zone = Plants_merged['Zone'][unit]
         for FuelEntry in FuelEntries:
             if Plants_merged['Fuel'][unit] == FuelEntry:
-            parameters['CostVariable']['val'][unit, :] = FuelPrices[zone][FuelEntries[FuelEntry]] / Plants_merged['Efficiency'][unit] +
-        Plants_merged['EmissionRate'][unit] * FuelPrices[zone]['PriceOfCO2']
-        found = True
+                parameters['CostVariable']['val'][unit, :] = FuelPrices[zone][FuelEntries[FuelEntry]] / Plants_merged['Efficiency'][unit] + Plants_merged['EmissionRate'][unit] * FuelPrices[zone]['PriceOfCO2']
+                found = True
         # Special case for biomass plants, which are not included in EU ETS:
         if Plants_merged['Fuel'][unit] == 'BIO':
             parameters['CostVariable']['val'][unit, :] = FuelPrices[zone]['PriceOfBiomass'] / Plants_merged['Efficiency'][
                 unit]
-        found = True
+            found = True
         if not found:
             logging.warn('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] + ' in unit ' +
                          Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')

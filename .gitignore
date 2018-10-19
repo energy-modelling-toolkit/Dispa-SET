@@ -15,4 +15,3 @@ Docs/_static/*
 *.egg-info/*
 dist/*
 build/*
-
