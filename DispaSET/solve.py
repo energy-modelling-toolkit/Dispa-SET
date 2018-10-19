@@ -133,7 +133,7 @@ def solve_pyomo(sim_folder):
     else:
         path_cplex = ''
         if len(SimData['config']['cplex_path']) > 2:
-            logging.warn('The specified path for cplex (' + SimData['config'][
+            logging.warning('The specified path for cplex (' + SimData['config'][
                 'cplex_path'] + ') is not valid. It will be ignored')
 
     time0 = time.time()

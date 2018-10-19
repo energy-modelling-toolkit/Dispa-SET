@@ -92,12 +92,12 @@ def build_simulation(config):
     if os.path.isfile(config['Interconnections']):
         flows = load_csv(config['Interconnections'], index_col=0, parse_dates=True).fillna(0)
     else:
-        logging.warn('No historical flows will be considered (no valid file provided)')
+        logging.warning('No historical flows will be considered (no valid file provided)')
         flows = pd.DataFrame(index=idx_utc_noloc)
     if os.path.isfile(config['NTC']):
         NTC = load_csv(config['NTC'], index_col=0, parse_dates=True).fillna(0)
     else:
-        logging.warn('No NTC values will be considered (no valid file provided)')
+        logging.warning('No NTC values will be considered (no valid file provided)')
         NTC = pd.DataFrame(index=idx_utc_noloc)
 
     # Load Shedding:
@@ -160,17 +160,17 @@ def build_simulation(config):
             tmp = load_csv(config[fuel], header=None, index_col=0, parse_dates=True)
             FuelPrices[fuel] = tmp[1][idx_utc_noloc].values
         elif isinstance(config['default'][fuel], (int, float, complex)):
-            logging.warn('No data file found for "' + fuel + '. Using default value ' + str(config['default'][fuel]) + ' EUR')
+            logging.warning('No data file found for "' + fuel + '. Using default value ' + str(config['default'][fuel]) + ' EUR')
             FuelPrices[fuel] = pd.Series(config['default'][fuel], index=idx_utc_noloc)
         # Special case for lignite and peat, for backward compatibility
         elif fuel == 'PriceOfLignite':
-            logging.warn('No price data found for "' + fuel + '. Using the same value as for Black Coal')
+            logging.warning('No price data found for "' + fuel + '. Using the same value as for Black Coal')
             FuelPrices[fuel] = FuelPrices['PriceOfBlackCoal']
         elif fuel == 'PriceOfPeat':
-            logging.warn('No price data found for "' + fuel + '. Using the same value as for biomass')
+            logging.warning('No price data found for "' + fuel + '. Using the same value as for biomass')
             FuelPrices[fuel] = FuelPrices['PriceOfBiomass']
         else:
-            logging.warn('No data file or default value found for "' + fuel + '. Assuming zero marginal price!')
+            logging.warning('No data file or default value found for "' + fuel + '. Assuming zero marginal price!')
             FuelPrices[fuel] = pd.Series(0, index=idx_utc_noloc)
 
     # Interconnections:
@@ -202,7 +202,7 @@ def build_simulation(config):
     
     for key in ['TimeUpMinimum','TimeDownMinimum']:
         if any([not x.is_integer() for x in Plants_merged[key].fillna(0).values.astype('float')]):
-            logging.warn(key + ' in the power plant data has been rounded to the nearest integer value')
+            logging.warning(key + ' in the power plant data has been rounded to the nearest integer value')
             Plants_merged.loc[:,key] = Plants_merged[key].fillna(0).values.astype('int32')
 
     if not len(Plants_merged.index.unique()) == len(Plants_merged):
@@ -266,10 +266,10 @@ def build_simulation(config):
         oldname = plants['Unit'][s]
         # newname = mapping['NewIndex'][s] #FIXME Unused variable ?
         if oldname not in HeatDemand:
-            logging.warn('No heat demand profile found for CHP plant "' + str(oldname) + '". Assuming zero')
+            logging.warning('No heat demand profile found for CHP plant "' + str(oldname) + '". Assuming zero')
             HeatDemand[oldname] = 0
         if oldname not in CostHeatSlack:
-            logging.warn('No heat cost profile found for CHP plant "' + str(oldname) + '". Assuming zero')
+            logging.warning('No heat cost profile found for CHP plant "' + str(oldname) + '". Assuming zero')
             CostHeatSlack[oldname] = 0
  
 
@@ -341,7 +341,7 @@ def build_simulation(config):
     ############################################   Sets    ############################################################
     ###################################################################################################################
 
-    # The sets are defined within a dictionnary:
+    # The sets are defined within a dictionary:
     sets = {}
     sets['h'] = [str(x + 1) for x in range(Nhours_long)]
     sets['z'] = [str(x + 1) for x in range(Nhours_long - config['LookAhead'] * 24)]
@@ -464,9 +464,9 @@ def build_simulation(config):
                                                      Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
             parameters['StorageProfile']['val'][i, :] = ReservoirLevels_merged[s][idx_long].values
             if any(ReservoirLevels_merged[s] > 1):
-                logging.warn(s + ': The reservoir level is sometimes higher than its capacity!')
+                logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
         else:
-            logging.warn( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
+            logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
             parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
             parameters['StorageProfile']['val'][i, :] = 0.5
 
@@ -538,7 +538,7 @@ def build_simulation(config):
                 unit]
             found = True
         if not found:
-            logging.warn('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] + ' in unit ' + \
+            logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] + ' in unit ' + \
                   Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
 
     # %%#################################################################################################################################################################################################
@@ -561,7 +561,7 @@ def build_simulation(config):
             if u in Outages_merged.columns:
                 parameters['OutageFactor']['val'][i, :] = Outages_merged[u].values
             else:
-                logging.warn('Outages factors not found for unit ' + u + '. Assuming no outages')
+                logging.warning('Outages factors not found for unit ' + u + '. Assuming no outages')
 
     # Participation to the reserve market
     values = np.array([s in config['ReserveParticipation'] for s in sets['t']], dtype='bool')
@@ -572,12 +572,12 @@ def build_simulation(config):
         idx = sets['t'].index(Plants_merged['Technology'][unit])
         parameters['Technology']['val'][unit, idx] = True
 
-        # Fuels
+    # Fuels
     for unit in range(Nunits):
         idx = sets['f'].index(Plants_merged['Fuel'][unit])
         parameters['Fuel']['val'][unit, idx] = True
 
-        # Location
+    # Location
     for i in range(len(sets['n'])):
         parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['countries'][i]).values
 
@@ -605,7 +605,7 @@ def build_simulation(config):
             if Plants_merged['Fuel'][i] in ['GAS', 'NUC'] and Plants_merged['PowerCapacity'][i] > 350:
                 parameters['PowerInitial']['val'][i] = (Plants_merged['PartLoadMin'][i] + 1) / 2 * \
                                                        Plants_merged['PowerCapacity'][i]
-            # Config variables:
+    # Config variables:
     sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead']
     sets['y_config'] = ['year', 'month', 'day']
     dd_begin = idx_long[4]
@@ -703,14 +703,14 @@ def adjust_capacity(inputs,tech_fuel,scaling=1,value=None,singleunit=False,write
     Function used to modify the installed capacities in the Dispa-SET generated input data
     The function update the Inputs.p file in the simulation directory at each call
     
-    :param inputs:      Input data dictionnary OR path to the simulation directory containing Inputs.p
+    :param inputs:      Input data dictionary OR path to the simulation directory containing Inputs.p
     :param tech_fuel:   tuple with the technology and fuel type for which the capacity should be modified
     :param scaling:     Scaling factor to be applied to the installed capacity
     :param value:       Absolute value of the desired capacity (! Applied only if scaling != 1 !)
     :param singleunit:  Set to true if the technology should remain lumped in a single unit
     :param write_gdx:   boolean defining if Inputs.gdx should be also overwritten with the new data
     :param dest_path:   Simulation environment path to write the new input data. If unspecified, no data is written!
-    :return:            New SimData dictionnary 
+    :return:            New SimData dictionary 
     '''
     import pickle
 
@@ -725,7 +725,7 @@ def adjust_capacity(inputs,tech_fuel,scaling=1,value=None,singleunit=False,write
         SimData = inputs
         path = SimData['config']['SimulationDirectory']
     else:
-        logging.error('The input data must be either a dictionnary or string containing a valid directory')
+        logging.error('The input data must be either a dictionary or string containing a valid directory')
         sys.exit(1)
 
     if not isinstance(tech_fuel,tuple):
@@ -788,13 +788,13 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
     Function used to modify the storage capacities in the Dispa-SET generated input data
     The function update the Inputs.p file in the simulation directory at each call
     
-    :param inputs:      Input data dictionnary OR path to the simulation directory containing Inputs.p
+    :param inputs:      Input data dictionary OR path to the simulation directory containing Inputs.p
     :param tech_fuel:   tuple with the technology and fuel type for which the capacity should be modified
     :param scaling:     Scaling factor to be applied to the installed capacity
     :param value:       Absolute value of the desired capacity (! Applied only if scaling != 1 !)
     :param write_gdx:   boolean defining if Inputs.gdx should be also overwritten with the new data
     :param dest_path:   Simulation environment path to write the new input data. If unspecified, no data is written!
-    :return:            New SimData dictionnary 
+    :return:            New SimData dictionary 
     '''
     import pickle
 
@@ -808,7 +808,7 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
     elif isinstance(inputs,dict):
         SimData = inputs
     else:
-        logging.error('The input data must be either a dictionnary or string containing a valid directory')
+        logging.error('The input data must be either a dictionary or string containing a valid directory')
         sys.exit(1)
 
     if not isinstance(tech_fuel,tuple):

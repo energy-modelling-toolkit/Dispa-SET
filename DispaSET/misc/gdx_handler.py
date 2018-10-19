@@ -290,9 +290,9 @@ def gdx_to_dataframe(data, fixindex=False, verbose=False):
                 out[symbol] = pd.Series(vals)
                 logging.debug('Successfully loaded variable ' + symbol)
             elif dim == 1:
-                logging.warn('Variable ' + symbol + ' has dimension 0, which should not occur. Skipping')
+                logging.warning('Variable ' + symbol + ' has dimension 0, which should not occur. Skipping')
             elif dim > 3:
-                logging.warn('Variable ' + symbol + ' has more than 2 dimensions, which is very tiring. Skipping')
+                logging.warning('Variable ' + symbol + ' has more than 2 dimensions, which is very tiring. Skipping')
         else:
              logging.debug('Variable ' + symbol + ' is empty. Skipping')
     for symbol in out:
@@ -340,7 +340,7 @@ def get_gams_path(gams_dir=None):
         gams_dir = gams_dir.decode()
     if gams_dir is not None:
         if not os.path.exists(gams_dir):
-            logging.warn('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
+            logging.warning('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
         else:
             return os.path.dirname(gams_dir).encode()
 
