@@ -615,16 +615,21 @@ def build_simulation(config):
                 parameters['PowerInitial']['val'][i] = (Plants_merged['PartLoadMin'][i] + 1) / 2 * \
                                                        Plants_merged['PowerCapacity'][i]
             # Config variables:
-    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead']
-    sets['y_config'] = ['year', 'month', 'day']
+    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead','ValueOfLostLoad','QuickStartShare','CostOfSpillage','WaterValue']
+    sets['y_config'] = ['year', 'month', 'day', 'val']
     dd_begin = idx_long[4]
     dd_end = idx_long[-2]
 
+#TODO: integrated the parameters (VOLL, Water value, etc) from the excel config file
     values = np.array([
-        [dd_begin.year, dd_begin.month, dd_begin.day],
-        [dd_end.year, dd_end.month, dd_end.day],
-        [0, 0, config['HorizonLength']],
-        [0, 0, config['LookAhead']]
+        [dd_begin.year, dd_begin.month, dd_begin.day, 0],
+        [dd_end.year, dd_end.month, dd_end.day, 0],
+        [0, 0, config['HorizonLength'], 0],
+        [0, 0, config['LookAhead'], 0], 
+        [0, 0, 0, 1e5],     # Value of lost load
+        [0, 0, 0, 0.5],       # allowed Share of quick start units in reserve
+        [0, 0, 0, 1],       # Cost of spillage (EUR/MWh)
+        [0, 0, 0, 100],       # Value of water (for unsatisfied water reservoir levels, EUR/MWh)
     ])
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
