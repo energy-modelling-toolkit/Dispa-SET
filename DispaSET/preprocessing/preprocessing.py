@@ -159,7 +159,7 @@ def build_simulation(config):
     for zone in config['countries']:
         zone_series = zone_series+[zone]*len(fuels)
     zonefuels_array = [zone_series, fuel_series]
-    FuelPrices = pd.DataFrame(columns=zonefuels_array, index=idx_utc_noloc)
+    FuelPrices = pd.DataFrame(columns=zonefuels_array, index=idx_utc_noloc, dtype=float)
     idx = pd.IndexSlice
     tmp = pd.DataFrame()
     for zone in config['countries']:
@@ -167,10 +167,12 @@ def build_simulation(config):
             try:
                 tmp = load_csv(config[fuel], header=0, index_col=0, parse_dates=True)
             except:
-                pass
+                logging.warning("Couldn't load file")
             if os.path.isfile(config[fuel]) and zone in tmp.columns:
                 FuelPrices.loc[idx[idx_utc_noloc], idx[zone, fuel]] = tmp[zone][idx_utc_noloc].values
-            elif isinstance(config['default'][fuel], (int, long, float, complex)):
+            # FIXME: IF single column and column names are not defined, assign these values to all
+            # FIXME: Currently the default values are assigned ignoring the loaded csv file
+            elif isinstance(config['default'][fuel], (int, float, complex)):
                 logging.warn('No data file found for "' + fuel + '. Using default value ' + str(config['default'][fuel]) + ' EUR')
                 FuelPrices.loc[idx[idx_utc_noloc], idx[zone, fuel]] = pd.Series(config['default'][fuel], index=idx_utc_noloc)
             # Special case for lignite and peat, for backward compatibility
