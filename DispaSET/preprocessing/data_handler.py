@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import pandas as pd
 
+from six.moves import reload_module
 try:
     from future.builtins import int
 except ImportError:
@@ -168,7 +169,7 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
                     out[u] = data[header]
                     found = True
                     if i > 0 and warning:
-                        logging.warn('No specific information was found for unit ' + u + ' in table ' + tablename + '. The generic information for ' + str(header) + ' has been used')
+                        logging.warning('No specific information was found for unit ' + u + ' in table ' + tablename + '. The generic information for ' + str(header) + ' has been used')
                     break
             if not found:
                 if warning:
@@ -238,10 +239,10 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
                     sys.exit(1)
         elif key in plants['Unit']:
             if not isinstance(key, tuple):  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
-                logging.warn('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the mapping between original and clustered units. Skipping')
+                logging.warning('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the mapping between original and clustered units. Skipping')
         else:
             if not isinstance(key, tuple):  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
-                logging.warn('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the table of power plants. Skipping')
+                logging.warning('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the table of power plants. Skipping')
     return merged
 
 
@@ -288,7 +289,7 @@ def invert_dic_df(dic,tablename=''):
     for item in panel.items:
         for key in dic.keys():
             if item not in dic[key].columns:
-                logging.warn('The column "' + item + '" is not present in "' + key + '" for the "' + tablename + '" data. Zero will be assumed')
+                logging.warning('The column "' + item + '" is not present in "' + key + '" for the "' + tablename + '" data. Zero will be assumed')
         dic_out[item] = panel[item].fillna(0)
     return dic_out
 
@@ -303,9 +304,11 @@ def write_to_excel(xls_out, list_vars):
     """
 
 
-    # import sys
-    reload(sys)
-    sys.setdefaultencoding("utf-8")
+    reload_module(sys)
+    try: # Hack needed in 2.7
+        sys.setdefaultencoding("utf-8")
+    except:
+        pass
 
     if not os.path.exists(xls_out):
         os.mkdir(xls_out)
@@ -336,7 +339,7 @@ def write_to_excel(xls_out, list_vars):
     for p in parameters:
         var = parameters[p]
         dim = len(var['sets'])
-        if var['sets'][-1] == 'h' and isinstance(dates, pd.tseries.index.DatetimeIndex) and dim > 1:
+        if var['sets'][-1] == 'h' and isinstance(dates, pd.DatetimeIndex) and dim > 1:
             if len(dates) != var['val'].shape[-1]:
                 logging.critical('The date range in the Config variable (' + str(
                     len(dates)) + ' time steps) does not match the length of the time index (' + str(
