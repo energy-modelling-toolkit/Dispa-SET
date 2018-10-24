@@ -845,8 +845,26 @@ def get_result_analysis(inputs, results):
         logging.error('Could compute storage data')
         StorageData = None
 
+    # Storage errors
+    try:
+        List_tech_storage = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS']
+        isstorage = pd.Series(index=inputs['units'].index)
+        for u in isstorage.index:
+            isstorage[u] = inputs['units'].Technology[u] in List_tech_storage
+        sto_units = inputs['units'][isstorage]
+        StorageCompare = sto_units.StorageCapacity
+        #Compared to StorageProfile
+#        StorageError = ((inputs['param_df']['StorageProfile']*StorageCompare).subtract(results['OutputStorageLevel'],'columns')).divide((inputs['param_df']['StorageProfile']*StorageCompare),'columns')*100
+        #Compared to StorageCapacity
+        StorageError = ((inputs['param_df']['StorageProfile']*StorageCompare).subtract(results['OutputStorageLevel'],'columns')).divide((StorageCompare),'columns')*100
+        StorageError = StorageError.dropna(1)
+        StorageError.plot(figsize=(12,6),title='Difference Between Real and Calculated Storage Levels')
+    except:
+        logging.error('Couldnt compute storage data')
+        StorageError = None
+
     return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-            'CountryData': CountryData, 'Congestion': Congestion, 'StorageData': StorageData}    
+            'CountryData': CountryData, 'Congestion': Congestion, 'StorageData': StorageData, 'StorageError': StorageError}    
 
 def get_indicators_powerplant(inputs, results):
     """
@@ -1093,5 +1111,4 @@ def CostExPost(inputs,results):
     if diff.max() > 0.01 * results['OutputSystemCost'].max():
         logging.critical('There are significant differences between the cost computed ex post and and the cost provided by the optimization results!')
     return costs,sumcost
-
-
+     
