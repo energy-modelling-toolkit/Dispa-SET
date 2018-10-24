@@ -169,9 +169,8 @@ def write_variables(gams_dir, gdx_out, list_vars):
     :param gdx_out:         (Relative) path to the gdx file to be written
     :param list_vars:       List with the sets and parameters to be written
     """
-    if not os.path.isdir(gams_dir):
-        gams_dir = get_gams_path()
-    if not os.path.isdir(gams_dir):
+    gams_dir = get_gams_path(gams_dir=gams_dir.encode())
+    if not gams_dir:  # couldn't locate
         logging.critical('GDXCC: Could not find the specified gams directory: ' + gams_dir)
         sys.exit(1)
     gams_dir = force_str(gams_dir)
@@ -291,9 +290,9 @@ def gdx_to_dataframe(data, fixindex=False, verbose=False):
                 out[symbol] = pd.Series(vals)
                 logging.debug('Successfully loaded variable ' + symbol)
             elif dim == 1:
-                logging.warn('Variable ' + symbol + ' has dimension 0, which should not occur. Skipping')
+                logging.warning('Variable ' + symbol + ' has dimension 0, which should not occur. Skipping')
             elif dim > 3:
-                logging.warn('Variable ' + symbol + ' has more than 2 dimensions, which is very tiring. Skipping')
+                logging.warning('Variable ' + symbol + ' has more than 2 dimensions, which is very tiring. Skipping')
         else:
              logging.debug('Variable ' + symbol + ' is empty. Skipping')
     for symbol in out:
@@ -328,14 +327,23 @@ def get_gdx(gams_dir, resultfile):
                             fixindex=True, verbose=True)
 
 
-def get_gams_path():
+def get_gams_path(gams_dir=None):
     """
     Function that attempts to search for the GAMS installation path (required to write the GDX or run gams)
 
-    It returns the path if it has been found, or an empty string otherwise.
+    It returns the path if it has been found, or an empty string otherwise. If a gams_dir argument is passed 
+    it tries to validate before searching
 
     Currently works for Windows, Linux and OSX. More searching rules and patterns should be added in the future
     """
+    if isinstance(gams_dir, bytes):
+        gams_dir = gams_dir.decode()
+    if gams_dir is not None:
+        if not os.path.exists(gams_dir):
+            logging.warning('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
+        else:
+            return os.path.dirname(gams_dir).encode()
+
     import subprocess
     out = ''
     if sys.platform == 'linux2' or sys.platform == 'linux':
@@ -406,15 +414,15 @@ def get_gams_path():
                     out = tmp
                 else:
                     logging.critical('The provided path is not a valid windows gams folder')
-                    sys.exit(1)
+                    return False
             elif sys.platform == 'linux2':
                 if os.path.isfile(tmp + os.sep + 'gamslib'):  # does not always work... gamslib_ml
                     out = tmp
                 else:
                     logging.critical('The provided path is not a valid linux gams folder')
-                    sys.exit(1)
+                    return False
             else:
                 if os.path.isdir(tmp):
                     out = tmp
 
-    return out
+    return out.encode()

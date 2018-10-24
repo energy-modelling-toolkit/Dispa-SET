@@ -19,10 +19,10 @@ import pandas as pd
 
 from ..misc.gdx_handler import gdx_to_list, gdx_to_dataframe, get_gams_path
 from ..misc.str_handler import shrink_to_64, clean_strings
-from ..common import commonvars
+from ..common import commons
 
  # get color definitions: 
-commons= commonvars()
+
 
 def GAMSstatus(statustype,num):
     '''
@@ -190,7 +190,7 @@ def get_plot_data(inputs, results, c):
     return plotdata
 
 
-def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None):
+def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None,alpha=None):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum.
     In this case, the Pandas index is not used since it can cause a bug in matplotlib
@@ -217,7 +217,6 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
         pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
     else:
         pdrng = rng
-    alpha = '0.3'        
     idx = [d.to_pydatetime() for d in pdrng]  
 
     # Netting the interconnections:
@@ -262,10 +261,10 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
         col2 = sumplot_neg.columns[j + 1]
         color = commons['colors'][col2]
         hatch = commons['hatches'][col2]
-        plt.fill_between(idx, sumplot_neg.loc[pdrng, col1].values, sumplot_neg.loc[pdrng, col2].values, color=color, alpha=alpha,
+        plt.fill_between(idx, sumplot_neg.loc[pdrng, col1].values, sumplot_neg.loc[pdrng, col2].values, facecolor=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col1)
-        patches.append(mpatches.Patch(color=color, alpha=0.3, hatch=hatch, label=col2))
+        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
 
     # Plot Positive values:
@@ -274,10 +273,10 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
         col2 = sumplot_pos.columns[j + 1]
         color = commons['colors'][col2]
         hatch = commons['hatches'][col2]
-        plt.fill_between(idx, sumplot_pos.loc[pdrng, col1].values, sumplot_pos.loc[pdrng, col2].values, color=color, alpha=alpha,
+        plt.fill_between(idx, sumplot_pos.loc[pdrng, col1].values, sumplot_pos.loc[pdrng, col2].values, facecolor=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col2)
-        patches.append(mpatches.Patch(color=color, alpha=0.3, hatch=hatch, label=col2))
+        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
     
     # Plot curtailment:    
@@ -285,10 +284,9 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
         if not curtailment.index.equals(demand.index):
             logging.error('The curtailment time series must have the same index as the demand')
             sys.exit(1)
-        color = 'red'
-        plt.fill_between(idx, sumplot_neg.loc[pdrng, 'sum'].values-curtailment[pdrng].values, sumplot_neg.loc[pdrng, 'sum'].values, color='red', alpha=0.7)
+        plt.fill_between(idx, sumplot_neg.loc[pdrng, 'sum'].values-curtailment[pdrng].values, sumplot_neg.loc[pdrng, 'sum'].values, facecolor=commons['colors']['curtailment'])
         labels.append('Curtailment')
-        patches.append(mpatches.Patch(color='red', alpha=0.7, label='Curtailment'))
+        patches.append(mpatches.Patch(facecolor=commons['colors']['curtailment'], label='Curtailment'))
    
     plt.xticks(rotation=45)
     ax.set_ylabel('Power [MW]')
@@ -297,12 +295,12 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
     if level is not None:
         # Create right axis:
         ax2 = fig.add_subplot(111, sharex=ax, frameon=False, label='aa')
-        ax2.plot(idx, level[pdrng].values, color='k', alpha=0.3, linestyle='--')
+        ax2.plot(idx, level[pdrng].values, color='k', alpha=alpha, linestyle='--')
         ax2.yaxis.tick_right()
         ax2.yaxis.set_label_position("right")
         ax2.set_ylabel('Level [MWh]')
         ax2.yaxis.label.set_fontsize(16)
-        line_SOC = mlines.Line2D([], [], color='black', alpha=0.3, label='Reservoir', linestyle='--')
+        line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Reservoir', linestyle='--')
 
     plt.xticks(rotation=45)
     line_demand = mlines.Line2D([], [], color='black', label='Load')
@@ -312,7 +310,7 @@ def plot_dispatch_safe(demand, plotdata, level=None, curtailment=None, rng=None)
     else:
         plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_SOC] + patches[::-1], loc=4)
 
-def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
+def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None, alpha=None):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
     
@@ -336,7 +334,6 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
         pdrng = plotdata.index[:min(len(plotdata)-1,7*24)]
     else:
         pdrng = rng
-    alpha = '0.3'        
     
     # Netting the interconnections:
     if 'FlowIn' in plotdata and 'FlowOut' in plotdata:
@@ -380,10 +377,10 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
         col2 = sumplot_neg.columns[j + 1]
         color = commons['colors'][col2]
         hatch = commons['hatches'][col2]
-        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2], color=color, alpha=alpha,
+        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2], facecolor=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col1)
-        patches.append(mpatches.Patch(color=color, alpha=0.3, hatch=hatch, label=col2))
+        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
 
     # Plot Positive values:
@@ -392,10 +389,10 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
         col2 = sumplot_pos.columns[j + 1]
         color = commons['colors'][col2]
         hatch = commons['hatches'][col2]
-        plt.fill_between(pdrng, sumplot_pos.loc[pdrng, col1], sumplot_pos.loc[pdrng, col2], color=color, alpha=alpha,
+        plt.fill_between(pdrng, sumplot_pos.loc[pdrng, col1], sumplot_pos.loc[pdrng, col2], facecolor=color, alpha=alpha,
                          hatch=hatch)
         labels.append(col2)
-        patches.append(mpatches.Patch(color=color, alpha=0.3, hatch=hatch, label=col2))
+        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
     
     # Plot curtailment:    
@@ -403,10 +400,9 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
         if not curtailment.index.equals(demand.index):
             logging.error('The curtailment time series must have the same index as the demand')
             sys.exit(1)
-        color = 'red'
-        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum']-curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'], color='red', alpha=0.7)
+        plt.fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum'] - curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'], facecolor=commons['colors']['curtailment'])
         labels.append('Curtailment')
-        patches.append(mpatches.Patch(color='red', alpha=0.7, label='Curtailment'))
+        patches.append(mpatches.Patch(facecolor=commons['colors']['curtailment'], label='Curtailment'))
    
 
     ax.set_ylabel('Power [MW]')
@@ -415,12 +411,12 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
     if level is not None:
         # Create right axis:
         ax2 = fig.add_subplot(111, sharex=ax, frameon=False, label='aa')
-        ax2.plot(pdrng, level[pdrng], color='k', alpha=0.3, linestyle='--')
+        ax2.plot(pdrng, level[pdrng], color='k', alpha=alpha, linestyle='--')
         ax2.yaxis.tick_right()
         ax2.yaxis.set_label_position("right")
         ax2.set_ylabel('Level [MWh]')
         ax2.yaxis.label.set_fontsize(16)
-        line_SOC = mlines.Line2D([], [], color='black', alpha=0.3, label='Reservoir', linestyle='--')
+        line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Reservoir', linestyle='--')
 
     line_demand = mlines.Line2D([], [], color='black', label='Load')
     plt.legend(handles=[line_demand] + patches[::-1], loc=4)
@@ -430,30 +426,25 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None):
         plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_SOC] + patches[::-1], loc=4)
 
 
-def plot_rug(df_series, on_off=False, cmap='Greys'):
+def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=False):
     """Create multiaxis rug plot from pandas Dataframe
-    
-    Parameters:
-        df_series: 2D pandas with timed index
-        
-        on_off: 
-            * If True all points that are above 0 will be plotted as one color.
-            * If False all values will be colored based on their value.
-                
-        cmap: palette name (from colorbrewer, matplotlib etc.)
-        
+
+    Arguments:
+        df_series (pd.DataFrame): 2D pandas with timed index
+        on_off (bool): if True all points that are above 0 will be plotted as one color. If False all values will be colored based on their value.
+        cmap (str): palette name (from colorbrewer, matplotlib etc.)
+        fig_title (str): Figure title
+        normalized (bool): if True, all series colormaps will be normalized based on the maximum value of the dataframe
     Returns:
         plot
         
-    Function written by K. Kavvadias
+    Function copied from enlopy v0.1 www.github.com/kavvkon/enlopy. Install with `pip install enlopy` for latest version.
     """
 
     def format_axis(iax):
         # Formatting: remove all lines (not so elegant)
-        iax.axes.spines['top'].set_visible(False)
-        iax.spines['right'].set_visible(False)
-        iax.spines['left'].set_visible(False)
-        iax.spines['bottom'].set_visible(False)
+        for spine in ['top', 'right', 'left', 'bottom']:
+            iax.axes.spines[spine].set_visible(False)
         # iax.xaxis.set_ticks_position('none')
         iax.yaxis.set_ticks_position('none')
         iax.get_yaxis().set_ticks([])
@@ -466,37 +457,54 @@ def plot_rug(df_series, on_off=False, cmap='Greys'):
             return True
 
     # check if Series or dataframe
-    if len(df_series.shape) == 2:
-        df_series2 = df_series
-        df_series2.columns = [clean_strings(x) for x in df_series.columns]
-        rows = len(df_series2.columns)
-    elif len(df_series.shape) == 1:
-        df_series2 = df_series.to_frame()
+    if isinstance(df_series, pd.DataFrame):
+        rows = len(df_series.columns)
+    elif isinstance(df_series, pd.Series):
+        df_series = df_series.to_frame()
         rows = 1
     else:
-        raise AssertionError("Has to be either Series or Dataframe")
+        raise ValueError("Has to be either Series or Dataframe")
+    if len(df_series) < 1:
+        raise ValueError("Has to be non empty Series or Dataframe")
 
-    fig, axes = plt.subplots(nrows=rows, ncols=1, sharex=True,
-                             figsize=(16, 0.25 * rows), squeeze=False,
-                             frameon=False, gridspec_kw={'hspace': 0.15})
+    max_color = np.nanmax(df_series.values)
+    min_color = np.nanmin(df_series.values)
 
-    for (item, iseries), iax in zip(df_series2.iteritems(), axes.ravel()):
+    __, axes = plt.subplots(nrows=rows, ncols=1, sharex=True,
+                            figsize=(16, 0.25 * rows), squeeze=False,
+                            frameon=False, gridspec_kw={'hspace': 0.15})
+
+    for (item, iseries), iax in zip(df_series.iteritems(), axes.ravel()):
         format_axis(iax)
-        iax.set_ylabel(item, rotation=0)
-        if iseries.sum() > 0:
+        iax.set_ylabel(str(item)[:30], rotation='horizontal',
+                       rotation_mode='anchor',
+                       horizontalalignment='right', x=-0.01)
+        x = iseries.index
+
+        if iseries.sum() > 0:  # if series is not empty
             if on_off:
                 i_on_off = iseries.apply(flag_operation).replace(False, np.nan)
                 i_on_off.plot(ax=iax, style='|', lw=.7, cmap=cmap)
             else:
-                x = [d.to_pydatetime() for d in iseries.index]
                 y = np.ones(len(iseries))
-                iax.scatter(x, y, marker='|', s=100,
-                            c=iseries.values * 100, cmap=cmap)
+                # Define (truncated) colormap:
+                if not normalized:  # Replace max_color (frame) with series max
+                    max_color = np.nanmax(iseries.values)
+                    min_color = np.nanmin(iseries.values)
+                # Hack to plot max color when all series are equal
+                if np.isclose(min_color, max_color):
+                    min_color = min_color * 0.99
 
-    iax.spines['bottom'].set_visible(True)
-    plt.xticks(rotation=45)
-    #iax.set_xlim(min(x), max(x))
+                iax.scatter(x, y,
+                            marker='|', s=100,
+                            c=iseries.values,
+                            vmin=min_color,
+                            vmax=max_color,
+                            cmap=cmap)
 
+    axes.ravel()[0].set_title(fig_title)
+    axes.ravel()[-1].spines['bottom'].set_visible(True)
+    axes.ravel()[-1].set_xlim(np.min(x), np.max(x))
 
 
 def plot_energy_country_fuel(inputs, results, PPindicators):
@@ -556,7 +564,7 @@ def plot_country_capacities(inputs,plot=True):
     PowerCapacity = PowerCapacity[cols]
     if plot:
         colors = [commons['colors'][tech] for tech in PowerCapacity.columns]
-        ax = PowerCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
+        ax = PowerCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=1.0, legend='reverse',
                                 title='Installed capacity per country (the horizontal lines indicate the peak demand)')
         ax.set_ylabel('Capacity [MW]')
         demand = inputs['param_df']['Demand']['DA'].max() 
@@ -566,7 +574,7 @@ def plot_country_capacities(inputs,plot=True):
 
 
 
-def get_sim_results(path='.', cache=False, temp_path='.pickle'):
+def get_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickle'):
     """
     This function reads the simulation environment folder once it has been solved and loads
     the input variables together with the results.
@@ -592,15 +600,14 @@ def get_sim_results(path='.', cache=False, temp_path='.pickle'):
     if not 'param_df' in inputs:
         inputs['param_df'] = ds_to_df(inputs)
 
+    if gams_dir is None:  # Use user-defined gams_dir else try to use the one defined in config
+        gams_dir = inputs['config']['GAMS_folder'].encode()
 
-    gams_dir = inputs['config']['GAMS_folder'].encode() # We need to pass the dir in config if we run it in clusters. PBS script fail to autolocate
-    if not os.path.exists(gams_dir):
-        logging.warn('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
-        gams_dir = get_gams_path()
-        if not os.path.exists(gams_dir):
-            logging.error('GAMS path cannot be located. Simulation is stopped')
-            return False
-    gams_dir = gams_dir.encode()
+    gams_dir = get_gams_path(gams_dir)
+    # We need to pass the dir in config if we run it in clusters. PBS script fail to autolocate
+    if not gams_dir:  # couldn't locate
+        logging.error('GAMS path cannot be located. Cannot parse gdx files')
+        return False
 
     # Load results and store in cache file in the .pickle folder:
     if cache:
@@ -730,8 +737,11 @@ def plot_country(inputs, results, c='', rng=None):
 
     # Generation plot: 
     CountryGeneration = filter_by_country(results['OutputPower'], inputs, c)
-
-    plot_rug(CountryGeneration, on_off=False, cmap='Greys')
+    try:
+        import enlopy as el  # try to get latest version
+        el.plot_rug(CountryGeneration, on_off=False, cmap='gist_heat_r', fig_title=c)
+    except ImportError:
+        plot_rug(CountryGeneration, on_off=False, cmap='gist_heat_r', fig_title=c)
 
     return True
 

@@ -109,7 +109,7 @@ def check_sto(config, plants,raw_data=True):
         NonNaNKeys = ['StorageCapacity']
 
     if 'StorageInitial' in plants:
-        logging.warn('The "StorageInitial" column is present in the power plant table, although it is deprecated (it should now be defined in the ReservoirLevel data table). It will not be considered.')
+        logging.warning('The "StorageInitial" column is present in the power plant table, although it is deprecated (it should now be defined in the ReservoirLevel data table). It will not be considered.')
   
     for key in keys:
         if key not in plants:
@@ -215,22 +215,22 @@ def check_chp(config, plants):
                 logging.critical('The calculated value of the total CHP efficiency for unit ' + unitname + ' is ' + str(TotalEfficiency) + ', which is unrealistic!')
                 sys.exit(1)
             if TotalEfficiency > 0.95:
-                logging.warn('The calculated value of the total CHP efficiency for unit ' + unitname + ' is ' + str(TotalEfficiency) + ', which is very high!')
+                logging.warning('The calculated value of the total CHP efficiency for unit ' + unitname + ' is ' + str(TotalEfficiency) + ', which is very high!')
 
     # Check the optional MaxHeatCapacity parameter. While it adds another realistic boundary it is not a required parameter for the definition of the CHP's operational envelope.:
     if 'CHPMaxHeat' in plants:
         for u in plants.index:
             plant_MaxHeat = plants.loc[u, 'CHPMaxHeat']
             if plant_MaxHeat <=0:
-                logging.warn('CHPMaxHeat for plant {} is {} which shuts down any heat production.'.format(u, plant_MaxHeat))
+                logging.warning('CHPMaxHeat for plant {} is {} which shuts down any heat production.'.format(u, plant_MaxHeat))
     # Check the optional heat storage values:
     if 'STOCapacity' in plants:
         for u in plants.index:
             Qdot = plants.loc[u,'PowerCapacity']/plants.loc[u,'CHPPowerToHeat']
             if plants.loc[u,'STOCapacity'] < Qdot * 0.5 :
-                logging.warn('Unit ' + unitname + ': The value of the thermal storage capacity (' + str(plants.loc[u,'STOCapacity']) + 'MWh) seems very low compared to its thermal power (' + str(Qdot) + 'MW).')
+                logging.warning('Unit ' + unitname + ': The value of the thermal storage capacity (' + str(plants.loc[u,'STOCapacity']) + 'MWh) seems very low compared to its thermal power (' + str(Qdot) + 'MW).')
             elif plants.loc[u,'STOCapacity'] > Qdot * 24:
-                logging.warn('Unit ' + unitname + ': The value of the thermal storage capacity (' + str(plants.loc[u,'STOCapacity']) + 'MWh) seems very high compared to its thermal power (' + str(Qdot) + 'MW).')
+                logging.warning('Unit ' + unitname + ': The value of the thermal storage capacity (' + str(plants.loc[u,'STOCapacity']) + 'MWh) seems very high compared to its thermal power (' + str(Qdot) + 'MW).')
 
     if 'STOSelfDischarge' in plants:
         for u in plants.index:     
@@ -238,7 +238,7 @@ def check_chp(config, plants):
                 logging.error('Unit ' + unitname + ': The value of the thermal storage self-discharge (' + str(plants.loc[u,'STOSelfDischarge']*100) + '%/day) cannot be negative')
                 sys.exit(1)
             elif plants.loc[u,'STOSelfDischarge'] > 1:
-                logging.warn('Unit ' + unitname + ': The value of the thermal storage self-discharge (' + str(plants.loc[u,'STOSelfDischarge']*100) + '%/day) seems very high')
+                logging.warning('Unit ' + unitname + ': The value of the thermal storage self-discharge (' + str(plants.loc[u,'STOSelfDischarge']*100) + '%/day) seems very high')
             elif plants.loc[u,'STOSelfDischarge'] > 24:
                 logging.error('Unit ' + unitname + ': The value of the thermal storage self-discharge (' + str(plants.loc[u,'STOSelfDischarge']*100) + '%/day) is too high')
                 sys.exit(1)                           
@@ -380,11 +380,11 @@ def check_heat_demand(plants,data):
                 logging.error('CHPPowerToHeat is not defined for unit ' + str(u) + ' appearing in the heat demand profiles')
                 sys.exit(1)
             elif data[u].max() > Qmax:
-                logging.warn('The maximum thermal demand for unit ' + str(u) + ' (' + str(data[u].max()) + ') is higher than its thermal capacity (' + str(Qmax) + '). Slack heat will be used to cover that.')
+                logging.warning('The maximum thermal demand for unit ' + str(u) + ' (' + str(data[u].max()) + ') is higher than its thermal capacity (' + str(Qmax) + '). Slack heat will be used to cover that.')
             if data[u].min() < Qmin:
-                logging.warn('The minimum thermal demand for unit ' + str(u) + ' (' + str(data[u].min()) + ') is lower than its minimum thermal generation (' + str(Qmin) + ' MWth)')
+                logging.warning('The minimum thermal demand for unit ' + str(u) + ' (' + str(data[u].min()) + ') is lower than its minimum thermal generation (' + str(Qmin) + ' MWth)')
         else:
-            logging.warn('The heat demand profile with header "' + str(u) + '" does not correspond to any CHP plant. It will be ignored.')
+            logging.warning('The heat demand profile with header "' + str(u) + '" does not correspond to any CHP plant. It will be ignored.')
     return True
 
 
@@ -395,16 +395,16 @@ def check_df(df, StartDate=None, StopDate=None, name=''):
 
     if isinstance(df.index, pd.DatetimeIndex):
         if not StartDate in df.index:
-            logging.warn('The start date ' + str(StartDate) + ' is not in the index of the provided dataframe')
+            logging.warning('The start date ' + str(StartDate) + ' is not in the index of the provided dataframe')
         if not StopDate in df.index:
-            logging.warn('The stop date ' + str(StopDate) + ' is not in the index of the provided dataframe')
+            logging.warning('The stop date ' + str(StopDate) + ' is not in the index of the provided dataframe')
     if any(np.isnan(df)):
         for key in df:
             missing = np.sum(np.isnan(df[key]))
             # pos = np.where(np.isnan(df.sum(axis=1)))
             # idx_pos = [df.index[i] for i in pos]
             if missing != 0:
-                logging.warn('There are ' + str(missing) + ' missing entries in the column ' + key + ' of the dataframe ' + name)
+                logging.warning('There are ' + str(missing) + ' missing entries in the column ' + key + ' of the dataframe ' + name)
     if not df.columns.is_unique:
         logging.error('The column headers of table "' + name + '" are not unique!. The following headers are duplicated: ' + str(df.columns.get_duplicates()))
         sys.exit(1)
