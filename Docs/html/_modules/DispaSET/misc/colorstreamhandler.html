@@ -1,0 +1,395 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>DispaSET.misc.colorstreamhandler &mdash; Documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> DispaSET
+          
+
+          
+            
+            <img src="../../../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../workflow.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Model Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../formulations.html">Model Formulations and clustering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../implementation.html">Implementation and interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../data.html">Input Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cases.html">Case Studies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developers.html">Developers’ section</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../DispaSET.html">DispaSET package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DispaSET</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>DispaSET.misc.colorstreamhandler</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for DispaSET.misc.colorstreamhandler</h1><div class="highlight"><pre>
+<span></span><span class="c1"># colored stream handler for python logging framework (use the ColorStreamHandler class).</span>
+<span class="c1">#</span>
+<span class="c1"># based on:</span>
+<span class="c1"># http://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/1336640#1336640</span>
+
+<span class="c1"># how to use:</span>
+<span class="c1"># I used a dict-based logging configuration, not sure what else would work.</span>
+<span class="c1">#</span>
+<span class="c1"># import logging, logging.config, colorstreamhandler</span>
+<span class="c1">#</span>
+<span class="c1"># _LOGCONFIG = {</span>
+<span class="c1">#     &quot;version&quot;: 1,</span>
+<span class="c1">#     &quot;disable_existing_loggers&quot;: False,</span>
+<span class="c1">#</span>
+<span class="c1">#     &quot;handlers&quot;: {</span>
+<span class="c1">#         &quot;console&quot;: {</span>
+<span class="c1">#             &quot;class&quot;: &quot;colorstreamhandler.ColorStreamHandler&quot;,</span>
+<span class="c1">#             &quot;stream&quot;: &quot;ext://sys.stderr&quot;,</span>
+<span class="c1">#             &quot;level&quot;: &quot;INFO&quot;</span>
+<span class="c1">#         }</span>
+<span class="c1">#     },</span>
+<span class="c1">#</span>
+<span class="c1">#     &quot;root&quot;: {</span>
+<span class="c1">#         &quot;level&quot;: &quot;INFO&quot;,</span>
+<span class="c1">#         &quot;handlers&quot;: [&quot;console&quot;]</span>
+<span class="c1">#     }</span>
+<span class="c1"># }</span>
+<span class="c1">#</span>
+<span class="c1"># logging.config.dictConfig(_LOGCONFIG)</span>
+<span class="c1"># mylogger = logging.getLogger(&quot;mylogger&quot;)</span>
+<span class="c1"># mylogger.warning(&quot;foobar&quot;)</span>
+
+<span class="c1"># Copyright (c) 2014 Markus Pointner</span>
+<span class="c1">#</span>
+<span class="c1"># Permission is hereby granted, free of charge, to any person obtaining a copy</span>
+<span class="c1"># of this software and associated documentation files (the &quot;Software&quot;), to deal</span>
+<span class="c1"># in the Software without restriction, including without limitation the rights</span>
+<span class="c1"># to use, copy, modify, merge, publish, distribute, sublicense, and/or sell</span>
+<span class="c1"># copies of the Software, and to permit persons to whom the Software is</span>
+<span class="c1"># furnished to do so, subject to the following conditions:</span>
+<span class="c1">#</span>
+<span class="c1"># The above copyright notice and this permission notice shall be included in</span>
+<span class="c1"># all copies or substantial portions of the Software.</span>
+<span class="c1">#</span>
+<span class="c1"># THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR</span>
+<span class="c1"># IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,</span>
+<span class="c1"># FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE</span>
+<span class="c1"># AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER</span>
+<span class="c1"># LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,</span>
+<span class="c1"># OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN</span>
+<span class="c1"># THE SOFTWARE.</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+
+
+<span class="k">class</span> <span class="nc">_AnsiColorStreamHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">):</span>
+    <span class="n">DEFAULT</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\x1b</span><span class="s1">[0m&#39;</span>
+    <span class="n">RED</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\x1b</span><span class="s1">[31m&#39;</span>
+    <span class="n">GREEN</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\x1b</span><span class="s1">[32m&#39;</span>
+    <span class="n">YELLOW</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\x1b</span><span class="s1">[33m&#39;</span>
+    <span class="n">CYAN</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\x1b</span><span class="s1">[36m&#39;</span>
+
+    <span class="n">CRITICAL</span> <span class="o">=</span> <span class="n">RED</span>
+    <span class="n">ERROR</span> <span class="o">=</span> <span class="n">RED</span>
+    <span class="n">WARNING</span> <span class="o">=</span> <span class="n">YELLOW</span>
+    <span class="n">INFO</span> <span class="o">=</span> <span class="n">GREEN</span>
+    <span class="n">DEBUG</span> <span class="o">=</span> <span class="n">CYAN</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_tty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">isatty</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">,</span> <span class="s1">&#39;isatty&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">isatty</span> <span class="ow">and</span> <span class="n">isatty</span><span class="p">()</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_get_color</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">level</span> <span class="o">&gt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">CRITICAL</span>
+        <span class="k">elif</span> <span class="n">level</span> <span class="o">&gt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">ERROR</span>
+        <span class="k">elif</span> <span class="n">level</span> <span class="o">&gt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">WARNING</span>
+        <span class="k">elif</span> <span class="n">level</span> <span class="o">&gt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">INFO</span>
+        <span class="k">elif</span> <span class="n">level</span> <span class="o">&gt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">DEBUG</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">DEFAULT</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_color</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">levelno</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_tty</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">color</span> <span class="o">+</span> <span class="n">text</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">text</span>
+
+
+<span class="k">class</span> <span class="nc">_WinColorStreamHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">):</span>
+    <span class="c1"># wincon.h</span>
+    <span class="n">FOREGROUND_BLACK</span> <span class="o">=</span> <span class="mh">0x0000</span>
+    <span class="n">FOREGROUND_BLUE</span> <span class="o">=</span> <span class="mh">0x0001</span>
+    <span class="n">FOREGROUND_GREEN</span> <span class="o">=</span> <span class="mh">0x0002</span>
+    <span class="n">FOREGROUND_CYAN</span> <span class="o">=</span> <span class="mh">0x0003</span>
+    <span class="n">FOREGROUND_RED</span> <span class="o">=</span> <span class="mh">0x0004</span>
+    <span class="n">FOREGROUND_MAGENTA</span> <span class="o">=</span> <span class="mh">0x0005</span>
+    <span class="n">FOREGROUND_YELLOW</span> <span class="o">=</span> <span class="mh">0x0006</span>
+    <span class="n">FOREGROUND_GREY</span> <span class="o">=</span> <span class="mh">0x0007</span>
+    <span class="n">FOREGROUND_INTENSITY</span> <span class="o">=</span> <span class="mh">0x0008</span>  <span class="c1"># foreground color is intensified.</span>
+    <span class="n">FOREGROUND_WHITE</span> <span class="o">=</span> <span class="n">FOREGROUND_BLUE</span> <span class="o">|</span> <span class="n">FOREGROUND_GREEN</span> <span class="o">|</span> <span class="n">FOREGROUND_RED</span>
+
+    <span class="n">BACKGROUND_BLACK</span> <span class="o">=</span> <span class="mh">0x0000</span>
+    <span class="n">BACKGROUND_BLUE</span> <span class="o">=</span> <span class="mh">0x0010</span>
+    <span class="n">BACKGROUND_GREEN</span> <span class="o">=</span> <span class="mh">0x0020</span>
+    <span class="n">BACKGROUND_CYAN</span> <span class="o">=</span> <span class="mh">0x0030</span>
+    <span class="n">BACKGROUND_RED</span> <span class="o">=</span> <span class="mh">0x0040</span>
+    <span class="n">BACKGROUND_MAGENTA</span> <span class="o">=</span> <span class="mh">0x0050</span>
+    <span class="n">BACKGROUND_YELLOW</span> <span class="o">=</span> <span class="mh">0x0060</span>
+    <span class="n">BACKGROUND_GREY</span> <span class="o">=</span> <span class="mh">0x0070</span>
+    <span class="n">BACKGROUND_INTENSITY</span> <span class="o">=</span> <span class="mh">0x0080</span>  <span class="c1"># background color is intensified.</span>
+
+    <span class="n">DEFAULT</span> <span class="o">=</span> <span class="n">FOREGROUND_WHITE</span>
+    <span class="n">CRITICAL</span> <span class="o">=</span> <span class="n">BACKGROUND_YELLOW</span> <span class="o">|</span> <span class="n">FOREGROUND_RED</span> <span class="o">|</span> <span class="n">FOREGROUND_INTENSITY</span> <span class="o">|</span> <span class="n">BACKGROUND_INTENSITY</span>
+    <span class="n">ERROR</span> <span class="o">=</span> <span class="n">FOREGROUND_RED</span> <span class="o">|</span> <span class="n">FOREGROUND_INTENSITY</span>
+    <span class="n">WARNING</span> <span class="o">=</span> <span class="n">FOREGROUND_YELLOW</span> <span class="o">|</span> <span class="n">FOREGROUND_INTENSITY</span>
+    <span class="n">INFO</span> <span class="o">=</span> <span class="n">FOREGROUND_GREEN</span>
+    <span class="n">DEBUG</span> <span class="o">=</span> <span class="n">FOREGROUND_CYAN</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_get_color</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">level</span> <span class="o">&gt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">CRITICAL</span>
+        <span class="k">elif</span> <span class="n">level</span> <span class="o">&gt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">ERROR</span>
+        <span class="k">elif</span> <span class="n">level</span> <span class="o">&gt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">WARNING</span>
+        <span class="k">elif</span> <span class="n">level</span> <span class="o">&gt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">INFO</span>
+        <span class="k">elif</span> <span class="n">level</span> <span class="o">&gt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">DEBUG</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">DEFAULT</span>
+
+    <span class="k">def</span> <span class="nf">_set_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">code</span><span class="p">):</span>
+        <span class="kn">import</span> <span class="nn">ctypes</span>
+        <span class="n">ctypes</span><span class="o">.</span><span class="n">windll</span><span class="o">.</span><span class="n">kernel32</span><span class="o">.</span><span class="n">SetConsoleTextAttribute</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_outhdl</span><span class="p">,</span> <span class="n">code</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+        <span class="c1"># get file handle for the stream</span>
+        <span class="kn">import</span> <span class="nn">ctypes</span><span class="o">,</span> <span class="nn">ctypes.util</span>
+        <span class="c1"># for some reason find_msvcrt() sometimes doesn&#39;t find msvcrt.dll on my system?</span>
+        <span class="n">crtname</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_msvcrt</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">crtname</span><span class="p">:</span>
+            <span class="n">crtname</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_library</span><span class="p">(</span><span class="s2">&quot;msvcrt&quot;</span><span class="p">)</span>
+        <span class="n">crtlib</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">cdll</span><span class="o">.</span><span class="n">LoadLibrary</span><span class="p">(</span><span class="n">crtname</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_outhdl</span> <span class="o">=</span> <span class="n">crtlib</span><span class="o">.</span><span class="n">_get_osfhandle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">fileno</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">emit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_color</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">levelno</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_color</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">FOREGROUND_WHITE</span><span class="p">)</span>
+
+
+<span class="c1"># select ColorStreamHandler based on platform</span>
+<span class="kn">import</span> <span class="nn">platform</span>
+
+<span class="k">if</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Windows&#39;</span><span class="p">:</span>
+    <span class="n">ColorStreamHandler</span> <span class="o">=</span> <span class="n">_WinColorStreamHandler</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">ColorStreamHandler</span> <span class="o">=</span> <span class="n">_AnsiColorStreamHandler</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Sylvain Quoilin &amp; Kostas Kavvadias
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'../../../',
+              VERSION:'',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

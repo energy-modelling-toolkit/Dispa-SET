@@ -1,0 +1,1076 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Input Data &mdash; Documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Case Studies" href="cases.html" />
+    <link rel="prev" title="Implementation and interface" href="implementation.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> DispaSET
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workflow.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Model Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formulations.html">Model Formulations and clustering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="implementation.html">Implementation and interface</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Input Data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#technologies">Technologies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fuels">Fuels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#unit-specific-or-technology-specific-inputs">Unit-specific or technology-specific inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#demand">Demand</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#countries">Countries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#power-plant-data">Power plant data</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#common-fields">Common fields</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#storage-units">Storage units</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#chp-units">CHP units</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#renewable-generation">Renewable generation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#storage-and-hydro-data">Storage and hydro data</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#inflows">Inflows</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#storage-level">Storage level</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#variable-capacity-storage">Variable capacity storage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#power-plant-outages">Power plant outages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interconnections">Interconnections</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#net-transfer-capacities">Net transfer capacities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#historical-physical-flows">Historical physical flows</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#fuel-prices">Fuel Prices</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cases.html">Case Studies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developers.html">Developers’ section</a></li>
+<li class="toctree-l1"><a class="reference internal" href="DispaSET.html">DispaSET package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DispaSET</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Input Data</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/data.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="input-data">
+<span id="data"></span><h1>Input Data<a class="headerlink" href="#input-data" title="Permalink to this headline">¶</a></h1>
+<p>In this section, “Input Data” refers to the data stored in the Dispa-SET database. The format of this data is pre-defined and imposed, in such a way that it can be read by the pre-processing tool.</p>
+<p>Two important preliminary comments should be formulated:</p>
+<ul class="simple">
+<li>All the time series should be registered with their timestamps (e.g. ‘2013-02-20 02:00:00’) relative to the UTC timezone.</li>
+<li>Although the optimisation model is designed to run with any technology or fuel name, the pre-processing and the post-processing tools of Dispa-SET use some hard-coded values. The Dispa-SET database should also comply with this convention (described in the next sections). Any non-recognized technology or fuel will be discarded in the pre-processing.</li>
+</ul>
+<div class="section" id="technologies">
+<h2>Technologies<a class="headerlink" href="#technologies" title="Permalink to this headline">¶</a></h2>
+<p>The Dispa-SET input distinguishes between the technologies defined in the table below. The VRES column indicates the variable renewable technologies (set “tr” in the optimisation) and the Storage column indicates the technologies which can accumulate energy.</p>
+<table border="1" class="docutils" id="id1">
+<caption><span class="caption-text">Dispa-SET technologies</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="22%" />
+<col width="57%" />
+<col width="10%" />
+<col width="12%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Technology</th>
+<th class="head">Description</th>
+<th class="head">VRES</th>
+<th class="head">Storage</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>COMC</td>
+<td>Combined cycle</td>
+<td>N</td>
+<td>N</td>
+</tr>
+<tr class="row-odd"><td>GTUR</td>
+<td>Gas turbine</td>
+<td>N</td>
+<td>N</td>
+</tr>
+<tr class="row-even"><td>HDAM</td>
+<td>Conventional hydro dam</td>
+<td>N</td>
+<td>Y</td>
+</tr>
+<tr class="row-odd"><td>HROR</td>
+<td>Hydro run-of-river</td>
+<td>Y</td>
+<td>N</td>
+</tr>
+<tr class="row-even"><td>HPHS</td>
+<td>Pumped hydro storage</td>
+<td>N</td>
+<td>Y</td>
+</tr>
+<tr class="row-odd"><td>ICEN</td>
+<td>Internal combustion engine</td>
+<td>N</td>
+<td>N</td>
+</tr>
+<tr class="row-even"><td>PHOT</td>
+<td>Solar photovoltaic</td>
+<td>Y</td>
+<td>N</td>
+</tr>
+<tr class="row-odd"><td>STUR</td>
+<td>Steam turbine</td>
+<td>N</td>
+<td>N</td>
+</tr>
+<tr class="row-even"><td>WTOF</td>
+<td>Offshore wind turbine</td>
+<td>Y</td>
+<td>N</td>
+</tr>
+<tr class="row-odd"><td>WTON</td>
+<td>Onshore wind turbine</td>
+<td>Y</td>
+<td>N</td>
+</tr>
+<tr class="row-even"><td>CAES</td>
+<td>Compressed air energy storage</td>
+<td>N</td>
+<td>Y</td>
+</tr>
+<tr class="row-odd"><td>BATS</td>
+<td>Stationary batteries</td>
+<td>N</td>
+<td>Y</td>
+</tr>
+<tr class="row-even"><td>BEVS</td>
+<td>Battery-powered electric vehicles</td>
+<td>N</td>
+<td>Y</td>
+</tr>
+<tr class="row-odd"><td>THMS</td>
+<td>Thermal storage</td>
+<td>N</td>
+<td>Y</td>
+</tr>
+<tr class="row-even"><td>P2GS</td>
+<td>Power-to-gas storage</td>
+<td>N</td>
+<td>Y</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="fuels">
+<h2>Fuels<a class="headerlink" href="#fuels" title="Permalink to this headline">¶</a></h2>
+<p>Dispa-SET only considers a limited number of different fuel types. They are summarised in the following table, together with some examples.</p>
+<table border="1" class="docutils" id="id2">
+<caption><span class="caption-text">Dispa-SET fuels</span><a class="headerlink" href="#id2" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="1%" />
+<col width="99%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Fuel</th>
+<th class="head">Examples</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>BIO</td>
+<td>Bagasse, Biodiesel, Gas From Biomass, Gasification, Biomass, Briquettes, Cattle Residues, Rice Hulls Or Padi Husk, Straw, Wood Gas (From Wood Gasification), Wood Waste Liquids Excl Blk Liq (Incl Red Liquor, Sludge, Wood,Spent Sulfite Liquor And Oth Liquids, Wood And Wood Waste</td>
+</tr>
+<tr class="row-odd"><td>GAS</td>
+<td>Blast Furnace Gas, Boiler Natural Gas, Butane, Coal Bed Methane, Coke Oven Gas, Flare Gas, Gas (Generic), Methane, Mine Gas, Natural Gas, Propane, Refinery Gas, Sour Gas, Synthetic Natural Gas, Top Gas, Voc Gas &amp; Vapor, Waste Gas, Wellhead Gas</td>
+</tr>
+<tr class="row-even"><td>GEO</td>
+<td>Geothermal steam</td>
+</tr>
+<tr class="row-odd"><td>HRD</td>
+<td>Anthracite, Other Anthracite, Bituminous Coal, Coker By-Product, Coal Gas (From Coal Gasification), Coke, Coal (Generic), Coal-Oil Mixture, Other Coal, Coal And Pet Coke Mi, Coal Tar Oil, Anthracite Coal Waste, Coal-Water Mixture, Gob, Hard Coal / Anthracite, Imported Coal, Other Solids, Soft Coal, Anthracite Silt, Steam Coal, Subbituminous, Pelletized Synthetic Fuel From Coal, Bituminous Coal Waste)</td>
+</tr>
+<tr class="row-even"><td>HYD</td>
+<td>Hydrogen</td>
+</tr>
+<tr class="row-odd"><td>LIG</td>
+<td>Lignite black, Lignite brown, lignite</td>
+</tr>
+<tr class="row-even"><td>NUC</td>
+<td>U, Pu</td>
+</tr>
+<tr class="row-odd"><td>OIL</td>
+<td>Crude Oil, Distillate Oil, Diesel Fuel, No. 1 Fuel Oil, No. 2 Fuel Oil, No. 3 Fuel Oil, No. 4 Fuel Oil, No. 5 Fuel Oil, No. 6 Fuel Oil, Furnace Fuel, Gas Oil, Gasoline, Heavy Oil Mixture, Jet Fuel, Kerosene, Light Fuel Oil, Liquefied Propane Gas, Methanol, Naphtha, ,Gas From Fuel Oil Gasification, Fuel Oil, Other Liquid, Orimulsion, Petroleum Coke, Petroleum Coke Synthetic Gas, Black Liquor, Residual Oils, Re-Refined Motor Oil, Oil Shale, Tar, Topped Crude Oil, Waste Oil</td>
+</tr>
+<tr class="row-even"><td>PEA</td>
+<td>Peat Moss</td>
+</tr>
+<tr class="row-odd"><td>SUN</td>
+<td>Solar energy</td>
+</tr>
+<tr class="row-even"><td>WAT</td>
+<td>Hydro energy</td>
+</tr>
+<tr class="row-odd"><td>WIN</td>
+<td>Wind energy</td>
+</tr>
+<tr class="row-even"><td>WST</td>
+<td>Digester Gas (Sewage Sludge Gas), Gas From Refuse Gasification, Hazardous Waste, Industrial Waste, Landfill Gas, Poultry Litter, Manure, Medical Waste, Refused Derived Fuel, Refuse, Waste Paper And Waste Plastic, Refinery Waste, Tires, Agricultural Waste, Waste Coal, Waste Water Sludge, Waste</td>
+</tr>
+</tbody>
+</table>
+<p>Different fuels may be used to power a given technology, e.g. steam turbines may be fired with almost any fuel type. In Dispa-SET, each unit must be defined with the pair of values (technology,fuel). The next tables is derived from a commercial power plant database and indicates the number of occurences of each combination. It appears clearly that, even through some combinations are irrelevant, both characteristics are needed to define a power plant type.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="8%" />
+<col width="8%" />
+<col width="8%" />
+<col width="8%" />
+<col width="8%" />
+<col width="8%" />
+<col width="8%" />
+<col width="8%" />
+<col width="8%" />
+<col width="8%" />
+<col width="8%" />
+<col width="11%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">f/t</th>
+<th class="head">COMC</th>
+<th class="head">GTUR</th>
+<th class="head">HDAM</th>
+<th class="head">HPHS</th>
+<th class="head">HROR</th>
+<th class="head">ICEN</th>
+<th class="head">PHOT</th>
+<th class="head">STUR</th>
+<th class="head">WTOF</th>
+<th class="head">WTON</th>
+<th class="head">Total</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>BIO</td>
+<td>&#160;</td>
+<td>2</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>10</td>
+<td>&#160;</td>
+<td>79</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>91</td>
+</tr>
+<tr class="row-odd"><td>GAS</td>
+<td>485</td>
+<td>188</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>28</td>
+<td>&#160;</td>
+<td>97</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>798</td>
+</tr>
+<tr class="row-even"><td>GEO</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>10</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>10</td>
+</tr>
+<tr class="row-odd"><td>HRD</td>
+<td>4</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>389</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>393</td>
+</tr>
+<tr class="row-even"><td>HYD</td>
+<td>&#160;</td>
+<td>1</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>1</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>2</td>
+</tr>
+<tr class="row-odd"><td>LIG</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>249</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>249</td>
+</tr>
+<tr class="row-even"><td>NUC</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>138</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>138</td>
+</tr>
+<tr class="row-odd"><td>OIL</td>
+<td>7</td>
+<td>94</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>27</td>
+<td>&#160;</td>
+<td>146</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>274</td>
+</tr>
+<tr class="row-even"><td>PEA</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>17</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>17</td>
+</tr>
+<tr class="row-odd"><td>SUN</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>20</td>
+<td>7</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>27</td>
+</tr>
+<tr class="row-even"><td>UNK</td>
+<td>&#160;</td>
+<td>2</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>1</td>
+<td>&#160;</td>
+<td>1</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>4</td>
+</tr>
+<tr class="row-odd"><td>WAT</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>33</td>
+<td>23</td>
+<td>21</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>1</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>78</td>
+</tr>
+<tr class="row-even"><td>WIN</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>9</td>
+<td>27</td>
+<td>36</td>
+</tr>
+<tr class="row-odd"><td>WST</td>
+<td>&#160;</td>
+<td>3</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>7</td>
+<td>&#160;</td>
+<td>46</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>56</td>
+</tr>
+<tr class="row-even"><td>Total</td>
+<td>496</td>
+<td>290</td>
+<td>33</td>
+<td>23</td>
+<td>21</td>
+<td>73</td>
+<td>20</td>
+<td>1181</td>
+<td>9</td>
+<td>27</td>
+<td>2173</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="unit-specific-or-technology-specific-inputs">
+<h2>Unit-specific or technology-specific inputs<a class="headerlink" href="#unit-specific-or-technology-specific-inputs" title="Permalink to this headline">¶</a></h2>
+<p>Some parameters, such as the availability factor, the outage factor or the inflows may be defined at the unit level or at the technology level. For that reason, the pre-processing tool first lookups the unit name in the database to assign it a value, and then lookups the technology if no unit-specific information has been found.</p>
+</div>
+<div class="section" id="demand">
+<h2>Demand<a class="headerlink" href="#demand" title="Permalink to this headline">¶</a></h2>
+<p>Electricity demand is given per zone/country and the first row of each column shoud reflect that name.</p>
+<p>Heat demand timeseries is needed where CHP plants are used. In the current formulation, each CHP plant is covering a heat load. In other words, one power plant is connected to a single district heating network. Therefore, in the heat demand input file, the first column has to be a time index and the following columns the heat demand in MW. The first row should contain the exact name of the power plant that will cover this demand.</p>
+</div>
+<div class="section" id="countries">
+<h2>Countries<a class="headerlink" href="#countries" title="Permalink to this headline">¶</a></h2>
+<p>Although the nodes names can be freely user-defined in the database, for the Dispa-SET EU model, the ISO 3166-1 standard has been adopted to describe each country at the NUTS1 level (except for Greece and the United Kingdom, for which the abbreviations EL and UK are used according to <a class="reference external" href="http://publications.europa.eu/code/pdf/370000en.htm">EU Interinstitutional style guide</a> ). The list of countries is defined as:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="33%" />
+<col width="67%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Code</th>
+<th class="head">Country</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>AT</td>
+<td>Austria</td>
+</tr>
+<tr class="row-odd"><td>BE</td>
+<td>Belgium</td>
+</tr>
+<tr class="row-even"><td>BG</td>
+<td>Bulgaria</td>
+</tr>
+<tr class="row-odd"><td>CH</td>
+<td>Switzerland</td>
+</tr>
+<tr class="row-even"><td>CY</td>
+<td>Cyprus</td>
+</tr>
+<tr class="row-odd"><td>CZ</td>
+<td>Czech Republic</td>
+</tr>
+<tr class="row-even"><td>DE</td>
+<td>Germany</td>
+</tr>
+<tr class="row-odd"><td>DK</td>
+<td>Denmark</td>
+</tr>
+<tr class="row-even"><td>EE</td>
+<td>Estonia</td>
+</tr>
+<tr class="row-odd"><td>EL</td>
+<td>Greece</td>
+</tr>
+<tr class="row-even"><td>ES</td>
+<td>Spain</td>
+</tr>
+<tr class="row-odd"><td>FI</td>
+<td>Finland</td>
+</tr>
+<tr class="row-even"><td>FR</td>
+<td>France</td>
+</tr>
+<tr class="row-odd"><td>HR</td>
+<td>Croatia</td>
+</tr>
+<tr class="row-even"><td>HU</td>
+<td>Hungary</td>
+</tr>
+<tr class="row-odd"><td>IE</td>
+<td>Ireland</td>
+</tr>
+<tr class="row-even"><td>IT</td>
+<td>Italy</td>
+</tr>
+<tr class="row-odd"><td>LT</td>
+<td>Lituania</td>
+</tr>
+<tr class="row-even"><td>LU</td>
+<td>Luxembourg</td>
+</tr>
+<tr class="row-odd"><td>LV</td>
+<td>Latvia</td>
+</tr>
+<tr class="row-even"><td>MT</td>
+<td>Malta</td>
+</tr>
+<tr class="row-odd"><td>NL</td>
+<td>Netherlands</td>
+</tr>
+<tr class="row-even"><td>NO</td>
+<td>Norway</td>
+</tr>
+<tr class="row-odd"><td>PL</td>
+<td>Poland</td>
+</tr>
+<tr class="row-even"><td>PT</td>
+<td>Portugal</td>
+</tr>
+<tr class="row-odd"><td>RO</td>
+<td>Romania</td>
+</tr>
+<tr class="row-even"><td>SE</td>
+<td>Sweden</td>
+</tr>
+<tr class="row-odd"><td>SI</td>
+<td>Slovenia</td>
+</tr>
+<tr class="row-even"><td>SK</td>
+<td>Slovakia</td>
+</tr>
+<tr class="row-odd"><td>UK</td>
+<td>United Kingdom</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="power-plant-data">
+<h2>Power plant data<a class="headerlink" href="#power-plant-data" title="Permalink to this headline">¶</a></h2>
+<p>The power plant database may contain as many fields as desired, e.g. to ensure that the input data can be traced back, or to provide the id of this plant in another database. However, some fields are required by Dispa-SET and must therefore be defined in the database.</p>
+<div class="section" id="common-fields">
+<h3>Common fields<a class="headerlink" href="#common-fields" title="Permalink to this headline">¶</a></h3>
+<p>The following fields must be defined for all units:</p>
+<table border="1" class="docutils" id="id3">
+<caption><span class="caption-text">Common fields for all units</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="54%" />
+<col width="26%" />
+<col width="19%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Description</th>
+<th class="head">Field name</th>
+<th class="head">Units</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>Unit name</td>
+<td>Unit</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>Commissioning year</td>
+<td>Year</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>Technology</td>
+<td>Technology</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>Primary fuel</td>
+<td>Fuel</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>Zone</td>
+<td>Zone</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>Capacity</td>
+<td>PowerCapacity</td>
+<td>MW</td>
+</tr>
+<tr class="row-even"><td>Efficiency</td>
+<td>Efficiency</td>
+<td>%</td>
+</tr>
+<tr class="row-odd"><td>Efficiency at minimum load</td>
+<td>MinEfficiency</td>
+<td>%</td>
+</tr>
+<tr class="row-even"><td>CO2 intensity</td>
+<td>CO2Intensity</td>
+<td>TCO2/MWh</td>
+</tr>
+<tr class="row-odd"><td>Minimum load</td>
+<td>PartLoadMin</td>
+<td>%</td>
+</tr>
+<tr class="row-even"><td>Ramp up rate</td>
+<td>RampUpRate</td>
+<td>%/min</td>
+</tr>
+<tr class="row-odd"><td>Ramp down rate</td>
+<td>RampDownRate</td>
+<td>%/min)</td>
+</tr>
+<tr class="row-even"><td>Start-up time</td>
+<td>StartUPTime</td>
+<td>h</td>
+</tr>
+<tr class="row-odd"><td>Minimum up time</td>
+<td>MinUpTime</td>
+<td>h</td>
+</tr>
+<tr class="row-even"><td>Minimum down time</td>
+<td>MinDownTime</td>
+<td>h</td>
+</tr>
+<tr class="row-odd"><td>No load cost</td>
+<td>NoLoadCost</td>
+<td>EUR/h</td>
+</tr>
+<tr class="row-even"><td>Start-up cost</td>
+<td>StartUpCost</td>
+<td>EUR</td>
+</tr>
+<tr class="row-odd"><td>Ramping cost</td>
+<td>RampingCost</td>
+<td>EUR/MW</td>
+</tr>
+<tr class="row-even"><td>Presence of CHP</td>
+<td>CHP</td>
+<td>y/n</td>
+</tr>
+</tbody>
+</table>
+<p>NB: the fields indicated with % as unit must be entered in a non-dimensional way (i.e. 90% should be written 0.9).</p>
+</div>
+<div class="section" id="storage-units">
+<h3>Storage units<a class="headerlink" href="#storage-units" title="Permalink to this headline">¶</a></h3>
+<p>Some parameters must only be defined for the units equipped with storage. They can be left blank for all other units.</p>
+<table border="1" class="docutils" id="id4">
+<caption><span class="caption-text">Specific fields for storage units</span><a class="headerlink" href="#id4" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="48%" />
+<col width="35%" />
+<col width="17%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Description</th>
+<th class="head">Field name</th>
+<th class="head">Units</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>Storage capacity</td>
+<td>STOCapacity</td>
+<td>MWh</td>
+</tr>
+<tr class="row-odd"><td>Self-discharge rate</td>
+<td>STOSelfDischarge</td>
+<td>%/h</td>
+</tr>
+<tr class="row-even"><td>Maximum charging power</td>
+<td>STOMaxChargingPower</td>
+<td>MW</td>
+</tr>
+<tr class="row-odd"><td>Charging efficiency</td>
+<td>STOChargingEfficiency</td>
+<td>%</td>
+</tr>
+</tbody>
+</table>
+<p>In the case of a storage unit, the discharge efficiency should be assigned to the common field “Efficiency”. Similarly, the common field “PowerCapacity” is the nominal power in discharge mode.</p>
+</div>
+<div class="section" id="chp-units">
+<h3>CHP units<a class="headerlink" href="#chp-units" title="Permalink to this headline">¶</a></h3>
+<p>Some parameters must only be defined for the units equipped with CHP. They can be left blank for all other units.</p>
+<table border="1" class="docutils" id="id5">
+<caption><span class="caption-text">Specific fields for CHP units</span><a class="headerlink" href="#id5" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="47%" />
+<col width="21%" />
+<col width="32%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Description</th>
+<th class="head">Field name</th>
+<th class="head">Units</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>CHP Type</td>
+<td>CHPType</td>
+<td>extraction/back-pressure/p2h</td>
+</tr>
+<tr class="row-odd"><td>Power-to-heat ratio</td>
+<td>CHPPowerToHeat</td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
+</tr>
+<tr class="row-even"><td>Power Loss factor</td>
+<td>CHPPowerLossFactor</td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
+</tr>
+<tr class="row-odd"><td>Maximum heat production</td>
+<td>CHPMaxHeat</td>
+<td>MW(th)</td>
+</tr>
+<tr class="row-even"><td>Capacity of heat Storage</td>
+<td>STOCapacity</td>
+<td>MWh(th)</td>
+</tr>
+<tr class="row-odd"><td>% of storage heat losses per timestep</td>
+<td>STOSelfDischarge</td>
+<td>%</td>
+</tr>
+</tbody>
+</table>
+<p>In the current version of DispaSet three type of combined heat and power units are supported:</p>
+<ul class="simple">
+<li>Extraction/condensing units</li>
+<li>Backpressure units</li>
+<li>Power to heat</li>
+</ul>
+<p>For each of the above configurations the following fields must be filled:</p>
+<table border="1" class="docutils" id="id6">
+<caption><span class="caption-text">Mandatory fields per type of CHP unit (X: mandatory, o:optional)</span><a class="headerlink" href="#id6" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="33%" />
+<col width="20%" />
+<col width="22%" />
+<col width="24%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Description</th>
+<th class="head">Extraction</th>
+<th class="head">Backpressure</th>
+<th class="head">Power to heat</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>CHPType</td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+</tr>
+<tr class="row-odd"><td>CHPPowerToHeat</td>
+<td>X</td>
+<td>X</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>CHPPowerLossFactor</td>
+<td>X</td>
+<td>&#160;</td>
+<td>X</td>
+</tr>
+<tr class="row-odd"><td>CHPMaxHeat</td>
+<td>o</td>
+<td>o</td>
+<td>X</td>
+</tr>
+<tr class="row-even"><td>STOCapacity</td>
+<td>o</td>
+<td>o</td>
+<td>o</td>
+</tr>
+<tr class="row-odd"><td>STOSelfDischarge</td>
+<td>o</td>
+<td>o</td>
+<td>o</td>
+</tr>
+</tbody>
+</table>
+<p>There are numerous data checking routines to ensure that all data provided is consistent.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">For extraction/condensing CHP plants, the power plant capacity (<em>PowerCapacity</em>) must correspont to the nameplate capacity in the maximum heat and power mode. Internal Dispaset calculations will use the equivalent stand-alone plants capacity based on the parameters provided.</p>
+</div>
+</div>
+</div>
+<div class="section" id="renewable-generation">
+<h2>Renewable generation<a class="headerlink" href="#renewable-generation" title="Permalink to this headline">¶</a></h2>
+<p>Variable renewable generation is defined as power generation from renewable source that cannot be stored: its is either fed to the grid or curtailed. The technologies falling under this definition are the ones described in the subset “tr” in the model definition.</p>
+<p>The time-dependent genration of for these technologies must be provided as an exogenous time series in the form of an “availability factor”. The latter is defined as the proportion of the nominal power capacity that can be generated at each hour.</p>
+<p>In the database, the time series are provided as column vectors with the technology name as header. After the pre-processing, an availability factor is attributed to each unit according to their technology. Non-renewable technologies are assigned an availability factor of 1.</p>
+</div>
+<div class="section" id="storage-and-hydro-data">
+<h2>Storage and hydro data<a class="headerlink" href="#storage-and-hydro-data" title="Permalink to this headline">¶</a></h2>
+<p>Storage units are an extension of the regular units, including additional constraints and parameters. In the power plant table, four additional parameters are required: storage capacity (in MWh), self-discharge (in %/h), discharge power (in MW) and discharge efficiency (in %).</p>
+<p>Some other parameters must be introduced in the form of time series in the “HydroData” section of the Dispa-SET database. There are described hereunder.</p>
+<p>It should be noted that the nomenclature adopted for the modeling of storage units refers to the characteristics of hydro units with water reservoirs. However, these parameters (e.g. inflows, level) can easily be transposed to the case of alternative storage units such as batteries or CAES.</p>
+<div class="section" id="inflows">
+<h3>Inflows<a class="headerlink" href="#inflows" title="Permalink to this headline">¶</a></h3>
+<p>The Inflows are defined as the contribution of exogenous sources to the level (or state of charge) or the reservoir. They are expressed in MWh of potential energy. If the inflows are provided as m³/h, they must be converted.</p>
+<p>The input to dispaset is defined as “ScaledInflows”. It is the normalized values of the inflow with respect to the nominal power of the storage unit (in discharge mode). As an example, if the inflow value at a certain time is 100MWh/h and if the turbining capacity of the hydro plant is 200 MW, the scaled inflow value must be defined as 0.5.</p>
+<p>Scaled inflows should be provided in the form of time series with the unit name or the technology as columns header.</p>
+</div>
+<div class="section" id="storage-level">
+<h3>Storage level<a class="headerlink" href="#storage-level" title="Permalink to this headline">¶</a></h3>
+<p>Because emptying the storage has a zero marginal cost, a non-constrained optimization tends to leave the storage completely empty at the end of the optimisation horizon. For that reason, a minimum storage level is imposed at the last hour of each horizon. In Dispa-SET, a typical optimisation horizon is a few days. The model is therefore not capable of optimising the storage level e.g. for seasonal variations. The minimum storage level at the last hour is therefore an exogenous input. It can be selected from a historical level or obtained from a long-term hydro scheduling optimization.</p>
+<p>The level input in the Dispa-SET database is normalized with respect to the storage capacity: its minimum value is zero and its maximum is one.</p>
+</div>
+<div class="section" id="variable-capacity-storage">
+<h3>Variable capacity storage<a class="headerlink" href="#variable-capacity-storage" title="Permalink to this headline">¶</a></h3>
+<p>In special cases, it might be necessary to simulate a storage unit whose capacity varies in time. A typical example is the simulation of the storage capacity provided by electric vehicles: depending on the time of the day, the connected battery capacity varies.</p>
+<p>This special case can be simulated using the “AvailabilityFactor” input. In the case of a storage unit, reduces the avaiable capacity by a factor varying from 0 to 1.</p>
+</div>
+</div>
+<div class="section" id="power-plant-outages">
+<h2>Power plant outages<a class="headerlink" href="#power-plant-outages" title="Permalink to this headline">¶</a></h2>
+<p>In the current version, Dispa-SET does not distinguish planned outages from unplanned outages. They are characterized for each unit by the “OutageFactor” parameter. This parameter varies from 0 (no outage) to 1 (full outage). The available unit power is thus given by its nominal capacity multiplied by (1-OutageFactor).</p>
+<p>The outages are provided in the dedicated section of the Database for each unit. They consist of a time series with the unit name as columns header.</p>
+</div>
+<div class="section" id="interconnections">
+<h2>Interconnections<a class="headerlink" href="#interconnections" title="Permalink to this headline">¶</a></h2>
+<p>Two case should be distinguished when considering interconnections:</p>
+<ul class="simple">
+<li>Interconnections occuring between the simulated zones</li>
+<li>Interconnections occuring between the simulated zones and the Rest of the World (RoW)</li>
+</ul>
+<p>These two cases are addresses by two different datasets described here under.</p>
+<div class="section" id="net-transfer-capacities">
+<h3>Net transfer capacities<a class="headerlink" href="#net-transfer-capacities" title="Permalink to this headline">¶</a></h3>
+<p>Dispa-SET indogenously models the internal exchanges between countries (or zones) using a commercial net transfer caapcity (NTC). It does not consider (yet) DC power flows or more complex grid simulations.</p>
+<p>Since the NTC values might vary in time, they must be supplied as time series, whose header include the origin country, the string ‘ -&gt; ‘ and the destination country. As an example, the NTC from belgium to france must be provided with the header ‘BE -&gt; FR’.</p>
+<p>Because NTCs are not necessarily symetrical, they must be provided in both directions (i.e. ‘BE -&gt; FR’ and ‘FR -&gt; BE’. Non-provided NTCs are considered to be zero (i.e. no interconnection).</p>
+</div>
+<div class="section" id="historical-physical-flows">
+<h3>Historical physical flows<a class="headerlink" href="#historical-physical-flows" title="Permalink to this headline">¶</a></h3>
+<p>In Dispa-SET, the flows between internal zones and the rest of the world cannot be modeled endogenously. They must be provided as exogenous inputs. These inputs are referred to as “Historical physical flows”, although they can also be user-defined.</p>
+<p>In the input table of historical flows, the headers are similar to those of the NTCs (ie. ‘XX -&gt; YY’). All flows occuring an internal zone of the simulation and outside zones are considered as external flows and summed up. As an example, the historical flows ‘FR -&gt; XX’, ‘FR -&gt; YY’ and ‘FR -&gt; ZZ’ will be aggregated in to a single interconnection flow ‘FR -&gt; RoW’ if XX, YY and ZZ are not simulated zones.</p>
+<p>These aggregated historical flows are then imposed to the solver as exogenous inputs.</p>
+<p>In Dispa-SET, the flows are defined as positive variables. For each zone, there will thus be a maximum of two vectors defining its exchanges with the rest of the world (e.g. ‘FR -&gt; RoW’ and ‘RoW -&gt; FR’).</p>
+<p>As for the NTCs, undefined historical flows are considered to be zero, i.e. not provided any historical flows is equivalent to consider the system as islanded.</p>
+</div>
+</div>
+<div class="section" id="fuel-prices">
+<h2>Fuel Prices<a class="headerlink" href="#fuel-prices" title="Permalink to this headline">¶</a></h2>
+<p>Fuel prices vary both geographically and in time. They must therefore be provided as a time series for each simulated zone. One table is provided per fuel type, with as column header the zone to which it applies. If no header is provided, the fuel price is applied to all the simulated zones.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="cases.html" class="btn btn-neutral float-right" title="Case Studies" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="implementation.html" class="btn btn-neutral" title="Implementation and interface" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Sylvain Quoilin &amp; Kostas Kavvadias
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'./',
+              VERSION:'',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,365 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>DispaSET.solve &mdash; Documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> DispaSET
+          
+
+          
+            
+            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../workflow.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../model.html">Model Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../formulations.html">Model Formulations and clustering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../implementation.html">Implementation and interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../data.html">Input Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cases.html">Case Studies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developers.html">Developers’ section</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../DispaSET.html">DispaSET package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">DispaSET</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>DispaSET.solve</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for DispaSET.solve</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This worksheet contains the two main functions to solve the DispaSET optimization problem using PYOMO or GAMS.</span>
+
+<span class="sd">Solve with GAMS and the high level API</span>
+<span class="sd">--------------------------------------</span>
+<span class="sd">The high level interface is recommended for Linux users because it solves</span>
+<span class="sd">the &quot;whitespace in the simulation folder&quot; issue.</span>
+
+<span class="sd">Installation:</span>
+<span class="sd">    To install the high-level API in Python 2.x::</span>
+
+<span class="sd">        cd gams24.4_linux_x64_64_sfx/apifiles/Python/api</span>
+<span class="sd">        python gamssetup.py install</span>
+
+<span class="sd">    To install the high-level API in Python 3.x::</span>
+<span class="sd">    </span>
+<span class="sd">        cd gams24.6_linux_x64_64_sfx/apifiles/Python/api_34</span>
+<span class="sd">        python setup.py install    </span>
+
+<span class="sd">Solve with GAMS and the low level APIs</span>
+<span class="sd">--------------------------------------</span>
+<span class="sd">Use lower level apis to run GAMS. BAsed on GAMS xpexample2.py</span>
+
+<span class="sd">The advantage of the low level API is that it can easily be installed from pip::</span>
+<span class="sd">    </span>
+<span class="sd">    pip install gdxcc</span>
+<span class="sd">    pip install gamsxcc</span>
+<span class="sd">    pip install optcc</span>
+<span class="sd">    </span>
+<span class="sd">Solve with PYOMO</span>
+<span class="sd">----------------</span>
+<span class="sd">The Pyomo version of Dispa-SET is currently not up-to-date. Use at your own risk.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1">#######################################################################################################################</span>
+<span class="c1">############################################ Dispa-SET: main model ####################################################</span>
+<span class="c1">#######################################################################################################################</span>
+
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">from</span> <span class="nn">.misc.gdx_handler</span> <span class="k">import</span> <span class="n">get_gams_path</span><span class="p">,</span> <span class="n">import_local_lib</span><span class="p">,</span> <span class="n">package_exists</span>
+<span class="kn">from</span> <span class="nn">.misc.gms_handler</span> <span class="k">import</span> <span class="n">solve_high_level</span><span class="p">,</span> <span class="n">solve_low_level</span>
+
+
+<div class="viewcode-block" id="is_sim_folder_ok"><a class="viewcode-back" href="../../DispaSET.html#DispaSET.solve.is_sim_folder_ok">[docs]</a><span class="k">def</span> <span class="nf">is_sim_folder_ok</span><span class="p">(</span><span class="n">sim_folder</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Function that checks if the provided path is a valid Dispa-SET simulation folder</span>
+<span class="sd">    The following files are required:</span>
+<span class="sd">        - Inputs.gdx</span>
+<span class="sd">        - UCM_h.gms</span>
+
+<span class="sd">    :param sim_folder: path (absolute or relative) to the simulation folder</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">sim_folder</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;The provided DispaSET simulation environment folder (&#39;</span> <span class="o">+</span> <span class="n">sim_folder</span> <span class="o">+</span> <span class="s1">&#39;) does not exist&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sim_folder</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;Inputs.gdx&#39;</span><span class="p">)):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="s1">&#39;There is no Inputs.gdx file within the specified DispaSET simulation environment folder (&#39;</span> <span class="o">+</span> <span class="n">sim_folder</span> <span class="o">+</span> <span class="s1">&#39;). Check that the GDX output is activated in the option file and that no error stated during the pre-processing&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sim_folder</span><span class="p">,</span> <span class="sa">u</span><span class="s1">&#39;UCM_h.gms&#39;</span><span class="p">)):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="s1">&#39;There is no UCM_h.gms file within the specified DispaSET simulation environment folder (&#39;</span> <span class="o">+</span> <span class="n">sim_folder</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="solve_GAMS"><a class="viewcode-back" href="../../DispaSET.html#DispaSET.solve.solve_GAMS">[docs]</a><span class="k">def</span> <span class="nf">solve_GAMS</span><span class="p">(</span><span class="n">sim_folder</span><span class="p">,</span> <span class="n">gams_folder</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">output_lst</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Function used to run the optimization using the GAMS engine.</span>
+
+<span class="sd">    :param sim_folder: path to a valid Dispa-SET simulation folder</span>
+<span class="sd">    :param gams_folder: path to the gams folder. If not provided, the script will try to find it automatically</span>
+<span class="sd">    :param work_dir: path to the working directory (does not need to be provided)</span>
+<span class="sd">    :param output_lst: Set to True to conserve a copy of the GAMS lst file in the simulation folder</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">if</span> <span class="n">package_exists</span><span class="p">(</span><span class="s1">&#39;gams&#39;</span><span class="p">):</span>
+        <span class="n">solv_func</span> <span class="o">=</span> <span class="n">solve_high_level</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;Could not import gams. Trying to use lower level APIs&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">package_exists</span><span class="p">(</span><span class="s1">&#39;gamsxcc&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">package_exists</span><span class="p">(</span><span class="s1">&#39;optcc&#39;</span><span class="p">):</span>
+            <span class="n">solv_func</span> <span class="o">=</span> <span class="n">solve_low_level</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">solv_func</span> <span class="o">=</span> <span class="n">solve_high_level</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;Could not import lower level APIs. Trying to locate local version&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">import_local_lib</span><span class="p">(</span><span class="s1">&#39;gams&#39;</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">gams_folder</span> <span class="o">=</span> <span class="n">get_gams_path</span><span class="p">(</span><span class="n">gams_folder</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">gams_folder</span><span class="p">:</span>  <span class="c1"># couldn&#39;t locate</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;GAMS path cannot be located. Simulation is stopped&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">sim_folder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">sim_folder</span><span class="p">)</span>
+    <span class="n">gams_folder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">gams_folder</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">is_sim_folder_ok</span><span class="p">(</span><span class="n">sim_folder</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="n">solv_func</span><span class="p">(</span><span class="n">gams_folder</span><span class="p">,</span> <span class="n">sim_folder</span><span class="p">,</span> <span class="n">output_lst</span><span class="o">=</span><span class="n">output_lst</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sim_folder</span><span class="p">,</span> <span class="s1">&#39;debug.gdx&#39;</span><span class="p">)):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;A debug file was created. There has probably been an optimization error&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="s1">&#39;warn.log&#39;</span><span class="p">):</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="s1">&#39;warn.log&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sim_folder</span><span class="p">,</span> <span class="s1">&#39;warn_solve.log&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">ret</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="solve_pyomo"><a class="viewcode-back" href="../../DispaSET.html#DispaSET.solve.solve_pyomo">[docs]</a><span class="k">def</span> <span class="nf">solve_pyomo</span><span class="p">(</span><span class="n">sim_folder</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Function used to run the optimization using the PYOMO engine.</span>
+
+<span class="sd">    :param sim_folder: path to a valid Dispa-SET simulation folder</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="kn">import</span> <span class="nn">pickle</span>
+    <span class="kn">from</span> <span class="nn">.pyomo.model</span> <span class="k">import</span> <span class="n">DispaSolve</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sim_folder</span><span class="p">,</span> <span class="s1">&#39;Inputs.p&#39;</span><span class="p">),</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pyomo_input_file</span><span class="p">:</span>
+        <span class="n">SimData</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pyomo_input_file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">SimData</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">][</span><span class="s1">&#39;SimulationType&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;MILP&#39;</span><span class="p">:</span>
+        <span class="n">LPFormulation</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">LPFormulation</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">SimData</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">][</span><span class="s1">&#39;cplex_path&#39;</span><span class="p">]):</span>
+        <span class="n">path_cplex</span> <span class="o">=</span> <span class="n">SimData</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">][</span><span class="s1">&#39;cplex_path&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">path_cplex</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">SimData</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">][</span><span class="s1">&#39;cplex_path&#39;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;The specified path for cplex (&#39;</span> <span class="o">+</span> <span class="n">SimData</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">][</span>
+                <span class="s1">&#39;cplex_path&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;) is not valid. It will be ignored&#39;</span><span class="p">)</span>
+
+    <span class="n">time0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">DispaSolve</span><span class="p">(</span><span class="n">SimData</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">],</span> <span class="n">SimData</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">],</span> <span class="n">LPFormulation</span><span class="o">=</span><span class="n">LPFormulation</span><span class="p">,</span> <span class="n">path_cplex</span><span class="o">=</span><span class="n">path_cplex</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Completed simulation in </span><span class="si">{0:.2f}</span><span class="s1"> seconds&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">time0</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="s1">&#39;warn.log&#39;</span><span class="p">):</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="s1">&#39;warn.log&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sim_folder</span><span class="p">,</span> <span class="s1">&#39;warn_solve.log&#39;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">results</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Sylvain Quoilin &amp; Kostas Kavvadias
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'../../',
+              VERSION:'',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

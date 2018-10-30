@@ -1,0 +1,413 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Getting Started &mdash; Documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Model Description" href="model.html" />
+    <link rel="prev" title="Releases" href="releases.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> DispaSET
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#using-dispa-set-with-gams">Using Dispa-SET with GAMS:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-dispa-set-with-pyomo">Using Dispa-SET with PYOMO:</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#step-by-step-example-of-a-dispa-set-run">Step-by-step example of a Dispa-SET run</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#using-the-command-line-interface">1. Using the command line interface</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#check-the-configuration-file">1.1. Check the configuration file</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pre-processing">1.2. Pre-processing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#check-the-simulation-environment">1.3. Check the simulation environment</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#run-the-optimisation">1.4. Run the optimisation</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#using-the-dispa-set-api">2. Using the Dispa-SET API.</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-gams">3. Using GAMS</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#using-the-gams-graphical-user-interface">Using the GAMS graphical user interface:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#using-the-gams-command-line">Using the GAMS command line:</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#postprocessing">Postprocessing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Model Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formulations.html">Model Formulations and clustering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="implementation.html">Implementation and interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data.html">Input Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cases.html">Case Studies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developers.html">Developers’ section</a></li>
+<li class="toctree-l1"><a class="reference internal" href="DispaSET.html">DispaSET package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DispaSET</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Getting Started</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/workflow.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="getting-started">
+<span id="workflow"></span><h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
+<p>This short tutorial describes the main steps to get a practical example of Dispa-SET running.</p>
+<div class="section" id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h2>
+<p>Install Python 2.7, with full scientific stack. The <a class="reference external" href="https://www.continuum.io/downloads">Anaconda</a> distribution is recommended since it comprises all the required packages. If Anaconda is not used, the following libraries and their dependencies should be installed manually:</p>
+<ul class="simple">
+<li>numpy</li>
+<li>pandas (&gt; v0.18.1)</li>
+<li>matplotlib</li>
+<li>xlrd</li>
+<li>pickle</li>
+</ul>
+<p>This can be achieved using the pip installer (example for numpy):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">numpy</span>
+</pre></div>
+</div>
+<p>NB: For Windows users, some packages might require the installation of a C++ compiler for Python. This corresponds to the typical error message: “Unable to find vcvarsall.bat”. This can be solved by installing the freely available “Microsoft Visual C++ Compiler for Python 2.7 “.  In some cases the path to the compiler must be added to the PATH windows environment variable (e.g. C:Program FilesCommon FilesMicrosoftVisual C++ for Python9.0)</p>
+<div class="section" id="using-dispa-set-with-gams">
+<h3>Using Dispa-SET with GAMS:<a class="headerlink" href="#using-dispa-set-with-gams" title="Permalink to this headline">¶</a></h3>
+<p>Dispa-SET is primarily designed to run with GAMS and therefore requires GAMS to be installed with a valid user licence. Currently, only the 64-bit version of GAMS is supported in Dispa-SET!</p>
+<p>The GAMS api for python has been pre-compiled in the “Externals” folder and is usable with most operating systems. If the pre-compiled binaries are not available or could not be loaded, the system exits with an error message. In that case, the gams python api should be compiled from the source provided in the GAMS installation folder (e.g. “C:\GAMS\win64\24.3\apifiles\Python\api”):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">gdxsetup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+<span class="n">python</span> <span class="n">gamssetup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+</pre></div>
+</div>
+<p>The api requires the path to the gams installation folder. The “get_gams_path()” function of dispa-set performs a system search to automatically detect this path. It case it is not successful, the user is prompted for the proper installation path.</p>
+</div>
+<div class="section" id="using-dispa-set-with-pyomo">
+<h3>Using Dispa-SET with PYOMO:<a class="headerlink" href="#using-dispa-set-with-pyomo" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><p class="first">Install pyomo</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">pyomo</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Install a solver and add it to the PATH environment variable (e.g. if cplex is installed, the “cplex” command should be callable from any command prompt).</p>
+</li>
+</ul>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">The PYOMO version of Dispa-SET is currently outdated. The changes implemented in Dispa-SET version 2.2 and 2.3 will not work in the Pyomo solver. It is recommended using the GAMS solver to benefit from the latest improvements of the model.</p>
+</div>
+</div>
+</div>
+<div class="section" id="step-by-step-example-of-a-dispa-set-run">
+<h2>Step-by-step example of a Dispa-SET run<a class="headerlink" href="#step-by-step-example-of-a-dispa-set-run" title="Permalink to this headline">¶</a></h2>
+<p>This section describes the pre-processing and the solving phases of a Dispa-SET run. Three equivalent methods are described in the next sections:</p>
+<ul class="simple">
+<li>Using the command line interface</li>
+<li>Using the Dispa-SET API</li>
+<li>Using GAMS</li>
+</ul>
+<div class="section" id="using-the-command-line-interface">
+<h3>1. Using the command line interface<a class="headerlink" href="#using-the-command-line-interface" title="Permalink to this headline">¶</a></h3>
+<p>Dispa-SET can be run from the command line. To that aim, open a terminal window and change de directory to the Dispa-SET root folder.</p>
+<img alt="_images/cli.png" src="_images/cli.png" />
+<div class="section" id="check-the-configuration-file">
+<h4>1.1. Check the configuration file<a class="headerlink" href="#check-the-configuration-file" title="Permalink to this headline">¶</a></h4>
+<p>Dispa-SET runs are defined in dedicated excel configuration files stored in the “ConfigFiles” folder. The configuration file “ConfigTest.xlsx” is provided for testing purposes. It generates a 10-days optimisation using data relative a fictitious power system composed of two zones Z1 and Z2.</p>
+</div>
+<div class="section" id="pre-processing">
+<h4>1.2. Pre-processing<a class="headerlink" href="#pre-processing" title="Permalink to this headline">¶</a></h4>
+<p>From the command line, specify the configuration file to be used as an argument, the solver (Pyomo or GAMS) and the actions to be performed. Within the “Dispa-SET” folder, run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">dispacli</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">c</span> <span class="o">./</span><span class="n">ConfigFiles</span><span class="o">/</span><span class="n">ConfigTest</span><span class="o">.</span><span class="n">xlsx</span> <span class="n">build</span>
+</pre></div>
+</div>
+<p>NB: The command line interface dispacli.py is designed to run with the Python interpreter, which should be the one selected. It might present some problems when run in Ipython.</p>
+</div>
+<div class="section" id="check-the-simulation-environment">
+<h4>1.3. Check the simulation environment<a class="headerlink" href="#check-the-simulation-environment" title="Permalink to this headline">¶</a></h4>
+<p>The simulation environment folder is defined in the configuration file. In the test example it is set to “Simulations/simulation_test”. The simulation inputs are written in three different formats: excel (34 excel files), Python (Inputs.p) and GAMS (Inputs.gdx).</p>
+</div>
+<div class="section" id="run-the-optimisation">
+<h4>1.4. Run the optimisation<a class="headerlink" href="#run-the-optimisation" title="Permalink to this headline">¶</a></h4>
+<p>Using the GAMS api, the simulation can be started directly from the main DispaSet python file after the pre-processing phase. From the “Dispa-SET” folder, run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">dispacli</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">g</span> <span class="o">-</span><span class="n">c</span> <span class="o">./</span><span class="n">ConfigFiles</span><span class="o">/</span><span class="n">ConfigTest</span><span class="o">.</span><span class="n">xlsx</span> <span class="n">simulate</span>
+</pre></div>
+</div>
+<p>This generates the simulation environment, runs the optimisation, and stores the results in the same folder. Note that this can only work is the simulation has been pre-processed before (step 1.2). It is possible to combine the pre-processing and simulation step in one command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">dispacli</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">g</span> <span class="o">-</span><span class="n">c</span> <span class="o">./</span><span class="n">ConfigFiles</span><span class="o">/</span><span class="n">ConfigTest</span><span class="o">.</span><span class="n">xlsx</span> <span class="n">build</span> <span class="n">simulate</span>
+</pre></div>
+</div>
+<p>The same action can be performed using the PYOMO solver. In that case, the “-g” argument must be changed into “-p”:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">dispacli</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">p</span> <span class="o">-</span><span class="n">c</span> <span class="o">./</span><span class="n">ConfigFiles</span><span class="o">/</span><span class="n">ConfigTest</span><span class="o">.</span><span class="n">xlsx</span> <span class="n">build</span> <span class="n">simulate</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="using-the-dispa-set-api">
+<h3>2. Using the Dispa-SET API.<a class="headerlink" href="#using-the-dispa-set-api" title="Permalink to this headline">¶</a></h3>
+<p>The steps to run a model can be also performed directly in python, by importing the Dispa-SET library. An example file (“build_and_run.py”) is available in the “scripts/” folder.
+After checking the configuration file “ConfigTest.xlsx” (in the “ConfigFiles” folder). Run the following python commands:</p>
+<p>2.1 Import Dispa-SET:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">DispaSET</span> <span class="k">as</span> <span class="nn">ds</span>
+</pre></div>
+</div>
+<p>2.2 Load the configuration file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">config</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">load_config_excel</span><span class="p">(</span><span class="s1">&#39;ConfigFiles/ConfigTest.xlsx&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>2.3 Build the simulation environment (Folder that contains the input data and the simulation files required for the solver):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">SimData</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">build_simulation</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>2.4a Solve using PYOMO:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">r</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">solve_pyomo</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;SimulationDirectory&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>2.4b Solve using GAMS:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">r</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">solve_GAMS</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;SimulationDirectory&#39;</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;GAMS_folder&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>A more detailed description of the Dispa-SET functions in available in the API section.</p>
+</div>
+<div class="section" id="using-gams">
+<h3>3. Using GAMS<a class="headerlink" href="#using-gams" title="Permalink to this headline">¶</a></h3>
+<p>It is sometimes useful to run the dispa-SET directly in GAMS (e.g. for debugging purposes). In that case, the pre-processing must be run first (steps 1.2 or 2.1, 2.2 and 2.3) and the gams file generated in the simulation folder can be used to run the optimization.</p>
+<div class="section" id="using-the-gams-graphical-user-interface">
+<h4>Using the GAMS graphical user interface:<a class="headerlink" href="#using-the-gams-graphical-user-interface" title="Permalink to this headline">¶</a></h4>
+<p>From the simulation folder (defined in the config file), the Dispa-SET model can be run following the instruction below:</p>
+<ol class="arabic simple">
+<li>Open the UCM.gpr project file in GAMS</li>
+<li>From GAMS, open the UCM_h.gmx model file</li>
+<li>Run the model in GAMS.</li>
+</ol>
+<p>The result file is written in the gdx format and stored in the Simulation folder, together with all input files.</p>
+</div>
+<div class="section" id="using-the-gams-command-line">
+<h4>Using the GAMS command line:<a class="headerlink" href="#using-the-gams-command-line" title="Permalink to this headline">¶</a></h4>
+<p>GAMS can also be run from the command line (this is the only option for the Linux version).</p>
+<ol class="arabic">
+<li><p class="first">Make sure that the gams binary is in the system PATH</p>
+</li>
+<li><p class="first">From the simulation environment folder, run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">gams</span> <span class="n">UCM_h</span><span class="o">.</span><span class="n">gms</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="section" id="postprocessing">
+<h2>Postprocessing<a class="headerlink" href="#postprocessing" title="Permalink to this headline">¶</a></h2>
+<p>Various functions and tools are provided within the PostProcessing.py file to load, analyse and plot the siimulation results. The use of these functions is illustrated into the the “Read_results_notebook.ipynb”  Notebook or in the “read_results.py” script, which can be run by changing the path to the simulation folder. The type of results provided by the post-processing is illustrated hereunder.</p>
+<p>The power dispatch can be plotted for each simulated zone. In this plot, the units are aggregated by fuel type. The power consumed by storage units and the exportations are indicated as negative values.</p>
+<img alt="_images/results_dispatch.png" src="_images/results_dispatch.png" />
+<p>It is also interesting to display the results at the unit level to gain deeper insights regarding the dispatch. In that case, a plot is generated, showing the commitment status of all units in a zone at each timestep. Both the dispatch plot and the commitment plot can be called using the CountryPlots function.</p>
+<img alt="_images/results_rug.png" src="_images/results_rug.png" />
+<p>Some aggregated statistics on the simulations results can also be obtained, including the number of hours of congestion in each interconnection line, the yearly energy balances for each zone, the amount of lost load, etc.</p>
+<img alt="_images/result_analysis.png" src="_images/result_analysis.png" />
+<p>The yearly energy balance per fuel or per technology is also useful to compare the energy mix in each zone. This can be plotted using the EnergyBarPlot function, with the following results:</p>
+<img alt="_images/results_balance.png" src="_images/results_balance.png" />
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="model.html" class="btn btn-neutral float-right" title="Model Description" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="releases.html" class="btn btn-neutral" title="Releases" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Sylvain Quoilin &amp; Kostas Kavvadias
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'./',
+              VERSION:'',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

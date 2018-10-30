@@ -1,0 +1,333 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>DispaSET.pyomo package &mdash; Documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="DispaSET.preprocessing package" href="DispaSET.preprocessing.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> DispaSET
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workflow.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Model Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formulations.html">Model Formulations and clustering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="implementation.html">Implementation and interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data.html">Input Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cases.html">Case Studies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developers.html">Developers’ section</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="DispaSET.html">DispaSET package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="DispaSET.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="DispaSET.misc.html">DispaSET.misc package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DispaSET.postprocessing.html">DispaSET.postprocessing package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DispaSET.preprocessing.html">DispaSET.preprocessing package</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">DispaSET.pyomo package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dispaset-pyomo-model-module">DispaSET.pyomo.model module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-DispaSET.pyomo.utils">DispaSET.pyomo.utils module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-DispaSET.pyomo">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="DispaSET.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DispaSET.html#module-DispaSET.solve">DispaSET.solve module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DispaSET.html#module-DispaSET">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DispaSET</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="DispaSET.html">DispaSET package</a> &raquo;</li>
+        
+      <li>DispaSET.pyomo package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/DispaSET.pyomo.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="dispaset-pyomo-package">
+<h1>DispaSET.pyomo package<a class="headerlink" href="#dispaset-pyomo-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="dispaset-pyomo-model-module">
+<h2>DispaSET.pyomo.model module<a class="headerlink" href="#dispaset-pyomo-model-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-DispaSET.pyomo.utils">
+<span id="dispaset-pyomo-utils-module"></span><h2>DispaSET.pyomo.utils module<a class="headerlink" href="#module-DispaSET.pyomo.utils" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="DispaSET.pyomo.utils.get_set_members">
+<code class="descclassname">DispaSET.pyomo.utils.</code><code class="descname">get_set_members</code><span class="sig-paren">(</span><em>instance</em>, <em>sets</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/pyomo/utils.html#get_set_members"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.pyomo.utils.get_set_members" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get set members relative to a list of sets</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>instance</strong> – Pyomo Instance</li>
+<li><strong>sets</strong> – List of strings with the set names</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A list with the set members</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.pyomo.utils.get_sets">
+<code class="descclassname">DispaSET.pyomo.utils.</code><code class="descname">get_sets</code><span class="sig-paren">(</span><em>instance</em>, <em>varname</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/pyomo/utils.html#get_sets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.pyomo.utils.get_sets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get sets that belong to a pyomo Variable or Param</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>instance</strong> – Pyomo Instance</li>
+<li><strong>varname</strong> – Name of the Pyomo Variable (string)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A list with the sets that belong to this Param</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.pyomo.utils.pyomo_format">
+<code class="descclassname">DispaSET.pyomo.utils.</code><code class="descname">pyomo_format</code><span class="sig-paren">(</span><em>sets</em>, <em>param</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/pyomo/utils.html#pyomo_format"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.pyomo.utils.pyomo_format" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that flattens the multidimensional dispaset input data into the pyomo format: a dictionnary with a tuple and the parameter value.
+The tuple contains the strings of the corresponding set values</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.pyomo.utils.pyomo_to_pandas">
+<code class="descclassname">DispaSET.pyomo.utils.</code><code class="descname">pyomo_to_pandas</code><span class="sig-paren">(</span><em>instance</em>, <em>varname</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/pyomo/utils.html#pyomo_to_pandas"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.pyomo.utils.pyomo_to_pandas" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function converting a pyomo variable or parameter into a pandas dataframe.
+The variable must have one or two dimensions and the sets must be provided as a list of lists</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>instance</strong> – Pyomo Instance</li>
+<li><strong>varname</strong> – Name of the Pyomo Variable (string)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-DispaSET.pyomo">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-DispaSET.pyomo" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="DispaSET.preprocessing.html" class="btn btn-neutral" title="DispaSET.preprocessing package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Sylvain Quoilin &amp; Kostas Kavvadias
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'./',
+              VERSION:'',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

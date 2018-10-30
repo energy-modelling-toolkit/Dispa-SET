@@ -1,0 +1,480 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Model Formulations and clustering &mdash; Documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Implementation and interface" href="implementation.html" />
+    <link rel="prev" title="Model Description" href="model.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> DispaSET
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workflow.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Model Description</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Model Formulations and clustering</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#no-clustering">No clustering</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#standard-formulation">Standard formulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#integer-clustering">Integer clustering</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lp-clustering">LP clustering</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="implementation.html">Implementation and interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data.html">Input Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cases.html">Case Studies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developers.html">Developers’ section</a></li>
+<li class="toctree-l1"><a class="reference internal" href="DispaSET.html">DispaSET package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DispaSET</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Model Formulations and clustering</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/formulations.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="model-formulations-and-clustering">
+<span id="formulations"></span><h1>Model Formulations and clustering<a class="headerlink" href="#model-formulations-and-clustering" title="Permalink to this headline">¶</a></h1>
+<p>Because of the constraints linked to computational efficiency and to data availability, it is not necessarily desirable to accurately model each individual unit in the power system. For that reason, Dispa-SET can operate under different modelling hypotheses and levels of complexity. In terms of formulation of the optimization problem, these include for example:
+- A linear programming formulation, in which all units are clustered by technology
+- An integer formulation in which a typical unit is considered for each technology and multiplied N times. The formulation allows taking into account constraints such as minimum up/down times, minimum load, etc.
+- A binary formulation in which each power plant in the system is considered individually</p>
+<p>The section describes the various clustering options and modeling formulations available in Dispa-SET. It is worthwhile to note that each clustering method and/or modelling formulation can be applied to the same reference dataset. This allows comparing the various methods in terms of computational efficiency, but also in terms of accuracy.</p>
+<p>Four main formulations are currently available:</p>
+<div class="section" id="no-clustering">
+<h2>No clustering<a class="headerlink" href="#no-clustering" title="Permalink to this headline">¶</a></h2>
+<p>In this case, the pre-processing tool does not modify the power plant input data. The user is allowed to cluster some power plants himself by defining the Nunits input variable in the power plants input csv file. Let us consider the following (incomplete) inputs as an example:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="23%" />
+<col width="11%" />
+<col width="11%" />
+<col width="23%" />
+<col width="8%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Unit</th>
+<th class="head">PowerCapacity</th>
+<th class="head">Nunits</th>
+<th class="head">Zone</th>
+<th class="head">Technology</th>
+<th class="head">Fuel</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>Maasvlakte</td>
+<td>500</td>
+<td>1</td>
+<td>Z2</td>
+<td>STUR</td>
+<td>HRD</td>
+</tr>
+<tr class="row-odd"><td>Diemen</td>
+<td>430</td>
+<td>1</td>
+<td>Z2</td>
+<td>COMC</td>
+<td>GAS</td>
+</tr>
+<tr class="row-even"><td>CCGTs</td>
+<td>400</td>
+<td>6</td>
+<td>Z2</td>
+<td>COMC</td>
+<td>GAS</td>
+</tr>
+<tr class="row-odd"><td>Borssele</td>
+<td>408</td>
+<td>1</td>
+<td>Z2</td>
+<td>STUR</td>
+<td>HRD</td>
+</tr>
+<tr class="row-even"><td>OCGT1</td>
+<td>25</td>
+<td>1</td>
+<td>Z2</td>
+<td>GTUR</td>
+<td>GAS</td>
+</tr>
+<tr class="row-odd"><td>TIHANGE 3</td>
+<td>1000</td>
+<td>1</td>
+<td>Z1</td>
+<td>STUR</td>
+<td>NUC</td>
+</tr>
+<tr class="row-even"><td>DROGENBOS TGV</td>
+<td>465</td>
+<td>1</td>
+<td>Z1</td>
+<td>COMC</td>
+<td>GAS</td>
+</tr>
+<tr class="row-odd"><td>SISTERON</td>
+<td>214</td>
+<td>2</td>
+<td>Z1</td>
+<td>HDAM</td>
+<td>WAT</td>
+</tr>
+<tr class="row-even"><td>SIERREUX</td>
+<td>20</td>
+<td>1</td>
+<td>Z1</td>
+<td>GTUR</td>
+<td>GAS</td>
+</tr>
+<tr class="row-odd"><td>ANGLEUR</td>
+<td>30</td>
+<td>1</td>
+<td>Z1</td>
+<td>GTUR</td>
+<td>GAS</td>
+</tr>
+<tr class="row-even"><td>WindOn_Z1</td>
+<td>200</td>
+<td>1</td>
+<td>Z1</td>
+<td>WTON</td>
+<td>WIN</td>
+</tr>
+</tbody>
+</table>
+<p>In this example, there are a number of different unit types and two zones. Some power plants have Nunits=1, which implies that they will be considered individually in the optimization. Other power plants (CCGTS and SISTERON) are multiplied 6 and 2 times, respectively. This implies that the total capacity of CCGTs and SISTERON units is 2400 MW and 228 MW, respectively. Note that all unit characteristics in the input data (not appearing in the above table) should be defined for a single unit!</p>
+<p>These two units are assigned an integer variable instead of a binary variable in the optimization. The solver successively starts 1, 2, 3, 4, etc. units with the exact same characteristics. In this approach, start-up costs, minimum up and down times, minimum part-load are considered, but with a significantly improved computational efficiency. The loss in accuracy resides in the hypothesis of identical characteritics for all units in a clustered group. This is however acceptable if not data is available at the individual power plant level, or if the complexity of the modeled system does not justify such a high disaggregation level.</p>
+</div>
+<div class="section" id="standard-formulation">
+<h2>Standard formulation<a class="headerlink" href="#standard-formulation" title="Permalink to this headline">¶</a></h2>
+<p>For computational efficiency reasons, it is useful to merge some of the original units into larger units. This reduces the number of continuous and binary variables and can, in some conditions, be performed without significant loss of simulation accuracy.</p>
+<p>In the standard formulation (formerly call MILP formulation), the units that are either very small or very flexible are merged into larger units. Some of these units (e.g. the turbojets) indeed present a low capacity or a high flexibility: their output power does not exceed a few MW and/or they can reach full power in less than 15 minutes (i.e. less than the simulation time step). For these units, a unit commitment model with a time step of 1 hour is unnecessary and computationally inefficient. They are therefore merged into one single, highly flexible unit with averaged characteristics.</p>
+<p>The condition for the merging of two units is a combination of subconditions regarding their type, maximum power, flexiblity and technical similarities. They are summarized in the figure below (NB: the thresholds are for indicative purpose only, they can be user-defined).</p>
+<img alt="_images/clustering.png" src="_images/clustering.png" />
+<p>When two units are merged, the minimum and maximum capacities of new aggregated units (indicated by the star) are given by:</p>
+<div class="math notranslate nohighlight">
+\[P_{min}^* = min(P_{j,min})\]</div>
+<div class="math notranslate nohighlight">
+\[P_{max}^* = \sum_j (P_{j,min})\]</div>
+<p>The last equation is also applied for the storage capacity or for the storage charging power.</p>
+<p>The unit marginal (or variable cost) is given by:</p>
+<div class="math notranslate nohighlight">
+\[Cost_{Variable}^* = \frac{\sum_j ( P_{j,max} \cdot Cost_{Variable,j} )}{P_{max}^*}\]</div>
+<p>The start-up/shut-down costs are transformed into ramping costs (example with ramp-up):</p>
+<div class="math notranslate nohighlight">
+\[Cost_{RampUp}^* = \frac{\sum_j ( P_{j,max} \cdot Cost_{RampUp,j} )}{P_{max}^*} + \frac{\sum_j ( Cost_{StartUp,j} )}{P_{max}^*}\]</div>
+<p>Other characteristics, such as the plant efficiency, the minimum up/down times or the CO2 emissions are computed as a weighted averaged:</p>
+<div class="math notranslate nohighlight">
+\[Efficiency^* = \frac{\sum_j ( P_{j,max} \cdot Efficiency_{j} )}{P_{max}^*}\]</div>
+<p>It should be noted that only very similar units are merged (i.e. their quantitative characteristics should be similar), which avoids errors due to excessive aggregation.</p>
+<p>In the example provided in the above table the following would occur:</p>
+<ul class="simple">
+<li>SIERREUR and ANGLEUR would be merged because they are small and highly flexible.</li>
+<li>OCGT1 cannot be merged with SIERREUX and ANGLEUR since they don’t belong to the same zone.</li>
+<li>Maasvlakte and Borssele are not merged, although they have the same technology, fuel and zone. This is because their size is significant and they flexibility is low.</li>
+<li>Diemen and CCGTS are merged only if their flexibility is high (i.e. they can start/stop or ramp to full load in less then one hour).</li>
+</ul>
+</div>
+<div class="section" id="integer-clustering">
+<h2>Integer clustering<a class="headerlink" href="#integer-clustering" title="Permalink to this headline">¶</a></h2>
+<p>In this formulation, all units of a similar technology, fuel and zone are clustered: a typical unit is defined by averaging the characteristics of all units belonging to the cluster. The total number of units is conserved, allowing a proper representation of constraints such as start-up costs, minimum up/down times or minimum stable load values. In the example provided above, the integer clustering would results into the following unit list:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="23%" />
+<col width="11%" />
+<col width="11%" />
+<col width="23%" />
+<col width="8%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Unit</th>
+<th class="head">PowerCapacity</th>
+<th class="head">Nunits</th>
+<th class="head">Zone</th>
+<th class="head">Technology</th>
+<th class="head">Fuel</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>Z2_STUR_HRD</td>
+<td>454</td>
+<td>2</td>
+<td>Z2</td>
+<td>STUR</td>
+<td>HRD</td>
+</tr>
+<tr class="row-odd"><td>Z2_COMC_GAS</td>
+<td>404</td>
+<td>7</td>
+<td>Z2</td>
+<td>COMC</td>
+<td>GAS</td>
+</tr>
+<tr class="row-even"><td>OCGT1</td>
+<td>25</td>
+<td>1</td>
+<td>Z2</td>
+<td>GTUR</td>
+<td>GAS</td>
+</tr>
+<tr class="row-odd"><td>TIHANGE 3</td>
+<td>1000</td>
+<td>1</td>
+<td>Z1</td>
+<td>STUR</td>
+<td>NUC</td>
+</tr>
+<tr class="row-even"><td>DROGENBOS TGV</td>
+<td>465</td>
+<td>1</td>
+<td>Z1</td>
+<td>COMC</td>
+<td>GAS</td>
+</tr>
+<tr class="row-odd"><td>SISTERON</td>
+<td>214</td>
+<td>2</td>
+<td>Z1</td>
+<td>HDAM</td>
+<td>WAT</td>
+</tr>
+<tr class="row-even"><td>Z1_GTUR_GAZ</td>
+<td>25</td>
+<td>2</td>
+<td>Z1</td>
+<td>GTUR</td>
+<td>GAS</td>
+</tr>
+<tr class="row-odd"><td>WindOn_Z1</td>
+<td>200</td>
+<td>1</td>
+<td>Z1</td>
+<td>WTON</td>
+<td>WIN</td>
+</tr>
+</tbody>
+</table>
+<p>where the total capacity and number of units for each technology/fuel is conserved. More details regarding the formulation and the implementation of the integer clustering are available in <a class="footnote-reference" href="#id2" id="id1">[1]</a></p>
+</div>
+<div class="section" id="lp-clustering">
+<h2>LP clustering<a class="headerlink" href="#lp-clustering" title="Permalink to this headline">¶</a></h2>
+<p>Dispa-SET provides the possibility to generate the optimisation model as an LP problem (i.e. withtout the binary variables). In that case, the following constraints are removed since they can only be expressed in an MILP formulation:</p>
+<ul class="simple">
+<li>Minimum up and down times</li>
+<li>Start-up costs</li>
+<li>Minimum stable load</li>
+</ul>
+<p>Since the start-up of individual units is not considered anymore, it is not useful to disaggrate them in the optimisation. All units of a similar technology, fuel and zone are merged into a single unit using the equations proposed in the previous sections.</p>
+<table class="docutils footnote" frame="void" id="id2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>Incorporating Operational Flexibility Into Electric Generation Planning: Impacts and Methods for System Design and Policy Analysis, Palmintier, B.S. (2012). Ph.D. Thesis, Engineering Systems Division, MIT</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="implementation.html" class="btn btn-neutral float-right" title="Implementation and interface" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="model.html" class="btn btn-neutral" title="Model Description" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Sylvain Quoilin &amp; Kostas Kavvadias
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'./',
+              VERSION:'',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

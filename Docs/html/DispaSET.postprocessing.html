@@ -1,0 +1,624 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>DispaSET.postprocessing package &mdash; Documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="DispaSET.preprocessing package" href="DispaSET.preprocessing.html" />
+    <link rel="prev" title="DispaSET.misc package" href="DispaSET.misc.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> DispaSET
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workflow.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Model Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formulations.html">Model Formulations and clustering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="implementation.html">Implementation and interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data.html">Input Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cases.html">Case Studies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developers.html">Developers’ section</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="DispaSET.html">DispaSET package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="DispaSET.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="DispaSET.misc.html">DispaSET.misc package</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">DispaSET.postprocessing package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-DispaSET.postprocessing.postprocessing">DispaSET.postprocessing.postprocessing module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-DispaSET.postprocessing">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="DispaSET.preprocessing.html">DispaSET.preprocessing package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DispaSET.pyomo.html">DispaSET.pyomo package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="DispaSET.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DispaSET.html#module-DispaSET.solve">DispaSET.solve module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DispaSET.html#module-DispaSET">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DispaSET</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="DispaSET.html">DispaSET package</a> &raquo;</li>
+        
+      <li>DispaSET.postprocessing package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/DispaSET.postprocessing.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="dispaset-postprocessing-package">
+<h1>DispaSET.postprocessing package<a class="headerlink" href="#dispaset-postprocessing-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-DispaSET.postprocessing.postprocessing">
+<span id="dispaset-postprocessing-postprocessing-module"></span><h2>DispaSET.postprocessing.postprocessing module<a class="headerlink" href="#module-DispaSET.postprocessing.postprocessing" title="Permalink to this headline">¶</a></h2>
+<p>Set of functions useful to analyse to DispaSET output data.</p>
+<p>&#64;author: Sylvain Quoilin, JRC</p>
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.CostExPost">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">CostExPost</code><span class="sig-paren">(</span><em>inputs</em>, <em>results</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#CostExPost"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.CostExPost" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ex post computation of the operational costs with plotting. This allows breaking down
+the cost into its different components and check that it matches with the objective 
+function from the optimization.</p>
+<dl class="docutils">
+<dt>The cost objective function is the following:</dt>
+<dd>SystemCost(i)
+=E=
+sum(u,CostFixed(u)*Committed(u,i))
++sum(u,CostStartUpH(u,i) + CostShutDownH(u,i))
++sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
++sum(u,CostVariable(u,i) * Power(u,i))
++sum(l,PriceTransmission(l,i)*Flow(l,i))
++sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
++sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
++sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
++100E3*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
++80E3*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
++70E3*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
++1*sum(s,spillage(s,i))</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">tuple with the cost components and their cumulative sums in two dataframes.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.GAMSstatus">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">GAMSstatus</code><span class="sig-paren">(</span><em>statustype</em>, <em>num</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#GAMSstatus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.GAMSstatus" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that returns the model status or the solve status from gams</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>statustype</strong> – String with the type of status to retrieve (“solver” or “model”)</li>
+<li><strong>num</strong> – Indicated termination condition (Integer)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">String with the status</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.aggregate_by_fuel">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">aggregate_by_fuel</code><span class="sig-paren">(</span><em>PowerOutput</em>, <em>Inputs</em>, <em>SpecifyFuels=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#aggregate_by_fuel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.aggregate_by_fuel" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function sorts the power generation curves of the different units by technology</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>PowerOutput</strong> – Dataframe of power generationwith units as columns and time as index</li>
+<li><strong>Inputs</strong> – Dispaset inputs version 2.1.1</li>
+<li><strong>SpecifyFuels</strong> – If not all fuels should be considered, list containing the relevant ones</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Returns PowerByFuel:</th></tr>
+<tr class="field-even field"><td>&#160;</td><td class="field-body"><p class="first last">Dataframe with power generation by fuel</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.ds_to_df">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">ds_to_df</code><span class="sig-paren">(</span><em>inputs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#ds_to_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.ds_to_df" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that converts the dispaset data format into a dictionary of dataframes</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>inputs</strong> – input file</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">dictionary of dataframes</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.filter_by_country">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">filter_by_country</code><span class="sig-paren">(</span><em>PowerOutput</em>, <em>inputs</em>, <em>c</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#filter_by_country"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.filter_by_country" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function filters the dispaset Output Power dataframe by country</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>PowerOutput</strong> – Dataframe of power generationwith units as columns and time as index</li>
+<li><strong>Inputs</strong> – Dispaset inputs version 2.1.1</li>
+<li><strong>c</strong> – Selected country (e.g. ‘BE’)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns Power:</th><td class="field-body"><p class="first last">Dataframe with power generation by country</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.get_imports">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">get_imports</code><span class="sig-paren">(</span><em>flows</em>, <em>c</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#get_imports"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.get_imports" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that computes the balance of the imports/exports of a given zone</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>flows</strong> – Pandas dataframe with the timeseries of the exchanges</li>
+<li><strong>c</strong> – Country (zone) to consider</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Returns NetImports:</th></tr>
+<tr class="field-even field"><td>&#160;</td><td class="field-body"><p class="first last">Scalar with the net balance over the whole time period</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.get_indicators_powerplant">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">get_indicators_powerplant</code><span class="sig-paren">(</span><em>inputs</em>, <em>results</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#get_indicators_powerplant"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.get_indicators_powerplant" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that analyses the dispa-set results at the power plant level
+Computes the number of startups, the capacity factor, etc</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>inputs</strong> – DispaSET inputs</li>
+<li><strong>results</strong> – DispaSET results</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns out:</th><td class="field-body"><p class="first last">Dataframe with the main power plants characteristics and the computed indicators</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.get_load_data">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">get_load_data</code><span class="sig-paren">(</span><em>inputs</em>, <em>c</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#get_load_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.get_load_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the load curve, the residual load curve, and the net residual load curve of a specific country</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>inputs</strong> – DispaSET inputs (output of the get_sim_results function)</li>
+<li><strong>c</strong> – Country to consider (e.g. ‘BE’)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return out:</th><td class="field-body"><p class="first last">Dataframe with the following columns:
+Load:               Load curve of the specified country
+ResidualLoad:       Load minus the production of variable renewable sources
+NetResidualLoad:    Residual netted from the interconnections with neightbouring countries</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.get_plot_data">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">get_plot_data</code><span class="sig-paren">(</span><em>inputs</em>, <em>results</em>, <em>c</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#get_plot_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.get_plot_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that reads the results dataframe of a DispaSET simulation and extract the dispatch data spedific to one country</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>results</strong> – Pandas dataframe with the results (output of the GdxToDataframe function)</li>
+<li><strong>c</strong> – Country to be considered (e.g. ‘BE’)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Returns plotdata:</th></tr>
+<tr class="field-even field"><td>&#160;</td><td class="field-body"><p class="first last">Dataframe with the dispatch data storage and outflows are negative</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.get_result_analysis">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">get_result_analysis</code><span class="sig-paren">(</span><em>inputs</em>, <em>results</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#get_result_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.get_result_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads the DispaSET results and provides useful general information to stdout</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>inputs</strong> – DispaSET inputs</li>
+<li><strong>results</strong> – DispaSET results</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.get_sim_results">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">get_sim_results</code><span class="sig-paren">(</span><em>path='.'</em>, <em>gams_dir=None</em>, <em>cache=False</em>, <em>temp_path='.pickle'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#get_sim_results"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.get_sim_results" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function reads the simulation environment folder once it has been solved and loads
+the input variables together with the results.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – Relative path to the simulation environment folder (current path by default)</li>
+<li><strong>cache</strong> – If true, caches the simulation results in a pickle file for faster loading the next time</li>
+<li><strong>temp_path</strong> – Temporary path to store the cache file</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Returns inputs,results:</th></tr>
+<tr class="field-even field"><td>&#160;</td><td class="field-body"><p class="first last">Two dictionaries with all the input and outputs</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.plot_country">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">plot_country</code><span class="sig-paren">(</span><em>inputs</em>, <em>results</em>, <em>c=''</em>, <em>rng=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#plot_country"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.plot_country" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates plots from the dispa-SET results for one specific country</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>inputs</strong> – DispaSET inputs</li>
+<li><strong>results</strong> – DispaSET results</li>
+<li><strong>c</strong> – Considered country (e.g. ‘BE’)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.plot_country_capacities">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">plot_country_capacities</code><span class="sig-paren">(</span><em>inputs</em>, <em>plot=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#plot_country_capacities"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.plot_country_capacities" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots the installed capacity for each country, disaggregated by fuel type</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>inputs</strong> – Dictionnary with the inputs of the model (output of the function GetResults)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.plot_dispatch">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">plot_dispatch</code><span class="sig-paren">(</span><em>demand</em>, <em>plotdata</em>, <em>level=None</em>, <em>curtailment=None</em>, <em>rng=None</em>, <em>alpha=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#plot_dispatch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.plot_dispatch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that plots the dispatch data and the reservoir level as a cumulative sum</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>demand</strong> – Pandas Series with the demand curve</li>
+<li><strong>plotdata</strong> – Pandas Dataframe with the data to be plotted. Negative columns should be at the beginning. Output of the function GetPlotData</li>
+<li><strong>level</strong> – Optional pandas series with an aggregated reservoir level for the considered zone.</li>
+<li><strong>curtailment</strong> – Optional pandas series with the value of the curtailment</li>
+<li><strong>rng</strong> – Indexes of the values to be plotted. If undefined, the first week is plotted</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.plot_dispatch_safe">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">plot_dispatch_safe</code><span class="sig-paren">(</span><em>demand</em>, <em>plotdata</em>, <em>level=None</em>, <em>curtailment=None</em>, <em>rng=None</em>, <em>alpha=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#plot_dispatch_safe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.plot_dispatch_safe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that plots the dispatch data and the reservoir level as a cumulative sum.
+In this case, the Pandas index is not used since it can cause a bug in matplotlib</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>demand</strong> – Pandas Series with the demand curve</li>
+<li><strong>plotdata</strong> – Pandas Dataframe with the data to be plotted. Negative columns should be at the beginning. Output of the function GetPlotData</li>
+<li><strong>level</strong> – Optional pandas series with an aggregated reservoir level for the considered zone.</li>
+<li><strong>curtailment</strong> – Optional pandas series with the value of the curtailment</li>
+<li><strong>rng</strong> – Indexes of the values to be plotted. If undefined, the first week is plotted</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.plot_energy_country_fuel">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">plot_energy_country_fuel</code><span class="sig-paren">(</span><em>inputs</em>, <em>results</em>, <em>PPindicators</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#plot_energy_country_fuel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.plot_energy_country_fuel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots the generation for each country, disaggregated by fuel type</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>results</strong> – Dictionnary with the outputs of the model (output of the function GetResults)</li>
+<li><strong>PPindicators</strong> – Por powerplant statistics (output of the function get_indicators_powerplant)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="DispaSET.postprocessing.postprocessing.plot_rug">
+<code class="descclassname">DispaSET.postprocessing.postprocessing.</code><code class="descname">plot_rug</code><span class="sig-paren">(</span><em>df_series</em>, <em>on_off=False</em>, <em>cmap='Greys'</em>, <em>fig_title=''</em>, <em>normalized=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DispaSET/postprocessing/postprocessing.html#plot_rug"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DispaSET.postprocessing.postprocessing.plot_rug" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create multiaxis rug plot from pandas Dataframe</p>
+<dl class="docutils">
+<dt>Arguments:</dt>
+<dd>df_series (pd.DataFrame): 2D pandas with timed index
+on_off (bool): if True all points that are above 0 will be plotted as one color. If False all values will be colored based on their value.
+cmap (str): palette name (from colorbrewer, matplotlib etc.)
+fig_title (str): Figure title
+normalized (bool): if True, all series colormaps will be normalized based on the maximum value of the dataframe</dd>
+<dt>Returns:</dt>
+<dd>plot</dd>
+</dl>
+<p>Function copied from enlopy v0.1 www.github.com/kavvkon/enlopy. Install with <cite>pip install enlopy</cite> for latest version.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-DispaSET.postprocessing">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-DispaSET.postprocessing" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="DispaSET.preprocessing.html" class="btn btn-neutral float-right" title="DispaSET.preprocessing package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="DispaSET.misc.html" class="btn btn-neutral" title="DispaSET.misc package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Sylvain Quoilin &amp; Kostas Kavvadias
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'./',
+              VERSION:'',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

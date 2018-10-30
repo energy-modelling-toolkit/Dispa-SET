@@ -1,0 +1,752 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>DispaSET.preprocessing.data_check &mdash; Documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> DispaSET
+          
+
+          
+            
+            <img src="../../../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../workflow.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Model Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../formulations.html">Model Formulations and clustering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../implementation.html">Implementation and interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../data.html">Input Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cases.html">Case Studies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developers.html">Developers’ section</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../DispaSET.html">DispaSET package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DispaSET</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>DispaSET.preprocessing.data_check</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for DispaSET.preprocessing.data_check</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This files gathers different functions used in the DispaSET to check the input</span>
+<span class="sd">data</span>
+
+<span class="sd">__author__ = &#39;Sylvain Quoilin (sylvain.quoilin@ec.europa.eu)&#39;</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+
+<div class="viewcode-block" id="isVRE"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_check.isVRE">[docs]</a><span class="k">def</span> <span class="nf">isVRE</span><span class="p">(</span><span class="n">tech</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Function that returns true the technology is a variable renewable energy technology</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">tech</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;HROR&#39;</span><span class="p">,</span><span class="s1">&#39;PHOT&#39;</span><span class="p">,</span><span class="s1">&#39;WTON&#39;</span><span class="p">,</span><span class="s1">&#39;WTOF&#39;</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="isStorage"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_check.isStorage">[docs]</a><span class="k">def</span> <span class="nf">isStorage</span><span class="p">(</span><span class="n">tech</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Function that returns true the technology is a storage technology</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">tech</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;HDAM&#39;</span><span class="p">,</span><span class="s1">&#39;HPHS&#39;</span><span class="p">,</span><span class="s1">&#39;CAES&#39;</span><span class="p">,</span><span class="s1">&#39;BATS&#39;</span><span class="p">,</span><span class="s1">&#39;BEVS&#39;</span><span class="p">,</span><span class="s1">&#39;THMS&#39;</span><span class="p">,</span><span class="s1">&#39;P2GS&#39;</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="check_AvailabilityFactors"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_check.check_AvailabilityFactors">[docs]</a><span class="k">def</span> <span class="nf">check_AvailabilityFactors</span><span class="p">(</span><span class="n">plants</span><span class="p">,</span><span class="n">AF</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Function that checks the validity of the provided availability factors and warns</span>
+<span class="sd">    if a default value of 100% is used.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">AF</span><span class="o">.</span><span class="n">values</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Some Availaibility factors are negative&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">AF</span><span class="o">.</span><span class="n">values</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;Some Availability factors are higher than one. They must be carefully checked&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;WTON&#39;</span><span class="p">,</span> <span class="s1">&#39;WTOF&#39;</span><span class="p">,</span> <span class="s1">&#39;PHOT&#39;</span><span class="p">,</span> <span class="s1">&#39;HROR&#39;</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">[</span><span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Technology&#39;</span><span class="p">]</span><span class="o">==</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">AF</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">AF</span><span class="p">[</span><span class="n">u</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The availability factor of unit &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; + for technology &#39;</span> <span class="o">+</span> <span class="n">t</span> <span class="o">+</span> <span class="s1">&#39; is always 100%!&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;Unit &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; (technology &#39;</span> <span class="o">+</span> <span class="n">t</span> <span class="o">+</span> <span class="s1">&#39;) does not appear in the availbilityFactors table. Its values will be set to 100%!&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="check_clustering"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_check.check_clustering">[docs]</a><span class="k">def</span> <span class="nf">check_clustering</span><span class="p">(</span><span class="n">plants</span><span class="p">,</span><span class="n">plants_merged</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Function that checks that the installed capacities are still equal after the clustering process</span>
+
+<span class="sd">    :param plants:  Non-clustered list of units</span>
+<span class="sd">    :param plants_merged:  clustered list of units</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c1"># First, list all pairs of technology - fuel</span>
+    <span class="n">techs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span> <span class="p">[[</span><span class="n">plants</span><span class="o">.</span><span class="n">Technology</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span><span class="n">plants</span><span class="o">.</span><span class="n">Fuel</span><span class="p">[</span><span class="n">idx</span><span class="p">]]</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">plants</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="p">)</span>
+    <span class="n">techs</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">techs</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+        <span class="n">tech</span> <span class="o">=</span> <span class="p">(</span><span class="n">techs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span><span class="n">techs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">units_old</span> <span class="o">=</span> <span class="n">plants</span><span class="p">[(</span><span class="n">plants</span><span class="o">.</span><span class="n">Technology</span> <span class="o">==</span> <span class="n">tech</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">Fuel</span> <span class="o">==</span> <span class="n">tech</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+        <span class="n">units_new</span> <span class="o">=</span> <span class="n">plants_merged</span><span class="p">[(</span><span class="n">plants_merged</span><span class="o">.</span><span class="n">Technology</span> <span class="o">==</span> <span class="n">tech</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">plants_merged</span><span class="o">.</span><span class="n">Fuel</span> <span class="o">==</span> <span class="n">tech</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+        <span class="n">P_old</span> <span class="o">=</span> <span class="p">(</span><span class="n">units_old</span><span class="o">.</span><span class="n">PowerCapacity</span> <span class="o">*</span> <span class="n">units_old</span><span class="o">.</span><span class="n">Nunits</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">P_new</span> <span class="o">=</span> <span class="p">(</span><span class="n">units_new</span><span class="o">.</span><span class="n">PowerCapacity</span> <span class="o">*</span> <span class="n">units_new</span><span class="o">.</span><span class="n">Nunits</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">P_old</span> <span class="o">-</span> <span class="n">P_new</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">P_old</span> <span class="o">+</span> <span class="mf">0.0001</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.01</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;The installed capacity for technology &quot;&#39;</span> <span class="o">+</span> <span class="n">tech</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;&quot; and fuel &quot;&#39;</span> <span class="o">+</span> <span class="n">tech</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;&quot; is not equal between the original units table (P = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">P_old</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;) and the clustered table (P = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">P_new</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># Check the overall installed storage capacity:</span>
+    <span class="n">List_tech_storage</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;HDAM&#39;</span><span class="p">,</span> <span class="s1">&#39;HPHS&#39;</span><span class="p">,</span> <span class="s1">&#39;BATS&#39;</span><span class="p">,</span> <span class="s1">&#39;BEVS&#39;</span><span class="p">,</span> <span class="s1">&#39;CAES&#39;</span><span class="p">,</span> <span class="s1">&#39;THMS&#39;</span><span class="p">]</span>
+    <span class="n">isstorage</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">plants</span><span class="o">.</span><span class="n">index</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;bool&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">isstorage</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+        <span class="n">isstorage</span><span class="p">[</span><span class="n">u</span><span class="p">]</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">Technology</span><span class="p">[</span><span class="n">u</span><span class="p">]</span> <span class="ow">in</span> <span class="n">List_tech_storage</span>
+    <span class="n">isstorage_merged</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">plants_merged</span><span class="o">.</span><span class="n">index</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;bool&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">isstorage_merged</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+        <span class="n">isstorage_merged</span><span class="p">[</span><span class="n">u</span><span class="p">]</span> <span class="o">=</span> <span class="n">plants_merged</span><span class="o">.</span><span class="n">Technology</span><span class="p">[</span><span class="n">u</span><span class="p">]</span> <span class="ow">in</span> <span class="n">List_tech_storage</span>
+    <span class="n">TotalStorage</span> <span class="o">=</span> <span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">STOCapacity</span><span class="p">[</span><span class="n">isstorage</span><span class="p">]</span><span class="o">*</span><span class="n">plants</span><span class="o">.</span><span class="n">Nunits</span><span class="p">[</span><span class="n">isstorage</span><span class="p">])</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">TotalStorage_merged</span> <span class="o">=</span> <span class="p">(</span><span class="n">plants_merged</span><span class="o">.</span><span class="n">STOCapacity</span><span class="p">[</span><span class="n">isstorage_merged</span><span class="p">]</span><span class="o">*</span><span class="n">plants_merged</span><span class="o">.</span><span class="n">Nunits</span><span class="p">[</span><span class="n">isstorage_merged</span><span class="p">])</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">TotalStorage</span> <span class="o">-</span> <span class="n">TotalStorage_merged</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">TotalStorage</span> <span class="o">+</span> <span class="mf">0.0001</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.01</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;The total installed storage capacity is not equal between the original units table (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">TotalStorage</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;) and the clustered table (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">TotalStorage_merged</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span><span class="p">)</span>
+        <span class="c1">#sys.exit(1)</span>
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="check_MinMaxFlows"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_check.check_MinMaxFlows">[docs]</a><span class="k">def</span> <span class="nf">check_MinMaxFlows</span><span class="p">(</span><span class="n">df_min</span><span class="p">,</span><span class="n">df_max</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Function that checks that there is no incompatibility between the minimum and maximum flows</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">df_min</span> <span class="o">&gt;</span> <span class="n">df_max</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">df_min</span> <span class="o">&gt;</span> <span class="n">df_max</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;ERROR: At least one minimum flow is higher than the maximum flow, for example in line number &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">pos</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39; and time step &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">pos</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">df_max</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">df_max</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;ERROR: At least one maximum flow is negative, for example in line number &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">pos</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39; and time step &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">pos</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="check_sto"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_check.check_sto">[docs]</a><span class="k">def</span> <span class="nf">check_sto</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">plants</span><span class="p">,</span><span class="n">raw_data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that checks the storage plant characteristics</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">raw_data</span><span class="p">:</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;STOCapacity&#39;</span><span class="p">,</span><span class="s1">&#39;STOSelfDischarge&#39;</span><span class="p">,</span><span class="s1">&#39;STOMaxChargingPower&#39;</span><span class="p">,</span><span class="s1">&#39;STOChargingEfficiency&#39;</span><span class="p">]</span>
+        <span class="n">NonNaNKeys</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;STOCapacity&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;StorageCapacity&#39;</span><span class="p">,</span><span class="s1">&#39;StorageSelfDischarge&#39;</span><span class="p">,</span><span class="s1">&#39;StorageChargingCapacity&#39;</span><span class="p">,</span><span class="s1">&#39;StorageChargingEfficiency&#39;</span><span class="p">]</span>
+        <span class="n">NonNaNKeys</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;StorageCapacity&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;StorageInitial&#39;</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;The &quot;StorageInitial&quot; column is present in the power plant table, although it is deprecated (it should now be defined in the ReservoirLevel data table). It will not be considered.&#39;</span><span class="p">)</span>
+  
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The power plants data does not contain the field &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot;, which is mandatory for storage units&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">NonNaNKeys</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">plants</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;Unit&#39;</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+                <span class="n">unitname</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">unitname</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="n">key</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;A non numeric value was detected in the power plants inputs for parameter &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="n">key</span><span class="p">]):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The power plants data is missing for unit &#39;</span> <span class="o">+</span> <span class="n">unitname</span> <span class="o">+</span> <span class="s1">&#39; and parameter &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+
+<div class="viewcode-block" id="check_chp"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_check.check_chp">[docs]</a><span class="k">def</span> <span class="nf">check_chp</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">plants</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that checks the CHP plant characteristics</span>
+<span class="sd">    &quot;&quot;&quot;</span>   
+    <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;CHPType&#39;</span><span class="p">,</span><span class="s1">&#39;CHPPowerToHeat&#39;</span><span class="p">,</span><span class="s1">&#39;CHPPowerLossFactor&#39;</span><span class="p">]</span>
+    <span class="n">NonNaNKeys</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;CHPPowerToHeat&#39;</span><span class="p">,</span><span class="s1">&#39;CHPPowerLossFactor&#39;</span><span class="p">]</span>
+    <span class="n">StrKeys</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;CHPType&#39;</span><span class="p">]</span>
+    
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The power plants data does not contain the field &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot;, which is mandatory for CHP units&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">NonNaNKeys</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">plants</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;Unit&#39;</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+                <span class="n">unitname</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">unitname</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="n">key</span><span class="p">])</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;A non numeric value was detected in the power plants inputs for parameter &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="n">key</span><span class="p">]):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The power plants data is missing for unit number &#39;</span> <span class="o">+</span> <span class="n">unitname</span> <span class="o">+</span> <span class="s1">&#39; and parameter &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">StrKeys</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">plants</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;Unit&#39;</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+                <span class="n">unitname</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">unitname</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="n">key</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                    <span class="s1">&#39;A numeric value was detected in the power plants inputs for parameter &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot;. This column should contain strings only.&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;An empty value was detected in the power plants inputs for unit &quot;&#39;</span> <span class="o">+</span> <span class="n">unitname</span> <span class="o">+</span> <span class="s1">&#39;&quot; and parameter &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="c1"># Check the efficiency values:</span>
+    <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">plants</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s1">&#39;Unit&#39;</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+            <span class="n">unitname</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">unitname</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+        <span class="n">plant_PowerCapacity</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;PowerCapacity&#39;</span><span class="p">]</span>
+        <span class="n">plant_MaxHeat</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="s1">&#39;CHPMaxHeat&#39;</span><span class="p">]</span>
+        <span class="n">plant_powertoheat</span> <span class="o">=</span>  <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;CHPPowerToHeat&#39;</span><span class="p">]</span>
+        <span class="n">plant_powerlossfactor</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;CHPPowerLossFactor&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;CHPType&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;extraction&#39;</span><span class="p">,</span><span class="s1">&#39;back-pressure&#39;</span><span class="p">,</span> <span class="s1">&#39;p2h&#39;</span><span class="p">]:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The value of CHPType should be &quot;extraction&quot;, &quot;back-pressure&quot; or &quot;p2h&quot;. The type of unit &#39;</span> <span class="o">+</span> <span class="n">u</span> <span class="o">+</span> <span class="s1">&#39; is &quot;&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;CHPType&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">))</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>              
+        <span class="k">if</span> <span class="mi">0</span> <span class="o">&gt;</span> <span class="n">plant_powertoheat</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The value of CHPPowerToHeat should be higher or equal to zero and lower than 10. Unit &#39;</span> <span class="o">+</span> <span class="n">u</span> <span class="o">+</span> <span class="s1">&#39; has a value of &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plant_powertoheat</span><span class="p">))</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>         
+        <span class="k">if</span> <span class="mi">0</span> <span class="o">&gt;</span> <span class="n">plant_powerlossfactor</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;CHPType&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s1">&#39;p2h&#39;</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The value of CHPPowerLossFactor should be higher or equal to zero and lower than 1. Unit &#39;</span> <span class="o">+</span> <span class="n">u</span> <span class="o">+</span> <span class="s1">&#39; has a value of &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plant_powerlossfactor</span><span class="p">))</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>   
+        <span class="k">if</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;CHPType&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;back-pressure&#39;</span> <span class="ow">and</span> <span class="n">plant_powerlossfactor</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The value of CHPPowerLossFactor must be zero if the CHP types is &quot;back-pressure&quot;. Unit &#39;</span> <span class="o">+</span> <span class="n">u</span> <span class="o">+</span> <span class="s1">&#39; has a value of &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plant_powerlossfactor</span><span class="p">))</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="s1">&#39;CHPType&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;extraction&#39;</span><span class="p">:</span>
+            <span class="n">intersection_MaxHeat</span> <span class="o">=</span> <span class="n">plant_PowerCapacity</span> <span class="o">/</span> <span class="n">plant_powertoheat</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">isnull</span><span class="p">(</span><span class="n">plant_MaxHeat</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">intersection_MaxHeat</span> <span class="o">&lt;</span> <span class="n">plant_MaxHeat</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;Given Maximum heat CHPMaxHeat (</span><span class="si">{}</span><span class="s1">) is higher than the intersection point of the two other constraints (</span><span class="si">{}</span><span class="s1">) &#39;</span>
+                                    <span class="s1">&#39;(power loss factor and backpressure line) therefore it will not be ignored&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">plant_MaxHeat</span><span class="p">,</span> <span class="n">intersection_MaxHeat</span><span class="p">)</span> <span class="p">)</span>
+                    <span class="n">plant_MaxHeat</span> <span class="o">=</span> <span class="n">intersection_MaxHeat</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">plant_MaxHeat</span> <span class="o">=</span> <span class="n">intersection_MaxHeat</span>
+
+        <span class="c1"># Calculating the nominal total efficiency at the highest point:</span>
+        <span class="k">if</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;CHPType&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s1">&#39;p2h&#39;</span><span class="p">:</span>
+            <span class="n">Fuel</span> <span class="o">=</span> <span class="p">(</span><span class="n">plant_PowerCapacity</span> <span class="o">+</span> <span class="n">plant_powerlossfactor</span> <span class="o">*</span> <span class="n">plant_MaxHeat</span><span class="p">)</span><span class="o">/</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;Efficiency&#39;</span><span class="p">]</span> <span class="c1"># F = (P + C_v * Q)/eta_condensation</span>
+            <span class="n">TotalEfficiency</span> <span class="o">=</span> <span class="p">(</span><span class="n">plant_PowerCapacity</span> <span class="o">+</span> <span class="n">plant_MaxHeat</span><span class="p">)</span> <span class="o">/</span> <span class="n">Fuel</span>             <span class="c1"># eta_tot = (P + Q) / F</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Highest overall efficiency of CHP plant </span><span class="si">{}</span><span class="s1"> is </span><span class="si">{:.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">u</span><span class="p">,</span><span class="n">TotalEfficiency</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">TotalEfficiency</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">TotalEfficiency</span> <span class="o">&gt;</span> <span class="mf">1.14</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The calculated value of the total CHP efficiency for unit &#39;</span> <span class="o">+</span> <span class="n">unitname</span> <span class="o">+</span> <span class="s1">&#39; is &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">TotalEfficiency</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;, which is unrealistic!&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">TotalEfficiency</span> <span class="o">&gt;</span> <span class="mf">0.95</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;The calculated value of the total CHP efficiency for unit &#39;</span> <span class="o">+</span> <span class="n">unitname</span> <span class="o">+</span> <span class="s1">&#39; is &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">TotalEfficiency</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;, which is very high!&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Check the optional MaxHeatCapacity parameter. While it adds another realistic boundary it is not a required parameter for the definition of the CHP&#39;s operational envelope.:</span>
+    <span class="k">if</span> <span class="s1">&#39;CHPMaxHeat&#39;</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">plants</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="n">plant_MaxHeat</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="s1">&#39;CHPMaxHeat&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">plant_MaxHeat</span> <span class="o">&lt;=</span><span class="mi">0</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;CHPMaxHeat for plant </span><span class="si">{}</span><span class="s1"> is </span><span class="si">{}</span><span class="s1"> which shuts down any heat production.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">plant_MaxHeat</span><span class="p">))</span>
+    <span class="c1"># Check the optional heat storage values:</span>
+    <span class="k">if</span> <span class="s1">&#39;STOCapacity&#39;</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">plants</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="n">Qdot</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;PowerCapacity&#39;</span><span class="p">]</span><span class="o">/</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;CHPPowerToHeat&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;STOCapacity&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">Qdot</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Unit &#39;</span> <span class="o">+</span> <span class="n">unitname</span> <span class="o">+</span> <span class="s1">&#39;: The value of the thermal storage capacity (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;STOCapacity&#39;</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39;MWh) seems very low compared to its thermal power (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">Qdot</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;MW).&#39;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;STOCapacity&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">Qdot</span> <span class="o">*</span> <span class="mi">24</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Unit &#39;</span> <span class="o">+</span> <span class="n">unitname</span> <span class="o">+</span> <span class="s1">&#39;: The value of the thermal storage capacity (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;STOCapacity&#39;</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39;MWh) seems very high compared to its thermal power (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">Qdot</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;MW).&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;STOSelfDischarge&#39;</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">plants</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>     
+            <span class="k">if</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;STOSelfDischarge&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Unit &#39;</span> <span class="o">+</span> <span class="n">unitname</span> <span class="o">+</span> <span class="s1">&#39;: The value of the thermal storage self-discharge (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;STOSelfDischarge&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">100</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;%/day) cannot be negative&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;STOSelfDischarge&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Unit &#39;</span> <span class="o">+</span> <span class="n">unitname</span> <span class="o">+</span> <span class="s1">&#39;: The value of the thermal storage self-discharge (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;STOSelfDischarge&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">100</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;%/day) seems very high&#39;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;STOSelfDischarge&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">24</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Unit &#39;</span> <span class="o">+</span> <span class="n">unitname</span> <span class="o">+</span> <span class="s1">&#39;: The value of the thermal storage self-discharge (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;STOSelfDischarge&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">100</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;%/day) is too high&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>                           
+
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="check_units"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_check.check_units">[docs]</a><span class="k">def</span> <span class="nf">check_units</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">plants</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that checks the power plant characteristics</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">,</span> <span class="s1">&#39;Fuel&#39;</span><span class="p">,</span> <span class="s1">&#39;Zone&#39;</span><span class="p">,</span> <span class="s1">&#39;Technology&#39;</span><span class="p">,</span> <span class="s1">&#39;PowerCapacity&#39;</span><span class="p">,</span> <span class="s1">&#39;PartLoadMin&#39;</span><span class="p">,</span> <span class="s1">&#39;RampUpRate&#39;</span><span class="p">,</span> <span class="s1">&#39;RampDownRate&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;StartUpTime&#39;</span><span class="p">,</span> <span class="s1">&#39;MinUpTime&#39;</span><span class="p">,</span> <span class="s1">&#39;MinDownTime&#39;</span><span class="p">,</span> <span class="s1">&#39;NoLoadCost&#39;</span><span class="p">,</span> <span class="s1">&#39;StartUpCost&#39;</span><span class="p">,</span> <span class="s1">&#39;Efficiency&#39;</span><span class="p">,</span> <span class="s1">&#39;CO2Intensity&#39;</span><span class="p">]</span>
+    <span class="n">NonNaNKeys</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;PowerCapacity&#39;</span><span class="p">,</span> <span class="s1">&#39;PartLoadMin&#39;</span><span class="p">,</span> <span class="s1">&#39;RampUpRate&#39;</span><span class="p">,</span> <span class="s1">&#39;RampDownRate&#39;</span><span class="p">,</span> <span class="s1">&#39;Efficiency&#39;</span><span class="p">,</span> <span class="s1">&#39;RampingCost&#39;</span><span class="p">,</span>
+                  <span class="s1">&#39;CO2Intensity&#39;</span><span class="p">]</span>
+    <span class="n">StrKeys</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">,</span> <span class="s1">&#39;Zone&#39;</span><span class="p">,</span> <span class="s1">&#39;Fuel&#39;</span><span class="p">,</span> <span class="s1">&#39;Technology&#39;</span><span class="p">]</span>
+
+    <span class="c1"># Special treatment for the Optional key Nunits:</span>
+    <span class="k">if</span> <span class="s1">&#39;Nunits&#39;</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+        <span class="n">keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;Nunits&#39;</span><span class="p">)</span>
+        <span class="n">NonNaNKeys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;Nunits&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="ow">not</span> <span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">is_integer</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Nunits&#39;</span><span class="p">]]):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Some values are not integers in the &quot;Nunits&quot; column of the plant database&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;The columns &quot;Nunits&quot; is not present in the power plant database. A value of one will be assumed by default&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The power plants data does not contain the field &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot;, which is mandatory&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">NonNaNKeys</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">plants</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="n">key</span><span class="p">])</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;A non numeric value was detected in the power plants inputs for parameter &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="n">key</span><span class="p">]):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The power plants data is missing for unit number &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; and parameter &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">StrKeys</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">plants</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="n">key</span><span class="p">])</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                    <span class="s1">&#39;A numeric value was detected in the power plants inputs for parameter &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot;. This column should contain strings only.&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;An empty value was detected in the power plants inputs for unit &quot;&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+                    <span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;&quot; and parameter &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">lower</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;PowerCapacity&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;PartLoadMin&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;StartUpTime&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;MinUpTime&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;MinDownTime&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;NoLoadCost&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+             <span class="s1">&#39;StartUpCost&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+    <span class="n">lower_hard</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;RampUpRate&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;RampDownRate&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;Efficiency&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+    <span class="n">higher</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;PartLoadMin&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Efficiency&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+    <span class="n">higher_time</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;MinUpTime&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;MinDownTime&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>  <span class="c1"># &#39;StartUpTime&#39;:0,</span>
+
+    <span class="c1"># Special treatment for the Optional key Nunits:</span>
+    <span class="k">if</span> <span class="s1">&#39;Nunits&#39;</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+        <span class="n">lower_hard</span><span class="p">[</span><span class="s1">&#39;Nunits&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">]):</span>
+        <span class="n">duplicates</span> <span class="o">=</span> <span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">][</span><span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;The names of the power plants are not unique. The following names are duplicates: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">duplicates</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;. &quot;&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">duplicates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;&quot; appears for example in the following countries: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">Zone</span><span class="p">[</span><span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span><span class="o">==</span><span class="n">duplicates</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">lower</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">plants</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">lower</span><span class="p">[</span><span class="n">key</span><span class="p">]):</span>
+            <span class="n">plantlist</span> <span class="o">=</span> <span class="n">plants</span><span class="p">[</span><span class="n">plants</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">lower</span><span class="p">[</span><span class="n">key</span><span class="p">]]</span>
+            <span class="n">plantlist</span> <span class="o">=</span> <span class="n">plantlist</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="s1">&#39;The value of &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39; should be higher or equal to zero. A negative value has been found for units &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+                    <span class="n">plantlist</span><span class="p">))</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">lower_hard</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">plants</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">lower_hard</span><span class="p">[</span><span class="n">key</span><span class="p">]):</span>
+            <span class="n">plantlist</span> <span class="o">=</span> <span class="n">plants</span><span class="p">[</span><span class="n">plants</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">lower_hard</span><span class="p">[</span><span class="n">key</span><span class="p">]]</span>
+            <span class="n">plantlist</span> <span class="o">=</span> <span class="n">plantlist</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="s1">&#39;The value of &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39; should be strictly higher than zero. A null or negative value has been found for units &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+                    <span class="n">plantlist</span><span class="p">))</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">higher</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">plants</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">higher</span><span class="p">[</span><span class="n">key</span><span class="p">]):</span>
+            <span class="n">plantlist</span> <span class="o">=</span> <span class="n">plants</span><span class="p">[</span><span class="n">plants</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">higher</span><span class="p">[</span><span class="n">key</span><span class="p">]]</span>
+            <span class="n">plantlist</span> <span class="o">=</span> <span class="n">plantlist</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="s1">&#39;The value of &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39; should be lower or equal to one. A higher value has been found for units &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+                    <span class="n">plantlist</span><span class="p">))</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">higher_time</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">plants</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;HorizonLength&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">24</span><span class="p">):</span>
+            <span class="n">plantlist</span> <span class="o">=</span> <span class="n">plants</span><span class="p">[</span><span class="n">plants</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;HorizonLength&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">24</span><span class="p">]</span>
+            <span class="n">plantlist</span> <span class="o">=</span> <span class="n">plantlist</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The value of &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39; should be lower than the horizon length (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+                <span class="n">config</span><span class="p">[</span><span class="s1">&#39;HorizonLength&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">24</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; hours). A higher value has been found for units &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plantlist</span><span class="p">))</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="check_heat_demand"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_check.check_heat_demand">[docs]</a><span class="k">def</span> <span class="nf">check_heat_demand</span><span class="p">(</span><span class="n">plants</span><span class="p">,</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Function that checks the validity of the heat demand profiles</span>
+
+<span class="sd">    :param     plants:  List of CHP plants</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">plants</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">plants</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="c1"># Check if there is demand data for that unit:</span>
+            <span class="k">if</span> <span class="n">u</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Heat demand data for CHP unit &quot;&#39;</span> <span class="o">+</span> <span class="n">u</span> <span class="o">+</span> <span class="s1">&#39;&quot; could not be found.&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">u</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;Heat demand data for CHP unit &quot;&#39;</span> <span class="o">+</span> <span class="n">u</span> <span class="o">+</span> <span class="s1">&#39;&quot; is either no found or always equal to zero&#39;</span><span class="p">)</span>
+            <span class="n">plant_CHP_type</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;CHPType&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">isnull</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="s1">&#39;CHPMaxHeat&#39;</span><span class="p">]):</span>
+                <span class="n">plant_Qmax</span> <span class="o">=</span> <span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">plant_Qmax</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;CHPMaxHeat&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">plant_CHP_type</span> <span class="o">==</span> <span class="s1">&#39;extraction&#39;</span><span class="p">:</span>
+                <span class="n">Qmin</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">Qmax</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="s1">&#39;PowerCapacity&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="s1">&#39;CHPPowerToHeat&#39;</span><span class="p">],</span> <span class="n">plant_Qmax</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">plant_CHP_type</span> <span class="o">==</span> <span class="s1">&#39;back-pressure&#39;</span><span class="p">:</span>
+                <span class="n">Qmin</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;PowerCapacity&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;PartLoadMin&#39;</span><span class="p">]</span> <span class="o">/</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="s1">&#39;CHPPowerToHeat&#39;</span><span class="p">]</span>
+                <span class="n">Qmax</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="s1">&#39;PowerCapacity&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">u</span><span class="p">,</span> <span class="s1">&#39;CHPPowerToHeat&#39;</span><span class="p">],</span> <span class="n">plant_Qmax</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">plant_CHP_type</span> <span class="o">==</span> <span class="s1">&#39;p2h&#39;</span><span class="p">:</span>
+                <span class="n">Qmin</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">Qmax</span> <span class="o">=</span> <span class="n">plant_Qmax</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;The CHP type for unit &#39;</span> <span class="o">+</span> <span class="n">u</span> <span class="o">+</span> <span class="s1">&#39; is not valid.&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">Qmax</span><span class="p">)</span> <span class="ow">and</span> <span class="n">plant_CHP_type</span><span class="o">!=</span><span class="s1">&#39;p2h&#39;</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;CHPPowerToHeat is not defined for unit &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; appearing in the heat demand profiles&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">data</span><span class="p">[</span><span class="n">u</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">Qmax</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;The maximum thermal demand for unit &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">u</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">())</span> <span class="o">+</span> <span class="s1">&#39;) is higher than its thermal capacity (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">Qmax</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;). Slack heat will be used to cover that.&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="n">u</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">Qmin</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;The minimum thermal demand for unit &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">u</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">+</span> <span class="s1">&#39;) is lower than its minimum thermal generation (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">Qmin</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; MWth)&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;The heat demand profile with header &quot;&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;&quot; does not correspond to any CHP plant. It will be ignored.&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="check_df"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_check.check_df">[docs]</a><span class="k">def</span> <span class="nf">check_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">StartDate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">StopDate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that check the time series provided as inputs</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">StartDate</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;The start date &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">StartDate</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; is not in the index of the provided dataframe&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">StopDate</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;The stop date &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">StopDate</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; is not in the index of the provided dataframe&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">df</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">df</span><span class="p">:</span>
+            <span class="n">missing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
+            <span class="c1"># pos = np.where(np.isnan(df.sum(axis=1)))</span>
+            <span class="c1"># idx_pos = [df.index[i] for i in pos]</span>
+            <span class="k">if</span> <span class="n">missing</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;There are &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; missing entries in the column &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39; of the dataframe &#39;</span> <span class="o">+</span> <span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;The column headers of table &quot;&#39;</span> <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;&quot; are not unique!. The following headers are duplicated: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_duplicates</span><span class="p">()))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="check_simulation_environment"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_check.check_simulation_environment">[docs]</a><span class="k">def</span> <span class="nf">check_simulation_environment</span><span class="p">(</span><span class="n">SimulationPath</span><span class="p">,</span> <span class="n">store_type</span><span class="o">=</span><span class="s1">&#39;pickle&#39;</span><span class="p">,</span> <span class="n">firstline</span><span class="o">=</span><span class="mi">7</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to test the validity of disapset inputs</span>
+<span class="sd">    :param SimulationPath:          Path to the simulation folder</span>
+<span class="sd">    :param store_type:              choose between: &quot;list&quot;, &quot;excel&quot;, &quot;pickle&quot;</span>
+<span class="sd">    :param firstline:               Number of the first line in the data (only if type==&#39;excel&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="kn">import</span> <span class="nn">cPickle</span>
+
+    <span class="c1"># minimum list of variable required for dispaSET:</span>
+    <span class="n">list_sets</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;h&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;d&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;mk&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;n&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;c&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;p&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;l&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;f&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;s&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;t&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;tr&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;u&#39;</span><span class="p">]</span>
+
+    <span class="n">list_param</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;AvailabilityFactor&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;CostFixed&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;CostShutDown&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Curtailment&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Demand&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Efficiency&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Fuel&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;CostVariable&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;FuelPrice&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Markup&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;CostStartUp&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;EmissionMaximum&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;EmissionRate&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;FlowMaximum&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;FlowMinimum&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;LineNode&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Location&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;LoadShedding&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;OutageFactor&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;PermitPrice&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;PriceTransmission&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;PowerCapacity&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;PartLoadMin&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;RampUpMaximum&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;RampDownMaximum&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;RampStartUpMaximum&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;RampShutDownMaximum&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Reserve&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;StorageDischargeEfficiency&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;StorageCapacity&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;StorageInflow&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;StorageOutflow&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;StorageInitial&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;StorageMinimum&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;StorageChargingEfficiency&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;StorageChargingCapacity&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Technology&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;TimeDownMinimum&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;TimeUpMinimum&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;TimeDownInitial&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;TimeUpInitial&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;PowerInitial&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">store_type</span> <span class="o">==</span> <span class="s1">&#39;list&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">SimulationPath</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="c1"># The list of sets and parameters has been passed directly to the function, checking that all are present:</span>
+            <span class="n">SimulationPath_vars</span> <span class="o">=</span> <span class="p">[</span><span class="n">SimulationPath</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">SimulationPath</span><span class="p">))]</span>
+            <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">list_sets</span> <span class="o">+</span> <span class="n">list_param</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">var</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SimulationPath_vars</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The variable &quot;&#39;</span> <span class="o">+</span> <span class="n">var</span> <span class="o">+</span> <span class="s1">&#39;&quot; has not been found in the list of input variables&#39;</span><span class="p">)</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The argument must a list. Please correct or change the &quot;type&quot; argument&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">store_type</span> <span class="o">==</span> <span class="s1">&#39;pickle&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">SimulationPath</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">SimulationPath</span><span class="p">,</span> <span class="s1">&#39;Inputs.p&#39;</span><span class="p">)):</span>
+                <span class="nb">vars</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">SimulationPath</span><span class="p">,</span> <span class="s1">&#39;Inputs.p&#39;</span><span class="p">),</span> <span class="s1">&#39;rb&#39;</span><span class="p">))</span>
+                <span class="n">arg_vars</span> <span class="o">=</span> <span class="p">[</span><span class="nb">vars</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">vars</span><span class="p">))]</span>
+                <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">list_sets</span> <span class="o">+</span> <span class="n">list_param</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">var</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">arg_vars</span><span class="p">:</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;Found Pickle file but does not contain valid DispaSET input (&#39;</span> <span class="o">+</span> <span class="n">var</span> <span class="o">+</span> <span class="s1">&#39; missing)&#39;</span><span class="p">)</span>
+                        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;Could not find the Inputs.p file in the specified directory&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The function argument is not a valid directory&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">store_type</span> <span class="o">==</span> <span class="s1">&#39;excel&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">SimulationPath</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">SimulationPath</span><span class="p">,</span> <span class="s1">&#39;InputDispa-SET - Sets.xlsx&#39;</span><span class="p">)):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;Could not find the file &#39;InputDispa-SET - Sets.xlsx&#39;&quot;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">list_param</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">SimulationPath</span><span class="p">,</span> <span class="s1">&#39;InputDispa-SET - &#39;</span> <span class="o">+</span> <span class="n">var</span> <span class="o">+</span> <span class="s1">&#39;.xlsx&#39;</span><span class="p">)):</span>
+                    <span class="n">a</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;Could not find the file &#39;InputDispa-SET - &quot;</span> <span class="o">+</span> <span class="n">var</span> <span class="o">+</span> <span class="s2">&quot;.xlsx&#39;&quot;</span><span class="p">)</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The function argument is not a valid directory&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The &quot;type&quot; parameter must be one of the following : &quot;list&quot;, &quot;excel&quot;, &quot;pickle&quot;&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Sylvain Quoilin &amp; Kostas Kavvadias
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'../../../',
+              VERSION:'',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

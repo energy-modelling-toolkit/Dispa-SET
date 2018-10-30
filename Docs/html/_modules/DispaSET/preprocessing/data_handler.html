@@ -1,0 +1,771 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>DispaSET.preprocessing.data_handler &mdash; Documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> DispaSET
+          
+
+          
+            
+            <img src="../../../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../workflow.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Model Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../formulations.html">Model Formulations and clustering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../implementation.html">Implementation and interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../data.html">Input Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cases.html">Case Studies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developers.html">Developers’ section</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../DispaSET.html">DispaSET package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DispaSET</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>DispaSET.preprocessing.data_handler</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for DispaSET.preprocessing.data_handler</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">future.builtins</span> <span class="k">import</span> <span class="nb">int</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+
+<div class="viewcode-block" id="NodeBasedTable"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_handler.NodeBasedTable">[docs]</a><span class="k">def</span> <span class="nf">NodeBasedTable</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="n">idx</span><span class="p">,</span><span class="n">countries</span><span class="p">,</span><span class="n">tablename</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    This function loads the tabular data stored in csv files relative to each</span>
+<span class="sd">    zone (a.k.a node, country) of the simulation.</span>
+
+<span class="sd">    :param path:                Path to the data to be loaded</span>
+<span class="sd">    :param idx:                 Pandas datetime index to be used for the output</span>
+<span class="sd">    :param countries:           List with the country codes to be considered</span>
+<span class="sd">    :param fallback:            List with the order of data source.</span>
+<span class="sd">    :param tablename:           String with the name of the table being processed</span>
+<span class="sd">    :param default:             Default value to be applied if no data is found</span>
+
+<span class="sd">    :return:           Dataframe with the time series for each unit</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+              
+    <span class="n">paths</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">paths</span><span class="p">[</span><span class="s1">&#39;all&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="n">SingleFile</span><span class="o">=</span><span class="kc">True</span>
+    <span class="k">elif</span> <span class="s1">&#39;##&#39;</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">countries</span><span class="p">:</span>
+            <span class="n">path_c</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;##&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path_c</span><span class="p">):</span>
+                <span class="n">paths</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)]</span> <span class="o">=</span> <span class="n">path_c</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;No data file found for the table &#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39; and country &#39;</span> <span class="o">+</span> <span class="n">c</span> <span class="o">+</span> <span class="s1">&#39;. File &#39;</span> <span class="o">+</span> <span class="n">path_c</span> <span class="o">+</span> <span class="s1">&#39; does not exist&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">SingleFile</span><span class="o">=</span><span class="kc">False</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">idx</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;No data file found for the table &#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39;. Using default value &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">default</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">default</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">default</span><span class="p">,(</span><span class="nb">float</span><span class="p">,</span><span class="nb">int</span><span class="p">)):</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">default</span><span class="p">,</span><span class="n">index</span><span class="o">=</span><span class="n">idx</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">countries</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Default value provided for table &#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39; is not valid&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">SingleFile</span><span class="p">:</span>
+        <span class="c1"># If it is only one file, there is a header with the country code</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">load_csv</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="s1">&#39;all&#39;</span><span class="p">],</span> <span class="n">index_col</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">tmp</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;The index of data file &#39;</span> <span class="o">+</span> <span class="n">paths</span><span class="p">[</span><span class="s1">&#39;all&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39; is not unique. Please check the data&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">countries</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">tmp</span><span class="p">:</span>
+                <span class="n">data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">tmp</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>    <span class="c1"># if the country code is not in the header, it can also be because it is a single country simulation and no header is needed:</span>
+                <span class="n">data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Country &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39; could not be found in the file &#39;</span> <span class="o">+</span> <span class="n">path</span> <span class="o">+</span> <span class="s1">&#39;. Using default value &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">default</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">default</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">pass</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">default</span><span class="p">,(</span><span class="nb">float</span><span class="p">,</span><span class="nb">int</span><span class="p">,</span><span class="n">long</span><span class="p">)):</span>
+                    <span class="n">data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">default</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Default value provided for table &#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39; is not valid&#39;</span><span class="p">)</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span> <span class="c1"># assembling the files in a single dataframe:</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">paths</span><span class="p">[</span><span class="n">c</span><span class="p">]</span>
+            <span class="c1"># In case of separated files for each country, there is no header</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="n">load_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="c1"># check that the loaded file is ok:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">tmp</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;The index of data file &#39;</span> <span class="o">+</span> <span class="n">paths</span><span class="p">[</span><span class="s1">&#39;all&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39; is not unique. Please check the data&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+     
+    <span class="k">return</span> <span class="n">data</span></div>
+
+
+
+<div class="viewcode-block" id="UnitBasedTable"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_handler.UnitBasedTable">[docs]</a><span class="k">def</span> <span class="nf">UnitBasedTable</span><span class="p">(</span><span class="n">plants</span><span class="p">,</span><span class="n">path</span><span class="p">,</span><span class="n">idx</span><span class="p">,</span><span class="n">countries</span><span class="p">,</span><span class="n">fallbacks</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">],</span><span class="n">tablename</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">RestrictWarning</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    This function loads the tabular data stored in csv files and assigns the</span>
+<span class="sd">    proper values to each unit of the plants dataframe. If the unit-specific </span>
+<span class="sd">    value is not found in the data, the script can fallback on more generic</span>
+<span class="sd">    data (e.g. fuel-based, technology-based, zone-based) or to the default value.</span>
+<span class="sd">    The order in which the data should be loaded is specified in the fallback</span>
+<span class="sd">    list. For example, [&#39;Unit&#39;,&#39;Technology&#39;] means that the script will first</span>
+<span class="sd">    try to find a perfect match for the unit name in the data table. If not found,</span>
+<span class="sd">    a column with the unit technology as header is search. If not found, the</span>
+<span class="sd">    default value is assigned.</span>
+
+<span class="sd">    :param plants:              Dataframe with the units for which data is required</span>
+<span class="sd">    :param path:                Path to the data to be loaded</span>
+<span class="sd">    :param idx:                 Pandas datetime index to be used for the output</span>
+<span class="sd">    :param countries:           List with the country codes to be considered</span>
+<span class="sd">    :param fallback:            List with the order of data source. </span>
+<span class="sd">    :param tablename:           String with the name of the table being processed</span>
+<span class="sd">    :param default:             Default value to be applied if no data is found</span>
+<span class="sd">    :param RestrictWarning:     Only display the warnings if the unit belongs to the list of technologies provided in this parameter</span>
+<span class="sd">    </span>
+<span class="sd">    :return:           Dataframe with the time series for each unit</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+              
+    <span class="n">paths</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">paths</span><span class="p">[</span><span class="s1">&#39;all&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="n">SingleFile</span><span class="o">=</span><span class="kc">True</span>
+    <span class="k">elif</span> <span class="s1">&#39;##&#39;</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">countries</span><span class="p">:</span>
+            <span class="n">path_c</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;##&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path_c</span><span class="p">):</span>
+                <span class="n">paths</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)]</span> <span class="o">=</span> <span class="n">path_c</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;No data file found for the table &#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39; and country &#39;</span> <span class="o">+</span> <span class="n">c</span> <span class="o">+</span> <span class="s1">&#39;. File &#39;</span> <span class="o">+</span> <span class="n">path_c</span> <span class="o">+</span> <span class="s1">&#39; does not exist&#39;</span><span class="p">)</span>
+<span class="c1">#                sys.exit(1)</span>
+        <span class="n">SingleFile</span><span class="o">=</span><span class="kc">False</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">idx</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;No data file found for the table &#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39;. Using default value &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">default</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">default</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">idx</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">default</span><span class="p">,(</span><span class="nb">float</span><span class="p">,</span><span class="nb">int</span><span class="p">)):</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">default</span><span class="p">,</span><span class="n">index</span><span class="o">=</span><span class="n">idx</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Default value provided for table &#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39; is not valid&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span> <span class="c1"># assembling the files in a single dataframe:</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">paths</span><span class="p">[</span><span class="n">c</span><span class="p">]</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="n">load_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="c1"># check that the loaded file is ok:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">tmp</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;The index of data file &#39;</span> <span class="o">+</span> <span class="n">path</span> <span class="o">+</span> <span class="s1">&#39; is not unique. Please check the data&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">SingleFile</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">tmp</span><span class="p">:</span>
+                    <span class="n">data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>                
+            <span class="k">else</span><span class="p">:</span>    <span class="c1"># use the multi-index header with the country</span>
+                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">tmp</span><span class="p">:</span>
+                    <span class="n">columns</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">c</span><span class="p">,</span><span class="n">key</span><span class="p">))</span>
+                    <span class="n">data</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="s1">&#39;,&#39;</span><span class="o">+</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">SingleFile</span><span class="p">:</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">MultiIndex</span><span class="o">.</span><span class="n">from_tuples</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Country&#39;</span><span class="p">,</span> <span class="s1">&#39;Data&#39;</span><span class="p">])</span>
+        <span class="c1"># For each plant and each fallback key, try to find the corresponding column in the data</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">idx</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">plants</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="n">warning</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">RestrictWarning</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">warning</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">if</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="s1">&#39;Technology&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">RestrictWarning</span><span class="p">:</span>
+                    <span class="n">warning</span><span class="o">=</span><span class="kc">True</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="s1">&#39;Unit&#39;</span><span class="p">]</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">key</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fallbacks</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">SingleFile</span><span class="p">:</span>
+                    <span class="n">header</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="n">key</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">header</span> <span class="o">=</span> <span class="p">(</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="s1">&#39;Zone&#39;</span><span class="p">],</span><span class="n">plants</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="n">key</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">header</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                    <span class="n">out</span><span class="p">[</span><span class="n">u</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">header</span><span class="p">]</span>
+                    <span class="n">found</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">warning</span><span class="p">:</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;No specific information was found for unit &#39;</span> <span class="o">+</span> <span class="n">u</span> <span class="o">+</span> <span class="s1">&#39; in table &#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39;. The generic information for &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">header</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; has been used&#39;</span><span class="p">)</span>
+                    <span class="k">break</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">warning</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;No specific information was found for unit &#39;</span> <span class="o">+</span> <span class="n">u</span> <span class="o">+</span> <span class="s1">&#39; in table &#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39;. Using default value &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">default</span><span class="p">))</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">default</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">out</span><span class="p">[</span><span class="n">u</span><span class="p">]</span> <span class="o">=</span> <span class="n">default</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">out</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;The column headers of table &quot;&#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39;&quot; are not unique!. The following headers are duplicated: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_duplicates</span><span class="p">()))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+
+<div class="viewcode-block" id="merge_series"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_handler.merge_series">[docs]</a><span class="k">def</span> <span class="nf">merge_series</span><span class="p">(</span><span class="n">plants</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">mapping</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;WeightedAverage&#39;</span><span class="p">,</span> <span class="n">tablename</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that merges the times series corresponding to the merged units (e.g. outages, inflows, etc.)</span>
+
+<span class="sd">    :param plants:      Pandas dataframe with the information relative to the original units</span>
+<span class="sd">    :param data:        Pandas dataframe with the time series and the original unit names as column header</span>
+<span class="sd">    :param mapping:     Mapping between the merged units and the original units. Output of the clustering function</span>
+<span class="sd">    :param method:      Select the merging method (&#39;WeightedAverage&#39;/&#39;Sum&#39;)</span>
+<span class="sd">    :param tablename:   Name of the table being processed (e.g. &#39;Outages&#39;), used in the warnings</span>
+<span class="sd">    :return merged:     Pandas dataframe with the merged time series when necessary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># backward compatibility:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="s2">&quot;Nunits&quot;</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">:</span>
+        <span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Nunits&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="n">plants</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">plants</span><span class="p">))</span>
+    <span class="n">merged</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+    <span class="n">unitnames</span> <span class="o">=</span> <span class="n">plants</span><span class="o">.</span><span class="n">Unit</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="c1"># First check the data:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;The input &quot;&#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39;&quot; to the merge_series function must be a dataframe&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;bool&#39;</span><span class="p">,</span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="s1">&#39;float&#39;</span><span class="p">,</span><span class="s1">&#39;float16&#39;</span><span class="p">,</span> <span class="s1">&#39;float32&#39;</span><span class="p">,</span> <span class="s1">&#39;float64&#39;</span><span class="p">,</span> <span class="s1">&#39;float128&#39;</span><span class="p">,</span><span class="s1">&#39;int8&#39;</span><span class="p">,</span> <span class="s1">&#39;int16&#39;</span><span class="p">,</span> <span class="s1">&#39;int32&#39;</span><span class="p">,</span> <span class="s1">&#39;int64&#39;</span><span class="p">]:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The column &quot;&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;&quot; of table + &quot;&#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39;&quot; is not numeric!&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">unitnames</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">unitnames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">newunit</span> <span class="o">=</span> <span class="n">mapping</span><span class="p">[</span><span class="s1">&#39;NewIndex&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">newunit</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">merged</span><span class="p">:</span>  <span class="c1"># if the columns name is in the mapping and the new unit has not been processed yet</span>
+                <span class="n">oldindexes</span> <span class="o">=</span> <span class="n">mapping</span><span class="p">[</span><span class="s1">&#39;FormerIndexes&#39;</span><span class="p">][</span><span class="n">newunit</span><span class="p">]</span>
+                <span class="n">oldnames</span> <span class="o">=</span> <span class="p">[</span><span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">][</span><span class="n">x</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">oldindexes</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">all</span><span class="p">([</span><span class="n">name</span> <span class="ow">in</span> <span class="n">data</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">oldnames</span><span class="p">]):</span>
+                    <span class="n">subunits</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">oldnames</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">oldnames</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                            <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The column &quot;&#39;</span> <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;&quot; is required for the aggregation of unit &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span>
+                                             <span class="s1">&#39;&quot;, but it has not been found in the input data&#39;</span><span class="p">)</span>
+                            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+                <span class="c1"># Renaming the subunits df headers with the old plant indexes instead of the unit names:</span>
+                <span class="n">subunits</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">mapping</span><span class="p">[</span><span class="s1">&#39;FormerIndexes&#39;</span><span class="p">][</span><span class="n">newunit</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;WeightedAverage&#39;</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">oldindexes</span><span class="p">:</span>
+                        <span class="n">name</span> <span class="o">=</span> <span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">]</span>
+                        <span class="n">value</span> <span class="o">=</span> <span class="n">value</span> <span class="o">+</span> <span class="n">subunits</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-9</span><span class="p">,</span> <span class="n">plants</span><span class="p">[</span><span class="s1">&#39;PowerCapacity&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">]</span><span class="o">*</span><span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Nunits&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">])</span>
+                    <span class="n">P_j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-9</span><span class="p">,</span> <span class="n">plants</span><span class="p">[</span><span class="s1">&#39;PowerCapacity&#39;</span><span class="p">][</span><span class="n">oldindexes</span><span class="p">]</span><span class="o">*</span><span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Nunits&#39;</span><span class="p">][</span><span class="n">oldindexes</span><span class="p">]))</span>
+                    <span class="n">merged</span><span class="p">[</span><span class="n">newunit</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span> <span class="o">/</span> <span class="n">P_j</span>
+                <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;Sum&#39;</span><span class="p">:</span>
+                    <span class="n">merged</span><span class="p">[</span><span class="n">newunit</span><span class="p">]</span> <span class="o">=</span> <span class="n">subunits</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;Method &quot;&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">method</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;&quot; unknown in function MergeSeries&#39;</span><span class="p">)</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">plants</span><span class="p">[</span><span class="s1">&#39;Unit&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>  <span class="c1"># if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Column &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; present in the table &quot;&#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39;&quot; not found in the mapping between original and clustered units. Skipping&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>  <span class="c1"># if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Column &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; present in the table &quot;&#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39;&quot; not found in the table of power plants. Skipping&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">merged</span></div>
+
+
+<div class="viewcode-block" id="define_parameter"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_handler.define_parameter">[docs]</a><span class="k">def</span> <span class="nf">define_parameter</span><span class="p">(</span><span class="n">sets_in</span><span class="p">,</span> <span class="n">sets</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to define a DispaSET parameter and fill it with a constant value</span>
+
+<span class="sd">    :param sets_in:     List with the labels of the sets corresponding to the parameter</span>
+<span class="sd">    :param sets:        dictionary containing the definition of all the sets (must comprise those referenced in sets_in)</span>
+<span class="sd">    :param value:       Default value to attribute to the parameter</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="s1">&#39;bool&#39;</span><span class="p">:</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">sets</span><span class="p">[</span><span class="n">setx</span><span class="p">])</span> <span class="k">for</span> <span class="n">setx</span> <span class="ow">in</span> <span class="n">sets_in</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;bool&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">value</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">sets</span><span class="p">[</span><span class="n">setx</span><span class="p">])</span> <span class="k">for</span> <span class="n">setx</span> <span class="ow">in</span> <span class="n">sets_in</span><span class="p">])</span>
+    <span class="k">elif</span> <span class="n">value</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">sets</span><span class="p">[</span><span class="n">setx</span><span class="p">])</span> <span class="k">for</span> <span class="n">setx</span> <span class="ow">in</span> <span class="n">sets_in</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">sets</span><span class="p">[</span><span class="n">setx</span><span class="p">])</span> <span class="k">for</span> <span class="n">setx</span> <span class="ow">in</span> <span class="n">sets_in</span><span class="p">])</span> <span class="o">*</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;sets&#39;</span><span class="p">:</span> <span class="n">sets_in</span><span class="p">,</span> <span class="s1">&#39;val&#39;</span><span class="p">:</span> <span class="n">values</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="invert_dic_df"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_handler.invert_dic_df">[docs]</a><span class="k">def</span> <span class="nf">invert_dic_df</span><span class="p">(</span><span class="n">dic</span><span class="p">,</span><span class="n">tablename</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that takes as input a dictionary of dataframes, and inverts the key of</span>
+<span class="sd">    the dictionary with the columns headers of the dataframes</span>
+
+<span class="sd">    :param dic: dictionary of dataframes, with the same columns headers and the same index</span>
+<span class="sd">    :param tablename: string with the name of the table being processed (for the error msg)</span>
+<span class="sd">    :returns: dictionary of dataframes, with swapped headers</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># keys are defined as the keys of the original dictionary, cols are the columns of the original dataframe</span>
+    <span class="c1"># items are the keys of the output dictionary, i.e. the columns of the original dataframe</span>
+    <span class="n">dic_out</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1"># First, check that all indexes have the same length:</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">dic</span><span class="p">[</span><span class="n">dic</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">index</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dic</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dic</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;The indexes of the data tables &quot;&#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39;&quot; are not equal in all the files&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># Then put the data in a panda Panel with minor orientation:</span>
+    <span class="n">panel</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Panel</span><span class="o">.</span><span class="n">fromDict</span><span class="p">(</span><span class="n">dic</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="s1">&#39;minor&#39;</span><span class="p">)</span>
+    <span class="c1"># Display a warning if some items are missing in the original data:</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">panel</span><span class="o">.</span><span class="n">items</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dic</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">item</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dic</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;The column &quot;&#39;</span> <span class="o">+</span> <span class="n">item</span> <span class="o">+</span> <span class="s1">&#39;&quot; is not present in &quot;&#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;&quot; for the &quot;&#39;</span> <span class="o">+</span> <span class="n">tablename</span> <span class="o">+</span> <span class="s1">&#39;&quot; data. Zero will be assumed&#39;</span><span class="p">)</span>
+        <span class="n">dic_out</span><span class="p">[</span><span class="n">item</span><span class="p">]</span> <span class="o">=</span> <span class="n">panel</span><span class="p">[</span><span class="n">item</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dic_out</span></div>
+
+
+<div class="viewcode-block" id="write_to_excel"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_handler.write_to_excel">[docs]</a><span class="k">def</span> <span class="nf">write_to_excel</span><span class="p">(</span><span class="n">xls_out</span><span class="p">,</span> <span class="n">list_vars</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that reads all the variables (in list_vars) and inserts them one by one to excel</span>
+
+<span class="sd">    :param xls_out: The path of the folder where the excel files are to be written</span>
+<span class="sd">    :param list_vars: List containing the dispaset variables</span>
+<span class="sd">    :returns: Binary variable (True)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+
+    <span class="c1"># import sys</span>
+    <span class="n">reload</span><span class="p">(</span><span class="n">sys</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">setdefaultencoding</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">xls_out</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">xls_out</span><span class="p">)</span>
+
+
+        <span class="c1"># Printing all sets in one sheet:</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">ExcelWriter</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">xls_out</span><span class="p">,</span> <span class="s1">&#39;InputDispa-SET - Sets.xlsx&#39;</span><span class="p">),</span> <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;xlsxwriter&#39;</span><span class="p">)</span>
+
+    <span class="p">[</span><span class="n">sets</span><span class="p">,</span> <span class="n">parameters</span><span class="p">]</span> <span class="o">=</span> <span class="n">list_vars</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;Config&#39;</span><span class="p">][</span><span class="s1">&#39;val&#39;</span><span class="p">]</span>
+        <span class="n">first_day</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">last_day</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="mi">23</span><span class="p">)</span>
+        <span class="n">dates</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">first_day</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">last_day</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s1">&#39;1h&#39;</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">dates</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sets</span><span class="p">:</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">sets</span><span class="p">[</span><span class="n">s</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">s</span><span class="p">])</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="s1">&#39;Sets&#39;</span><span class="p">,</span> <span class="n">startrow</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">startcol</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;All sets successfully written to excel&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Printing each parameter in a separate sheet and workbook:</span>
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="n">p</span><span class="p">]</span>
+        <span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;h&#39;</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dates</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">tseries</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">)</span> <span class="ow">and</span> <span class="n">dim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dates</span><span class="p">)</span> <span class="o">!=</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;val&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s1">&#39;The date range in the Config variable (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">dates</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39; time steps) does not match the length of the time index (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+                    <span class="n">var</span><span class="p">[</span><span class="s1">&#39;val&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39;) for variable &#39;</span> <span class="o">+</span> <span class="n">p</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">ExcelWriter</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">xls_out</span><span class="p">,</span> <span class="s1">&#39;InputDispa-SET - &#39;</span> <span class="o">+</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39;.xlsx&#39;</span><span class="p">),</span> <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;xlsxwriter&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;val&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">p</span><span class="p">],</span> <span class="n">index</span><span class="o">=</span><span class="n">sets</span><span class="p">[</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]])</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">startrow</span><span class="o">=</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">],</span> <span class="n">startcol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">worksheet</span> <span class="o">=</span> <span class="n">writer</span><span class="o">.</span><span class="n">sheets</span><span class="p">[</span><span class="n">p</span><span class="p">]</span>
+            <span class="n">worksheet</span><span class="o">.</span><span class="n">write_string</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span><span class="p">)</span>
+            <span class="n">worksheet</span><span class="o">.</span><span class="n">set_column</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">list_sets</span> <span class="o">=</span> <span class="p">[</span><span class="n">sets</span><span class="p">[</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]],</span> <span class="n">sets</span><span class="p">[</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]]]</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;val&#39;</span><span class="p">]</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">list_sets</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">index</span><span class="o">=</span><span class="n">list_sets</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">startrow</span><span class="o">=</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">],</span> <span class="n">startcol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">worksheet</span> <span class="o">=</span> <span class="n">writer</span><span class="o">.</span><span class="n">sheets</span><span class="p">[</span><span class="n">p</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+                <span class="n">worksheet</span><span class="o">.</span><span class="n">write_row</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dates</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+                <span class="n">worksheet</span><span class="o">.</span><span class="n">write_row</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dates</span><span class="o">.</span><span class="n">month</span><span class="p">)</span>
+                <span class="n">worksheet</span><span class="o">.</span><span class="n">write_row</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dates</span><span class="o">.</span><span class="n">day</span><span class="p">)</span>
+                <span class="n">worksheet</span><span class="o">.</span><span class="n">write_row</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dates</span><span class="o">.</span><span class="n">hour</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">worksheet</span><span class="o">.</span><span class="n">write_string</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;,&#39;</span> <span class="o">+</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span><span class="p">)</span>
+            <span class="n">worksheet</span><span class="o">.</span><span class="n">freeze_panes</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">worksheet</span><span class="o">.</span><span class="n">set_column</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">list_sets</span> <span class="o">=</span> <span class="p">[</span><span class="n">sets</span><span class="p">[</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]],</span> <span class="n">sets</span><span class="p">[</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]],</span> <span class="n">sets</span><span class="p">[</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">2</span><span class="p">]]]</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;val&#39;</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">list_sets</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="n">list_sets</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">Nrows</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">list_sets</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:],</span> <span class="n">columns</span><span class="o">=</span><span class="n">list_sets</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">index</span><span class="o">=</span><span class="n">list_sets</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">startrow</span><span class="o">=</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">Nrows</span><span class="p">,</span> <span class="n">startcol</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                            <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">df2</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">key</span><span class="p">])</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">Nrows</span><span class="p">))</span>
+                <span class="n">df2</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">startrow</span><span class="o">=</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">Nrows</span><span class="p">,</span> <span class="n">startcol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                             <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">worksheet</span> <span class="o">=</span> <span class="n">writer</span><span class="o">.</span><span class="n">sheets</span><span class="p">[</span><span class="n">p</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+                <span class="n">worksheet</span><span class="o">.</span><span class="n">write_row</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dates</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+                <span class="n">worksheet</span><span class="o">.</span><span class="n">write_row</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dates</span><span class="o">.</span><span class="n">month</span><span class="p">)</span>
+                <span class="n">worksheet</span><span class="o">.</span><span class="n">write_row</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dates</span><span class="o">.</span><span class="n">day</span><span class="p">)</span>
+                <span class="n">worksheet</span><span class="o">.</span><span class="n">write_row</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dates</span><span class="o">.</span><span class="n">hour</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">worksheet</span><span class="o">.</span><span class="n">write_string</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;,&#39;</span> <span class="o">+</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;,&#39;</span> <span class="o">+</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span><span class="p">)</span>
+            <span class="n">worksheet</span><span class="o">.</span><span class="n">write_string</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">worksheet</span><span class="o">.</span><span class="n">write_string</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">worksheet</span><span class="o">.</span><span class="n">freeze_panes</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">],</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">worksheet</span><span class="o">.</span><span class="n">set_column</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">list_sets</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">startrow</span><span class="o">=</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">],</span> <span class="n">startcol</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Only three dimensions currently supported. Parameter &#39;</span> <span class="o">+</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39; has &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; dimensions.&#39;</span><span class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Parameter &#39;</span> <span class="o">+</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39; successfully written to excel&#39;</span><span class="p">)</span>
+
+
+    <span class="c1"># Writing a gams file to process the excel sheets:</span>
+    <span class="n">gmsfile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">xls_out</span><span class="p">,</span> <span class="s1">&#39;make_gdx.gms&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sets</span><span class="p">:</span>
+        <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;$CALL GDXXRW &quot;InputDispa-SET - Sets.xlsx&quot; Set=&#39;</span> <span class="o">+</span> <span class="n">s</span> <span class="o">+</span> <span class="s1">&#39; rng=&#39;</span> <span class="o">+</span> <span class="nb">chr</span><span class="p">(</span>
+            <span class="n">i</span> <span class="o">+</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;A&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;3 Rdim=1  O=&#39;</span> <span class="o">+</span> <span class="n">s</span> <span class="o">+</span> <span class="s1">&#39;.gdx </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;$GDXIN &#39;</span> <span class="o">+</span> <span class="n">s</span> <span class="o">+</span> <span class="s1">&#39;.gdx </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;Set &#39;</span> <span class="o">+</span> <span class="n">s</span> <span class="o">+</span> <span class="s1">&#39;; </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;$LOAD &#39;</span> <span class="o">+</span> <span class="n">s</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;$GDXIN </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="n">p</span><span class="p">]</span>
+        <span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;sets&#39;</span><span class="p">])</span>
+        <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;$CALL GDXXRW &quot;InputDispa-SET - &#39;</span> <span class="o">+</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39;.xlsx&quot; par=&#39;</span> <span class="o">+</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39; rng=A&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+                <span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; Rdim=1 </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;$CALL GDXXRW &quot;InputDispa-SET - &#39;</span> <span class="o">+</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39;.xlsx&quot; par=&#39;</span> <span class="o">+</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39; rng=A&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+                <span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; Rdim=1 Cdim=1 </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;$CALL GDXXRW &quot;InputDispa-SET - &#39;</span> <span class="o">+</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39;.xlsx&quot; par=&#39;</span> <span class="o">+</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39; rng=A&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+                <span class="n">var</span><span class="p">[</span><span class="s1">&#39;firstrow&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; Rdim=2 Cdim=1 </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;$GDXIN &quot;InputDispa-SET - &#39;</span> <span class="o">+</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39;.gdx&quot; </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;Parameter &#39;</span> <span class="o">+</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39;; </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;$LOAD &#39;</span> <span class="o">+</span> <span class="n">p</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;$GDXIN </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">gmsfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;Execute_Unload &quot;Inputs.gdx&quot;&#39;</span><span class="p">)</span>
+    <span class="n">gmsfile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Data Successfully written to the &#39;</span> <span class="o">+</span> <span class="n">xls_out</span> <span class="o">+</span> <span class="s1">&#39; directory.&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="load_csv"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_handler.load_csv">[docs]</a><span class="k">def</span> <span class="nf">load_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">TempPath</span><span class="o">=</span><span class="s1">&#39;.pickle&#39;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">skipfooter</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that loads an xls sheet into a dataframe and saves a temporary pickle version of it.</span>
+<span class="sd">    If the pickle is newer than the sheet, do no load the sheet again.</span>
+
+<span class="sd">    :param file_excel: path to the excel file</span>
+<span class="sd">    :param TempPath: path to store the temporary data files</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">#TODO: this can be replaced by a leaner version using: import tempfile</span>
+
+    <span class="n">filepath_pandas</span> <span class="o">=</span> <span class="n">TempPath</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">filename</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;-&#39;</span> <span class="o">+</span> <span class="s1">&#39;.p&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">TempPath</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">TempPath</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filepath_pandas</span><span class="p">):</span>
+        <span class="n">time_pd</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">time_pd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">(</span><span class="n">filepath_pandas</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">time_pd</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="n">header</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="n">skiprows</span><span class="p">,</span> <span class="n">skipfooter</span><span class="o">=</span><span class="n">skipfooter</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="n">index_col</span><span class="p">,</span>
+                           <span class="n">parse_dates</span><span class="o">=</span><span class="n">parse_dates</span><span class="p">)</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">to_pickle</span><span class="p">(</span><span class="n">filepath_pandas</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_pickle</span><span class="p">(</span><span class="n">filepath_pandas</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">data</span></div>
+
+
+<div class="viewcode-block" id="load_config_excel"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_handler.load_config_excel">[docs]</a><span class="k">def</span> <span class="nf">load_config_excel</span><span class="p">(</span><span class="n">ConfigFile</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that loads the DispaSET excel config file and returns a dictionary</span>
+<span class="sd">    with the values</span>
+
+<span class="sd">    :param ConfigFile: String with (relative) path to the DispaSET excel configuration file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">xlrd</span>
+    <span class="n">wb</span> <span class="o">=</span> <span class="n">xlrd</span><span class="o">.</span><span class="n">open_workbook</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="n">ConfigFile</span><span class="p">)</span>  <span class="c1"># Option for csv to be added later</span>
+    <span class="n">sheet</span> <span class="o">=</span> <span class="n">wb</span><span class="o">.</span><span class="n">sheet_by_name</span><span class="p">(</span><span class="s1">&#39;main&#39;</span><span class="p">)</span>
+
+    <span class="n">config</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;SimulationDirectory&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">17</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;WriteExcel&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;WriteGDX&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">19</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;WritePickle&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;GAMS_folder&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">21</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;cplex_path&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">22</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;StartDate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xlrd</span><span class="o">.</span><span class="n">xldate_as_tuple</span><span class="p">(</span><span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">wb</span><span class="o">.</span><span class="n">datemode</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;StopDate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xlrd</span><span class="o">.</span><span class="n">xldate_as_tuple</span><span class="p">(</span><span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">31</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">wb</span><span class="o">.</span><span class="n">datemode</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;HorizonLength&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;LookAhead&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">33</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;SimulationType&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">46</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;ReserveCalculation&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">47</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;AllowCurtailment&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">48</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Demand&#39;</span><span class="p">,</span> <span class="s1">&#39;Outages&#39;</span><span class="p">,</span> <span class="s1">&#39;PowerPlantData&#39;</span><span class="p">,</span> <span class="s1">&#39;RenewablesAF&#39;</span><span class="p">,</span> <span class="s1">&#39;LoadShedding&#39;</span><span class="p">,</span> <span class="s1">&#39;NTC&#39;</span><span class="p">,</span> <span class="s1">&#39;Interconnections&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;ReservoirScaledInflows&#39;</span><span class="p">,</span> <span class="s1">&#39;PriceOfNuclear&#39;</span><span class="p">,</span> <span class="s1">&#39;PriceOfBlackCoal&#39;</span><span class="p">,</span> <span class="s1">&#39;PriceOfGas&#39;</span><span class="p">,</span> <span class="s1">&#39;PriceOfFuelOil&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;PriceOfBiomass&#39;</span><span class="p">,</span> <span class="s1">&#39;PriceOfCO2&#39;</span><span class="p">,</span> <span class="s1">&#39;ReservoirLevels&#39;</span><span class="p">,</span> <span class="s1">&#39;PriceOfLignite&#39;</span><span class="p">,</span> <span class="s1">&#39;PriceOfPeat&#39;</span><span class="p">,</span><span class="s1">&#39;HeatDemand&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;CostHeatSlack&#39;</span><span class="p">,</span><span class="s1">&#39;CostLoadShedding&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="n">config</span><span class="p">[</span><span class="n">param</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">61</span> <span class="o">+</span> <span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">][</span><span class="s1">&#39;PriceOfNuclear&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">69</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">][</span><span class="s1">&#39;PriceOfBlackCoal&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">70</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">][</span><span class="s1">&#39;PriceOfGas&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">71</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">][</span><span class="s1">&#39;PriceOfFuelOil&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">72</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">][</span><span class="s1">&#39;PriceOfBiomass&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">73</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">][</span><span class="s1">&#39;PriceOfCO2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">74</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">][</span><span class="s1">&#39;PriceOfLignite&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">76</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">][</span><span class="s1">&#39;PriceOfPeat&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">77</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">][</span><span class="s1">&#39;LoadShedding&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">65</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">][</span><span class="s1">&#39;CostHeatSlack&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">79</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">][</span><span class="s1">&#39;CostLoadShedding&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">80</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+    <span class="c1"># read the list of countries to consider:</span>
+    <span class="k">def</span> <span class="nf">read_truefalse</span><span class="p">(</span><span class="n">sheet</span><span class="p">,</span> <span class="n">rowstart</span><span class="p">,</span> <span class="n">colstart</span><span class="p">,</span> <span class="n">rowstop</span><span class="p">,</span> <span class="n">colstop</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function that reads a two column format with a list of strings in the first</span>
+<span class="sd">        columns and a list of true false in the second column</span>
+<span class="sd">        The list of strings associated with a True value is returned</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">rowstart</span><span class="p">,</span> <span class="n">rowstop</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">colstart</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">colstart</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;countries&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">read_truefalse</span><span class="p">(</span><span class="n">sheet</span><span class="p">,</span> <span class="mi">86</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">101</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;countries&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;countries&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">read_truefalse</span><span class="p">(</span><span class="n">sheet</span><span class="p">,</span> <span class="mi">86</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;modifiers&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;modifiers&#39;</span><span class="p">][</span><span class="s1">&#39;Demand&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;modifiers&#39;</span><span class="p">][</span><span class="s1">&#39;Wind&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">112</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;modifiers&#39;</span><span class="p">][</span><span class="s1">&#39;Solar&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">113</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;modifiers&#39;</span><span class="p">][</span><span class="s1">&#39;Storage&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell_value</span><span class="p">(</span><span class="mi">114</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># Read the technologies participating to reserve markets:</span>
+    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;ReserveParticipation&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">read_truefalse</span><span class="p">(</span><span class="n">sheet</span><span class="p">,</span> <span class="mi">131</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">145</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Using config file &quot;</span> <span class="o">+</span> <span class="n">ConfigFile</span> <span class="o">+</span> <span class="s2">&quot; to build the simulation environment&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="load_config_yaml"><a class="viewcode-back" href="../../../DispaSET.preprocessing.html#DispaSET.preprocessing.data_handler.load_config_yaml">[docs]</a><span class="k">def</span> <span class="nf">load_config_yaml</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Loads YAML file to dictionary&quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">yaml</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Cannot parse config file: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="n">exc</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Sylvain Quoilin &amp; Kostas Kavvadias
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'../../../',
+              VERSION:'',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
