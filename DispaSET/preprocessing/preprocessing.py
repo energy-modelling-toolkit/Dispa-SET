@@ -32,7 +32,7 @@ def get_git_revision_tag():
     """Get version of DispaSET used for this run. tag + commit hash"""
     from subprocess import check_output
     try:
-        return check_output(["git", "describe","--tags"]).strip()
+        return check_output(["git", "describe", "--tags", "--always"]).strip()
     except:
         return 'NA'
 
