@@ -74,7 +74,7 @@ This software is primarily developed and used within the Institute for Energy an
 
 Licence
 -------
-Dispa-SET is a free software licensed under the “European Union Public Licence" EUPL v1.1. It 
+Dispa-SET is a free software licensed under the “European Union Public Licence" EUPL v1.2. It 
 can be redistributed and/or modified under the terms of this license.
 
 Main Developers
