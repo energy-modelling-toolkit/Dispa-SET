@@ -21,6 +21,8 @@ import os
 sys.path.insert(0, os.path.abspath('../dispaset'))
 sys.path.insert(0, os.path.abspath('../'))
 autodoc_mock_imports = ['_tkinter', 'pyomo']
+import matplotlib
+matplotlib.use('agg')
 
 __version__ = None
 # Sets the __version__ variable

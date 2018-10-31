@@ -5,12 +5,11 @@ This worksheet contains the two main functions to solve the DispaSET optimizatio
 Solve with GAMS and the high level API
 --------------------------------------
 The high level interface is recommended for Linux users because it solves
-the "whitespace in the simulation folder" issue. Moreover, the "terminate" 
-comamnd tends to crash on linux with the low-level apis.   
+the "whitespace in the simulation folder" issue.
 
 Installation:
     To install the high-level API in Python 2.x::
-    
+
         cd gams24.4_linux_x64_64_sfx/apifiles/Python/api
         python gamssetup.py install
 
@@ -18,7 +17,7 @@ Installation:
     
         cd gams24.6_linux_x64_64_sfx/apifiles/Python/api_34
         python setup.py install    
-        
+
 Solve with GAMS and the low level APIs
 --------------------------------------
 Use lower level apis to run GAMS. BAsed on GAMS xpexample2.py
@@ -40,7 +39,6 @@ The Pyomo version of Dispa-SET is currently not up-to-date. Use at your own risk
 #######################################################################################################################
 
 
-import sys
 import os
 import shutil
 import logging
@@ -97,12 +95,10 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
             logging.warning('Could not import lower level APIs. Trying to locate local version')
             if not import_local_lib('gams'):
                 return False
-    if not os.path.exists(gams_folder):
-        logging.warning('The provided path for GAMS (' + gams_folder + ') does not exist. Trying to locate...')
-        gams_folder = get_gams_path()
-        if not os.path.exists(gams_folder):
-            logging.error('GAMS path cannot be located. Simulation is stopped')
-            return False
+    gams_folder = get_gams_path(gams_folder)
+    if not gams_folder:  # couldn't locate
+        logging.error('GAMS path cannot be located. Simulation is stopped')
+        return False
     sim_folder = os.path.abspath(sim_folder)
     gams_folder = os.path.abspath(gams_folder)
 
@@ -139,7 +135,7 @@ def solve_pyomo(sim_folder):
     else:
         path_cplex = ''
         if len(SimData['config']['cplex_path']) > 2:
-            logging.warn('The specified path for cplex (' + SimData['config'][
+            logging.warning('The specified path for cplex (' + SimData['config'][
                 'cplex_path'] + ') is not valid. It will be ignored')
 
     time0 = time.time()

@@ -72,13 +72,13 @@ def solve_low_level(gams_folder,sim_folder,output_lst=False,logoption=3):
     gamsxHandle = new_gamsxHandle_tp()
 
     try:
-        rc = gamsxCreateD(gamsxHandle, gams_folder, GMS_SSSIZE)
-        rc = optCreateD(optHandle, gams_folder, GMS_SSSIZE)
+        __ = gamsxCreateD(gamsxHandle, gams_folder, GMS_SSSIZE)
+        __ = optCreateD(optHandle, gams_folder, GMS_SSSIZE)
         time0 = time.time()
         status = callGams(gamsxHandle, optHandle, gams_folder, model)
     except Exception as e:
         logging.error('The following error occured when trying to solve the model in gams: ' + str(e))
-        sys.exit(1)
+        return False
     finally:
         optFree(optHandle)
         gamsxFree(gamsxHandle)
