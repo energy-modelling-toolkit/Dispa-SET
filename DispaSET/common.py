@@ -2,8 +2,6 @@
 """
 This file defines a dictionary with global variables to be used in Dispa-SET such as fluids, technologies, etc.
 """
-import itertools
-
 commons={}
 # Timestep
 commons['TimeStep'] = '1h'
