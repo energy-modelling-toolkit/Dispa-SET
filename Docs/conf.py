@@ -32,7 +32,7 @@ from subprocess import check_output
 try:
     __release__ = check_output(["git", "describe"]).strip()
 except:
-    __release__ = None
+    __release__ = ''
 
 # -- General configuration ------------------------------------------------
 
