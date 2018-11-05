@@ -9,26 +9,26 @@ This is input data of the Dispa-SET model, applied to the Balkans Region
 
 Countries included in different scenarios are show in the table [1]_ [2]_ [3]_ [4]_ :
 
-+-----------+------+------+
-| Countries | 2010 | 2015 |
-+===========+======+======+
-|Albania    | [O]  | [O]  |
-+-----------+------+------+
-|Bosnia and | [O]  | [O]  |
-|Herzegovina|	   |      |	
-+-----------+------+------+
-|Croatia    | [X]  | [O]  |
-+-----------+------+------+
-|Kosovo     | [O]  | [O]  |
-+-----------+------+------+
-|Macedonia  | [O]  | [O]  |
-+-----------+------+------+
-|Montenegro | [O]  | [O]  |
-+-----------+------+------+
-|Serbia     | [O]  | [O]  |
-+-----------+------+------+
-|Slovenia   | [X]  | [O]  |
-+-----------+------+------+
++-----------+------+------+------+------+
+| Countries | 2010 | 2015 | 2020 | 2030 |
++===========+======+======+======+======+
+|Albania    | [O]  | [O]  | [O]  | [O]  |
++-----------+------+------+------+------+
+|Bosnia and | [O]  | [O]  | [O]  | [O]  |
+|Herzegovina|      |      |      |      |
++-----------+------+------+------+------+
+|Croatia    | [X]  | [O]  | [O]  | [O]  |
++-----------+------+------+------+------+
+|Kosovo     | [O]  | [O]  | [O]  | [O]  |
++-----------+------+------+------+------+
+|Macedonia  | [O]  | [O]  | [O]  | [O]  |
++-----------+------+------+------+------+
+|Montenegro | [O]  | [O]  | [O]  | [O]  |
++-----------+------+------+------+------+
+|Serbia     | [O]  | [O]  | [O]  | [O]  |
++-----------+------+------+------+------+
+|Slovenia   | [X]  | [O]  | [O]  | [O]  |
++-----------+------+------+------+------+
 
 The model has the ability to describe every single unit, or a cluster of units powered by the same fuel type and technology, with a high level of detail can be modelled together with a large number of RES units with separate hourly distribution curves.
  
@@ -94,7 +94,7 @@ Important results
 Main developpers
 ----------------
 - Matija Pavičević (KU Leuven) - gathered and analysed the data, performed the computations, analysed and verified the results
-- Sylvain Quoilin (University of Liège) -  designed the model and the computational framework, verified the results 
+- Sylvain Quoilin (University of Liège, KU Leuven) -  designed the model and the computational framework, verified the results 
 - Andreas Zucker (Joint Research Centre, European Commission) - supervised the whole process
 
 References

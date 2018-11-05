@@ -75,7 +75,7 @@ Important results
 
 Main developpers
 ----------------
-- Sylvain Quoilin (University of Liège)
+- Sylvain Quoilin (University of Liège, KU Leuven)
 - Konstantinos Kavvadias (European Commission, Institute for Energy and Transport)
 - Matija Pavičević (KU Leuven)
 
@@ -92,5 +92,4 @@ Other contributors
 ------------------
 
 
-.. .. _Balkans: https://github.com/balkans-energy-modelling/DispaSET-for-the-Balkans
 
