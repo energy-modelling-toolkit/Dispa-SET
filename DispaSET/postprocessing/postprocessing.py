@@ -1100,3 +1100,72 @@ def CostExPost(inputs,results):
     return costs,sumcost
 
 
+
+
+def get_units_operation_cost(inputs, results):
+    """
+    Function that computes the operation cost for each power unit at each instant of time from the DispaSET results
+    Operation cost includes: CostFixed + CostStartUp + CostShutDown + CostRampUp + CostRampDown + CostVariable
+    
+    :param inputs:      DispaSET inputs
+    :param results:     DispaSET results
+    :returns out:       Dataframe with the the power units in columns and the operatopn cost at each instant in rows
+    
+    Main Author: @AbdullahAlawad
+    """
+    
+    datain = ds_to_df(inputs)
+    
+    #DataFrame with startup times for each unit (1 for startup)
+    StartUps = results['OutputCommitted'].copy()
+    for u in StartUps:
+        values = StartUps.loc[:, u].values
+        diff = -(np.roll(values, 1) - values )
+        diff[diff <= 0] = 0
+        StartUps[u] = diff
+    
+    #DataFrame with shutdown times for each unit (1 for shutdown)
+    ShutDowns = results['OutputCommitted'].copy()
+    for u in ShutDowns:
+        values = ShutDowns.loc[:, u].values
+        diff = (np.roll(values, 1) - values )
+        diff[diff <= 0] = 0
+        ShutDowns[u] = diff
+    
+    #DataFrame with ramping up levels for each unit at each instant (0 for ramping-down & leveling out)
+    RampUps = results['OutputPower'].copy()
+    for u in RampUps:
+        values = RampUps.loc[:, u].values
+        diff = -(np.roll(values, 1) - values )
+        diff[diff <= 0] = 0
+        RampUps[u] = diff
+    
+    #DataFrame with ramping down levels for each unit at each instant (0 for ramping-up & leveling out)
+    RampDowns = results['OutputPower'].copy()
+    for u in RampDowns:
+        values = RampDowns.loc[:, u].values
+        diff = (np.roll(values, 1) - values )
+        diff[diff <= 0] = 0
+        RampDowns[u] = diff
+    
+    FiexedCost = results['OutputCommitted'].copy()
+    StartUpCost = results['OutputCommitted'].copy()
+    ShutDownCost = results['OutputCommitted'].copy()
+    RampUpCost = results['OutputCommitted'].copy()
+    RampDownCost = results['OutputCommitted'].copy()
+    VariableCost = results['OutputCommitted'].copy()
+    UnitOperationCost = results['OutputCommitted'].copy()
+    
+    OperatedUnitList = results['OutputCommitted'].columns
+    for u in OperatedUnitList:
+        unit_indexNo = inputs['units'].index.get_loc(u)
+        FiexedCost.loc[:,[u]] = np.array(results['OutputCommitted'].loc[:,[u]])*inputs['parameters']['CostFixed']['val'][unit_indexNo]
+        StartUpCost.loc[:,[u]] = np.array(StartUps.loc[:,[u]])*inputs['parameters']['CostStartUp']['val'][unit_indexNo]
+        ShutDownCost.loc[:,[u]] = np.array(ShutDowns.loc[:,[u]])*inputs['parameters']['CostShutDown']['val'][unit_indexNo]
+        RampUpCost.loc[:,[u]] = np.array(RampUps.loc[:,[u]])*inputs['parameters']['CostRampUp']['val'][unit_indexNo]
+        RampDownCost.loc[:,[u]] = np.array(RampDowns.loc[:,[u]])*inputs['parameters']['CostRampDown']['val'][unit_indexNo]
+        VariableCost.loc[:,[u]] = np.array(datain['CostVariable'].loc[:,[u]])*np.array(results['OutputPower'][u]).reshape(-1,1)
+    
+    UnitOperationCost = FiexedCost+StartUpCost+ShutDownCost+RampUpCost+RampDownCost+VariableCost
+
+    return UnitOperationCost
