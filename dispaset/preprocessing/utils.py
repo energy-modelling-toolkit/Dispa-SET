@@ -231,9 +231,9 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
 
     for i in plants.index:  # i is the plant to be added to the new list
         merged = False
+        plants_string = plants[string_keys].iloc[i].fillna('')
         for j in plants_merged.index:  # j corresponds to the clustered plants
-            same_type = all([plants[key].fillna('')[i] == plants_merged[key].fillna('')[j] for key in
-                             string_keys])
+            same_type = all(plants_string == plants_merged[string_keys].iloc[j].fillna(''))
             same_fingerprint = (fingerprints[i] == fingerprints_merged[j])
             low_pmin = (plants['PartLoadMin'][i] <= PartLoadMax)
             low_pmax = (plants['PowerCapacity'][i] <= Pmax)

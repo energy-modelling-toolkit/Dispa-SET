@@ -58,6 +58,7 @@ Contents
    formulations
    implementation
    data
+   cases
    developers
    dispaset
 
