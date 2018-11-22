@@ -5,7 +5,7 @@ Releases
 
 Major stable releases:
 
-* `Dispa-SET v2.3`_
+* `Dispa-SET v2.3`_ (coming soon)
 
 * `Dispa-SET v2.2`_
 
@@ -18,6 +18,8 @@ Changelog
 
 Version 2.3
 ^^^^^^^^^^^
+* Input Data
+  	- Eu-wide dataset
 
 * Reformulation of the reserve constraints. Secondary reserves are now covered by spinning units only. Tertirary reserves can also be covered by quick start units. In total, three different reserve markets are now considered: 
 	- Secondary up 
@@ -38,16 +40,18 @@ Version 2.3
 
 * Improved post-processing:
 	- Netting interconnections in dispatch plots
+ 	- New colour palette and polished dispatch plot
 	- New fuels included
 	- Improved representation of curtailment
 
 * External dependencies:
 	- Removed pre-compiled libraries for unix systems
-	- Use of the low-level GAMS API (https://github.com/kavvkon/py-gdx)
+	- Use of the low-level GAMS API (https://github.com/kavvkon/gams-api)
 
 * Miscellaneous:
+	- Unit tests on travis (https://travis-ci.org/energy-modelling-toolkit/Dispa-SET)
 	- Bug fixes
-	- Compatibility with Python 3.6
+	- Compatibility with Python 3.6 and 3.7
 
 Version 2.2
 ^^^^^^^^^^^
