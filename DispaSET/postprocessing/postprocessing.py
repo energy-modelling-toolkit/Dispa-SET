@@ -282,7 +282,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
         if not curtailment.index.equals(demand.index):
             logging.error('The curtailment time series must have the same index as the demand')
             sys.exit(1)
-            axes[0].fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum'] - curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'], facecolor=commons['colors']['curtailment'])
+        axes[0].fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum'] - curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'], facecolor=commons['colors']['curtailment'])
         labels.append('Curtailment')
         patches.append(mpatches.Patch(facecolor=commons['colors']['curtailment'], label='Curtailment'))
 
@@ -598,15 +598,16 @@ def plot_country(inputs, results, c='', rng=None, plot_rug=True):
     sum_generation = plotdata.sum(axis=1)
     #if 'OutputShedLoad' in results:
     if 'OutputShedLoad' in results and c in results['OutputShedLoad']:
-        shed_load = results['OutputShedLoad'][c] / 1000
+        shed_load = results['OutputShedLoad'][c] / 1000 # GW
     else:
-        shed_load = pd.Series(0,index=demand.index) / 1000
+        shed_load = pd.Series(0,index=demand.index) / 1000 # GW
     diff = (sum_generation - demand + shed_load).abs()
     if diff.max() > 0.01 * demand.max():
         logging.critical('There is up to ' + str(diff.max()/demand.max()*100) + '% difference in the instantaneous energy balance of country ' + c)
 
     if 'OutputCurtailedPower' in results and c in results['OutputCurtailedPower']:
-        plot_dispatch(demand, plotdata, level, curtailment=results['OutputCurtailedPower'][c], rng=rng)
+        curtailment = results['OutputCurtailedPower'][c] / 1000 # GW
+        plot_dispatch(demand, plotdata, level, curtailment = curtailment, rng=rng)
     else:
         plot_dispatch(demand, plotdata, level, rng=rng)
 
