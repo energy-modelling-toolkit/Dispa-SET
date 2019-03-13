@@ -492,7 +492,7 @@ def get_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickle'):
 
     # Load results and store in cache file in the .pickle folder:
     if cache:
-        import cPickle
+        import pickle
         import hashlib
         m = hashlib.new('md5', resultfile)
         resultfile_hash = m.hexdigest()
@@ -507,10 +507,10 @@ def get_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickle'):
             results = gdx_to_dataframe(gdx_to_list(gams_dir, resultfile, varname='all', verbose=True), fixindex=True,
                                        verbose=True)
             with open(filepath_pickle, 'wb') as pfile:
-                cPickle.dump(results, pfile, protocol=cPickle.HIGHEST_PROTOCOL)
+                pickle.dump(results, pfile, protocol=pickle.HIGHEST_PROTOCOL)
         else:
             with open(filepath_pickle, 'rb') as pfile:
-                results = cPickle.load(pfile)
+                results = pickle.load(pfile)
     else:
         results = gdx_to_dataframe(gdx_to_list(gams_dir, resultfile, varname='all', verbose=True), fixindex=True,
                                    verbose=True)
