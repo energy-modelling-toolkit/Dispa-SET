@@ -734,13 +734,12 @@ def get_result_analysis(inputs, results):
             'CountryData': CountryData, 'Congestion': Congestion, 'StorageData': StorageData}
 
 # %%
-def storage_levels(inputs, results,c=None):
+def storage_levels(inputs, results):
     """
     Reads the DispaSET results and provides the difference between the minimum storage profile and the computed storage profile
 
     :param inputs:      DispaSET inputs
     :param results:     DispaSET results
-    :param c:           Country to be plotted
     """
     isstorage = pd.Series(index=inputs['units'].index)
     for u in isstorage.index:
