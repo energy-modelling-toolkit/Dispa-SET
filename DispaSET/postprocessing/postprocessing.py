@@ -492,9 +492,8 @@ def get_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickle'):
 
     # Load results and store in cache file in the .pickle folder:
     if cache:
-        import pickle
         import hashlib
-        m = hashlib.new('md5', resultfile)
+        m = hashlib.new('md5', resultfile.encode('utf-8'))
         resultfile_hash = m.hexdigest()
         filepath_pickle = str(temp_path + os.path.sep + resultfile_hash + '.p')
         if not os.path.isdir(temp_path):
@@ -507,7 +506,7 @@ def get_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickle'):
             results = gdx_to_dataframe(gdx_to_list(gams_dir, resultfile, varname='all', verbose=True), fixindex=True,
                                        verbose=True)
             with open(filepath_pickle, 'wb') as pfile:
-                pickle.dump(results, pfile, protocol=pickle.HIGHEST_PROTOCOL)
+                pickle.dump(results, pfile)
         else:
             with open(filepath_pickle, 'rb') as pfile:
                 results = pickle.load(pfile)
@@ -568,7 +567,7 @@ def get_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickle'):
     return inputs, results
 
 
-def plot_country(inputs, results, c='', rng=None, plot_rug=True):
+def plot_country(inputs, results, c='', rng=None, rug_plot=True):
     """
     Generates plots from the dispa-SET results for one specific country
 
@@ -612,7 +611,7 @@ def plot_country(inputs, results, c='', rng=None, plot_rug=True):
         plot_dispatch(demand, plotdata, level, rng=rng)
 
     # Generation plot:
-    if plot_rug:
+    if rug_plot:
         CountryGeneration = filter_by_country(results['OutputPower'], inputs, c)
         try:
             import enlopy as el  # try to get latest version
@@ -712,11 +711,10 @@ def get_result_analysis(inputs, results):
     # Country-specific storage data:
     try:
         StorageData = pd.DataFrame(index=inputs['sets']['n'])
-        List_tech_storage = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS']
         for c in StorageData.index:
             isstorage = pd.Series(index=inputs['units'].index)
             for u in isstorage.index:
-                isstorage[u] = inputs['units'].Technology[u] in List_tech_storage
+                isstorage[u] = inputs['units'].Technology[u] in commons['tech_storage']
             sto_units = inputs['units'][(inputs['units'].Zone == c) & isstorage]
             StorageData.loc[c,'Storage Capacity [MWh]'] = (sto_units.Nunits*sto_units.StorageCapacity).sum()
             StorageData.loc[c,'Storage Power [MW]'] = (sto_units.Nunits*sto_units.PowerCapacity).sum()
@@ -732,26 +730,29 @@ def get_result_analysis(inputs, results):
         logging.error('Could compute storage data')
         StorageData = None
 
-    # Storage errors
-    try:
-        List_tech_storage = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS']
-        isstorage = pd.Series(index=inputs['units'].index)
-        for u in isstorage.index:
-            isstorage[u] = inputs['units'].Technology[u] in List_tech_storage
-        sto_units = inputs['units'][isstorage]
-        StorageCompare = sto_units.StorageCapacity
-        #Compared to StorageProfile
-#        StorageError = ((inputs['param_df']['StorageProfile']*StorageCompare).subtract(results['OutputStorageLevel'],'columns')).divide((inputs['param_df']['StorageProfile']*StorageCompare),'columns')*100
-        #Compared to StorageCapacity
-        StorageError = ((inputs['param_df']['StorageProfile']*StorageCompare).subtract(results['OutputStorageLevel'],'columns')).divide((StorageCompare),'columns')*100
-        StorageError = StorageError.dropna(1)
-        StorageError.plot(figsize=(12,6),title='Difference Between Real and Calculated Storage Levels')
-    except:
-        logging.error('Couldnt compute storage data')
-        StorageError = None
-
     return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-            'CountryData': CountryData, 'Congestion': Congestion, 'StorageData': StorageData, 'StorageError': StorageError}
+            'CountryData': CountryData, 'Congestion': Congestion, 'StorageData': StorageData}
+
+# %%
+def storage_levels(inputs, results,c=None):
+    """
+    Reads the DispaSET results and provides the difference between the minimum storage profile and the computed storage profile
+
+    :param inputs:      DispaSET inputs
+    :param results:     DispaSET results
+    :param c:           Country to be plotted
+    """
+    isstorage = pd.Series(index=inputs['units'].index)
+    for u in isstorage.index:
+        isstorage[u] = inputs['units'].Technology[u] in commons['tech_storage']
+    sto_units = inputs['units'][isstorage]
+    results['OutputStorageLevel'].plot(figsize=(12,6),title='Calculated storage levels')
+    StorageError = ((inputs['param_df']['StorageProfile']*sto_units.StorageCapacity).subtract(results['OutputStorageLevel'],'columns')).divide((sto_units.StorageCapacity),'columns')*(-100)
+    StorageError = StorageError.dropna(1)
+    ax = StorageError.plot(figsize=(12,6),title='Difference between the calculated storage Levels and the (imposed) minimum level')
+    ax.set_ylabel('%')
+
+    return True
 
 def get_indicators_powerplant(inputs, results):
     """
