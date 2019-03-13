@@ -425,4 +425,4 @@ def get_gams_path(gams_dir=None):
                 if os.path.isdir(tmp):
                     out = tmp
 
-    return out.encode()
+    return out

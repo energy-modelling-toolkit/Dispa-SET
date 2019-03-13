@@ -745,7 +745,7 @@ def storage_levels(inputs, results):
     for u in isstorage.index:
         isstorage[u] = inputs['units'].Technology[u] in commons['tech_storage']
     sto_units = inputs['units'][isstorage]
-    results['OutputStorageLevel'].plot(figsize=(12,6),title='Calculated storage levels')
+    results['OutputStorageLevel'].plot(figsize=(12,6),title='Storage levels')
     StorageError = ((inputs['param_df']['StorageProfile']*sto_units.StorageCapacity).subtract(results['OutputStorageLevel'],'columns')).divide((sto_units.StorageCapacity),'columns')*(-100)
     StorageError = StorageError.dropna(1)
     ax = StorageError.plot(figsize=(12,6),title='Difference between the calculated storage Levels and the (imposed) minimum level')
