@@ -723,7 +723,7 @@ def get_result_analysis(inputs, results):
             for u in results['OutputPower'].columns:
                 if u in sto_units.index:
                     AverageStorageOutput += results['OutputPower'][u].mean()
-            StorageData.loc[c,'Average daily cycle depth [%]'] = AverageStorageOutput*24/StorageData.loc[c,'Storage Capacity [MWh]']
+            StorageData.loc[c,'Average daily cycle depth [%]'] = AverageStorageOutput*24/(1e-9+StorageData.loc[c,'Storage Capacity [MWh]'])
         print('\nCountry-Specific storage data')
         print(StorageData)
     except:
