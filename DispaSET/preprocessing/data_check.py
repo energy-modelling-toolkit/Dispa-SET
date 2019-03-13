@@ -354,6 +354,10 @@ def check_heat_demand(plants,data):
     plants.index = plants['Unit']
     for u in data:
         if u in plants.index:
+            if 'Nunits' in plants:
+                Nunits = plants.loc[u,'Nunits']
+            else:
+                Nunits = 1
             # Check if there is demand data for that unit:
             if u not in data.columns:
                 logging.error('Heat demand data for CHP unit "' + u + '" could not be found.')
@@ -364,16 +368,16 @@ def check_heat_demand(plants,data):
             if pd.isnull(plants.loc[u, 'CHPMaxHeat']):
                 plant_Qmax = +np.inf
             else:
-                plant_Qmax = plants.loc[u,'CHPMaxHeat']
+                plant_Qmax = plants.loc[u,'CHPMaxHeat'] 
             if plant_CHP_type == 'extraction':
                 Qmin = 0
-                Qmax = min(plants.loc[u, 'PowerCapacity'] / plants.loc[u, 'CHPPowerToHeat'], plant_Qmax)
+                Qmax = min(plants.loc[u, 'PowerCapacity'] / plants.loc[u, 'CHPPowerToHeat'], plant_Qmax) * Nunits
             elif plant_CHP_type == 'back-pressure':
-                Qmin = plants.loc[u,'PowerCapacity'] * plants.loc[u,'PartLoadMin'] /plants.loc[u,'CHPPowerToHeat']
-                Qmax = min(plants.loc[u, 'PowerCapacity'] / plants.loc[u, 'CHPPowerToHeat'], plant_Qmax)
+                Qmin = plants.loc[u,'PowerCapacity'] * plants.loc[u,'PartLoadMin'] /plants.loc[u,'CHPPowerToHeat'] * Nunits
+                Qmax = min(plants.loc[u, 'PowerCapacity'] / plants.loc[u, 'CHPPowerToHeat'], plant_Qmax) * Nunits
             elif plant_CHP_type == 'p2h':
                 Qmin = 0
-                Qmax = plant_Qmax
+                Qmax = plant_Qmax * Nunits
             else:
                 logging.error('The CHP type for unit ' + u + ' is not valid.')
             if np.isnan(Qmax) and plant_CHP_type!='p2h':
