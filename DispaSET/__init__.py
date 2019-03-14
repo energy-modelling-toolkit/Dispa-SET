@@ -49,8 +49,10 @@ _LOGCONFIG = {
 
 # Importing the main Dispa-SET functions so that they can be called with "ds.function"
 from .preprocessing.preprocessing import build_simulation
+from .preprocessing.preprocessing import get_temp_sim_results
+from .preprocessing.preprocessing import mid_term_scheduling
 from .preprocessing.preprocessing import adjust_capacity, adjust_storage
-from .solve import solve_GAMS, solve_pyomo
+from .solve import solve_GAMS, solve_pyomo, solve_GAMS_simple
 from .misc.gdx_handler import write_variables
 from .preprocessing.data_handler import load_config_excel, load_config_yaml
 from .postprocessing.postprocessing import get_sim_results

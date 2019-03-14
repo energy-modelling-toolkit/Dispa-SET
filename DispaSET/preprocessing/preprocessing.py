@@ -5,6 +5,7 @@ This is the main file of the DispaSET pre-processing tool. It comprises a single
 @author: S. Quoilin
 """
 
+import DispaSET as ds
 import datetime as dt
 import logging
 import os
@@ -23,7 +24,8 @@ from .data_check import check_units, check_chp, check_sto, check_heat_demand, ch
 from .utils import clustering, interconnections, incidence_matrix
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, write_to_excel, load_csv
 
-from ..misc.gdx_handler import write_variables
+
+from ..misc.gdx_handler import write_variables, gdx_to_list, gdx_to_dataframe
 from ..common import commons  # Load fuel types, technologies, timestep, etc:
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
@@ -36,14 +38,15 @@ def get_git_revision_tag():
     except:
         return 'NA'
 
-def build_simulation(config):
+def build_simulation(config, profiles=None):
     """
     This function reads the DispaSET config, loads the specified data,
     processes it when needed, and formats it in the proper DispaSET format.
     The output of the function is a directory with all inputs and simulation files required to run a DispaSET simulation
 
-    :param config: Dictionary with all the configuration fields loaded from the excel file. Output of the 'LoadConfig' function.
-    :param plot_load: Boolean used to display a plot of the demand curves in the different zones
+    :param config:        Dictionary with all the configuration fields loaded from the excel file. Output of the 'LoadConfig' function.
+    :param plot_load:     Boolean used to display a plot of the demand curves in the different zones
+    :param profiles:      Profiles from mid term scheduling simulations
     """
     dispa_version = str(get_git_revision_tag())
     logging.info('New build started. DispaSET version: ' + dispa_version)
@@ -149,7 +152,19 @@ def build_simulation(config):
 
     Outages = UnitBasedTable(plants,config['Outages'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='Outages')
     AF = UnitBasedTable(plants,config['RenewablesAF'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1,RestrictWarning=commons['tech_renewables'])
-    ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
+
+    # Reservoir levels
+    """
+    :profiles:      if turned on reservoir levels are overwritten by newly calculated ones 
+                    from the mid term scheduling simulations
+    """
+    if profiles is None:
+        ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
+    else:
+        ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
+        MidTermSchedulingProfiles = profiles
+        ReservoirLevels.update(MidTermSchedulingProfiles)
+
     ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirScaledInflows',default=0)
     HeatDemand = UnitBasedTable(plants_chp,config['HeatDemand'],idx_utc_noloc,config['countries'],fallbacks=['Unit'],tablename='HeatDemand',default=0)
     CostHeatSlack = UnitBasedTable(plants_chp,config['CostHeatSlack'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default']['CostHeatSlack'])
@@ -659,9 +674,15 @@ def build_simulation(config):
             fout.write(line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1'))
         fin.close()
         fout.close()
+        # additionally allso copy UCM_h_simple.gms
+        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+                        os.path.join(sim, 'UCM_h_simple.gms'))
     else:
         shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h.gms'),
                         os.path.join(sim, 'UCM_h.gms'))
+        # additionally allso copy UCM_h_simple.gms
+        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+                        os.path.join(sim, 'UCM_h_simple.gms'))
     gmsfile = open(os.path.join(sim, 'UCM.gpr'), 'w')
     gmsfile.write(
         '[PROJECT] \n \n[RP:UCM_H] \n1= \n[OPENWINDOW_1] \nFILE0=UCM_h.gms \nFILE1=UCM_h.gms \nMAXIM=1 \nTOP=50 \nLEFT=50 \nHEIGHT=400 \nWIDTH=400')
@@ -704,7 +725,6 @@ def build_simulation(config):
     
     if os.path.isfile('warn.log'):
         shutil.copy('warn.log', os.path.join(sim, 'warn_preprocessing.log'))
-
 
     return SimData
 
@@ -858,6 +878,70 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
             os.remove('Inputs.gdx')
     return SimData
 
+def get_temp_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickle'):
+    """
+    This function reads the simulation environment folder once it has been solved and loads
+    the input variables together with the results.
 
+    :param path:                Relative path to the simulation environment folder (current path by default)
+    :param cache:               If true, caches the simulation results in a pickle file for faster loading the next time
+    :param temp_path:           Temporary path to store the cache file
+    :returns inputs,results:    Two dictionaries with all the outputs 
+    """
 
+    resultfile = path + '/Results_simple.gdx'
+    results = gdx_to_dataframe(gdx_to_list(gams_dir, resultfile, varname='all', verbose=True), fixindex=True,
+                               verbose=True)
+    return results
+    
 
+def mid_term_scheduling(config, countries, path='.',profiles=None):
+    """
+    This function reads the DispaSET config file, searches for active countries,
+    loads data for each zone individually and solves model using UCM_h_simple.gms
+    
+    :config:                    Read config file
+    :path:                      --->>> CHECK IF NEEDED: provide path to the simulation folder
+    """
+#    import datetime as dt
+#    import pandas as pd
+#    from .common import commons
+    
+    # Day/hour corresponding to the first and last days of the simulation:
+    # Note that the first available data corresponds to 2015.01.31 (23.00) and the
+    # last day with data is 2015.12.31 (22.00)
+    __, m_start, d_start, __, __, __ = config['StartDate']
+    y_end, m_end, d_end, _, _, _ = config['StopDate']
+    config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
+    
+    # Indexes of the simualtion:
+    idx_std = pd.DatetimeIndex(start=pd.datetime(*config['StartDate']), end=pd.datetime(*config['StopDate']),
+                               freq=commons['TimeStep'])
+    idx_utc_noloc = idx_std - dt.timedelta(hours=1)
+    idx = idx_utc_noloc
+
+    # Solving reservoir levels for each country
+    no_of_zones = len(countries)
+    results = {}
+    temp_results = {}
+    i = 0
+    for c in countries:
+        i = i + 1  
+        print('[INFO    ] (Curently simulating Zone): ' + str(i) + 'out of ' + str(no_of_zones))
+        temp_config = dict(config)
+        temp_config['countries'] = [c]                    # Override country that needs to be simmulated
+        SimData = ds.build_simulation(temp_config)        # Create temporary SimData   
+        r = ds.solve_GAMS_simple(temp_config['SimulationDirectory'], temp_config['GAMS_folder'])
+        temp_results[c] = get_temp_sim_results(path=path)
+#        print('Zones simulated: ' + str(i) + '/' + str(no_of_zones))
+    for c in countries:
+        results[c] = dict(temp_results[c]['OutputStorageLevel'])
+    temp = pd.DataFrame()
+    for c in countries:
+        r = pd.DataFrame.from_dict(results[c], orient='columns')
+        results_t = pd.concat([temp, r], axis = 1)
+        temp = results_t
+    temp = temp.set_index(idx)
+    temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})
+    
+    return temp
