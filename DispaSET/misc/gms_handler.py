@@ -65,6 +65,8 @@ def solve_low_level(gams_folder,sim_folder,output_lst=False,logoption=3):
         ret = gamsxRunExecDLL(gamsxHandle, optHandleToPtr(optHandle), sysDir, 1)
         if ret[0] != 0:
             logging.error("*** Error RunExecDLL: Error in GAMS call = " + str(ret[1]))
+            if 'White space' in str(ret[1]):
+                logging.error("The Unix GAMS API does not accept white spaces. Move dispaset to a folder that does not contain white spaces")
             return False
 
         return True
