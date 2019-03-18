@@ -35,7 +35,7 @@ def check_AvailabilityFactors(plants,AF):
         logging.error('Some Availaibility factors are negative')
         sys.exit(1)
     if (AF.values > 1).any():
-        logging.critical('Some Availability factors are higher than one. They must be carefully checked')
+        logging.warning('Some Availability factors are higher than one. They must be carefully checked')
     for t in ['WTON', 'WTOF', 'PHOT', 'HROR']:
         for i in plants[plants['Technology']==t].index:
             u = plants.loc[i,'Unit']

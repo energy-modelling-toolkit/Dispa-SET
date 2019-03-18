@@ -119,7 +119,7 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
             if os.path.isfile(path_c):
                 paths[str(c)] = path_c
             else:
-                logging.error('No data file found for the table ' + tablename + ' and country ' + c + '. File ' + path_c + ' does not exist')
+                logging.critical('No data file found for the table ' + tablename + ' and country ' + c + '. File ' + path_c + ' does not exist')
 #                sys.exit(1)
         SingleFile=False
     data = pd.DataFrame(index=idx)

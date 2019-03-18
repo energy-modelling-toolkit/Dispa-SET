@@ -879,10 +879,11 @@ def CostExPost(inputs,results):
              +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
              +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
              +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
-             +100E3*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
-             +80E3*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
-             +70E3*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
-             +1*sum(s,spillage(s,i))
+             +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
+             +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
+             +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
+             +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
+
              
     :returns: tuple with the cost components and their cumulative sums in two dataframes.
     '''
@@ -975,6 +976,7 @@ def CostExPost(inputs,results):
     costs['CostHeat'] = CostHeat.sum(axis=1).fillna(0)
     
     #%% Lost loads:
+    # NB: the value of lost load is currently hard coded. This will have to be updated
     costs['LostLoad'] = 80e3* (results['LostLoad_2D'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_2U'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0))  \
                        + 100e3*(results['LostLoad_MaxPower'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_MinPower'].reindex(timeindex).sum(axis=1).fillna(0)) \
                        + 70e3*(results['LostLoad_RampDown'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_RampUp'].reindex(timeindex).sum(axis=1).fillna(0))
