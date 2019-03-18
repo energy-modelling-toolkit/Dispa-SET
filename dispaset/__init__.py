@@ -56,6 +56,7 @@ from .preprocessing.data_handler import load_config_excel, load_config_yaml
 from .postprocessing.postprocessing import get_sim_results
 from .postprocessing.postprocessing import ds_to_df
 from .postprocessing.postprocessing import plot_country
+from .postprocessing.postprocessing import storage_levels
 from .postprocessing.postprocessing import get_result_analysis
 from .postprocessing.postprocessing import get_indicators_powerplant
 from .postprocessing.postprocessing import aggregate_by_fuel

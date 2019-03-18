@@ -332,6 +332,7 @@ Reserve_2D(u,h)            [MW]    Spinning reserve down
 Reserve_3U(u,h)            [MW]    Non spinning quick start reserve up
 Heat(chp,h)                [MW]    Heat output by chp plant
 HeatSlack(chp,h)           [MW]    Heat satisfied by other sources
+WaterSlack(s)              [MWh]   Unsatisfied water level constraint
 ;
 
 free variable
@@ -361,7 +362,7 @@ PowerMustRun(u,h)=PowerMinStable(u)*LoadMaximum(u,h);
 PowerMustRun(u,h)$(sum(tr,Technology(u,tr))>=1 and smin(n,Location(u,n)*(1-Curtailment(n)))=1) = PowerCapacity(u)*LoadMaximum(u,h);
 
 * Part of the reserve that can be provided by offline quickstart units:
-K_QuickStart(n) = 0.5;
+K_QuickStart(n) = Config("QuickStartShare","val");
 
 $If %Verbose% == 1 Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial;
 
@@ -438,10 +439,10 @@ EQ_SystemCost(i)..
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
          +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
-         +100E3*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
-         +80E3*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
-         +70E3*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
-         +1*sum(s,spillage(s,i));
+         +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
+         +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
+         +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
+         +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
 $else
 
 EQ_SystemCost(i)..
@@ -455,10 +456,10 @@ EQ_SystemCost(i)..
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
          +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
-         +100E3*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
-         +80E3*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
-         +70E3*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
-         +1*sum(s,spillage(s,i));
+         +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
+         +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
+         +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
+         +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
 
 $endIf
 ;
@@ -469,6 +470,7 @@ EQ_Objective_function..
          SystemCostD
          =E=
          sum(i,SystemCost(i))
+         +Config("WaterValue","val")*sum(s,WaterSlack(s))
 ;
 
 * 3 binary commitment status
@@ -660,7 +662,7 @@ EQ_Storage_balance(s,i)..
 EQ_Storage_boundaries(s,i)$(ord(i) = card(i))..
          StorageFinalMin(s)
          =L=
-         StorageLevel(s,i)
+         StorageLevel(s,i) + WaterSlack(s)
 ;
 
 *Total emissions are capped
@@ -841,7 +843,7 @@ $if %Debug% == 1 $goto DebugSection
 display "OK";
 
 scalar starttime;
-set days /1,'ndays'/; 
+set days /1,'ndays'/;
 display days;
 PARAMETER elapsed(days);
 

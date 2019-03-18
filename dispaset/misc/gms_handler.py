@@ -14,6 +14,7 @@ def solve_high_level(gams_folder,sim_folder,output_lst=False):
         ws = GamsWorkspace(system_directory=str(gams_folder), debug=3)
         shutil.copy(os.path.join(sim_folder, 'UCM_h.gms'), ws.working_directory)
         shutil.copy(os.path.join(sim_folder, 'Inputs.gdx'), ws.working_directory)
+        shutil.copy(os.path.join(sim_folder, 'cplex.opt'), ws.working_directory)
         t1 = ws.add_job_from_file('UCM_h.gms')
         opt = ws.add_options()
         # Do not create .lst file
@@ -64,6 +65,8 @@ def solve_low_level(gams_folder,sim_folder,output_lst=False,logoption=3):
         ret = gamsxRunExecDLL(gamsxHandle, optHandleToPtr(optHandle), sysDir, 1)
         if ret[0] != 0:
             logging.error("*** Error RunExecDLL: Error in GAMS call = " + str(ret[1]))
+            if 'White space' in str(ret[1]):
+                logging.error("The Unix GAMS API does not accept white spaces. Move dispaset to a folder that does not contain white spaces")
             return False
 
         return True

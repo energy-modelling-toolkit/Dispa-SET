@@ -67,6 +67,9 @@ def build_simulation(config):
     idx_utc_noloc = idx_std - dt.timedelta(hours=1)
     idx_utc = idx_utc_noloc.tz_localize('UTC')
 
+    # Indexes for the whole year considered in StartDate
+    idx_utc_year_noloc = pd.DatetimeIndex(start=pd.datetime(*(config['StartDate'][0],1,1,0,0)), end=pd.datetime(*(config['StartDate'][0],12,31,23,59,59)), freq=commons['TimeStep'])
+
     # %%#################################################################################################################
     #####################################   Data Loading    ###########################################################
     ###################################################################################################################
@@ -83,10 +86,13 @@ def build_simulation(config):
     
     # Load :
     Load = NodeBasedTable(config['Demand'],idx_utc_noloc,config['countries'],tablename='Demand')
-    
+    # For the peak load, the whole year is considered:
+    PeakLoad = NodeBasedTable(config['Demand'],idx_utc_year_noloc,config['countries'],tablename='PeakLoad').max()
+
     if config['modifiers']['Demand'] != 1:
         logging.info('Scaling load curve by a factor ' + str(config['modifiers']['Demand']))
         Load = Load * config['modifiers']['Demand']
+        PeakLoad = PeakLoad * config['modifiers']['Demand']
 
     # Interconnections:
     if os.path.isfile(config['Interconnections']):
@@ -503,7 +509,7 @@ def build_simulation(config):
 
     # Demand
     # Dayahead['NL'][1800:1896] = Dayahead['NL'][1632:1728]
-    reserve_2U_tot = {i: (np.sqrt(10 * max(Load[i]) + 150 ** 2) - 150) for i in Load.columns}
+    reserve_2U_tot = {i: (np.sqrt(10 * PeakLoad[i] + 150 ** 2) - 150) for i in Load.columns}
     reserve_2D_tot = {i: (0.5 * reserve_2U_tot[i]) for i in Load.columns}
 
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])
@@ -518,7 +524,7 @@ def build_simulation(config):
 
     # Load Shedding:
     for i, c in enumerate(sets['n']):
-        parameters['LoadShedding']['val'][i] = LoadShedding[c] * Load[c].max()
+        parameters['LoadShedding']['val'][i] = LoadShedding[c] * PeakLoad[c]
         parameters['CostLoadShedding']['val'][i] = CostLoadShedding[c]
 
     # %%#################################################################################################################################################################################################
@@ -605,17 +611,22 @@ def build_simulation(config):
             if Plants_merged['Fuel'][i] in ['GAS', 'NUC'] and Plants_merged['PowerCapacity'][i] > 350:
                 parameters['PowerInitial']['val'][i] = (Plants_merged['PartLoadMin'][i] + 1) / 2 * \
                                                        Plants_merged['PowerCapacity'][i]
-    # Config variables:
-    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead']
-    sets['y_config'] = ['year', 'month', 'day']
+            # Config variables:
+    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead','ValueOfLostLoad','QuickStartShare','CostOfSpillage','WaterValue']
+    sets['y_config'] = ['year', 'month', 'day', 'val']
     dd_begin = idx_long[4]
     dd_end = idx_long[-2]
 
+#TODO: integrated the parameters (VOLL, Water value, etc) from the excel config file
     values = np.array([
-        [dd_begin.year, dd_begin.month, dd_begin.day],
-        [dd_end.year, dd_end.month, dd_end.day],
-        [0, 0, config['HorizonLength']],
-        [0, 0, config['LookAhead']]
+        [dd_begin.year, dd_begin.month, dd_begin.day, 0],
+        [dd_end.year, dd_end.month, dd_end.day, 0],
+        [0, 0, config['HorizonLength'], 0],
+        [0, 0, config['LookAhead'], 0],
+        [0, 0, 0, 1e5],     # Value of lost load
+        [0, 0, 0, 0.5],       # allowed Share of quick start units in reserve
+        [0, 0, 0, 1],       # Cost of spillage (EUR/MWh)
+        [0, 0, 0, 100],       # Value of water (for unsatisfied water reservoir levels, EUR/MWh)
     ])
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
@@ -661,16 +672,15 @@ def build_simulation(config):
     cplex_options = {'epgap': 0.05, # TODO: For the moment hardcoded, it has to be moved to a config file
                      'numericalemphasis': 0,
                      'scaind': 1,
-                     'lpmethod': 4,
-                     'relaxfixedinfeas': 0}
+                     'lpmethod': 0,
+                     'relaxfixedinfeas': 0,
+                     'mipstart':1,
+                     'epint':0}
 
     lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
-    with open(os.path.join(GMS_FOLDER, 'cplex.opt'), 'w') as f:
+    with open(os.path.join(sim, 'cplex.opt'), 'w') as f:
         for line in lines_to_write:
             f.write(line + '\n')
-
-    shutil.copyfile(os.path.join(GMS_FOLDER, 'cplex.opt'),
-                    os.path.join(sim, 'cplex.opt'))
 
     logging.debug('Using gams file from ' + GMS_FOLDER)
     if config['WriteGDX']:
@@ -710,7 +720,7 @@ def adjust_capacity(inputs,tech_fuel,scaling=1,value=None,singleunit=False,write
     :param singleunit:  Set to true if the technology should remain lumped in a single unit
     :param write_gdx:   boolean defining if Inputs.gdx should be also overwritten with the new data
     :param dest_path:   Simulation environment path to write the new input data. If unspecified, no data is written!
-    :return:            New SimData dictionary 
+    :return:            New SimData dictionary
     '''
     import pickle
 
@@ -794,7 +804,7 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
     :param value:       Absolute value of the desired capacity (! Applied only if scaling != 1 !)
     :param write_gdx:   boolean defining if Inputs.gdx should be also overwritten with the new data
     :param dest_path:   Simulation environment path to write the new input data. If unspecified, no data is written!
-    :return:            New SimData dictionary 
+    :return:            New SimData dictionary
     '''
     import pickle
 

@@ -35,9 +35,10 @@ Features
 The demand is assumed to be inelastic to the price signal. The MILP objective function is therefore the total generation cost over the optimization period. 
 
 
-Libraries used
---------------
+Libraries used and requirements
+-------------------------------
 
+* `Python 3.7`_
 * `pyomo`_ Optimization object library, interface to LP solver (e.g. CPLEX)
 * `pandas`_ for input and result data handling
 * `matplotlib`_ for plotting
@@ -63,13 +64,8 @@ The Dispa-SET project is relatively recent, and a number of improvements will be
 
 - Grid constraints (DC power-flow)
 - Stochastic scenarios
-- Extension of the modeled areas
+- Modelling of investment and capacity expansion
 - Modeling of the ancillary markets
-- User interface
-
-Public administration reference
--------------------------------
-This software is primarily developed and used within the Institute for Energy and Transport, which is one of the 7 scientific institutes of the Joint Research Centre (JRC) of the European Commission. The IET is based both in Petten, the Netherlands, and Ispra, Italy. The Dispa-SET model is developed in the framework of the "Energy Systems Modelling" (ESM) project.
 
 
 Licence
@@ -80,8 +76,9 @@ can be redistributed and/or modified under the terms of this license.
 Main Developers
 ---------------
 - `Sylvain Quoilin`_ (University of Liège, KU Leuven)
-- Andreas Zucker (European Commission, Institute for Energy and Transport)
 - Konstantinos Kavvadias (European Commission, Institute for Energy and Transport)
+- Matija Pavičević  (KU Leuven, Belgium)
+
 
 References
 ----------
@@ -96,6 +93,7 @@ References
 .. [9] Pavičević, M., Quoilin, S. and Pukšec, T., (2018). Comparison of Different Power Plant Clustering Approaches for Modeling Future Power Systems, Proceedings of the 3rd SEE SDEWES Conference, Novi Sad.
 .. [10] Pavičević, M., Kavvadias, K. and Quoilin, S. (2018). Impact of model formulation on power system simulations - Example with the Dispa-SET Balkans model, EMP-E conference 2018: Modelling Clean Energy Pathways, Brussels.
 
+.. _Python 3.7: https://www.anaconda.com/distribution/
 .. _matplotlib: http://matplotlib.org
 .. _pandas: http://pandas.pydata.org
 .. _pyomo: http://www.pyomo.org/
