@@ -87,13 +87,15 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
         solv_func = solve_high_level
     else:
         logging.warning('Could not import gams. Trying to use lower level APIs')
-        if package_exists('gamsxcc') and package_exists('optcc'):
-            solv_func = solve_low_level
-        else:
-            solv_func = solve_high_level
-            logging.warning('Could not import lower level APIs. Trying to locate local version')
-            if not import_local_lib('gams'):
-                return False
+    if package_exists('gamsxcc') and package_exists('optcc'):
+        solv_func = solve_low_level
+    elif package_exists('gams'):
+        solv_func = solve_high_level
+    else:
+        solv_func = solve_low_level
+        logging.warning('Could not the GAMS APIs. Trying to locate local version')
+        if not import_local_lib('lowlevel'):
+            return False
     gams_folder = get_gams_path(gams_folder)
     if not gams_folder:  # couldn't locate
         logging.error('GAMS path cannot be located. Simulation is stopped')

@@ -39,14 +39,12 @@ def import_local_lib(lib):
     path_script = os.path.dirname(__file__)
     path_ext = os.path.join(path_script,'../../Externals')
 
-    if sys.platform == 'win32' and platform.architecture()[0] == '32bit':
-        sys.path.append(os.path.join(path_ext,'gams_api/win32/'))
-    elif sys.platform == 'win32' and platform.architecture()[0] == '64bit':
+    if sys.platform == 'win32' and platform.architecture()[0] == '64bit' and sys.version[:3] == '3.7':
         sys.path.append(os.path.join(path_ext,'gams_api/win64/'))
     else:
-        logging.error('Pre-compiled libraries are not available for platform ' + sys.platform + ' and '
+        logging.error('Pre-compiled GAMS libraries are only available for python 3.7 64 bits under windows. You are useing platform ' + sys.platform + ' and '
                       ' architecture ' + platform.architecture()[0] +
-                      'Please install the gams API from the /apifiles/Python/api/ folder in the GAMS directory')
+                      'Please install the gams API using: "pip install gamsxcc gdxcc optcc"')
         sys.exit(1)
 
     if lib == 'gams':
@@ -54,8 +52,16 @@ def import_local_lib(lib):
             import gams
             return True
         except ImportError:
-            logging.error('Could not find gams. The gams library is required to run the GAMS versions of DispaSET.'
-                          'Please install if from the /apifiles/Python/api/ folder in the GAMS directory')
+            logging.error('Could not load the gams high-level api. The gams library is required to run the GAMS versions of DispaSET.'
+                          'Please install the gams API using: "python setup.py install" in the gams api folder')
+            sys.exit(1)
+    elif lib == 'lowlevel':
+        try:
+            import gdxcc,gamsxcc,optcc
+            return True
+        except ImportError:
+            logging.error('Could not load the gams low-level api. The gams library is required to run the GAMS versions of DispaSET.'
+                          'Please install the gams API using: "pip install gamsxcc gdxcc optcc"')
             sys.exit(1)
     elif lib == 'gdxcc':
         try:
@@ -63,7 +69,7 @@ def import_local_lib(lib):
             return True
         except ImportError:
             logging.critical("gdxcc module could not be imported from Externals. GDX cannot be produced or read"
-                            'Please install the gams API from the /apifiles/Python/api/ folder in the GAMS directory')
+                            'Please install the gams API using: "pip install gamsxcc gdxcc optcc"')
             sys.exit(1)
     else:
         logging.error('Only "gams" and "gdxcc" are present')
