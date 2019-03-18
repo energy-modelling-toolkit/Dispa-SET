@@ -38,11 +38,11 @@ http://www.dispaset.eu/latest/index.html
 Main contributors:
 ------------------
 
-* `Sylvain Quoilin`_ (University of Liège, Belgium)) 
+* `Sylvain Quoilin`_ (KU Leuven, Belgium)) 
 
 * Konstantinos Kavvadias  (Joint Research Centre, EU Commission)
 
-* Andreas Zucker (Joint Research Centre, EU Commission)
+* Matija Pavičević  (KU Leuven, Belgium)
 
 
 Contents

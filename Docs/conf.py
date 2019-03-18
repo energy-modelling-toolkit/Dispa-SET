@@ -30,7 +30,7 @@ exec(open('../DispaSET/_version.py').read())
 
 from subprocess import check_output
 try:
-    __release__ = check_output(["git", "describe"]).strip()
+    __release__ = check_output(["git", "describe"]).strip().decode()
 except:
     __release__ = ''
 
@@ -63,7 +63,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'DispaSET'
-copyright = u'2017, Sylvain Quoilin & Kostas Kavvadias'
+copyright = u'2019, Sylvain Quoilin & Kostas Kavvadias'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
