@@ -1,4 +1,4 @@
-Dispa-SET 
+![dispaset logo](https://raw.githubusercontent.com/energy-modelling-toolkit/Dispa-SET/tests/Docs/figures/logo.png)
 ===================
  ![Documentation](https://img.shields.io/badge/python-2.7,%203.7-blue.svg) [![License](https://img.shields.io/badge/License-EUPL--1.2-blue.svg)](https://opensource.org/licenses/EUPL-1.2) [![Documentation](https://readthedocs.org/projects/dispa-set/badge/?branch=master)](http://dispa-set.readthedocs.io/en/latest/) [![Build Status](https://travis-ci.org/energy-modelling-toolkit/Dispa-SET.svg)](https://travis-ci.org/energy-modelling-toolkit/Dispa-SET)
 
