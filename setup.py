@@ -23,7 +23,7 @@ setup(
     author='Sylvain Quoilin, Konstantinos Kavvadias',
     author_email='squoilin@uliege.be',
     description='An open-source unit commitment and optimal dispatch model ',
-    license='EUPL v1.1.',
+    license='EUPL v1.2.',
     url='http://www.dispaset.eu',
     download_url='http://www.dispaset.eu/en/latest/releases.html',
     packages=find_packages(),
