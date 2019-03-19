@@ -18,10 +18,10 @@ sys.path.append(os.path.abspath('..'))
 import dispaset as ds
 
 # Load the configuration file
-#config = ds.load_config_excel('../ConfigFiles/ConfigEU.xlsx')
-config = ds.load_config_yaml('../ConfigFiles/ConfigEU.yml')
+config = ds.load_config_excel('../ConfigFiles/ConfigEU.xlsx')
 
 # Limit the simulation period (for testing purposes, comment the line to run the whole year)
+config['StartDate'] = (2016, 1, 1, 0, 0, 0)
 config['StopDate'] = (2016, 1, 7, 0, 0, 0)
 
 # Build the simulation environment:

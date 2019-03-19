@@ -105,6 +105,9 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
     gams_folder = os.path.abspath(gams_folder)
 
     if is_sim_folder_ok(sim_folder):
+        #Temporary warning for Spyder users:
+        if any(['SPY_' in name for name in os.environ]): # check if spyder
+            logging.info("\nIf the script seems stuck at this place \n(gams is optimizing but not output is displayed), \nit is preferable to run Dispa-SET in a \nseparate terminal (in Spyder: Preferences - Run - \nExecute in an external system terminal)")
         ret = solv_func(gams_folder, sim_folder, output_lst=output_lst)
         if os.path.isfile(os.path.join(sim_folder, 'debug.gdx')):
             logging.warning('A debug file was created. There has probably been an optimization error')

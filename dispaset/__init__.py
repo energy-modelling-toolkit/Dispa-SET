@@ -23,7 +23,7 @@ _LOGCONFIG = {
      },
      "handlers": {
          "console": {
-            "class": "DispaSET.misc.colorstreamhandler.ColorStreamHandler",
+            "class": "dispaset.misc.colorstreamhandler.ColorStreamHandler",
              "stream": "ext://sys.stderr",
 #             "stream": "sys.stdout",
              "level": "INFO",
