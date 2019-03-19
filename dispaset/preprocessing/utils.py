@@ -59,7 +59,7 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
     :param Historical_flows:    Historical flows (pd dataframe)
     """
 
-    index = NTC_inter.index.intersection(Historical_flows.index)
+    index = NTC_inter.index.intersection(Historical_flows.index.tz_localize(None))
     if len(index)==0:
         logging.error('The two input dataframes (NTCs and Historical flows) must have the same index. No common values have been found')
         sys.exit(1)
