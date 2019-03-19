@@ -65,14 +65,14 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
         sys.exit(1)
     elif len(index) < len(NTC_inter) or len(index) < len(Historical_flows):
         diff = np.maximum(len(Historical_flows),len(NTC_inter)) - len(index)
-        logging.warn('The two input dataframes (NTCs and Historical flows) do not share the same index, although some values are common. The intersection has been considered and ' + str(diff) + ' data points have been lost')
+        logging.warning('The two input dataframes (NTCs and Historical flows) do not share the same index, although some values are common. The intersection has been considered and ' + str(diff) + ' data points have been lost')
     # Checking that all values are positive:
     if (NTC_inter.values < 0).any():
         pos = np.where(NTC_inter.values < 0)
-        logging.warn('WARNING: At least NTC value is negative, for example in line ' + str(NTC_inter.columns[pos[1][0]]) + ' and time step ' + str(NTC_inter.index[pos[0][0]]))
+        logging.warning('WARNING: At least NTC value is negative, for example in line ' + str(NTC_inter.columns[pos[1][0]]) + ' and time step ' + str(NTC_inter.index[pos[0][0]]))
     if (Historical_flows.values < 0).any():
         pos = np.where(Historical_flows.values < 0)
-        logging.warn('WARNING: At least one historical flow is negative, for example in line ' + str(Historical_flows.columns[pos[1][0]]) + ' and time step ' + str(Historical_flows.index[pos[0][0]]))
+        logging.warning('WARNING: At least one historical flow is negative, for example in line ' + str(Historical_flows.columns[pos[1][0]]) + ' and time step ' + str(Historical_flows.index[pos[0][0]]))
     all_connections = []
     simulation_connections = []
     # List all connections from the dataframe headers:
@@ -80,7 +80,7 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
     for connection in ConList:
         c = connection.split(' -> ')
         if len(c) != 2:
-            logging.warn('WARNING: Connection "' + connection + '" in the interconnection tables is not properly named. It will be ignored')
+            logging.warning('WARNING: Connection "' + connection + '" in the interconnection tables is not properly named. It will be ignored')
         else:
             if c[0] in Simulation_list:
                 all_connections.append(connection)
@@ -99,7 +99,7 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
     # Display a warning if a country is isolated:
     for c in Simulation_list:
         if not any([c in conn for conn in interconnections1]) and len(Simulation_list)>1:
-            logging.warn('Zone ' + c + ' does not appear to be connected to any other zone in the NTC table. It should be simulated in isolation')
+            logging.warning('Zone ' + c + ' does not appear to be connected to any other zone in the NTC table. It should be simulated in isolation')
 
     df_RoW_temp = pd.DataFrame(index=index)
     connNames = []
@@ -166,10 +166,10 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
     OnlyOnes = (plants['Nunits'] == 1).all()
     if method in ['Standard','MILP']:
         if not OnlyOnes:
-            logging.warn("The standard (or MILP) clustering method is only applicable if all values of the Nunits column in the power plant data are set to one. At least one different value has been encountered. No clustering will be applied")
+            logging.warning("The standard (or MILP) clustering method is only applicable if all values of the Nunits column in the power plant data are set to one. At least one different value has been encountered. No clustering will be applied")
     elif method == 'LP clustered':
         if not OnlyOnes:
-            logging.warn("The LP clustering method aggregates all the units of the same type. Individual units are not considered")
+            logging.warning("The LP clustering method aggregates all the units of the same type. Individual units are not considered")
             # Modifying the table to remove multiple-units plants:
             for key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower','CHPMaxHeat']:
                 if key in plants:
@@ -364,7 +364,7 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
     if Nunits != len(plants_merged):
         logging.info('Clustered ' + str(Nunits) + ' original units into ' + str(len(plants_merged)) + ' new units')
     else:
-        logging.warn('Did not cluster any unit')
+        logging.warning('Did not cluster any unit')
     return plants_merged, mapping
 
 ## Helpers

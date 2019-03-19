@@ -61,14 +61,19 @@ def build_simulation(config):
     y_end, m_end, d_end, _, _, _ = config['StopDate']
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
 
-    # Indexes of the simualtion:
-    idx_std = pd.DatetimeIndex(start=pd.datetime(*config['StartDate']), end=pd.datetime(*config['StopDate']),
-                               freq=commons['TimeStep'])
+    # Indexes of the simulation:
+    idx_std = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*config['StartDate']),
+                                             end=pd.datetime(*config['StopDate']),
+                                             freq=commons['TimeStep'])
+                               )
     idx_utc_noloc = idx_std - dt.timedelta(hours=1)
     idx_utc = idx_utc_noloc.tz_localize('UTC')
 
     # Indexes for the whole year considered in StartDate
-    idx_utc_year_noloc = pd.DatetimeIndex(start=pd.datetime(*(config['StartDate'][0],1,1,0,0)), end=pd.datetime(*(config['StartDate'][0],12,31,23,59,59)), freq=commons['TimeStep'])
+    idx_utc_year_noloc = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*(config['StartDate'][0],1,1,0,0)),
+                                                        end=pd.datetime(*(config['StartDate'][0],12,31,23,59,59)),
+                                                        freq=commons['TimeStep'])
+                                          )
 
     # %%#################################################################################################################
     #####################################   Data Loading    ###########################################################
@@ -324,7 +329,7 @@ def build_simulation(config):
 
     # Extending the data to include the look-ahead period (with constant values assumed)
     enddate_long = idx_utc_noloc[-1] + dt.timedelta(days=config['LookAhead'])
-    idx_long = pd.DatetimeIndex(start=idx_utc_noloc[0], end=enddate_long, freq=commons['TimeStep'])
+    idx_long = pd.DatetimeIndex(pd.date_range(start=idx_utc_noloc[0], end=enddate_long, freq=commons['TimeStep']))
     Nhours_long = len(idx_long)
 
     # re-indexing with the longer index and filling possibly missing data at the beginning and at the end::
