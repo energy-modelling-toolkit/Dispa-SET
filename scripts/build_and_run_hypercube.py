@@ -23,7 +23,7 @@ import pandas as pd
 os.chdir('..')
 
 # Import Dispa-SET
-import DispaSET as ds
+import dispaset as ds
 
 # Define the boundaries of the inputs space:
 overcapacity = [0.8,1.3]   # thermal capacity divided by peak load

@@ -1,4 +1,4 @@
-DispaSET package
+dispaset package
 ================
 
 Subpackages
@@ -6,18 +6,19 @@ Subpackages
 
 .. toctree::
 
-    DispaSET.misc
-    DispaSET.postprocessing
-    DispaSET.preprocessing
-    DispaSET.pyomo
+    dispaset.preprocessing
+    dispaset.postprocessing
+    dispaset.pyomo
+    dispaset.misc
+
 
 Submodules
 ----------
 
-DispaSET.solve module
+dispaset.solve module
 ---------------------
 
-.. automodule:: DispaSET.solve
+.. automodule:: dispaset.solve
     :members:
     :undoc-members:
     :show-inheritance:
@@ -26,7 +27,7 @@ DispaSET.solve module
 Module contents
 ---------------
 
-.. automodule:: DispaSET
+.. automodule:: dispaset
     :members:
     :undoc-members:
     :show-inheritance:

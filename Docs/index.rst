@@ -60,7 +60,7 @@ Contents
    data
    cases
    developers
-   DispaSET
+   dispaset
 
 
 Indices and tables

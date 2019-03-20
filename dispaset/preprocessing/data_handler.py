@@ -559,12 +559,44 @@ def load_config_excel(ConfigFile,AbsPath=True):
 
     return config
 
-def load_config_yaml(filename):
+def load_config_yaml(filename,AbsPath=True):
     """ Loads YAML file to dictionary"""
     import yaml
     with open(filename, 'r') as f:
         try:
-            return yaml.load(f)
+            config = yaml.load(f)
         except yaml.YAMLError as exc:
             logging.error('Cannot parse config file: {}'.format(filename))
             raise exc
+
+    # List of parameters for which an external file path must be specified:
+    params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
+              'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
+              'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
+              'CostHeatSlack','CostLoadShedding']
+
+    if AbsPath:
+    # Changing all relative paths to absolute paths. Relative paths must be defined 
+    # relative to the parent folder of the config file.
+        abspath = os.path.abspath(filename)
+        basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath),os.pardir))
+        if not os.path.isabs(config['SimulationDirectory']):
+            config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
+        for param in params:
+            if not os.path.isabs(config[param]):
+                config[param] = os.path.join(basefolder,config[param])
+                
+    return config
+
+def export_yaml_config(ExcelFile,YAMLFile):
+    """
+    Function that loads the DispaSET excel config file and dumps it as a yaml file.
+
+    :param ExcelFile:   Path to the Excel config file
+    :param YAMLFile:    Path to the YAML config file to be written
+    """
+    import yaml
+    config = load_config_excel(ExcelFile,AbsPath=False)
+    with open(YAMLFile, 'w') as outfile:
+        yaml.dump(config, outfile, default_flow_style=False)
+    return True

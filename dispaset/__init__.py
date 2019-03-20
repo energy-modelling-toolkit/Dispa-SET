@@ -23,7 +23,7 @@ _LOGCONFIG = {
      },
      "handlers": {
          "console": {
-            "class": "DispaSET.misc.colorstreamhandler.ColorStreamHandler",
+            "class": "dispaset.misc.colorstreamhandler.ColorStreamHandler",
              "stream": "ext://sys.stderr",
 #             "stream": "sys.stdout",
              "level": "INFO",
@@ -52,7 +52,7 @@ from .preprocessing.preprocessing import build_simulation
 from .preprocessing.preprocessing import adjust_capacity, adjust_storage
 from .solve import solve_GAMS, solve_pyomo
 from .misc.gdx_handler import write_variables
-from .preprocessing.data_handler import load_config_excel, load_config_yaml
+from .preprocessing.data_handler import load_config_excel, load_config_yaml, export_yaml_config
 from .postprocessing.postprocessing import get_sim_results
 from .postprocessing.postprocessing import ds_to_df
 from .postprocessing.postprocessing import plot_country

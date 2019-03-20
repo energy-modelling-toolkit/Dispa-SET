@@ -352,6 +352,14 @@ def get_gams_path(gams_dir=None):
 
     import subprocess
     out = ''
+
+    #first check if the gams path is defined as environment variable.
+
+    if "GAMS_PATH" in os.environ:
+        logging.debug('Using GAMS_PATH environmental variable {} '.format(os.environ['GAMS_PATH']))
+        return os.environ['GAMS_PATH']
+
+    # Else try to locate
     if sys.platform == 'linux2' or sys.platform == 'linux':
         try:
             tmp = subprocess.check_output(['locate', '-i', 'libgamscall64.so']).decode()

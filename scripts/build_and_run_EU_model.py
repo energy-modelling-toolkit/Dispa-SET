@@ -15,12 +15,13 @@ import sys,os
 sys.path.append(os.path.abspath('..'))
 
 # Import Dispa-SET
-import DispaSET as ds
+import dispaset as ds
 
 # Load the configuration file
 config = ds.load_config_excel('../ConfigFiles/ConfigEU.xlsx')
 
 # Limit the simulation period (for testing purposes, comment the line to run the whole year)
+config['StartDate'] = (2016, 1, 1, 0, 0, 0)
 config['StopDate'] = (2016, 1, 7, 0, 0, 0)
 
 # Build the simulation environment:

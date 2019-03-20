@@ -11,7 +11,7 @@ import sys,os
 sys.path.append(os.path.abspath('..'))
 
 # Import Dispa-SET
-import DispaSET as ds
+import dispaset as ds
 
 # Load the configuration file
 config = ds.load_config_excel('../ConfigFiles/ConfigTest.xlsx')

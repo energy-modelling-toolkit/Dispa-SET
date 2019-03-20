@@ -128,7 +128,7 @@ After checking the configuration file "ConfigTest.xlsx" (in the "ConfigFiles" fo
 
 2.1 Import Dispa-SET::
 
-	import DispaSET as ds
+	import dispaset as ds
 
 2.2 Load the configuration file::
 	
