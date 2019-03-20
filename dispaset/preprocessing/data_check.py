@@ -373,7 +373,7 @@ def check_heat_demand(plants,data):
                 Qmin = 0
                 Qmax = min(plants.loc[u, 'PowerCapacity'] / plants.loc[u, 'CHPPowerToHeat'], plant_Qmax) * Nunits
             elif plant_CHP_type == 'back-pressure':
-                Qmin = plants.loc[u,'PowerCapacity'] * plants.loc[u,'PartLoadMin'] /plants.loc[u,'CHPPowerToHeat'] * Nunits
+                Qmin = plants.loc[u,'PowerCapacity'] * plants.loc[u,'PartLoadMin'] /plants.loc[u,'CHPPowerToHeat']
                 Qmax = min(plants.loc[u, 'PowerCapacity'] / plants.loc[u, 'CHPPowerToHeat'], plant_Qmax) * Nunits
             elif plant_CHP_type == 'p2h':
                 Qmin = 0
