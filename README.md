@@ -51,9 +51,9 @@ dispaset -c ConfigFiles/ConfigTest.xlsx build simulate
 The documentation and the stable releases are available on the main Dispa-SET website: http://www.dispaset.eu
  
 ### Get involved
-This project is an open-source project. Interested users are therefore invited to test, comment or [contribute](CONTRIBUTING.md) to the tool. Submitting issues is the best way to get in touch with the development team, which will address your comment, question, or development request in the best possible possible. We are also looking for contributors to the main code, willing to contibute to its capabilities, computational-efficiency, formulation, etc. Finally, we are willing to collaborate with national agencies, reseach centers, or academic institutions on the use on the model for different data sets relative to EU countries.
+This project is an open-source project. Interested users are therefore invited to test, comment or [contribute](CONTRIBUTING.md) to the tool. Submitting issues is the best way to get in touch with the development team, which will address your comment, question, or development request in the best possible way. We are also looking for contributors to the main code, willing to contibute to its capabilities, computational-efficiency, formulation, etc. Finally, we are willing to collaborate with national agencies, reseach centers, or academic institutions on the use on the model for different data sets relative to EU countries.
 
-### Licence
+### License
 Dispa-SET is a free software licensed under the “European Union Public Licence" EUPL v1.2. It 
 can be redistributed and/or modified under the terms of this license.
 
