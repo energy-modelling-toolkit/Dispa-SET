@@ -49,6 +49,9 @@ $setglobal LPFormulation 0
 * (1 to retrieve 0 to not)
 $setglobal RetrieveStatus 0
 
+* Activate the flexible demand equations
+$setglobal ActivateFlexibleDemand 1
+
 *===============================================================================
 *Definition of   sets and parameters
 *===============================================================================
@@ -149,6 +152,9 @@ CostLoadShedding(n,h)            [EUR\MW]  Value of lost load
 LoadMaximum(u,h)                 [%]     Maximum load given AF and OF
 PowerMustRun(u,h)                [MW\u]    Minimum power output
 StorageFinalMin(s)               [MWh]   Minimum storage level at the end of the optimization horizon
+MaxFlexDemand(n)                 [MW]    Maximum value of the flexible demand parameter
+MaxOverSupply(n,h)               [MWh]   Maximum flexible demand accumultation
+AccumulatedOverSupply_inital(n)  [MWh]   Initial value of the flexible demand accumulation
 ;
 
 * Scalar variables necessary to the loop:
@@ -366,6 +372,11 @@ PowerMustRun(u,h)$(sum(tr,Technology(u,tr))>=1 and smin(n,Location(u,n)*(1-Curta
 * Part of the reserve that can be provided by offline quickstart units:
 K_QuickStart(n) = Config("QuickStartShare","val");
 
+* Flexible Demand
+MaxFlexDemand(n) = smax(h,Demand("Flex",n,h));
+MaxOverSupply(n,h) = Config("DemandFlexibility","val") * Demand("Flex",n,h);
+AccumulatedOverSupply_inital(n) = 0;
+
 $If %Verbose% == 1 Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial;
 
 $offorder
@@ -415,6 +426,11 @@ EQ_Flow_limits_upper
 EQ_Force_Commitment
 EQ_Force_DeCommitment
 EQ_LoadShedding
+EQ_Flexible_Demand
+EQ_Flexible_Demand_Max
+EQ_Flexible_Demand_Modulation_Min
+EQ_Flexible_Demand_Modulation_Max
+EQ_No_Flexible_Demand
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 ;
 
@@ -551,7 +567,7 @@ EQ_Demand_balance_DA(n,i)..
          +LL_MinPower(n,i)
 ;
 
-
+* Energy balance at the level of the flexible demand, considered as a storage capacity
 EQ_Flexible_Demand(n,i)..
          DemandModulation(n,i)
          =e=
@@ -560,16 +576,32 @@ EQ_Flexible_Demand(n,i)..
          - AccumulatedOverSupply(n,i-1)$(ord(i) > 1)
 ;
 
+* The accumulated oversupply is limited by size of flexible demand (i.e. storage) capacity
 EQ_Flexible_Demand_max(n,i)..
          AccumulatedOverSupply(n,i)
          =l=
-         MaxOverSupply(n)
+         MaxOverSupply(n,i)
 ;
 
-EQ_Flexible_Demand(n,i)..
+* The maximum downards demand modulation  at each time step is limited by the value of the flexible demand
+EQ_Flexible_Demand_Modulation_Min(n,i)..
          DemandModulation(n,i)
          =g=
-         -Demand("flex",n,i)
+         -Demand("Flex",n,i)
+;
+
+* The upwards demand modulation is arbitrarily limited by the maximum recorded value of the flexible demand
+EQ_Flexible_Demand_Modulation_max(n,i)..
+         DemandModulation(n,i)
+         =l=
+         MaxFlexDemand(n) - Demand("flex",n,i)
+;
+
+* If flexible demand is not considered, set the accumulated over supply to zero:
+EQ_No_Flexible_Demand(n,i)..
+         AccumulatedOverSupply(n,i)
+         =e=
+         0
 ;
 
 *Hourly demand balance in the upwards spinning reserve market for each node
@@ -837,6 +869,11 @@ EQ_Flow_limits_upper,
 EQ_Force_Commitment,
 EQ_Force_DeCommitment,
 EQ_LoadShedding,
+$If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand,
+$If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand_Max,
+$if not %ActivateFlexibleDemand% == 1 EQ_No_Flexible_Demand,
+EQ_Flexible_Demand_Modulation_Min,
+EQ_Flexible_Demand_Modulation_Max,
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 /
 ;
@@ -907,6 +944,8 @@ if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, Commi
          StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
          StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
 
+$If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),AccumulatedOverSupply.L(n,i));
+
 
 *Loop variables to display after solving:
 $If %Verbose% == 1 Display LastKeptHour,PowerInitial,CostStartUpH.L,CostShutDownH.L,CostRampUpH.L;
@@ -932,6 +971,7 @@ OutputSystemCost(h)
 OutputSpillage(s,h)
 OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
+$If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 ShadowPrice(n,h)
 LostLoad_MaxPower(n,h)
 LostLoad_MinPower(n,h)
@@ -958,6 +998,7 @@ OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(s,z)  = Spillage.L(s,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
+$If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
 LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
 LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
 LostLoad_2D(n,z) = LL_2D.L(n,z);
@@ -979,6 +1020,7 @@ OutputSystemCost,
 OutputSpillage,
 OutputShedLoad,
 OutputCurtailedPower,
+$If %ActivateFlexibleDemand% == 1 OutputDemandModulation,
 OutputGenMargin,
 LostLoad_MaxPower,
 LostLoad_MinPower,
