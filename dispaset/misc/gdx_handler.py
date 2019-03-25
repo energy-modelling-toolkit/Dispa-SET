@@ -42,7 +42,7 @@ def import_local_lib(lib):
     if sys.platform == 'win32' and platform.architecture()[0] == '64bit' and sys.version[:3] == '3.7':
         sys.path.append(os.path.join(path_ext,'gams_api/win64/'))
     else:
-        logging.error('Pre-compiled GAMS libraries are only available for python 3.7 64 bits under windows. You are useing platform ' + sys.platform + ' and '
+        logging.error('Pre-compiled GAMS libraries are only available for python 3.7 64 bits under windows. You are using platform ' + sys.platform + ' and '
                       ' architecture ' + platform.architecture()[0] +
                       'Please install the gams API using: "pip install gamsxcc gdxcc optcc"')
         sys.exit(1)

@@ -46,6 +46,7 @@ import time
 
 from .misc.gdx_handler import get_gams_path, import_local_lib, package_exists
 from .misc.gms_handler import solve_high_level, solve_low_level
+from .common import commons
 
 
 def is_sim_folder_ok(sim_folder):
@@ -84,17 +85,15 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
     :param output_lst: Set to True to conserve a copy of the GAMS lst file in the simulation folder
     '''
 
-    if package_exists('gams'):
-        solv_func = solve_high_level
-    else:
-        logging.warning('Could not import gams. Trying to use lower level APIs')
     if package_exists('gamsxcc') and package_exists('optcc'):
         solv_func = solve_low_level
+        logging.info('Using the low-level gams api')
     elif package_exists('gams'):
         solv_func = solve_high_level
+        logging.info('Using the high-level gams api')
     else:
         solv_func = solve_low_level
-        logging.warning('Could not the GAMS APIs. Trying to locate local version')
+        logging.warning('Could not find the GAMS APIs. Trying to locate local version')
         if not import_local_lib('lowlevel'):
             return False
     gams_folder = get_gams_path(gams_folder)
@@ -111,8 +110,8 @@ def solve_GAMS(sim_folder, gams_folder=None, output_lst=False):
         ret = solv_func(gams_folder, sim_folder, output_lst=output_lst)
         if os.path.isfile(os.path.join(sim_folder, 'debug.gdx')):
             logging.warning('A debug file was created. There has probably been an optimization error')
-        if os.path.isfile('warn.log'):
-            shutil.copy('warn.log', os.path.join(sim_folder, 'warn_solve.log'))
+        if os.path.isfile(commons['logfile']):
+            shutil.copy(commons['logfile'], os.path.join(sim_folder, 'warn_solve.log'))
         return ret
     else:
         return False
@@ -146,6 +145,6 @@ def solve_pyomo(sim_folder):
     time0 = time.time()
     results = DispaSolve(SimData['sets'], SimData['parameters'], LPFormulation=LPFormulation, path_cplex=path_cplex)
     logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
-    if os.path.isfile('warn.log'):
-        shutil.copy('warn.log', os.path.join(sim_folder, 'warn_solve.log'))
+    if os.path.isfile(commons['logfile']):
+        shutil.copy(commons['logfile'], os.path.join(sim_folder, 'warn_solve.log'))
     return results

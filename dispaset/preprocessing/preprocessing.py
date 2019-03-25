@@ -707,8 +707,8 @@ def build_simulation(config):
             pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
     logging.info('Build finished')
     
-    if os.path.isfile('warn.log'):
-        shutil.copy('warn.log', os.path.join(sim, 'warn_preprocessing.log'))
+    if os.path.isfile(commons['logfile']):
+        shutil.copy(commons['logfile'], os.path.join(sim, 'warn_preprocessing.log'))
 
 
     return SimData
