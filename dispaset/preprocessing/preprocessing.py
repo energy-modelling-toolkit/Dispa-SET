@@ -19,7 +19,7 @@ except ImportError:
     logging.warning("Couldn't import future package. Numeric operations may differ among different versions due to incompatible variable types")
     pass
 
-from .data_check import check_units, check_chp, check_sto, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering
+from .data_check import check_units, check_chp, check_sto, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering, check_FlexibleDemand
 from .utils import clustering, interconnections, incidence_matrix
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, write_to_excel, load_csv
 
@@ -88,6 +88,8 @@ def build_simulation(config):
         config['default']['CostLoadShedding'] = 1000
     if not isinstance(config['default']['CostHeatSlack'],(float,int)):
         config['default']['CostHeatSlack'] = 50
+    if not isinstance(config['default']['ShareOfFlexibleDemand'],(float,int)):
+        config['default']['ShareOfFlexibleDemand'] = 0
     
     # Load :
     Load = NodeBasedTable(config['Demand'],idx_utc_noloc,config['countries'],tablename='Demand')
@@ -114,6 +116,9 @@ def build_simulation(config):
     # Load Shedding:
     LoadShedding = NodeBasedTable(config['LoadShedding'],idx_utc_noloc,config['countries'],tablename='LoadShedding',default=config['default']['LoadShedding'])
     CostLoadShedding = NodeBasedTable(config['CostLoadShedding'],idx_utc_noloc,config['countries'],tablename='CostLoadShedding',default=config['default']['CostLoadShedding'])
+
+    # Flexible Demand
+    ShareOfFlexibleDemand = NodeBasedTable(config['ShareOfFlexibleDemand'],idx_utc_noloc,config['countries'],tablename='ShareOfFlexibleDemand',default=config['default']['ShareOfFlexibleDemand'])
 
     # Power plants:
     plants = pd.DataFrame()
@@ -162,6 +167,7 @@ def build_simulation(config):
     # data checks:
     check_AvailabilityFactors(plants,AF)
     check_heat_demand(plants,HeatDemand)
+    check_FlexibleDemand(ShareOfFlexibleDemand)
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
@@ -320,6 +326,8 @@ def build_simulation(config):
              name='LoadShedding')
     check_df(CostLoadShedding, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
              name='CostLoadShedding')
+    check_df(ShareOfFlexibleDemand, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+             name='ShareOfFlexibleDemand')
 
 #    for key in Renewables:
 #        check_df(Renewables[key], StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
@@ -338,13 +346,14 @@ def build_simulation(config):
     Inter_RoW = Inter_RoW.reindex(idx_long, method='nearest').fillna(method='bfill')
     NTCs = NTCs.reindex(idx_long, method='nearest').fillna(method='bfill')
     FuelPrices = FuelPrices.reindex(idx_long, method='nearest').fillna(method='bfill')
-    Load = Load.reindex(idx_long, method='nearest').fillna(method='bfill')
     Outages_merged = Outages_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
     ReservoirLevels_merged = ReservoirLevels_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
     ReservoirScaledInflows_merged = ReservoirScaledInflows_merged.reindex(idx_long, method='nearest').fillna(
         method='bfill')
     LoadShedding = LoadShedding.reindex(idx_long, method='nearest').fillna(method='bfill')
     CostLoadShedding = CostLoadShedding.reindex(idx_long, method='nearest').fillna(method='bfill')
+    ShareOfFlexibleDemand = ShareOfFlexibleDemand.reindex(idx_long, method='nearest').fillna(method='bfill')
+
 #    for tr in Renewables:
 #        Renewables[tr] = Renewables[tr].reindex(idx_long, method='nearest').fillna(method='bfill')
 
@@ -356,7 +365,7 @@ def build_simulation(config):
     sets = {}
     sets['h'] = [str(x + 1) for x in range(Nhours_long)]
     sets['z'] = [str(x + 1) for x in range(Nhours_long - config['LookAhead'] * 24)]
-    sets['mk'] = ['DA', '2U', '2D']
+    sets['mk'] = ['DA', '2U', '2D','Flex']
     sets['n'] = config['countries']
     sets['u'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
@@ -519,9 +528,10 @@ def build_simulation(config):
 
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])
     for i in range(len(sets['n'])):
-        values[0, i, :] = Load[sets['n'][i]]
+        values[0, i, :] = Load[sets['n'][i]] * (1 - ShareOfFlexibleDemand[sets['n'][i]])
         values[1, i, :] = reserve_2U_tot[sets['n'][i]]
         values[2, i, :] = reserve_2D_tot[sets['n'][i]]
+        values[3, i, :] = Load[sets['n'][i]] * ShareOfFlexibleDemand[sets['n'][i]]
     parameters['Demand'] = {'sets': sets_param['Demand'], 'val': values}
 
     # Emission Rate:
@@ -617,7 +627,7 @@ def build_simulation(config):
                 parameters['PowerInitial']['val'][i] = (Plants_merged['PartLoadMin'][i] + 1) / 2 * \
                                                        Plants_merged['PowerCapacity'][i]
             # Config variables:
-    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead','ValueOfLostLoad','QuickStartShare','CostOfSpillage','WaterValue']
+    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead','ValueOfLostLoad','QuickStartShare','CostOfSpillage','WaterValue','DemandFlexibility']
     sets['y_config'] = ['year', 'month', 'day', 'val']
     dd_begin = idx_long[4]
     dd_end = idx_long[-2]
@@ -632,6 +642,7 @@ def build_simulation(config):
         [0, 0, 0, 0.5],       # allowed Share of quick start units in reserve
         [0, 0, 0, 1],       # Cost of spillage (EUR/MWh)
         [0, 0, 0, 100],       # Value of water (for unsatisfied water reservoir levels, EUR/MWh)
+        [0, 0, 0, 2],       # Demand flexibility: number of hours by which the flexible demand can be time-shifted
     ])
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 

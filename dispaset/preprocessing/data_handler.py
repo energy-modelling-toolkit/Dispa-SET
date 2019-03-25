@@ -501,7 +501,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
     params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
               'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
               'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
-              'CostHeatSlack','CostLoadShedding']
+              'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand']
     for i, param in enumerate(params):
         config[param] = sheet.cell_value(61 + i, 2)
 
@@ -528,6 +528,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['default']['LoadShedding'] = sheet.cell_value(65, 5)
     config['default']['CostHeatSlack'] = sheet.cell_value(79, 5)
     config['default']['CostLoadShedding'] = sheet.cell_value(80, 5)
+    config['default']['ShareOfFlexibleDemand'] = sheet.cell_value(81, 5)
 
     # read the list of countries to consider:
     def read_truefalse(sheet, rowstart, colstart, rowstop, colstop):
