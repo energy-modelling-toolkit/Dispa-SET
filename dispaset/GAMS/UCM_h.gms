@@ -306,6 +306,7 @@ $If %LPFormulation% == 1 POSITIVE VARIABLES Committed (u,h) ; Committed.UP(u,h) 
 $If not %LPFormulation% == 1 INTEGER VARIABLES Committed (u,h), StartUp(u,h), ShutDown(u,h) ; Committed.UP(u,h) = Nunits(u) ; StartUp.UP(u,h) = Nunits(u) ; ShutDown.UP(u,h) = Nunits(u) ;
 
 POSITIVE VARIABLES
+AccumulatedOverSupply(n,h) [MWh]   Accumulated oversupply due to the flexible demand
 CostStartUpH(u,h)          [EUR]   Cost of starting up
 CostShutDownH(u,h)         [EUR]   cost of shutting down
 CostRampUpH(u,h)           [EUR]   Ramping cost
@@ -337,6 +338,7 @@ WaterSlack(s)              [MWh]   Unsatisfied water level constraint
 
 free variable
 SystemCostD                ![EUR]   Total system cost for one optimization period
+DemandModulation(n,h)      [MW] Difference between the flexible demand and the baseline
 ;
 
 *===============================================================================
@@ -542,10 +544,32 @@ EQ_Demand_balance_DA(n,i)..
           +sum(l,Flow(l,i)*LineNode(l,n))
          =E=
          Demand("DA",n,i)
+         +DemandModulation(n,i)
          +sum(s,StorageInput(s,i)*Location(s,n))
          -ShedLoad(n,i)
          -LL_MaxPower(n,i)
          +LL_MinPower(n,i)
+;
+
+
+EQ_Flexible_Demand(n,i)..
+         DemandModulation(n,i)
+         =e=
+         AccumulatedOverSupply(n,i)
+         - AccumulatedOverSupply_inital(n)$(ord(i) = 1)
+         - AccumulatedOverSupply(n,i-1)$(ord(i) > 1)
+;
+
+EQ_Flexible_Demand_max(n,i)..
+         AccumulatedOverSupply(n,i)
+         =l=
+         MaxOverSupply(n)
+;
+
+EQ_Flexible_Demand(n,i)..
+         DemandModulation(n,i)
+         =g=
+         -Demand("flex",n,i)
 ;
 
 *Hourly demand balance in the upwards spinning reserve market for each node
