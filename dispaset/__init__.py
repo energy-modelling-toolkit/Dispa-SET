@@ -3,6 +3,7 @@ import os
 
 # Sets the __version__ variable
 from ._version import __version__
+from .common import commons
 
 from .preprocessing.preprocessing import get_git_revision_tag
 __gitversion__ = get_git_revision_tag()
@@ -34,7 +35,7 @@ _LOGCONFIG = {
              "class": "logging.FileHandler",
              "level": "INFO",
              'formatter': 'standard',
-             'filename': 'warn.log',
+             'filename': commons['logfile'],
              'encoding': 'utf8'
 
          }
@@ -65,12 +66,12 @@ from .postprocessing.postprocessing import plot_country_capacities
 from .postprocessing.postprocessing import CostExPost
 from .cli import *
 
-# Removeing log file:
-if os.path.isfile('warn.log'):
+# Remove old log file:
+for filename in (f for f in os.listdir('.') if f.endswith('.dispa.log')):
     try:
-        os.remove('warn.log')
+        os.remove(filename)
     except OSError:
-        print ('Could not erase previous log file "warn.log"')
+        print ('Could not erase previous log file ' + filename)
 
 # Setting logging configuration:
 try:

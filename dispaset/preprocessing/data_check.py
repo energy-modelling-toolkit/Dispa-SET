@@ -373,7 +373,7 @@ def check_heat_demand(plants,data):
                 Qmin = 0
                 Qmax = min(plants.loc[u, 'PowerCapacity'] / plants.loc[u, 'CHPPowerToHeat'], plant_Qmax) * Nunits
             elif plant_CHP_type == 'back-pressure':
-                Qmin = plants.loc[u,'PowerCapacity'] * plants.loc[u,'PartLoadMin'] /plants.loc[u,'CHPPowerToHeat'] * Nunits
+                Qmin = plants.loc[u,'PowerCapacity'] * plants.loc[u,'PartLoadMin'] /plants.loc[u,'CHPPowerToHeat']
                 Qmax = min(plants.loc[u, 'PowerCapacity'] / plants.loc[u, 'CHPPowerToHeat'], plant_Qmax) * Nunits
             elif plant_CHP_type == 'p2h':
                 Qmin = 0
@@ -407,7 +407,7 @@ def check_df(df, StartDate=None, StopDate=None, name=''):
             missing = np.sum(np.isnan(df[key]))
             # pos = np.where(np.isnan(df.sum(axis=1)))
             # idx_pos = [df.index[i] for i in pos]
-            if missing != 0:
+            if missing > 1:
                 logging.warning('There are ' + str(missing) + ' missing entries in the column ' + key + ' of the dataframe ' + name)
     if not df.columns.is_unique:
         logging.error('The column headers of table "' + name + '" are not unique!. The following headers are duplicated: ' + str(df.columns.get_duplicates()))

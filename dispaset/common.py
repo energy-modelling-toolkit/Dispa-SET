@@ -2,6 +2,8 @@
 """
 This file defines a dictionary with global variables to be used in Dispa-SET such as fluids, technologies, etc.
 """
+import datetime
+
 commons={}
 # Timestep
 commons['TimeStep'] = '1h'
@@ -42,3 +44,4 @@ commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '',
                       'WST': '', 'OTH': ''
                       }
 
+commons['logfile'] = str(datetime.datetime.now()).replace(':','-').replace(' ','_') + '.dispa.log'
