@@ -407,7 +407,7 @@ def check_df(df, StartDate=None, StopDate=None, name=''):
             missing = np.sum(np.isnan(df[key]))
             # pos = np.where(np.isnan(df.sum(axis=1)))
             # idx_pos = [df.index[i] for i in pos]
-            if missing != 0:
+            if missing > 1:
                 logging.warning('There are ' + str(missing) + ' missing entries in the column ' + key + ' of the dataframe ' + name)
     if not df.columns.is_unique:
         logging.error('The column headers of table "' + name + '" are not unique!. The following headers are duplicated: ' + str(df.columns.get_duplicates()))
