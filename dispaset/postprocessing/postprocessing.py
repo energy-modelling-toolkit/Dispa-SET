@@ -189,7 +189,7 @@ def get_plot_data(inputs, results, c):
 
     return plotdata
 
-def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
+def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None, demand_modulation=None,
                   alpha=None, figsize=(13, 6)):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
@@ -243,8 +243,14 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
                              gridspec_kw={'height_ratios': [2.7, .8], 'hspace': 0.04})
 
     # Create left axis:
-#    ax.set_ylim([-10000,15000])
-    axes[0].plot(pdrng, demand[pdrng], color='k')
+    if demand_modulation is not None:
+        axes[0].plot(pdrng, demand[pdrng], color='k', linestyle=':')
+        axes[0].plot(pdrng, demand[pdrng]+demand_modulation[pdrng], color='k')
+        line_demand = mlines.Line2D([], [], color='black', label='Flex Load')
+        line_nonflexdemand = mlines.Line2D([], [], color='black', alpha=alpha, label='Orig. Load', linestyle=':')
+    else:
+        axes[0].plot(pdrng, demand[pdrng], color='k')
+        line_demand = mlines.Line2D([], [], color='black', label='Load')
     axes[0].set_xlim(pdrng[0],pdrng[-1])
 
     fig.suptitle('Power dispatch for country ' + demand.name[1])
@@ -252,6 +258,8 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
     labels = []
     patches = []
     colorlist = []
+    
+
 
 #    # Plot negative values:
     for j in range(idx_zero):
@@ -297,14 +305,12 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
 
         axes[1].set_ylabel('Level [TWh]')
         axes[1].yaxis.label.set_fontsize(12)
-        line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Reservoir', linestyle=':')
 
-    line_demand = mlines.Line2D([], [], color='black', label='Load')
     plt.legend(handles=[line_demand] + patches[::-1], loc=4)
-    if level is None:
+    if demand_modulation is None:
         plt.legend(handles=[line_demand] + patches[::-1], loc=4)
     else:
-        plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_SOC] + patches[::-1], loc=4)
+        plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_nonflexdemand] + patches[::-1], loc=4)
 
 
 def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=False):
@@ -525,7 +531,7 @@ def get_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickle'):
     for key in ['OutputPower', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
                 'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput', 'LostLoad_2U', 'LostLoad_3U',
                 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp', 'LostLoad_RampDown', 'LostLoad_2D',
-                'ShadowPrice', 'OutputHeat', 'OutputHeatSlack','status']:
+                'ShadowPrice', 'OutputHeat', 'OutputHeatSlack','OutputDemandModulation','status']:
         if key in results:
             if len(results[key]) == len(
                     index_long):  # Case of variables for which the look-ahead period recorded (e.g. the lost loads)
@@ -536,7 +542,7 @@ def get_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickle'):
             else:  # Variables whose index is not complete (sparse formulation)
                 results[key].index = index_long[results[key].index - 1]
                 if key in ['OutputPower', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
-                           'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput','OutputHeat', 'OutputHeatSlack']:
+                           'OutputShedLoad', 'OutputDemandModulation', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput','OutputHeat', 'OutputHeatSlack']:
                     results[key] = results[key].reindex(index).fillna(0)
                     # results[key].fillna(0,inplace=True)
         else:
@@ -594,21 +600,27 @@ def plot_country(inputs, results, c='', rng=None, rug_plot=True):
         level = pd.Series(0, index=results['OutputPower'].index)
 
     demand = inputs['param_df']['Demand'][('DA', c)] / 1000 # GW
+    if ('Flex', c) in inputs['param_df']['Demand']:
+        demand += inputs['param_df']['Demand'][('Flex', c)] / 1000
     sum_generation = plotdata.sum(axis=1)
-    #if 'OutputShedLoad' in results:
     if 'OutputShedLoad' in results and c in results['OutputShedLoad']:
         shed_load = results['OutputShedLoad'][c] / 1000 # GW
     else:
         shed_load = pd.Series(0,index=demand.index) / 1000 # GW
-    diff = (sum_generation - demand + shed_load).abs()
+    if 'OutputDemandModulation' in results and c in results['OutputDemandModulation']:
+        demand_modulation = results['OutputDemandModulation'][c] / 1000 # GW
+        diff = (sum_generation - demand + demand_modulation + shed_load).abs()
+    else:
+        demand_modulation = None # GW
+        diff = (sum_generation - demand + shed_load).abs()
     if diff.max() > 0.01 * demand.max():
         logging.critical('There is up to ' + str(diff.max()/demand.max()*100) + '% difference in the instantaneous energy balance of country ' + c)
 
     if 'OutputCurtailedPower' in results and c in results['OutputCurtailedPower']:
         curtailment = results['OutputCurtailedPower'][c] / 1000 # GW
-        plot_dispatch(demand, plotdata, level, curtailment = curtailment, rng=rng)
+        plot_dispatch(demand, plotdata, level, curtailment = curtailment, rng=rng, demand_modulation=demand_modulation)
     else:
-        plot_dispatch(demand, plotdata, level, rng=rng)
+        plot_dispatch(demand, plotdata, level, rng=rng, demand_modulation=demand_modulation)
 
     # Generation plot:
     if rug_plot:

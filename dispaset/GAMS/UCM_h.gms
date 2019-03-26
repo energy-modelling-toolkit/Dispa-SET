@@ -559,7 +559,7 @@ EQ_Demand_balance_DA(n,i)..
          sum(u,Power(u,i)*Location(u,n))
           +sum(l,Flow(l,i)*LineNode(l,n))
          =E=
-         Demand("DA",n,i)
+         Demand("DA",n,i) + Demand("Flex",n,i)
          +DemandModulation(n,i)
          +sum(s,StorageInput(s,i)*Location(s,n))
          -ShedLoad(n,i)
