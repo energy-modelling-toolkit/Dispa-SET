@@ -51,7 +51,7 @@ def build_simulation(config):
     #####################################   Main Inputs    ############################################################
     ###################################################################################################################
 
-    # Boolean variable to check wether it is milp or lp:
+    # Boolean variable to check whether it is milp or lp:
     LP = config['SimulationType'] == 'LP' or config['SimulationType'] == 'LP clustered'
 
     # Day/hour corresponding to the first and last days of the simulation:
@@ -83,14 +83,6 @@ def build_simulation(config):
     delta = idx_utc[-1] - idx_utc[0]
     days_simulation = delta.days + 1
 
-    # Defining missing configuration fields for backwards compatibility:
-    if not isinstance(config['default']['CostLoadShedding'],(float,int)):
-        config['default']['CostLoadShedding'] = 1000
-    if not isinstance(config['default']['CostHeatSlack'],(float,int)):
-        config['default']['CostHeatSlack'] = 50
-    if not isinstance(config['default']['ShareOfFlexibleDemand'],(float,int)):
-        config['default']['ShareOfFlexibleDemand'] = 0
-    
     # Load :
     Load = NodeBasedTable(config['Demand'],idx_utc_noloc,config['countries'],tablename='Demand')
     # For the peak load, the whole year is considered:
@@ -114,11 +106,10 @@ def build_simulation(config):
         NTC = pd.DataFrame(index=idx_utc_noloc)
 
     # Load Shedding:
-    LoadShedding = NodeBasedTable(config['LoadShedding'],idx_utc_noloc,config['countries'],tablename='LoadShedding',default=config['default']['LoadShedding'])
-    CostLoadShedding = NodeBasedTable(config['CostLoadShedding'],idx_utc_noloc,config['countries'],tablename='CostLoadShedding',default=config['default']['CostLoadShedding'])
-
+    LoadShedding = NodeBasedTable(config['LoadShedding'], idx_utc_noloc,config['countries'],tablename='LoadShedding',default=config['default']['LoadShedding'])
+    CostLoadShedding = NodeBasedTable(config['CostLoadShedding'], idx_utc_noloc, config['countries'], tablename='CostLoadShedding', default=config['default'].get('CostLoadShedding',1000))
     # Flexible Demand
-    ShareOfFlexibleDemand = NodeBasedTable(config['ShareOfFlexibleDemand'],idx_utc_noloc,config['countries'],tablename='ShareOfFlexibleDemand',default=config['default']['ShareOfFlexibleDemand'])
+    ShareOfFlexibleDemand = NodeBasedTable(config['ShareOfFlexibleDemand'],idx_utc_noloc,config['countries'],tablename='ShareOfFlexibleDemand', default=config['default'].get('ShareOfFlexibleDemand',0))
 
     # Power plants:
     plants = pd.DataFrame()
@@ -128,7 +119,7 @@ def build_simulation(config):
         for c in config['countries']:
             path = config['PowerPlantData'].replace('##', str(c))
             tmp = load_csv(path)
-            plants = plants.append(tmp, ignore_index=True)
+            plants = plants.append(tmp, ignore_index=True, sort=False)
     plants = plants[plants['Technology'] != 'Other']
     plants = plants[pd.notnull(plants['PowerCapacity'])]
     plants.index = range(len(plants))
@@ -162,7 +153,7 @@ def build_simulation(config):
     ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirScaledInflows',default=0)
     HeatDemand = UnitBasedTable(plants_chp,config['HeatDemand'],idx_utc_noloc,config['countries'],fallbacks=['Unit'],tablename='HeatDemand',default=0)
-    CostHeatSlack = UnitBasedTable(plants_chp,config['CostHeatSlack'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default']['CostHeatSlack'])
+    CostHeatSlack = UnitBasedTable(plants_chp,config['CostHeatSlack'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default'].get('CostHeatSlack',50))
 
     # data checks:
     check_AvailabilityFactors(plants,AF)

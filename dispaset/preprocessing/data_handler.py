@@ -11,6 +11,11 @@ try:
 except ImportError:
     pass
 
+# List of parameters for which an external file path must be specified:
+PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
+          'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
+          'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
+          'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand']
 
 def NodeBasedTable(path,idx,countries,tablename='',default=None):
     '''
@@ -498,13 +503,9 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['AllowCurtailment'] = sheet.cell_value(48, 2)
 
     # List of parameters for which an external file path must be specified:
-    params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
-              'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
-              'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
-              'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand']
-    for i, param in enumerate(params):
+    global PARAMS
+    for i, param in enumerate(PARAMS):
         config[param] = sheet.cell_value(61 + i, 2)
-
     if AbsPath:
     # Changing all relative paths to absolute paths. Relative paths must be defined 
     # relative to the parent folder of the config file.
@@ -512,7 +513,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
         basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath),os.pardir))
         if not os.path.isabs(config['SimulationDirectory']):
             config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
-        for param in params:
+        for param in PARAMS:
             if not os.path.isabs(config[param]):
                 config[param] = os.path.join(basefolder,config[param])
 
@@ -570,11 +571,10 @@ def load_config_yaml(filename,AbsPath=True):
             logging.error('Cannot parse config file: {}'.format(filename))
             raise exc
 
-    # List of parameters for which an external file path must be specified:
-    params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
-              'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
-              'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
-              'CostHeatSlack','CostLoadShedding']
+    global PARAMS
+    for param in PARAMS:
+        if param not in config:
+            config[param] = ''
 
     if AbsPath:
     # Changing all relative paths to absolute paths. Relative paths must be defined 
@@ -583,7 +583,7 @@ def load_config_yaml(filename,AbsPath=True):
         basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath),os.pardir))
         if not os.path.isabs(config['SimulationDirectory']):
             config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
-        for param in params:
+        for param in PARAMS:
             if not os.path.isabs(config[param]):
                 config[param] = os.path.join(basefolder,config[param])
                 
