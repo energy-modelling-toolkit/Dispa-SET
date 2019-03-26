@@ -17,9 +17,9 @@ PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding',
           'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
           'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand']
 
-DEFAULTS = ['PriceOfNuclear','PriceOfBlackCoal','PriceOfGas','PriceOfFuelOil','PriceOfBiomass',
-                'PriceOfCO2','PriceOfLignite','PriceOfPeat','LoadShedding','CostHeatSlack',
-                'CostLoadShedding','ShareOfFlexibleDemand']
+DEFAULTS = {'PriceOfNuclear':0,'PriceOfBlackCoal':0,'PriceOfGas':0,'PriceOfFuelOil':0,'PriceOfBiomass':0,
+                'PriceOfCO2':0,'PriceOfLignite':0,'PriceOfPeat':0,'LoadShedding':0,'CostHeatSlack':0,
+                'CostLoadShedding':100,'ShareOfFlexibleDemand':0}
 
 def NodeBasedTable(path,idx,countries,tablename='',default=None):
     '''
@@ -583,7 +583,7 @@ def load_config_yaml(filename,AbsPath=True):
     global DEFAULTS
     for key in DEFAULTS:
         if not key in config['default']:
-            config['default'][key]=None
+            config['default'][key]=DEFAULTS[key]
 
     if AbsPath:
     # Changing all relative paths to absolute paths. Relative paths must be defined 
