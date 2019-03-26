@@ -253,7 +253,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None, dema
         line_demand = mlines.Line2D([], [], color='black', label='Load')
     axes[0].set_xlim(pdrng[0],pdrng[-1])
 
-    fig.suptitle('Power dispatch for country ' + demand.name[1])
+    fig.suptitle('Power dispatch and aggregated reservoir level for country ' + demand.name[1])
 
     labels = []
     patches = []
@@ -310,7 +310,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None, dema
     if demand_modulation is None:
         plt.legend(handles=[line_demand] + patches[::-1], loc=4)
     else:
-        plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_nonflexdemand] + patches[::-1], loc=4)
+        plt.legend(handles=[line_demand] + [line_nonflexdemand] + patches[::-1], loc=4)
 
 
 def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=False):
