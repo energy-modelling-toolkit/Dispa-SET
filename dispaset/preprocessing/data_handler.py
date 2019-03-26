@@ -586,7 +586,14 @@ def load_config_yaml(filename,AbsPath=True):
         for param in PARAMS:
             if not os.path.isabs(config[param]):
                 config[param] = os.path.join(basefolder,config[param])
-                
+    
+    # Define all default values as None if they were not provided in the yaml file
+    for key in ['PriceOfNuclear','PriceOfBlackCoal','PriceOfGas','PriceOfFuelOil','PriceOfBiomass',
+                'PriceOfCO2','PriceOfLignite','PriceOfPeat','LoadShedding','CostHeatSlack',
+                'CostLoadShedding','ShareOfFlexibleDemand']:
+        if not key in config['default']:
+            config['default'][key]=None
+    
     return config
 
 def export_yaml_config(ExcelFile,YAMLFile):
