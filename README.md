@@ -1,6 +1,6 @@
 ![dispaset logo](https://raw.githubusercontent.com/energy-modelling-toolkit/Dispa-SET/tests/Docs/figures/logo.png)
 ===================
- ![Documentation](https://img.shields.io/badge/python-2.7,%203.7-blue.svg) [![License](https://img.shields.io/badge/License-EUPL--1.2-blue.svg)](https://opensource.org/licenses/EUPL-1.2) [![Documentation](https://readthedocs.org/projects/dispa-set/badge/?branch=master)](http://dispa-set.readthedocs.io/en/latest/) [![Build Status](https://travis-ci.org/energy-modelling-toolkit/Dispa-SET.svg)](https://travis-ci.org/energy-modelling-toolkit/Dispa-SET.svg?brach=master)
+ ![Documentation](https://img.shields.io/badge/python-2.7,%203.7-blue.svg) [![License](https://img.shields.io/badge/License-EUPL--1.2-blue.svg)](https://opensource.org/licenses/EUPL-1.2) [![Documentation](https://readthedocs.org/projects/dispa-set/badge/?branch=master)](http://dispa-set.readthedocs.io/en/latest/) [![Build Status](https://travis-ci.org/energy-modelling-toolkit/Dispa-SET.svg?brach=master)](https://travis-ci.org/energy-modelling-toolkit/Dispa-SET)
 
 ### Description
 The Dispa-SET model is a unit commitment and dispatch model developed within the “Joint Research Centre” and focused on the balancing and flexibility problems focusing on the European context. It is written in GAMS with advanced input/output data handling and visualization routines in Python.
