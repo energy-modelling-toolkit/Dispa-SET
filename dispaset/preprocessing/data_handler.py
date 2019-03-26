@@ -17,6 +17,10 @@ PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding',
           'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
           'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand']
 
+DEFAULTS = ['PriceOfNuclear','PriceOfBlackCoal','PriceOfGas','PriceOfFuelOil','PriceOfBiomass',
+                'PriceOfCO2','PriceOfLignite','PriceOfPeat','LoadShedding','CostHeatSlack',
+                'CostLoadShedding','ShareOfFlexibleDemand']
+
 def NodeBasedTable(path,idx,countries,tablename='',default=None):
     '''
     This function loads the tabular data stored in csv files relative to each
@@ -571,10 +575,15 @@ def load_config_yaml(filename,AbsPath=True):
             logging.error('Cannot parse config file: {}'.format(filename))
             raise exc
 
+    # Define missing parameters if they were not provided in the config file
     global PARAMS
     for param in PARAMS:
         if param not in config:
-            config[param] = ''
+            config[param] = ''    
+    global DEFAULTS
+    for key in DEFAULTS:
+        if not key in config['default']:
+            config['default'][key]=None
 
     if AbsPath:
     # Changing all relative paths to absolute paths. Relative paths must be defined 
@@ -586,13 +595,6 @@ def load_config_yaml(filename,AbsPath=True):
         for param in PARAMS:
             if not os.path.isabs(config[param]):
                 config[param] = os.path.join(basefolder,config[param])
-    
-    # Define all default values as None if they were not provided in the yaml file
-    for key in ['PriceOfNuclear','PriceOfBlackCoal','PriceOfGas','PriceOfFuelOil','PriceOfBiomass',
-                'PriceOfCO2','PriceOfLignite','PriceOfPeat','LoadShedding','CostHeatSlack',
-                'CostLoadShedding','ShareOfFlexibleDemand']:
-        if not key in config['default']:
-            config['default'][key]=None
     
     return config
 
