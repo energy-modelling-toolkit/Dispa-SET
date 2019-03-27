@@ -53,6 +53,10 @@ def NodeBasedTable(path,idx,zones,tablename='',default=None):
     elif SingleFile:
         # If it is only one file, there is a header with the zone code
         tmp = load_csv(paths['all'], index_col=0, parse_dates=True)
+        if len(tmp.index)!=len(idx):
+            logging.error('File {} index different size ({}) than desired index ({}).'.format(paths['all'],
+                                                                                             len(tmp.index),
+                                                                                             len(idx)))
         if not tmp.index.is_unique:
             logging.error('The index of data file ' + paths['all'] + ' is not unique. Please check the data')
             sys.exit(1)
@@ -87,8 +91,12 @@ def NodeBasedTable(path,idx,zones,tablename='',default=None):
             if not tmp.index.is_unique:
                 logging.error('The index of data file ' + paths['all'] + ' is not unique. Please check the data')
                 sys.exit(1)
+            if len(tmp.index) != len(idx):
+                logging.error('File {} index different size ({}) than desired index ({}).'.format(path,
+                                                                                                  len(tmp.index),
+                                                                                                  len(idx)))
             data[z] = tmp.iloc[:,0]
-     
+
     return data
 
 
@@ -595,7 +603,7 @@ def load_config_yaml(filename,AbsPath=True):
         for param in params:
             if not os.path.isabs(config[param]):
                 config[param] = os.path.join(basefolder,config[param])
-                
+
     return config
 
 def export_yaml_config(ExcelFile,YAMLFile):
