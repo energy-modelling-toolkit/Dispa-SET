@@ -49,11 +49,11 @@ def check_FlexibleDemand(flex):
     '''
     Function that checks the validity of the provided flexibility demand time series
     '''
-    if (flex.values < 0).any():
+    if (flex.dropna().values < 0).any():
         logging.error('Some flexibility demand values are negative. They must be comprised between 0 and 1')
         sys.exit(1)
-    if (flex.values > 1).any():
-        logging.error('Some flexibility demand values are negative. They must be comprised between 0 and 1')
+    if (flex.dropna().values > 1).any():
+        logging.error('Some flexibility demand values are more than 1. They must be comprised between 0 and 1')
         sys.exit(1)
 
 

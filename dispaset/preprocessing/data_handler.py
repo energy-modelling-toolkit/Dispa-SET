@@ -543,7 +543,10 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['default']['CostHeatSlack'] = sheet.cell_value(79, 5)
     config['default']['CostLoadShedding'] = sheet.cell_value(80, 5)
     config['default']['ShareOfFlexibleDemand'] = sheet.cell_value(81, 5)
-
+    for def_value in config['default']:
+        if config['default'][def_value] =='':
+            logging.warning('No value was provided in config file for {}. Will use {}'.format(def_value, DEFAULTS[def_value]))
+            config['default'][def_value] = DEFAULTS[def_value]
     # read the list of countries to consider:
     def read_truefalse(sheet, rowstart, colstart, rowstop, colstop):
         """
@@ -591,7 +594,7 @@ def load_config_yaml(filename,AbsPath=True):
             config[param] = ''    
     global DEFAULTS
     for key in DEFAULTS:
-        if not key in config['default']:
+        if key not in config['default']:
             config['default'][key]=DEFAULTS[key]
 
     if AbsPath:
