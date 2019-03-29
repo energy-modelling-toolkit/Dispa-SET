@@ -31,8 +31,8 @@ Outages:  'Database/OutageFactors/##/2016.csv'
 
 RenewablesAF:  'Database/AvailabilityFactors/##/1h/2016.csv'
 
-ReservoirLevels:  'Database/HydroData/ReservoirLevel/##/1h/2016.csv'
-ReservoirScaledInflows:  'Database/HydroData/ScaledInflows/##/1h/2016_converted_from_2012.csv'
+ReservoirLevels:  'Database/HydroData/ScaledLevels/##/1h/2016.csv'
+ReservoirScaledInflows:  'Database/HydroData/ScaledInflows/##/1h/2016_profile_from_2012.csv'
 
 #---------------- Prices
 PriceOfBiomass:  ''
@@ -55,10 +55,9 @@ countries: ['AT', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES',
 ReserveParticipation: ['COMC', 'GTUR', 'HDAM', 'HPHS', 'ICEN', 'CAES', 'BATS', 'BEVS']
 
 #---------------- Default prices
-default: {CostHeatSlack: 50.0, CostLoadShedding: 400.0, LoadShedding: 0.05, PriceOfBiomass: 37.0,
+default: {CostHeatSlack: 50.0, CostLoadShedding: 400.0, LoadShedding: 0.05, PriceOfBiomass: 13.0,
   PriceOfBlackCoal: 11.0, PriceOfCO2: 7.0, PriceOfFuelOil: 35.0, PriceOfGas: 20.0,
-  PriceOfLignite: 8.0, PriceOfNuclear: 3.0, PriceOfPeat: 0.0}
+  PriceOfLignite: 8.0, PriceOfNuclear: 3.0, PriceOfPeat: 8.0}
 
 #---------------- Multipliers
 modifiers: {Demand: 1.0, Solar: 1.0, Storage: 1.0, Wind: 1.0}
-
