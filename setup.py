@@ -15,7 +15,7 @@ def read(*parts):
 
 # Sets the __version__ variable
 __version__ = None
-exec(open('DispaSET/_version.py').read())
+exec(open('dispaset/_version.py').read())
 
 setup(
     name='dispaset',
@@ -23,7 +23,7 @@ setup(
     author='Sylvain Quoilin, Konstantinos Kavvadias',
     author_email='squoilin@uliege.be',
     description='An open-source unit commitment and optimal dispatch model ',
-    license='EUPL v1.1.',
+    license='EUPL v1.2.',
     url='http://www.dispaset.eu',
     download_url='http://www.dispaset.eu/en/latest/releases.html',
     packages=find_packages(),
@@ -44,7 +44,7 @@ setup(
                     },
     entry_points={
         'console_scripts': [
-            'dispaset = DispaSET.cli:cli'
+            'dispaset = dispaset.cli:cli'
         ]},
     classifiers=[
         'Intended Audience :: Science/Research',

@@ -35,9 +35,10 @@ Features
 The demand is assumed to be inelastic to the price signal. The MILP objective function is therefore the total generation cost over the optimization period. 
 
 
-Libraries used
---------------
+Libraries used and requirements
+-------------------------------
 
+* `Python 3.7`_
 * `pyomo`_ Optimization object library, interface to LP solver (e.g. CPLEX)
 * `pandas`_ for input and result data handling
 * `matplotlib`_ for plotting
@@ -53,6 +54,7 @@ In the past years, Dispa-SET has been used in various scientific works covering 
 * Impact of Electric Vehicle deployment in The Netherlands [5]_.
 * Open-source model of the Balkans area, with some simulations involving high shares of renewables [6]_ [7]_.
 * Available technical flexibility to balance variable RES generation in Belgium [8]_
+* Comparison of clustering formulations [9]_ [10]_
 
 
 
@@ -62,25 +64,21 @@ The Dispa-SET project is relatively recent, and a number of improvements will be
 
 - Grid constraints (DC power-flow)
 - Stochastic scenarios
-- Extension of the modeled areas
+- Modelling of investment and capacity expansion
 - Modeling of the ancillary markets
-- User interface
-
-Public administration reference
--------------------------------
-This software is primarily developed and used within the Institute for Energy and Transport, which is one of the 7 scientific institutes of the Joint Research Centre (JRC) of the European Commission. The IET is based both in Petten, the Netherlands, and Ispra, Italy. The Dispa-SET model is developed in the framework of the "Energy Systems Modelling" (ESM) project.
 
 
 Licence
 -------
-Dispa-SET is a free software licensed under the “European Union Public Licence" EUPL v1.1. It 
+Dispa-SET is a free software licensed under the “European Union Public Licence" EUPL v1.2. It 
 can be redistributed and/or modified under the terms of this license.
 
 Main Developers
 ---------------
 - `Sylvain Quoilin`_ (University of Liège, KU Leuven)
-- Andreas Zucker (European Commission, Institute for Energy and Transport)
 - Konstantinos Kavvadias (European Commission, Institute for Energy and Transport)
+- Matija Pavičević  (KU Leuven, Belgium)
+
 
 References
 ----------
@@ -89,10 +87,13 @@ References
 .. [3] Quoilin, S., Nijs, W., Gonzalez, I. H., Zucker, A. and Thiel, C. (2015), Evaluation of simplified flexibility evaluation tools using a unit commitment model, In 12th International Conference on the European Energy Market (EEM), pp. 1 5.
 .. [4] Quoilin, S., Nijs, W. and Zucker, A. (2017), Evaluating flexibility and adequacy in future EU power systems: model coupling and long-term forecasting, In Proceedings of the 2017 ECOS Conference, San Diego.
 .. [5] Beltramo, A., Julea, A., Refa, N., Drossinos, Y., Thiel, C. and Quoilin, S. (2017),`Using electric vehicles as flexible resource in power systems: A case study in the Netherlands, In 14th International Conference on the European Energy Market (EEM).
-.. [6] Pavi£evi¢, M., Tomi¢, I., Quoilin, S., Zucker, A. and Puk2ec, T. (2017), Applying the Dispa-SET model on the Western Balkans power systems, In Proceedings of the 2017 SDEWES Conference
-.. [7] Tomi¢, I., Pavi£evi¢, M., Quoilin, S., Zucker, A., Kraja£i¢, G., Puk2ec, T. and Dui¢, N. (2017), Applying the Dispa-SET model on the seven countries from the South East Europe, In 8th Energy Planning and Modeling of Energy Systems-Meeting, Belgrade
-.. [8] Quoilin, S., Gonzalez Vazquez, I., Zucker, A., & Thiel, C. (2014). Available technical flexibility for balancing variable renewable energy sources: case study in Belgium. Proceedings of the 9th Conference on Sustainable Development of Energy, Water and Environment Systems.
+.. [6] Pavičević, M., Tomić, I., Quoilin, S., Zucker, A. and Pukšec, T. and Krajačić, G. (2017), Applying the Dispa-SET model on the Western Balkans power systems, In Proceedings of the 2017 SDEWES Conference
+.. [7] Tomić, I., Pavičević, M., Quoilin, S., Zucker, A., Krajačić, G., Pukšec, T. and Duić, N. (2017), Applying the Dispa-SET model on the seven countries from the South East Europe, In 8th Energy Planning and Modeling of Energy Systems-Meeting, Belgrade
+.. [8] Quoilin, S., Gonzalez Vazquez, I., Zucker, A., and Thiel, C. (2014). Available technical flexibility for balancing variable renewable energy sources: case study in Belgium. Proceedings of the 9th Conference on Sustainable Development of Energy, Water and Environment Systems.
+.. [9] Pavičević, M., Quoilin, S. and Pukšec, T., (2018). Comparison of Different Power Plant Clustering Approaches for Modeling Future Power Systems, Proceedings of the 3rd SEE SDEWES Conference, Novi Sad.
+.. [10] Pavičević, M., Kavvadias, K. and Quoilin, S. (2018). Impact of model formulation on power system simulations - Example with the Dispa-SET Balkans model, EMP-E conference 2018: Modelling Clean Energy Pathways, Brussels.
 
+.. _Python 3.7: https://www.anaconda.com/distribution/
 .. _matplotlib: http://matplotlib.org
 .. _pandas: http://pandas.pydata.org
 .. _pyomo: http://www.pyomo.org/

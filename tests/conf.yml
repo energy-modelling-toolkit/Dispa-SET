@@ -1,0 +1,55 @@
+SimulationDirectory:  'Simulations/Simulation_test'
+WriteExcel: 0.0
+WriteGDX: 1.0
+WritePickle: 1.0
+
+GAMS_folder:  ''
+cplex_path:  ''
+
+#-----------------
+StartDate: !!python/tuple [2015, 1, 1, 0, 0, 0]
+StopDate: !!python/tuple [2015, 1, 31, 0, 0, 0]
+HorizonLength: 3
+LookAhead: 1
+
+#------------------
+Clustering: 1.0
+SimulationType:  'MILP'  #LP, LP clustered
+ReserveCalculation:  'Generic'
+AllowCurtailment: 1.0
+
+#-------------------
+CostHeatSlack:  ''
+CostLoadShedding:  ''
+Demand:  'tests/dummy_data/Load_RealTime/##/2015.csv'
+HeatDemand:  'tests/dummy_data//Heat_demand/CY/Vassilikos_CCP2.csv'
+Interconnections:  'tests/dummy_data/CrossBorderFlows.csv'
+LoadShedding:  ''
+NTC:  'tests/dummy_data/DayAheadNTC/1h/2015.csv'
+Outages:  ''
+PowerPlantData: 'tests/dummy_data/Units_testcase.csv'
+PriceOfBiomass:  'tests/dummy_data/FuelPrices/Biomass/2015.csv'
+PriceOfBlackCoal:  ''
+PriceOfCO2:  ''
+PriceOfFuelOil:  'tests/dummy_data/FuelPrices/Oil/2015.csv'
+PriceOfGas:  ''
+PriceOfLignite:  ''
+PriceOfNuclear:  ''
+PriceOfPeat:  'tests/dummy_data/FuelPrices/Biomass/2015.csv'
+RenewablesAF:  'tests/dummy_data/AvailabilityFactors/##/2015.csv'
+ReservoirLevels:  ''
+ReservoirScaledInflows:  ''
+
+#----------------
+countries: [ 'Z1', 'Z2']
+
+#----------------
+ReserveParticipation: [ 'GTUR',  'HDAM',  'HPHS', 'ICEN',  'CAES',  'BATS',  'BEVS']
+
+#----------------
+default: {CostHeatSlack: 51.0, CostLoadShedding: 400.0, LoadShedding: 0.05, PriceOfBiomass: 37.0,
+  PriceOfBlackCoal: 10.62, PriceOfCO2: 7.5, PriceOfFuelOil: 35.0, PriceOfGas: 25.0,
+  PriceOfLignite: 8.0, PriceOfNuclear: 3.0, PriceOfPeat: 0.0}
+
+#----------------
+modifiers: {Demand: 1.0, Solar: 1.0, Storage: 1.0, Wind: 1.0}
