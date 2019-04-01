@@ -518,8 +518,8 @@ def get_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickle'):
     StartDate = inputs['config']['StartDate']
     StopDate = inputs['config']['StopDate']  # last day of the simulation with look-ahead period
     StopDate_long = pd.datetime(*StopDate) + dt.timedelta(days=inputs['config']['LookAhead'])
-    index = pd.DatetimeIndex(start=pd.datetime(*StartDate), end=pd.datetime(*StopDate), freq='h')
-    index_long = pd.DatetimeIndex(start=pd.datetime(*StartDate), end=StopDate_long, freq='h')
+    index = pd.date_range(start=pd.datetime(*StartDate), end=pd.datetime(*StopDate), freq='h')
+    index_long = pd.date_range(start=pd.datetime(*StartDate), end=StopDate_long, freq='h')
 
     # Setting the proper index to the result dataframes:
     for key in ['OutputPower', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
@@ -653,7 +653,7 @@ def get_result_analysis(inputs, results):
 
     StartDate = inputs['config']['StartDate']
     StopDate = inputs['config']['StopDate']
-    index = pd.DatetimeIndex(start=pd.datetime(*StartDate), end=pd.datetime(*StopDate), freq='h')
+    index = pd.date_range(start=pd.datetime(*StartDate), end=pd.datetime(*StopDate), freq='h')
 
     # Aggregated values:
     TotalLoad = dfin['Demand']['DA'].loc[index, :].sum().sum()
