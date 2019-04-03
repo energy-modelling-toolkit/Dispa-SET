@@ -4,5 +4,6 @@ matplotlib==2.1.0
 numpy==1.13.3
 pandas==0.21.0
 Sphinx==1.6.5
+sphinx-rtd-theme==0.1.9
 xlrd==0.9.4
-pyomo==5.1
+Pyomo==5.3
