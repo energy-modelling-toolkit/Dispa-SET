@@ -27,7 +27,7 @@ def incidence_matrix(sets, set_used, parameters, param_used):
             parameters[param_used]['val'][i, sets['n'].index(to_node.strip())] = 1
             parameters[param_used]['val'][i, sets['n'].index(from_node.strip())] = -1
         else:
-            logging.warn("The line " + str(sets[set_used][i]) + " contains unrecognized nodes")
+            logging.warning("The line " + str(sets[set_used][i]) + " contains unrecognized nodes")
     return parameters[param_used]
 
 
@@ -65,15 +65,12 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
     ConList = Historical_flows.columns.tolist() + [x for x in NTC_inter.columns.tolist() if x not in Historical_flows.columns.tolist()]
     for connection in ConList:
         c = connection.split(' -> ')
-        if len(c) != 2:
-            logging.warning('WARNING: Connection "' + connection + '" in the interconnection tables is not properly named. It will be ignored')
-        else:
-            if c[0] in Simulation_list:
-                all_connections.append(connection)
-                if c[1] in Simulation_list:
-                    simulation_connections.append(connection)
-            elif c[1] in Simulation_list:
-                all_connections.append(connection)
+        if c[0] in Simulation_list:
+            all_connections.append(connection)
+            if c[1] in Simulation_list:
+                simulation_connections.append(connection)
+        elif c[1] in Simulation_list:
+            all_connections.append(connection)
 
     df_countries_simulated = pd.DataFrame(index=index)
     for interconnection in simulation_connections:
