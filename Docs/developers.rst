@@ -8,7 +8,7 @@ Folders organization
 --------------------
 
 * GAMS code and scripts are included within the "GAMS-files" folder. The code should only be modified in that folder!
-* Python code and scripts are included within the "DispaSET" folder. 
+* Python code and scripts are included within the "dispaset" folder.
 * DispaSET configuration files are included within the "ConfigFiles" folder (one file per simulation).
 * Input files for each country are stored in the "Database" folder
 * Simulation directories can be written into the "Simulations" folder, which is not tracked by git
@@ -43,11 +43,11 @@ Using Autodoc
 The "API" section of the Docs uses uses the sphinx autodoc extension to scan the source code of Dispa-SET and display the relevant functions together with their description, parameters and outputs.
 In the Sphinx "conf.py", the path to the source file must be added::
 
-	sys.path.insert(0, os.path.abspath('../DispaSET'))
+	sys.path.insert(0, os.path.abspath('../dispaset'))
 
 If the API documentation is generated with sphinx-apidoc, from the Docs folder, use::
 
-	sphinx-apidoc -o . ../DispaSET/
+	sphinx-apidoc -o . ../dispaset/
 
 Add a link to "DispaSET" in the table of content of index.rst and include the root folder in conf.py::
 

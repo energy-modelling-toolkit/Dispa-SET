@@ -14,7 +14,7 @@ import os
 os.chdir('..')
 
 # Import Dispa-SET
-import DispaSET as ds
+import dispaset as ds
 
 # Define path to save results. Each run will be a pickled tuple: (inputs, results)
 path_to_save = r'./scenario_runs'

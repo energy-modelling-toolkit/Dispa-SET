@@ -40,7 +40,8 @@ For something that is bigger than a one or two line fix:
 3. If you like the change and think the project could use it:
     * Be sure you have followed the code style for the project.
     * Make sure that the code quality is of high standards
-    * Update the relevant parts of the documentaiton
+    * Make sure that the unit tests pass
+    * Update the relevant parts of the documentation
     * Send a pull request.
 
 

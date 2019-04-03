@@ -1,15 +1,16 @@
-Dispa-SET 
+![dispaset logo](https://raw.githubusercontent.com/energy-modelling-toolkit/Dispa-SET/tests/Docs/figures/logo.png)
 ===================
- ![Documentation](https://img.shields.io/badge/python-2.7,%203.6-blue.svg) [![License](https://img.shields.io/badge/License-EUPL--1.1-blue.svg)](https://opensource.org/licenses/EUPL-1.1) [![Documentation](https://readthedocs.org/projects/dispa-set/badge/?branch=master)](http://dispa-set.readthedocs.io/en/latest/)
+ ![Documentation](https://img.shields.io/badge/python-2.7,%203.7-blue.svg) [![License](https://img.shields.io/badge/License-EUPL--1.2-blue.svg)](https://opensource.org/licenses/EUPL-1.2) [![Documentation](https://readthedocs.org/projects/dispa-set/badge/?branch=master)](http://dispa-set.readthedocs.io/en/latest/) [![Build Status](https://travis-ci.org/energy-modelling-toolkit/Dispa-SET.svg?branch=master)](https://travis-ci.org/energy-modelling-toolkit/Dispa-SET)
 
 ### Description
-The Dispa-SET model is a unit commitment and dispatch model developed within the “Joint Research Centre” and focused on the balancing and flexibility problems in European grids. It is written in GAMS and coupled to Matlab and Excel for input/output data handling and visualization. The selected Mixed-Integer Linear Programming (MILP) solver is CPLEX.
+The Dispa-SET model is a unit commitment and dispatch model developed within the “Joint Research Centre” and focused on the balancing and flexibility problems focusing on the European context. It is written in GAMS with advanced input/output data handling and visualization routines in Python.
 
-It is written in GAMS an Python (Pyomo) and uses csv files for input data handling. The optimisation is defined as a Linear Programming (LP) or Mixed-Integer Linear Programming (MILP) problem, depending on the desired level of accuracy and complexity. 
-
+Three different formulations are available offering a trade-off between accuracy and computational complexity ( Linear Programming (LP), Mixed-Integer Linear Programming (MILP)). This allows
+ to model a power system at any level of detail e.g. micro-grid, region, country, continent. A Pan-European scenario is included with the model as of version 2.3.
  
 ### Features
-The model is expressed as an optimization problem. Continuous variables include the individual unit dispatched power, the shedded load and the curtailed power generation. The binary variables are the commitment status of each unit. The main model features can be summarized as follows:
+The model is expressed as an optimization problem. 
+Continuous variables include the individual unit dispatched power, the shedded load and the curtailed power generation. The binary variables are the commitment status of each unit. The main model features can be summarized as follows:
 
 - Minimum and maximum power for each unit
 - Power plant ramping limits
@@ -29,7 +30,7 @@ The demand is assumed to be inelastic to the price signal. The MILP objective fu
 
 ### Quick start
 
-If you want to download the latest version from github for use or development purposes, make sure that you have git and the [anaconda distribution](https://www.continuum.io/downloads) installed and type the following:
+If you want to download the latest version from github for use or development purposes, make sure that you have git and the [anaconda distribution](https://www.anaconda.com/distribution/) installed and type the following:
 
 ```bash
 git clone https://github.com/energy-modelling-toolkit/Dispa-SET.git
@@ -37,9 +38,10 @@ cd Dispa-SET
 conda env create  # Automatically creates environment based on environment.yml
 source activate dispaset # in Windows: activate dispaset
 pip install -e . # Install editable local version
+pytest # Ensure that the test cases are running
 ```
 
-The above commands create a dedicated environment so that your anconda configuration remains clean from the required dependencies installed.
+The above commands create a dedicated environment so that your anaconda configuration remains clean from the required dependencies installed.
 To check that everything runs fine, you can build and run a test case by typing:
 ```bash
 dispaset -c ConfigFiles/ConfigTest.xlsx build simulate
@@ -47,30 +49,19 @@ dispaset -c ConfigFiles/ConfigTest.xlsx build simulate
 
 ### Documentation
 The documentation and the stable releases are available on the main Dispa-SET website: http://www.dispaset.eu
-
-
-### Ongoing developments
-The Dispa-SET project is relatively recent, and a number of improvements will be brought to the project in a close future:
-
-- Grid constraints (DC power-flow)
-- Stochastic scenarios
-- Extension of the modeled areas
-- Modeling of the ancillary markets
-- User interface
-
  
 ### Get involved
-This project is an open-source project. Interested users are therefore invited to test, comment or contribute to the tool. Submitting issues is the best way to get in touch with the development team, which will address your comment, question, or development request in the best possible possible. We are also looking for contributors to the main code, willing to contibute to its capabilities, computational-efficiency, formulation, etc. Finally, we are willing to collaborate with national agencies, reseach centers, or academic institutions on the use on the model for different data sets relative to EU countries.
+This project is an open-source project. Interested users are therefore invited to test, comment or [contribute](CONTRIBUTING.md) to the tool. Submitting issues is the best way to get in touch with the development team, which will address your comment, question, or development request in the best possible way. We are also looking for contributors to the main code, willing to contibute to its capabilities, computational-efficiency, formulation, etc. Finally, we are willing to collaborate with national agencies, reseach centers, or academic institutions on the use on the model for different data sets relative to EU countries.
 
-### Public administration reference
-This software has been developed initially within the Directorate C Energy, Transport and Climate, which is one of the 7 scientific directorates of the Joint Research Centre (JRC) of the European Commission. Directorate C is based both in Petten, the Netherlands, and Ispra, Italy. 
-
-### Licence
-Dispa-SET is a free software licensed under the “European Union Public Licence" EUPL v1.1. It 
+### License
+Dispa-SET is a free software licensed under the “European Union Public Licence" EUPL v1.2. It 
 can be redistributed and/or modified under the terms of this license.
 
 ### Main developers
-- Sylvain Quoilin (University of Liège)
+This software has been developed initially within the Directorate C Energy, Transport and Climate, which is one of the 7 scientific directorates of the Joint Research Centre (JRC) of the European Commission. Directorate C is based both in Petten, the Netherlands, and Ispra, Italy. 
+Currently the main developers are the following:
+
+- Sylvain Quoilin (KU Leuven, Belgium)
 - Konstantinos Kavvadias (Joint Research Centre, European Commission)
-- Andreas Zucker (Joint Research Centre, European Commission)
+- Matija Pavičević  (KU Leuven, Belgium)
 

@@ -5,7 +5,7 @@ Releases
 
 Major stable releases:
 
-* `Dispa-SET v2.3`_
+* `Dispa-SET v2.3`_ 
 
 * `Dispa-SET v2.2`_
 
@@ -18,11 +18,14 @@ Changelog
 
 Version 2.3
 ^^^^^^^^^^^
+* Input Data: 
+	- A complete EU dataset has been included to the repository for the year 2016. 
+	- More information: :ref:`caseeu28`.
 
-* Reformulation of the reserve constraints. Secondary reserves are now covered by spinning units only. Tertirary reserves can also be covered by quick start units. In total, three different reserve markets are now considered: 
-	- Secondary up 
-	- Secondary down
-	- Tertiary up
+* Reformulation of the reserve constraints:
+	- Secondary reserves are now covered by spinning units only. 
+	- Tertirary reserves can also be covered by quick start units. 
+	- In total, three different reserve markets are now considered: Secondary up; Secondary down; and Tertiary up
 
 * Implementation of a new formulation (integer clustering) for power plant related constraints. This formulation divides the simulation time by a factor higher than 10 and allows extending the geographical scope of Dispa-SET. There are now four standard model formulations, which can be run with the same input data:
 	- Standard formulation: low capacity or highly flexible units are merged
@@ -38,16 +41,21 @@ Version 2.3
 
 * Improved post-processing:
 	- Netting interconnections in dispatch plots
+ 	- New colour palette and polished dispatch plot
 	- New fuels included
 	- Improved representation of curtailment
 
 * External dependencies:
 	- Removed pre-compiled libraries for unix systems
-	- Use of the low-level GAMS API (https://github.com/kavvkon/py-gdx)
+	- Use of the low-level GAMS API (https://github.com/kavvkon/gams-api)
+
+* Python 3.7: 
+	- Dispa-SET now runs exclusively on Python 3.7. 
+	- The compatibility with previous Python versions (2.7, 3.6) is not guaranteed anymore.
 
 * Miscellaneous:
+	- Unit tests on travis (https://travis-ci.org/energy-modelling-toolkit/Dispa-SET)
 	- Bug fixes
-	- Compatibility with Python 3.6
 
 Version 2.2
 ^^^^^^^^^^^
