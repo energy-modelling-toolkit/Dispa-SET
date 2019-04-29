@@ -351,13 +351,21 @@ def get_gams_path(gams_dir=None):
             return os.path.dirname(gams_dir).encode()
 
     import subprocess
-    out = ''
+    out = None
 
     #first check if the gams path is defined as environment variable.
 
-    if "GAMS_PATH" in os.environ:
-        logging.debug('Using GAMS_PATH environmental variable {} '.format(os.environ['GAMS_PATH']))
-        return os.environ['GAMS_PATH']
+    if "GAMSPATH" in os.environ:
+        logging.debug('Using GAMSPATH environmental variable {} '.format(os.environ['GAMSPATH']))
+        return os.environ['GAMSPATH']
+
+    try:
+        from shutil import which
+        out = which('gams')
+        if out is not None:
+            out = os.path.dirname(out)
+    except ImportError:
+        logging.warning("Couldn't use which to locate gams.")
 
     # Else try to locate
     if sys.platform == 'linux2' or sys.platform == 'linux':
@@ -393,7 +401,7 @@ def get_gams_path(gams_dir=None):
             if os.path.exists(line):
                 out = line
             break
-        if out == '':    # The 32-bit version of gams should never be preferred
+        if out is None:    # The 32-bit version of gams should never be preferred
             for line in lines_32:
                 if os.path.exists(line):
                     out = line
@@ -418,7 +426,7 @@ def get_gams_path(gams_dir=None):
                 out = line
             break
 
-    if out != '':
+    if out is not None:
         logging.info('Detected ' + out + ' as GAMS path on this computer')
     else:
         tmp = input('Specify the path to GAMS within quotes (e.g. "C:\\\\GAMS\\\\win64\\\\24.3"): ')
