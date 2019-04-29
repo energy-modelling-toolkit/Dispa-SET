@@ -213,7 +213,7 @@ def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
     out = {}
     tgdx = tm.time()
     gdxHandle = new_gdxHandle_tp()
-    gdxCreateD(gdxHandle, gams_dir, GMS_SSSIZE)
+    gdxCreateD(gdxHandle, force_str(gams_dir), GMS_SSSIZE)
 
     # make sure the file path is properly formatted:
     filename = filename.replace('/', os.path.sep).replace('\\\\', os.path.sep).replace('\\', os.path.sep)
