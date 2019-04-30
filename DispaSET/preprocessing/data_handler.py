@@ -5,25 +5,19 @@ import sys
 import numpy as np
 import pandas as pd
 
-from six.moves import reload_module
-try:
-    from future.builtins import int
-except ImportError:
-    pass
 
-
-def NodeBasedTable(path,idx,countries,tablename='',default=None):
+def NodeBasedTable(path,idx,zones,tablename='',default=None):
     '''
     This function loads the tabular data stored in csv files relative to each
     zone (a.k.a node, country) of the simulation.
 
     :param path:                Path to the data to be loaded
     :param idx:                 Pandas datetime index to be used for the output
-    :param countries:           List with the country codes to be considered
-    :param fallback:            List with the order of data source.
+    :param zones:           List with the country codes to be considered
+    :param fallback:            List with the order of data source. 
     :param tablename:           String with the name of the table being processed
     :param default:             Default value to be applied if no data is found
-
+    
     :return:           Dataframe with the time series for each unit
     '''
               
@@ -32,7 +26,7 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
         paths['all'] = path
         SingleFile=True
     elif '##' in path:
-        for c in countries:
+        for c in zones:
             path_c = path.replace('##', str(c))
             if os.path.isfile(path_c):
                 paths[str(c)] = path_c
@@ -45,20 +39,20 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
         logging.info('No data file found for the table ' + tablename + '. Using default value ' + str(default))
         if default is None:
             pass
-        elif isinstance(default,(float,int)):
-            data = pd.DataFrame(default,index=idx,columns=countries)
+        elif isinstance(default,(float,int,long)):
+            data = pd.DataFrame(default,index=idx,columns=zones)
         else:
             logging.error('Default value provided for table ' + tablename + ' is not valid')
             sys.exit(1)
-    elif SingleFile:
+    elif SingleFile:   
         # If it is only one file, there is a header with the country code
         tmp = load_csv(paths['all'], index_col=0, parse_dates=True)
         if not tmp.index.is_unique:
             logging.error('The index of data file ' + paths['all'] + ' is not unique. Please check the data')
             sys.exit(1)
-        for key in countries:
+        for key in zones:
             if key in tmp:
-                data[key] = tmp[key]
+                data[key] = tmp[key]  
             elif len(tmp.columns) == 1:    # if the country code is not in the header, it can also be because it is a single country simulation and no header is needed:
                 data[key] = tmp.iloc[:,0]
             else:
@@ -81,30 +75,29 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
                 sys.exit(1)
             data[c] = tmp.iloc[:,0]
      
-    return data
+    return data   
 
 
 
-def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',default=None,RestrictWarning=None):
+def UnitBasedTable(plants,path,idx,zones,fallbacks=['Unit'],tablename='',default=None):
     '''
-    This function loads the tabular data stored in csv files and assigns the
+    This function loads the tabular data stored in csv files and assigns the 
     proper values to each unit of the plants dataframe. If the unit-specific 
-    value is not found in the data, the script can fallback on more generic
+    value is not found in the data, the script can fallback on more generic 
     data (e.g. fuel-based, technology-based, zone-based) or to the default value.
     The order in which the data should be loaded is specified in the fallback
     list. For example, ['Unit','Technology'] means that the script will first
-    try to find a perfect match for the unit name in the data table. If not found,
+    try to find a perfect match for the unit name in the data table. If not found, 
     a column with the unit technology as header is search. If not found, the
     default value is assigned.
 
     :param plants:              Dataframe with the units for which data is required
     :param path:                Path to the data to be loaded
     :param idx:                 Pandas datetime index to be used for the output
-    :param countries:           List with the country codes to be considered
+    :param zones:           List with the country codes to be considered
     :param fallback:            List with the order of data source. 
     :param tablename:           String with the name of the table being processed
     :param default:             Default value to be applied if no data is found
-    :param RestrictWarning:     Only display the warnings if the unit belongs to the list of technologies provided in this parameter
     
     :return:           Dataframe with the time series for each unit
     '''
@@ -114,20 +107,20 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
         paths['all'] = path
         SingleFile=True
     elif '##' in path:
-        for c in countries:
+        for c in zones:
             path_c = path.replace('##', str(c))
             if os.path.isfile(path_c):
                 paths[str(c)] = path_c
             else:
                 logging.error('No data file found for the table ' + tablename + ' and country ' + c + '. File ' + path_c + ' does not exist')
-#                sys.exit(1)
+                sys.exit(1)
         SingleFile=False
     data = pd.DataFrame(index=idx)
     if len(paths) == 0:
         logging.info('No data file found for the table ' + tablename + '. Using default value ' + str(default))
         if default is None:
             out = pd.DataFrame(index=idx)
-        elif isinstance(default,(float,int)):
+        elif isinstance(default,(float,int,long)):
             out = pd.DataFrame(default,index=idx,columns=plants['Unit'])
         else:
             logging.error('Default value provided for table ' + tablename + ' is not valid')
@@ -153,14 +146,9 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
         # For each plant and each fallback key, try to find the corresponding column in the data
         out = pd.DataFrame(index=idx)
         for j in plants.index:
-            warning = True
-            if not RestrictWarning is None:
-                warning = False
-                if plants.loc[j,'Technology'] in RestrictWarning:
-                    warning=True
             u = plants.loc[j,'Unit']
             found = False
-            for i,key in enumerate(fallbacks):
+            for i,key in enumerate(fallbacks):    
                 if SingleFile:
                     header = plants.loc[j,key]
                 else:
@@ -168,18 +156,17 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
                 if header in data:
                     out[u] = data[header]
                     found = True
-                    if i > 0 and warning:
-                        logging.warning('No specific information was found for unit ' + u + ' in table ' + tablename + '. The generic information for ' + str(header) + ' has been used')
+                    if i > 0:
+                        ####### Edits #######
+                        #logging.info('No specific information was found for unit ' + u + ' in table ' + tablename + '. The generic information for ' + str(header) + ' has been used')
+                        pass
                     break
             if not found:
-                if warning:
-                    logging.info('No specific information was found for unit ' + u + ' in table ' + tablename + '. Using default value ' + str(default))
+                ####### Edits #######
+                #logging.info('No specific information was found for unit ' + u + ' in table ' + tablename + '. Using default value ' + str(default))
                 if not default is None:
-                    out[u] = default
-    if not out.columns.is_unique:
-        logging.error('The column headers of table "' + tablename + '" are not unique!. The following headers are duplicated: ' + str(out.columns.get_duplicates()))
-        sys.exit(1)
-    return out
+                    out[u] = default        
+    return out   
 
 
 
@@ -194,17 +181,11 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
     :param tablename:   Name of the table being processed (e.g. 'Outages'), used in the warnings
     :return merged:     Pandas dataframe with the merged time series when necessary
     """
-    # backward compatibility:
-    if not "Nunits" in plants:
-        plants['Nunits'] = 1
-
-    plants.index = range(len(plants))
+    Nunits = len(plants)
+    plants.index = range(Nunits)
     merged = pd.DataFrame(index=data.index)
-    unitnames = plants.Unit.values.tolist()
+    unitnames = [plants['Unit'][x] for x in mapping['NewIndex']]
     # First check the data:
-    if not isinstance(data,pd.DataFrame):
-        logging.error('The input "' + tablename + '" to the merge_series function must be a dataframe')
-        sys.exit(1)
     for key in data:
         if str(data[key].dtype) not in ['bool','int','float','float16', 'float32', 'float64', 'float128','int8', 'int16', 'int32', 'int64']:
             logging.critical('The column "' + str(key) + '" of table + "' + tablename + '" is not numeric!')
@@ -229,8 +210,8 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
                 if method == 'WeightedAverage':
                     for idx in oldindexes:
                         name = plants['Unit'][idx]
-                        value = value + subunits[idx] * np.maximum(1e-9, plants['PowerCapacity'][idx]*plants['Nunits'][idx])
-                    P_j = np.sum(np.maximum(1e-9, plants['PowerCapacity'][oldindexes]*plants['Nunits'][oldindexes]))
+                        value = value + subunits[idx] * np.maximum(1e-9, plants['PowerCapacity'][idx])
+                    P_j = np.sum(np.maximum(1e-9, plants['PowerCapacity'][oldindexes]))
                     merged[newunit] = value / P_j
                 elif method == 'Sum':
                     merged[newunit] = subunits.sum(axis=1)
@@ -238,11 +219,13 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
                     logging.critical('Method "' + str(method) + '" unknown in function MergeSeries')
                     sys.exit(1)
         elif key in plants['Unit']:
-            if not isinstance(key, tuple):  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
-                logging.warning('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the mapping between original and clustered units. Skipping')
+            if not type(
+                    key) == tuple:  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
+                logging.warn('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the mapping between original and clustered units. Skipping')         
         else:
-            if not isinstance(key, tuple):  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
-                logging.warning('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the table of power plants. Skipping')
+            if not type(
+                    key) == tuple:  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
+                logging.warn('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the table of power plants. Skipping')
     return merged
 
 
@@ -275,7 +258,7 @@ def invert_dic_df(dic,tablename=''):
     :returns: dictionary of dataframes, with swapped headers
     """
     # keys are defined as the keys of the original dictionary, cols are the columns of the original dataframe
-    # items are the keys of the output dictionary, i.e. the columns of the original dataframe
+    # items are the keys of the output dictionary, i.e. the columns of the original dataframe    
     dic_out = {}
     # First, check that all indexes have the same length:
     index = dic[dic.keys()[0]].index
@@ -289,9 +272,9 @@ def invert_dic_df(dic,tablename=''):
     for item in panel.items:
         for key in dic.keys():
             if item not in dic[key].columns:
-                logging.warning('The column "' + item + '" is not present in "' + key + '" for the "' + tablename + '" data. Zero will be assumed')
+                logging.warn('The column "' + item + '" is not present in "' + key + '" for the "' + tablename + '" data. Zero will be assumed')
         dic_out[item] = panel[item].fillna(0)
-    return dic_out
+    return dic_out  
 
 
 def write_to_excel(xls_out, list_vars):
@@ -303,12 +286,11 @@ def write_to_excel(xls_out, list_vars):
     :returns: Binary variable (True)
     """
 
+    import pandas as pd
 
-    reload_module(sys)
-    try: # Hack needed in 2.7
-        sys.setdefaultencoding("utf-8")
-    except:
-        pass
+    # import sys
+    reload(sys)
+    sys.setdefaultencoding("utf-8")
 
     if not os.path.exists(xls_out):
         os.mkdir(xls_out)
@@ -339,7 +321,7 @@ def write_to_excel(xls_out, list_vars):
     for p in parameters:
         var = parameters[p]
         dim = len(var['sets'])
-        if var['sets'][-1] == 'h' and isinstance(dates, pd.DatetimeIndex) and dim > 1:
+        if var['sets'][-1] == 'h' and isinstance(dates, pd.tseries.index.DatetimeIndex) and dim > 1:
             if len(dates) != var['val'].shape[-1]:
                 logging.critical('The date range in the Config variable (' + str(
                     len(dates)) + ' time steps) does not match the length of the time index (' + str(
@@ -439,7 +421,7 @@ def write_to_excel(xls_out, list_vars):
     logging.info('Data Successfully written to the ' + xls_out + ' directory.')
 
 
-def load_csv(filename, TempPath='.pickle', header=0, skiprows=None, skipfooter=0, index_col=None, parse_dates=False):
+def load_csv(filename, TempPath='.pickle', header=0, skiprows=[], skip_footer=0, index_col=None, parse_dates=False):
     """
     Function that loads an xls sheet into a dataframe and saves a temporary pickle version of it.
     If the pickle is newer than the sheet, do no load the sheet again.
@@ -447,7 +429,12 @@ def load_csv(filename, TempPath='.pickle', header=0, skiprows=None, skipfooter=0
     :param file_excel: path to the excel file
     :param TempPath: path to store the temporary data files
     """
+    ####### Edits #######
+    data = pd.read_csv(filename, header=header, skiprows=skiprows, skipfooter=skip_footer, index_col=index_col,
+                       parse_dates=parse_dates)
+    """
     #TODO: this can be replaced by a leaner version using: import tempfile
+    import os
 
     filepath_pandas = TempPath + '/' + filename.replace('/', '-') + '-' + '.p'
     if not os.path.isdir(TempPath):
@@ -457,11 +444,12 @@ def load_csv(filename, TempPath='.pickle', header=0, skiprows=None, skipfooter=0
     else:
         time_pd = os.path.getmtime(filepath_pandas)
     if os.path.getmtime(filename) > time_pd:
-        data = pd.read_csv(filename, header=header, skiprows=skiprows, skipfooter=skipfooter, index_col=index_col,
-                           parse_dates=parse_dates)
+        data = pd.read_csv(filename, header=header, skiprows=skiprows, skipfooter=skip_footer, index_col=index_col, parse_dates=parse_dates)
         data.to_pickle(filepath_pandas)
     else:
         data = pd.read_pickle(filepath_pandas)
+    """
+    ####### Edits #######
     return data
 
 
@@ -489,31 +477,48 @@ def load_config_excel(ConfigFile):
     config['HorizonLength'] = int(sheet.cell_value(32, 2))
     config['LookAhead'] = int(sheet.cell_value(33, 2))
 
-    config['SimulationType'] = sheet.cell_value(46, 2)
-    config['ReserveCalculation'] = sheet.cell_value(47, 2)
-    config['AllowCurtailment'] = sheet.cell_value(48, 2)
+    config['Clustering'] = sheet.cell_value(45, 2)
+    config['ClusteringType'] = sheet.cell_value(46, 2)
+    config['SimulationType'] = sheet.cell_value(47, 2)
+    config['ReserveCalculation'] = sheet.cell_value(48, 2)
+    config['AllowCurtailment'] = sheet.cell_value(49, 2)
 
-    params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
-              'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
-              'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
-              'CostHeatSlack','CostLoadShedding']
+    params = ['Demand', 'PowerPlantData','RenewablesAF','Outages', 'NTC', 'Interconnections', 'PriceOfCrudeOil', 'PriceOfGas', 'PriceOfDiesel', 'PriceOfHFO', 
+              'PriceOfNuclear', 'PriceOfBiomass', 'PriceOfMunicipalSolidWaste', 'PriceOfLandFillGas', 'PriceOfCO2', 'LoadShedding', 'CostLoadShedding', 'FuelsPricesPerZone']
     for i, param in enumerate(params):
         config[param] = sheet.cell_value(61 + i, 2)
 
-    config['default'] = {}
-    config['default']['PriceOfNuclear'] = sheet.cell_value(69, 5)
-    config['default']['PriceOfBlackCoal'] = sheet.cell_value(70, 5)
-    config['default']['PriceOfGas'] = sheet.cell_value(71, 5)
-    config['default']['PriceOfFuelOil'] = sheet.cell_value(72, 5)
-    config['default']['PriceOfBiomass'] = sheet.cell_value(73, 5)
-    config['default']['PriceOfCO2'] = sheet.cell_value(74, 5)
-    config['default']['PriceOfLignite'] = sheet.cell_value(76, 5)
-    config['default']['PriceOfPeat'] = sheet.cell_value(77, 5)
-    config['default']['LoadShedding'] = sheet.cell_value(65, 5)
-    config['default']['CostHeatSlack'] = sheet.cell_value(79, 5)
-    config['default']['CostLoadShedding'] = sheet.cell_value(80, 5)
+    params2 = ['PriceOfCrudeOil', 'PriceOfGas', 'PriceOfDiesel', 'PriceOfHFO','PriceOfNuclear', 'PriceOfBiomass', 'PriceOfMunicipalSolidWaste', 'PriceOfLandFillGas', 'PriceOfCO2']
 
-    # read the list of countries to consider:
+    for i, param2 in enumerate(params2):
+        config[param2+' 2'] = sheet.cell_value(67 + i, 2)
+
+    config['default'] = {}
+    config['default']['PriceOfCrudeOil'] = sheet.cell_value(67, 5)
+    config['default']['PriceOfGas'] = sheet.cell_value(68, 5)
+    config['default']['PriceOfDiesel'] = sheet.cell_value(69, 5)
+    config['default']['PriceOfHFO'] = sheet.cell_value(70, 5)
+    config['default']['PriceOfNuclear'] = sheet.cell_value(71, 5)
+    config['default']['PriceOfBiomass'] = sheet.cell_value(72, 5)
+    config['default']['PriceOfMunicipalSolidWaste'] = sheet.cell_value(73, 5)
+    config['default']['PriceOfLandFillGas'] = sheet.cell_value(74, 5)
+    config['default']['PriceOfCO2'] = sheet.cell_value(75, 5)
+    config['default']['PriceOfCrudeOil 2'] = sheet.cell_value(67, 6)
+    config['default']['PriceOfGas 2'] = sheet.cell_value(68, 6)
+    config['default']['PriceOfDiesel 2'] = sheet.cell_value(69, 6)
+    config['default']['PriceOfHFO 2'] = sheet.cell_value(70, 6)
+    config['default']['PriceOfNuclear 2'] = sheet.cell_value(71, 6)
+    config['default']['PriceOfBiomass 2'] = sheet.cell_value(72, 6)
+    config['default']['PriceOfMunicipalSolidWaste 2'] = sheet.cell_value(73, 6)
+    config['default']['PriceOfLandFillGas 2'] = sheet.cell_value(74, 6)
+    config['default']['PriceOfCO2 2'] = sheet.cell_value(75, 6)
+    config['default']['LoadShedding'] = sheet.cell_value(76, 5)
+    config['default']['CostLoadShedding'] = sheet.cell_value(77, 5)
+    config['ConnectedCountries'] = sheet.cell_value(103, 2)
+    if not config['ConnectedCountries']:
+        config['NTC'] = sheet.cell_value(65, 3)
+
+    # read the list of zones to consider:
     def read_truefalse(sheet, rowstart, colstart, rowstop, colstop):
         """
         Function that reads a two column format with a list of strings in the first
@@ -526,8 +531,24 @@ def load_config_excel(ConfigFile):
                 out.append(sheet.cell_value(i, colstart))
         return out
 
-    config['countries'] = read_truefalse(sheet, 86, 1, 101, 3)
-    config['countries'] = config['countries'] + read_truefalse(sheet, 86, 4, 102, 6)
+    config['zones'] = read_truefalse(sheet, 86, 1, 102, 3)
+    config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 102, 6)
+    ####### Edits #######
+    countries_list = [(i, item.value.encode("utf-8")) for i, item in
+                      enumerate(sheet.row_slice(rowx=155, start_colx=0, end_colx=100))]
+    countries_list = [x for x in countries_list if x[1] != '']
+    country_zones = {}
+    for item in countries_list:
+        zones_list = [element.value.encode("utf-8") for element in
+                      sheet.col_slice(item[0], start_rowx=156, end_rowx=180)]
+        zones_list = [x for x in zones_list if x != '' and x in config['zones']]
+        if zones_list:
+            country_zones[item[1]] = zones_list
+    config['country_zones'] = country_zones
+
+    config['countries'] = country_zones.keys()
+
+    ####### Edits #######
 
     config['modifiers'] = {}
     config['modifiers']['Demand'] = sheet.cell_value(111, 2)
@@ -550,4 +571,4 @@ def load_config_yaml(filename):
             return yaml.load(f)
         except yaml.YAMLError as exc:
             logging.error('Cannot parse config file: {}'.format(filename))
-            raise exc
+            raise

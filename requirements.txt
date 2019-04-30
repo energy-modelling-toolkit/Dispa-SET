@@ -1,0 +1,6 @@
+pandas
+numpy
+gdx
+gdxcc
+matplotlib
+xlrd

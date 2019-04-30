@@ -1,0 +1,17 @@
+c:\python27\lib\site-packages\pandas\core\indexing.py:1472: FutureWarning: 
+Passing list-likes to .loc or [] with any missing label will raise
+KeyError in the future, you can use .reindex() as an alternative.
+
+See the documentation here:
+https://pandas.pydata.org/pandas-docs/stable/indexing.html#deprecate-loc-reindex-listlike
+  return self._getitem_tuple(key)
+
+
+
+
+
+
+../DispaSET/postprocessing/postprocessing.py:547: FutureWarning: Creating a DatetimeIndex by passing range endpoints is deprecated.  Use `pandas.date_range` instead.
+  index = pd.DatetimeIndex(start=pd.datetime(*StartDate), end=pd.datetime(*StopDate), freq='h')
+../DispaSET/postprocessing/postprocessing.py:548: FutureWarning: Creating a DatetimeIndex by passing range endpoints is deprecated.  Use `pandas.date_range` instead.
+  index_long = pd.DatetimeIndex(start=pd.datetime(*StartDate), end=StopDate_long, freq='h')

@@ -1,0 +1,58 @@
+*Flows are below maximum values of some edges (transmission lines) that are shared between GCC countries
+*transmission line between Salwa and UAE
+*If ((Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) + Flow("BA -> OM",i) + Flow("QA -> OM",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("BA -> UAE",i) + Flow("QA -> UAE",i) - Flow("UAE -> QA",i) - Flow("OM -> QA",i) - Flow("UAE -> BA",i) - Flow("OM -> BA",i) - Flow("UAE -> SA_EOA",i) - Flow("OM -> SA_EOA",i) - Flow("UAE -> KW",i) - Flow("OM -> KW",i) ge 0),
+*EQ_Salwa_UAE(i)..Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) + Flow("BA -> OM",i) + Flow("QA -> OM",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("BA -> UAE",i) + Flow("QA -> UAE",i) - Flow("UAE -> QA",i) - Flow("OM -> QA",i) - Flow("UAE -> BA",i) - Flow("OM -> BA",i) - Flow("UAE -> SA_EOA",i) - Flow("OM -> SA_EOA",i) - Flow("UAE -> KW",i) - Flow("OM -> KW",i) =L= 1550 ;
+*else
+*EQ_Salwa_UAE(i)..-Flow("SA_EOA -> OM",i) - Flow("KW -> OM",i) - Flow("BA -> OM",i) - Flow("QA -> OM",i) - Flow("SA_EOA -> UAE",i) - Flow("KW -> UAE",i) - Flow("BA -> UAE",i) - Flow("QA -> UAE",i) + Flow("UAE -> QA",i) + Flow("OM -> QA",i) + Flow("UAE -> BA",i) + Flow("OM -> BA",i) + Flow("UAE -> SA_EOA",i) + Flow("OM -> SA_EOA",i) + Flow("UAE -> KW",i) + Flow("OM -> KW",i)=L= 1550 ;
+*);
+*EQ_Salwa_UAE(i)$(Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) + Flow("BA -> OM",i) + Flow("QA -> OM",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("BA -> UAE",i) + Flow("QA -> UAE",i) - Flow("UAE -> QA",i) - Flow("OM -> QA",i) - Flow("UAE -> BA",i) - Flow("OM -> BA",i) - Flow("UAE -> SA_EOA",i) - Flow("OM -> SA_EOA",i) - Flow("UAE -> KW",i) - Flow("OM -> KW",i) ge 0)..
+*         Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) + Flow("BA -> OM",i) + Flow("QA -> OM",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("BA -> UAE",i) + Flow("QA -> UAE",i) - Flow("UAE -> QA",i) - Flow("OM -> QA",i) - Flow("UAE -> BA",i) - Flow("OM -> BA",i) - Flow("UAE -> SA_EOA",i) - Flow("OM -> SA_EOA",i) - Flow("UAE -> KW",i) - Flow("OM -> KW",i) =L= 1550
+*;
+*EQ_Salwa_UAE(i)$(-Flow("SA_EOA -> OM",i) - Flow("KW -> OM",i) - Flow("BA -> OM",i) - Flow("QA -> OM",i) - Flow("SA_EOA -> UAE",i) - Flow("KW -> UAE",i) - Flow("BA -> UAE",i) - Flow("QA -> UAE",i) + Flow("UAE -> QA",i) + Flow("OM -> QA",i) + Flow("UAE -> BA",i) + Flow("OM -> BA",i) + Flow("UAE -> SA_EOA",i) + Flow("OM -> SA_EOA",i) + Flow("UAE -> KW",i) + Flow("OM -> KW",i) ge 0)..
+*         Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) + Flow("BA -> OM",i) + Flow("QA -> OM",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("BA -> UAE",i) + Flow("QA -> UAE",i) - Flow("UAE -> QA",i) - Flow("OM -> QA",i) - Flow("UAE -> BA",i) - Flow("OM -> BA",i) - Flow("UAE -> SA_EOA",i) - Flow("OM -> SA_EOA",i) - Flow("UAE -> KW",i) - Flow("OM -> KW",i) =L= 1550
+*;
+
+EQ_Flow_limits_upper7(i)..
+         Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) + Flow("BA -> OM",i) + Flow("QA -> OM",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("BA -> UAE",i) + Flow("QA -> UAE",i) =L= 1550
+;
+EQ_Flow_limits_upper7i(i)..
+         Flow("UAE -> QA",i) + Flow("OM -> QA",i) + Flow("UAE -> BA",i) + Flow("OM -> BA",i) + Flow("UAE -> SA_EOA",i) + Flow("OM -> SA_EOA",i) + Flow("UAE -> KW",i) + Flow("OM -> KW",i) =L= 1550
+;
+*transmission line between Ghunan and Salwa
+*If ((Flow("SA_EOA -> QA",i) + Flow("KW -> QA",i) + Flow("BA -> QA",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("BA -> UAE",i) + Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) + Flow("BA -> OM",i) - Flow("QA -> KW",i) - Flow("UAE -> KW",i) - Flow("OM -> KW",i) - Flow("QA -> SA_EOA",i) - Flow("UAE -> SA_EOA",i) - Flow("OM -> SA_EOA",i) - Flow("QA -> BA",i) - Flow("UAE -> BA",i) - Flow("OM -> BA",i) ge 0),
+*EQ_Ghunan_Salwa(i)..Flow("SA_EOA -> QA",i) + Flow("KW -> QA",i) + Flow("BA -> QA",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("BA -> UAE",i) + Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) + Flow("BA -> OM",i) - Flow("QA -> KW",i) - Flow("UAE -> KW",i) - Flow("OM -> KW",i) - Flow("QA -> SA_EOA",i) - Flow("UAE -> SA_EOA",i) - Flow("OM -> SA_EOA",i) - Flow("QA -> BA",i) - Flow("UAE -> BA",i) - Flow("OM -> BA",i) =L= 1500 ;
+*else
+*EQ_Ghunan_Salwa(i)..-Flow("SA_EOA -> QA",i) - Flow("KW -> QA",i) - Flow("BA -> QA",i) - Flow("SA_EOA -> UAE",i) - Flow("KW -> UAE",i) - Flow("BA -> UAE",i) - Flow("SA_EOA -> OM",i) - Flow("KW -> OM",i) - Flow("BA -> OM",i) + Flow("QA -> KW",i) + Flow("UAE -> KW",i) + Flow("OM -> KW",i) + Flow("QA -> SA_EOA",i) + Flow("UAE -> SA_EOA",i) + Flow("OM -> SA_EOA",i) + Flow("QA -> BA",i) + Flow("UAE -> BA",i) + Flow("OM -> BA",i)=L= 1500 ;
+*);
+*EQ_Ghunan_Salwa(i)$(Flow("SA_EOA -> QA",i) + Flow("KW -> QA",i) + Flow("BA -> QA",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("BA -> UAE",i) + Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) + Flow("BA -> OM",i) - Flow("QA -> KW",i) - Flow("UAE -> KW",i) - Flow("OM -> KW",i) - Flow("QA -> SA_EOA",i) - Flow("UAE -> SA_EOA",i) - Flow("OM -> SA_EOA",i) - Flow("QA -> BA",i) - Flow("UAE -> BA",i) - Flow("OM -> BA",i) ge 0)..
+*         Flow("SA_EOA -> QA",i) + Flow("KW -> QA",i) + Flow("BA -> QA",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("BA -> UAE",i) + Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) + Flow("BA -> OM",i) - Flow("QA -> KW",i) - Flow("UAE -> KW",i) - Flow("OM -> KW",i) - Flow("QA -> SA_EOA",i) - Flow("UAE -> SA_EOA",i) - Flow("OM -> SA_EOA",i) - Flow("QA -> BA",i) - Flow("UAE -> BA",i) - Flow("OM -> BA",i) =L= 1500
+*;
+*EQ_Ghunan_Salwa(i)$(-Flow("SA_EOA -> QA",i) - Flow("KW -> QA",i) - Flow("BA -> QA",i) - Flow("SA_EOA -> UAE",i) - Flow("KW -> UAE",i) - Flow("BA -> UAE",i) - Flow("SA_EOA -> OM",i) - Flow("KW -> OM",i) - Flow("BA -> OM",i) + Flow("QA -> KW",i) + Flow("UAE -> KW",i) + Flow("OM -> KW",i) + Flow("QA -> SA_EOA",i) + Flow("UAE -> SA_EOA",i) + Flow("OM -> SA_EOA",i) + Flow("QA -> BA",i) + Flow("UAE -> BA",i) + Flow("OM -> BA",i) ge 0)..
+*         Flow("SA_EOA -> QA",i) + Flow("KW -> QA",i) + Flow("BA -> QA",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("BA -> UAE",i) + Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) + Flow("BA -> OM",i) - Flow("QA -> KW",i) - Flow("UAE -> KW",i) - Flow("OM -> KW",i) - Flow("QA -> SA_EOA",i) - Flow("UAE -> SA_EOA",i) - Flow("OM -> SA_EOA",i) - Flow("QA -> BA",i) - Flow("UAE -> BA",i) - Flow("OM -> BA",i) =L= 1500
+*;
+
+EQ_Flow_limits_upper8(i)..
+         Flow("SA_EOA -> QA",i) + Flow("KW -> QA",i) + Flow("BA -> QA",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("BA -> UAE",i) + Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) + Flow("BA -> OM",i) =L= 1500
+;
+EQ_Flow_limits_upper8i(i)..
+         Flow("QA -> KW",i) + Flow("UAE -> KW",i) + Flow("OM -> KW",i) + Flow("QA -> SA_EOA",i) + Flow("UAE -> SA_EOA",i) + Flow("OM -> SA_EOA",i) + Flow("QA -> BA",i) + Flow("UAE -> BA",i) + Flow("OM -> BA",i) =L= 1500
+;
+*transmission line between Alfadhili and Ghunan
+*If ((Flow("BA -> KW",i) + Flow("QA -> KW",i) + Flow("UAE -> KW",i) + Flow("OM -> KW",i) + Flow("BA -> SA_EOA",i) + Flow("QA -> SA_EOA",i) + Flow("UAE -> SA_EOA",i) + Flow("OM -> SA_EOA",i) - Flow("SA_EOA -> BA",i) - Flow("KW -> BA",i) - Flow("SA_EOA -> QA",i) - Flow("KW -> QA",i) - Flow("SA_EOA -> UAE",i) - Flow("KW -> UAE",i) - Flow("SA_EOA -> OM",i) - Flow("KW -> OM",i) ge 0),
+*EQ_Alfadhili_Ghunan(i)..Flow("BA -> KW",i) + Flow("QA -> KW",i) + Flow("UAE -> KW",i) + Flow("OM -> KW",i) + Flow("BA -> SA_EOA",i) + Flow("QA -> SA_EOA",i) + Flow("UAE -> SA_EOA",i) + Flow("OM -> SA_EOA",i) - Flow("SA_EOA -> BA",i) - Flow("KW -> BA",i) - Flow("SA_EOA -> QA",i) - Flow("KW -> QA",i) - Flow("SA_EOA -> UAE",i) - Flow("KW -> UAE",i) - Flow("SA_EOA -> OM",i) - Flow("KW -> OM",i) =L= 1500 ;
+*else
+*EQ_Alfadhili_Ghunan(i)..-Flow("BA -> KW",i) - Flow("QA -> KW",i) - Flow("UAE -> KW",i) - Flow("OM -> KW",i) - Flow("BA -> SA_EOA",i) - Flow("QA -> SA_EOA",i) - Flow("UAE -> SA_EOA",i) - Flow("OM -> SA_EOA",i) + Flow("SA_EOA -> BA",i) + Flow("KW -> BA",i) + Flow("SA_EOA -> QA",i) + Flow("KW -> QA",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i)=L= 1500 ;
+*);
+*EQ_Alfadhili_Ghunan(i)$(Flow("BA -> KW",i) + Flow("QA -> KW",i) + Flow("UAE -> KW",i) + Flow("OM -> KW",i) + Flow("BA -> SA_EOA",i) + Flow("QA -> SA_EOA",i) + Flow("UAE -> SA_EOA",i) + Flow("OM -> SA_EOA",i) - Flow("SA_EOA -> BA",i) - Flow("KW -> BA",i) - Flow("SA_EOA -> QA",i) - Flow("KW -> QA",i) - Flow("SA_EOA -> UAE",i) - Flow("KW -> UAE",i) - Flow("SA_EOA -> OM",i) - Flow("KW -> OM",i) ge 0)..
+*         Flow("BA -> KW",i) + Flow("QA -> KW",i) + Flow("UAE -> KW",i) + Flow("OM -> KW",i) + Flow("BA -> SA_EOA",i) + Flow("QA -> SA_EOA",i) + Flow("UAE -> SA_EOA",i) + Flow("OM -> SA_EOA",i) - Flow("SA_EOA -> BA",i) - Flow("KW -> BA",i) - Flow("SA_EOA -> QA",i) - Flow("KW -> QA",i) - Flow("SA_EOA -> UAE",i) - Flow("KW -> UAE",i) - Flow("SA_EOA -> OM",i) - Flow("KW -> OM",i) =L= 1500
+*;
+*EQ_Alfadhili_Ghunan(i)$(-Flow("BA -> KW",i) - Flow("QA -> KW",i) - Flow("UAE -> KW",i) - Flow("OM -> KW",i) - Flow("BA -> SA_EOA",i) - Flow("QA -> SA_EOA",i) - Flow("UAE -> SA_EOA",i) - Flow("OM -> SA_EOA",i) + Flow("SA_EOA -> BA",i) + Flow("KW -> BA",i) + Flow("SA_EOA -> QA",i) + Flow("KW -> QA",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) ge 0)..
+*         Flow("BA -> KW",i) + Flow("QA -> KW",i) + Flow("UAE -> KW",i) + Flow("OM -> KW",i) + Flow("BA -> SA_EOA",i) + Flow("QA -> SA_EOA",i) + Flow("UAE -> SA_EOA",i) + Flow("OM -> SA_EOA",i) - Flow("SA_EOA -> BA",i) - Flow("KW -> BA",i) - Flow("SA_EOA -> QA",i) - Flow("KW -> QA",i) - Flow("SA_EOA -> UAE",i) - Flow("KW -> UAE",i) - Flow("SA_EOA -> OM",i) - Flow("KW -> OM",i) =L= 1500
+*;
+
+EQ_Flow_limits_upper9(i)..
+         Flow("BA -> KW",i) + Flow("QA -> KW",i) + Flow("UAE -> KW",i) + Flow("OM -> KW",i) + Flow("BA -> SA_EOA",i) + Flow("QA -> SA_EOA",i) + Flow("UAE -> SA_EOA",i) + Flow("OM -> SA_EOA",i) =L= 1500
+;
+EQ_Flow_limits_upper9i(i)..
+         Flow("SA_EOA -> BA",i) + Flow("KW -> BA",i) + Flow("SA_EOA -> QA",i) + Flow("KW -> QA",i) + Flow("SA_EOA -> UAE",i) + Flow("KW -> UAE",i) + Flow("SA_EOA -> OM",i) + Flow("KW -> OM",i) =L= 1500
+;

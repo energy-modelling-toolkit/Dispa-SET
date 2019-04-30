@@ -11,17 +11,37 @@ import sys
 
 import numpy as np
 import pandas as pd
+import time as tm
 
 from ..misc.str_handler import clean_strings, shrink_to_64
 
 
 def incidence_matrix(sets, set_used, parameters, param_used):
-    """
+    """ 
     This function generates the incidence matrix of the lines within the nodes
     A particular case is considered for the node "Rest Of the World", which is no explicitely defined in DispaSET
     """
-
+    ####### Edits #######
     for i in range(len(sets[set_used])):
+        [from_node, to_node] = sets[set_used][i].split('->')
+        if (from_node.strip() in sets['n']) and (to_node.strip() in sets['n']):
+            parameters[param_used]['val'][i, sets['n'].index(to_node.strip())] = 1
+            parameters[param_used]['val'][i, sets['n'].index(from_node.strip())] = -1
+        else:
+            logging.warn("The line " + str(sets[set_used][i]) + " contains unrecognized nodes")
+    ####### Edits #######
+
+    return parameters[param_used]
+
+'''
+     ####### Edits #######
+    for i in range(len(sets[set_used])):
+        try:
+            first_country, second_country = sets[set_used][i].split(' -> ')
+        except:
+            logging.error('The format of the interconnection is not valid.')
+            sys.exit(1)
+    """
         if 'RoW' not in sets[set_used][i]:
             first_country = sets[set_used][i][0:2]
             second_country = sets[set_used][i][6:8]
@@ -34,6 +54,8 @@ def incidence_matrix(sets, set_used, parameters, param_used):
         else:
             logging.error('The format of the interconnection is not valid.')
             sys.exit(1)
+    """
+     ####### Edits #######
 
         for j in range(len(sets['n'])):
             if first_country == sets['n'][j]:
@@ -42,30 +64,73 @@ def incidence_matrix(sets, set_used, parameters, param_used):
                 parameters[param_used]['val'][i, j] = 1
 
     return parameters[param_used]
+'''
 
+'''####### Edits #######
+def ExtractSendReceiveNodes(sets, set_used, parameters, param_used):
+    """
+    This function generates the SendReceiveNode matrix for the lines.
+    This matrix assigns a value of {0,1} for each combination of line, sending node and receiving node
+    """
+
+    for i in range(len(sets[set_used])):
+        [from_node, to_node] = sets[set_used][i].split('->')
+        if (from_node.strip() in sets['n']) and (to_node.strip() in sets['n']):
+            parameters[param_used]['val'][i, sets['n'].index(from_node.strip()), sets['n'].index(to_node.strip())] = 1
+        else:
+            logging.warn("The line " + str(sets[set_used][i]) + " contains unrecognized nodes")
+
+    return parameters[param_used]
+    
+
+def ExtractSendNode(sets, set_used, parameters, param_used):
+    """
+    This function generates the incidence matrix of the lines within the nodes
+    A particular case is considered for the node "Rest Of the World", which is no explicitely defined in DispaSET
+    """
+    for i in range(len(sets[set_used])):
+        [from_node, to_node] = sets[set_used][i].split('->')
+        if (from_node.strip() in sets['n']) and (to_node.strip() in sets['n']):
+            parameters[param_used]['val'] = sets['n'].index(from_node.strip())
+        else:
+            logging.warn("The line " + str(sets[set_used][i]) + " contains unrecognized nodes")
+    
+    return parameters[param_used]
+
+def ExtractReceiveNode(sets, set_used, parameters, param_used):
+    """
+    This function generates the incidence matrix of the lines within the nodes
+    A particular case is considered for the node "Rest Of the World", which is no explicitely defined in DispaSET
+    """
+    for i in range(len(sets[set_used])):
+        [from_node, to_node] = sets[set_used][i].split('->')
+        if (from_node.strip() in sets['n']) and (to_node.strip() in sets['n']):
+            parameters[param_used]['val'] = sets['n'].index(to_node.strip())
+        else:
+            logging.warn("The line " + str(sets[set_used][i]) + " contains unrecognized nodes")
+
+    return parameters[param_used]
+'''####### Edits #######
 
 def interconnections(Simulation_list, NTC_inter, Historical_flows):
     """
-    Function that checks for the possible interconnections of the countries included
-    in the simulation. If the interconnections occurs between two of the countries
-    defined by the user to perform the simulation with, it extracts the NTC between
-    those two countries. If the interconnection occurs between one of the countries
-    selected by the user and one country outside the simulation, it extracts the
-    physical flows; it does so for each pair (country inside-country outside) and
+    Function that checks for the possible interconnections of the zones included
+    in the simulation. If the interconnections occurs between two of the zones
+    defined by the user to perform the simulation with, it extracts the NTC between 
+    those two zones. If the interconnection occurs between one of the zones
+    selected by the user and one country outside the simulation, it extracts the 
+    physical flows; it does so for each pair (country inside-country outside) and 
     sums them together creating the interconnection of this country with the RoW.
 
-    :param Simulation_list:     List of simulated countries
+    :param Simulation_list:     List of simulated zones
     :param NTC:                 Day-ahead net transfer capacities (pd dataframe)
     :param Historical_flows:    Historical flows (pd dataframe)
     """
-
-    index = NTC_inter.index.intersection(Historical_flows.index)
-    if len(index)==0:
-        logging.error('The two input dataframes (NTCs and Historical flows) must have the same index. No common values have been found')
+    if len(NTC_inter.index) != len(Historical_flows.index) or NTC_inter.index[0] != Historical_flows.index[0]:
+        logging.error('The two input dataframes must have the same index')
         sys.exit(1)
-    elif len(index) < len(NTC_inter) or len(index) < len(Historical_flows):
-        diff = np.maximum(len(Historical_flows),len(NTC_inter)) - len(index)
-        logging.warn('The two input dataframes (NTCs and Historical flows) do not share the same index, although some values are common. The intersection has been considered and ' + str(diff) + ' data points have been lost')
+    else:
+        index = NTC_inter.index
     # Checking that all values are positive:
     if (NTC_inter.values < 0).any():
         pos = np.where(NTC_inter.values < 0)
@@ -89,12 +154,13 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
             elif c[1] in Simulation_list:
                 all_connections.append(connection)
 
-    df_countries_simulated = pd.DataFrame(index=index)
+    df_zones_simulated = pd.DataFrame(index=index)
     for interconnection in simulation_connections:
         if interconnection in NTC_inter.columns:
-            df_countries_simulated[interconnection] = NTC_inter[interconnection]
-            logging.info('Detected interconnection ' + interconnection + '. The historical NTCs will be imposed as maximum flow value')
-    interconnections1 = df_countries_simulated.columns
+            df_zones_simulated[interconnection] = NTC_inter[interconnection]
+            ####### Edits #######
+            #logging.info('Detected interconnection ' + interconnection + '. The historical NTCs will be imposed as maximum flow value')
+    interconnections1 = df_zones_simulated.columns
 
     # Display a warning if a country is isolated:
     for c in Simulation_list:
@@ -113,7 +179,7 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
         if not k[0:2] in compare_set and k[0:2] in Simulation_list:
             compare_set.add(k[0:2])
 
-    df_countries_RoW = pd.DataFrame(index=index)
+    df_zones_RoW = pd.DataFrame(index=index)
     while compare_set:
         nameToCompare = compare_set.pop()
         exports = []
@@ -129,18 +195,18 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
         flows_out = pd.concat(df_RoW_temp[connNames[exports[i]]] for i in range(len(exports)))
         flows_out = flows_out.groupby(flows_out.index).sum()
         flows_out.name = nameToCompare + ' -> RoW'
-        df_countries_RoW[nameToCompare + ' -> RoW'] = flows_out
+        df_zones_RoW[nameToCompare + ' -> RoW'] = flows_out
         flows_in = pd.concat(df_RoW_temp[connNames[imports[j]]] for j in range(len(imports)))
         flows_in = flows_in.groupby(flows_in.index).sum()
         flows_in.name = 'RoW -> ' + nameToCompare
-        df_countries_RoW['RoW -> ' + nameToCompare] = flows_in
-    interconnections2 = df_countries_RoW.columns
+        df_zones_RoW['RoW -> ' + nameToCompare] = flows_in
+    interconnections2 = df_zones_RoW.columns
     inter = list(interconnections1) + list(interconnections2)
-    return (df_countries_simulated, df_countries_RoW, inter)
+    return (df_zones_simulated, df_zones_RoW, inter)
 
 
 
-def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
+def clustering(plants, method='Standard', subMethod= 'None', Nslices=2, PartLoadMax=0.1, Pmax=30):
     """
     Merge excessively disaggregated power Units.
 
@@ -151,40 +217,35 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
     :param Pmax:            Maximum power for the unit to be clustered
     :return:                A list with the merged plants and the mapping between the original and merged units
     """
+    tc = tm.time()
+    if method == 'Standard':
+        cluster = True
+        LP = False
+        cluster_Tech_Fuel = False
+        cluster_Fuel = False
+        if subMethod == 'TechFuelCluster':
+            cluster_Tech_Fuel = True
+        elif subMethod == 'FuelCluster':
+            cluster_Fuel = True
+        else:
+            pass
+    elif method == 'LP':
+        cluster = True
+        LP = True
+    elif method == None:
+        cluster = False
+        LP = False
+    else:
+        logging.error('Method argument not recognized in the clustering function')
+        sys.exit(1)
 
     # Checking the the required columns are present in the input pandas dataframe:
     required_inputs = ['Unit', 'PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate', 'StartUpTime',
                        'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost', 'Efficiency']
-    for input_value in required_inputs:
-        if input_value not in plants.columns:
-            logging.error("The plants dataframe requires a '" + input_value + "' column for clustering")
+    for input in required_inputs:
+        if input not in plants.columns:
+            logging.error("The plants dataframe requires a '" + input + "' column for clustering")
             sys.exit(1)
-    if not "Nunits" in plants:
-        plants['Nunits'] = 1
-
-    # Checking the validity of the selected clustering method
-    OnlyOnes = (plants['Nunits'] == 1).all()
-    if method in ['Standard','MILP']:
-        if not OnlyOnes:
-            logging.warn("The standard (or MILP) clustering method is only applicable if all values of the Nunits column in the power plant data are set to one. At least one different value has been encountered. No clustering will be applied")
-    elif method == 'LP clustered':
-        if not OnlyOnes:
-            logging.warn("The LP clustering method aggregates all the units of the same type. Individual units are not considered")
-            # Modifying the table to remove multiple-units plants:
-            for key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower','CHPMaxHeat']:
-                if key in plants:
-                    plants.loc[:,key] = plants.loc[:,'Nunits'] * plants.loc[:,key]
-            plants['Nunits'] = 1
-            OnlyOnes = True
-    elif method == 'LP':
-        pass
-    elif method == 'Integer clustering':
-        pass
-    elif method == 'No clustering':
-        pass
-    else:
-        logging.error('Method argument ("' + str(method) + '") not recognized in the clustering function')
-        sys.exit(1)
 
     # Number of units:
     Nunits = len(plants)
@@ -225,22 +286,31 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
     #        if plants.columns[i] != 'Unit' and plants.dtypes[i] == np.dtype('O'):
     #            string_keys.append(plants.columns[i])
     string_keys = ['Zone', 'Technology', 'Fuel','CHPType']
+    string_keys2 = ['Zone', 'Fuel']
     # First, fill nan values:
     for key in string_keys:
         plants[key].fillna('',inplace=True)
-
     for i in plants.index:  # i is the plant to be added to the new list
         merged = False
+        plants_string = plants[string_keys].iloc[i].fillna('')
+        plants_string2 = plants[string_keys2].iloc[i].fillna('')
         for j in plants_merged.index:  # j corresponds to the clustered plants
+            '''
             same_type = all([plants[key].fillna('')[i] == plants_merged[key].fillna('')[j] for key in
-                             string_keys])
+                             string_keys]) and cluster  # if clustering is off, all plants will be considered as different and will therefore not be merged
+            
+            same_fuel = all([plants[key].fillna('')[i] == plants_merged[key].fillna('')[j] for key in
+                             string_keys2]) and cluster  # if clustering is off, all plants will be considered as different and will therefore not be merged
+            '''
+            same_type = all(plants_string == plants_merged[string_keys].iloc[j].fillna(''))
+            same_fuel = all(plants_string2 == plants_merged[string_keys2].iloc[j].fillna(''))
             same_fingerprint = (fingerprints[i] == fingerprints_merged[j])
             low_pmin = (plants['PartLoadMin'][i] <= PartLoadMax)
             low_pmax = (plants['PowerCapacity'][i] <= Pmax)
             highly_flexible = plants['RampUpRate'][i] > 1 / 60 and (plants['RampDownRate'][i] > 1 / 60) and (
-            plants['StartUpTime'][i] < 1) and (plants['MinDownTime'][i] <= 1) and (plants['MinUpTime'][i] <= 1)
-            cluster = OnlyOnes and same_type and ((same_fingerprint and low_pmin) or highly_flexible or low_pmax)
-            if method in ('Standard','MILP') and cluster:  # merge the two plants in plants_merged:
+                    plants['StartUpTime'][i] < 1) and (plants['MinDownTime'][i] <= 1) and (plants['MinUpTime'][i] <= 1)
+            if (same_type and same_fingerprint and low_pmin) or (same_type and highly_flexible) or (
+                    same_type and low_pmax) or (same_type and LP) or (same_type and cluster_Tech_Fuel) or (same_fuel and cluster_Fuel):  # merge the two plants in plants_merged:
                 P_old = plants_merged['PowerCapacity'][j]  # Old power in plants_merged
                 P_add = plants['PowerCapacity'][i]  # Additional power to be added
                 for key in plants_merged:
@@ -248,8 +318,8 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
                                'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge','CHPPowerToHeat','CHPPowerLossFactor']:
                         # Do a weighted average:
                         plants_merged.loc[j, key] = (plants_merged[key][j] * P_old + plants[key][i] * P_add) / (
-                        P_add + P_old)
-                    elif key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower','CHPMaxHeat']:
+                                P_add + P_old)
+                    elif key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower']:
                         # Do a sum:
                         plants_merged.loc[j, key] = plants_merged[key][j] + plants[key][i]
                     elif key in ['PartLoadMin', 'StartUpTime']:
@@ -261,53 +331,10 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
                         Cost_to_fullload = P_add * (1 - plants['PartLoadMin'][i]) * plants['RampingCost'][i] + \
                                            plants['StartUpCost'][i]
                         plants_merged.loc[j, key] = (P_old * plants_merged[key][j] + Cost_to_fullload) / (P_old + P_add)
-                    elif key == 'Nunits':
-                        plants_merged.loc[j, key] = 1
                 map_old_new[i] = j
                 map_plant_orig[j].append(i)
                 merged = True
                 break
-            elif method == 'LP clustered' and same_type and OnlyOnes:
-                P_old = plants_merged['PowerCapacity'][j]  # Old power in plants_merged
-                P_add = plants['PowerCapacity'][i]  # Additional power to be added
-                for key in plants_merged:
-                    if key in ['RampUpRate', 'RampDownRate', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'Efficiency',
-                               'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge']:
-                        # Do a weighted average:
-                        plants_merged.loc[j, key] = (plants_merged[key][j] * P_old + plants[key][i] * P_add) / (
-                        P_add + P_old)
-                    elif key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower','CHPMaxHeat']:
-                        # Do a sum:
-                        plants_merged.loc[j, key] = plants_merged[key][j] + plants[key][i]
-                    elif key in ['PartLoadMin', 'StartUpTime']:
-                        # impose 0
-                        plants_merged.loc[j, key] = 0
-                    elif key == 'RampingCost':
-                        # The starting cost must be added to the ramping cost
-                        Cost_to_fullload = P_add * (1 - plants['PartLoadMin'][i]) * plants['RampingCost'][i] + \
-                                           plants['StartUpCost'][i]
-                        plants_merged.loc[j, key] = (P_old * plants_merged[key][j] + Cost_to_fullload) / (P_old + P_add)
-                    elif key == 'Nunits':
-                        plants_merged.loc[j, key] = 1
-                map_old_new[i] = j
-                map_plant_orig[j].append(i)
-                merged = True
-                break
-            elif method == 'Integer clustering' and same_type:
-                for key in plants_merged:
-                    if key in ['PowerCapacity','RampUpRate', 'RampDownRate', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'Efficiency',
-                               'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge',
-                               'STOCapacity', 'STOMaxChargingPower','InitialPower','PartLoadMin', 'StartUpTime','RampingCost',
-                               'CHPPowerToHeat','CHPPowerLossFactor','CHPMaxHeat']:
-                        # Do a weighted average:
-                        plants_merged.loc[j, key] = (plants_merged.loc[j,key] * plants_merged.loc[j,'Nunits'] + plants.loc[i,key] * plants.loc[i,'Nunits']) / (plants_merged.loc[j,'Nunits'] + plants.loc[i,'Nunits'])
-                plants_merged.loc[j, 'Nunits'] = plants_merged.loc[j,'Nunits'] + plants.loc[i,'Nunits']
-                        
-                map_old_new[i] = j
-                map_plant_orig[j].append(i)
-                merged = True
-                break
-
         if not merged:  # Add a new plant in plants_merged:
             plants_merged = plants_merged.append(plants.loc[i], ignore_index=True)
             plants_merged = plants_merged.copy()
@@ -341,23 +368,13 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
             for oldplant in list_oldplants:
                 mapping['NewIndex'][oldplant] = NewName
 
-    # Transforming the start-up cost into ramping for the plants that did not go through any clustering:
-    if method == 'LP clustered':
+    if LP:
         for i in range(Nunits_merged):
             if plants_merged['RampingCost'][i] == 0:
                 Power = plants_merged['PowerCapacity'][i]
                 Start_up = plants_merged['StartUpCost'][i]
                 plants_merged.loc[i, 'RampingCost'] = Start_up / Power
-                
-    # Correcting the Nunits field of the clustered plants (must be integer):
-    elif method == 'Integer clustering':
-        for idx in plants_merged.index:
-            N = np.round(plants_merged.loc[idx,'Nunits'])
-        for key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower','NoLoadCost']:
-            if key in plants_merged.columns:
-                plants_merged.loc[idx,key] = plants_merged.loc[idx,key] * N / plants_merged.loc[idx,'Nunits']
-        plants_merged.loc[idx,'Nunits'] = N
-                
+
     # Updating the index of the merged plants dataframe with the new unit names, after some cleaning:
     plants_merged.index = plants_merged['Unit']
 
@@ -365,6 +382,7 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
         logging.info('Clustered ' + str(Nunits) + ' original units into ' + str(len(plants_merged)) + ' new units')
     else:
         logging.warn('Did not cluster any unit')
+    logging.info("Time to finish power plants clustering: {}s".format(tm.time() - tc))
     return plants_merged, mapping
 
 ## Helpers
