@@ -1,2 +1,0 @@
-I've reated these GIS files, used GCCIA datasets as the source for mosr of the information here. the spatial information are approximate.
--Abdullah
