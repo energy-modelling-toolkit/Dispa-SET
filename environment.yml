@@ -10,6 +10,7 @@ dependencies:
   - xlrd >= 0.9
   - pyyaml
   - pytest
+  - pip
   - pip:
     - gdxcc
     - gamsxcc
