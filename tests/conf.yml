@@ -41,7 +41,7 @@ ReservoirLevels:  ''
 ReservoirScaledInflows:  ''
 
 #----------------
-countries: [ 'Z1', 'Z2']
+countries: [ 'Z1', 'Z2', 'ZZ3']
 
 #----------------
 ReserveParticipation: [ 'GTUR',  'HDAM',  'HPHS', 'ICEN',  'CAES',  'BATS',  'BEVS']
