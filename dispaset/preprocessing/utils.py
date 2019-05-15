@@ -109,7 +109,7 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
 
     compare_set = set()
     for k in connNames:
-        if not k[0:2] in compare_set and k[0:2] in Simulation_list:
+        if not k[0:2] in compare_set and k[6:8] in Simulation_list:
             compare_set.add(k[0:2])
 
     df_countries_RoW = pd.DataFrame(index=index)
