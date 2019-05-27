@@ -53,7 +53,7 @@ def build_simulation(config):
 
     # Boolean variable to check wether it is milp or lp:
     LP = config['SimulationType'] == 'LP' or config['SimulationType'] == 'LP clustered'
-
+    CEP = config['CEP'] == 1
     # Day/hour corresponding to the first and last days of the simulation:
     # Note that the first available data corresponds to 2015.01.31 (23.00) and the
     # last day with data is 2015.12.31 (22.00)
@@ -426,6 +426,77 @@ def build_simulation(config):
     sets_param['TimeUpMinimum'] = ['u']
     sets_param['TimeDownMinimum'] = ['u']
 
+
+
+    # %%################################################################################################################
+    ############################################   Capacity Expansion    ############################################################
+    ###################################################################################################################
+
+
+    all_cost = load_csv('Database/CapacityExpansion/techs_cost.csv') # cost information # NOTE: Fixed Cost are added to initial model formulation
+
+    if CEP:
+        # split set u -> uc ⋃ ue
+        # load technical parameters (averaged by existing data) and cost (DIW)
+        ## TODO: Determine parameters in dependency of country 
+
+        logging.info("Capacity Expansion used!")
+        expandable_units = ['HRD-STUR', 'LIG-STUR', 'NUC-STUR','OIL-STUR', 'GAS-GTUR'] #TODO rather in config?
+
+        #Plants_merged = Plants_merged.query('Technology != "COMC" and Fuel != "GAS"')
+        #Plants_merged = Plants_merged.query('Technology != "STUR" and Fuel != "GAS"') 
+
+        plant_new = load_csv('Database/CapacityExpansion/techs_cap.csv') # technical information
+        plant_new = plant_new[plant_new.Unit.isin(expandable_units)]
+
+        # create variables (cartesian product of tech x country)
+        n_countries = len(config['countries'])
+        n_technologies = plant_new.shape[0]
+        plant_new = pd.concat([plant_new] * n_countries) # for each zone
+        plant_new['Zone'] = np.repeat(config['countries'], n_technologies) # create zone column
+        plant_new['Unit'] = plant_new.apply(lambda x:  x['Zone'] + "-" + x['Unit'], axis=1) # naming
+        plant_new = plant_new.set_index('Unit', drop=False)
+        
+        ## Cost of new technologies
+        index = plant_new[['Fuel', 'Technology']].reset_index().set_index('Unit', drop=False)
+        
+        Plants_merged = Plants_merged.merge(index[['Fuel', 'Technology']],  how='outer', on = ['Fuel', 'Technology'], 
+            indicator=True).query('_merge == "left_only"')
+
+        del Plants_merged['_merge']
+
+        Plants_merged = Plants_merged.set_index('Unit', drop=False)
+        sets['ue'] = Plants_merged.index.tolist() # existing plants
+        sets['uc'] = plant_new.index.tolist() # new plants to expand
+        sets['u'] = sets['ue'] + sets['uc'] # Union
+
+        Plants_merged = Plants_merged.append(plant_new)
+        plant_new_cost = all_cost[all_cost.Unit.isin(expandable_units)]
+        df_expanded = pd.merge(index, plant_new_cost, on=['Fuel', 'Technology'], how='left')
+
+    else:
+        sets['uc'] = list()
+    
+    for var in ["Investment",  "EconomicLifetime"]:
+        sets_param[var] = ['uc']
+        
+    # Define all the parameters and set a default value of zero:
+    for var in sets_param:
+        parameters[var] = define_parameter(sets_param[var], sets, value=0)
+    
+    for var in ["Investment", "EconomicLifetime"]:
+        parameters[var] = define_parameter(sets_param[var], sets, value=0)
+        if CEP:
+            parameters[var]["val"] =  df_expanded[var].values
+
+    Plants_merged['FixedCost'] = pd.merge(Plants_merged, all_cost, how='left', on=['Fuel', 'Technology'])['FixedCost'].values
+    Nunits = len(Plants_merged)
+
+    for var in ["CostFixed"]:
+        sets_param[var] = ['u']
+        parameters[var] = define_parameter(sets_param[var], sets, value=0)
+        parameters[var]["val"] =  Plants_merged['FixedCost'].values
+
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
         parameters[var] = define_parameter(sets_param[var], sets, value=0)
@@ -657,16 +728,33 @@ def build_simulation(config):
 
     if not os.path.exists(sim):
         os.makedirs(sim)
-    if LP:
+
+    def replace_text_by_dict(text, dic):
+        """Replace dictionary items in text
+        """
+
+        for i, j in dic.items():
+            text = text.replace(i, j)
+        return text
+    
+    gams_file_changes = {'LP':LP, 'CEP':CEP}
+    changes_infile_string = {'LP': ('$setglobal LPFormulation 0','$setglobal LPFormulation 1'), 'CEP': ('$setglobal CEPFormulation 0', '$setglobal CEPFormulation 1')}
+    gams_file_changes_list = {changes_infile_string[k][0]: changes_infile_string[k][1] for k,v in gams_file_changes.items() if v == True}  #filter based on selection
+    if len(gams_file_changes_list)>0:
         fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
         fout = open(os.path.join(sim,'UCM_h.gms'), "wt")
         for line in fin:
-            fout.write(line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1'))
+            fout.write(replace_text_by_dict(line, gams_file_changes_list))
         fin.close()
         fout.close()
     else:
         shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h.gms'),
                         os.path.join(sim, 'UCM_h.gms'))
+
+    if CEP:
+        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_CAP.gms'),
+                        os.path.join(sim, 'UCM_CAP.gms'))
+
     gmsfile = open(os.path.join(sim, 'UCM.gpr'), 'w')
     gmsfile.write(
         '[PROJECT] \n \n[RP:UCM_H] \n1= \n[OPENWINDOW_1] \nFILE0=UCM_h.gms \nFILE1=UCM_h.gms \nMAXIM=1 \nTOP=50 \nLEFT=50 \nHEIGHT=400 \nWIDTH=400')
