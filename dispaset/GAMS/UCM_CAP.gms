@@ -494,13 +494,12 @@ EQ_SystemCost(i)..
 $endIf
 ;
 
-
-
 EQ_Objective_function..
          SystemCostD
          =E=
          sum(i,SystemCost(i))
          +Config("WaterValue","val")*sum(s,WaterSlack(s))
+        + sum(uc, Expanded(uc) * C_inv(uc)*PowerCapacity(uc)* 1/card(h))
 ;
 
 * 3 binary commitment status

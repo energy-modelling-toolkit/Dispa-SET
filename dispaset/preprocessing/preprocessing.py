@@ -74,7 +74,7 @@ def build_simulation(config):
                                                         end=pd.datetime(*(config['StartDate'][0],12,31,23,59,59)),
                                                         freq=commons['TimeStep'])
                                           )
-
+    idx_utc_noloc = idx_utc
     # %%#################################################################################################################
     #####################################   Data Loading    ###########################################################
     ###################################################################################################################
@@ -94,6 +94,8 @@ def build_simulation(config):
     # For the peak load, the whole year is considered:
     PeakLoad = NodeBasedTable(config['Demand'],idx_utc_year_noloc,config['countries'],tablename='PeakLoad').max()
 
+    print("huhuuuu")
+    print(Load)
     if config['modifiers']['Demand'] != 1:
         logging.info('Scaling load curve by a factor ' + str(config['modifiers']['Demand']))
         Load = Load * config['modifiers']['Demand']
@@ -593,6 +595,8 @@ def build_simulation(config):
         values[0, i, :] = Load[sets['n'][i]]
         values[1, i, :] = reserve_2U_tot[sets['n'][i]]
         values[2, i, :] = reserve_2D_tot[sets['n'][i]]
+    
+
     parameters['Demand'] = {'sets': sets_param['Demand'], 'val': values}
 
     # Emission Rate:

@@ -1,7 +1,7 @@
 $Title UCM model
 
 $eolcom //
-Option threads=4;
+Option threads=20;
 Option IterLim=1000000000;
 Option ResLim = 10000000000;
 *Option optca=0.0;
@@ -51,7 +51,7 @@ $setglobal RetrieveStatus 0
 
 * Definition of the capacity expansion decision
 * (1 for yes 0 for no)
-$setglobal CEPFormulation 0
+$setglobal CEPFormulation 1
 
 
 *===============================================================================
@@ -502,15 +502,16 @@ $ifthen [%CEPFormulation% == 1]
 EQ_Objective_function..
          SystemCostD 
          =E=
-         sum(i,SystemCost(i))
-         +Config("WaterValue","val")*sum(s,WaterSlack(s)) ;
+         (sum(i,SystemCost(i))
+         +Config("WaterValue","val")*sum(s,WaterSlack(s))
+         + sum(uc, Expanded(uc) * C_inv(uc)*PowerCapacity(uc)* 1/card(h)))/1E6;
 $else
 EQ_Objective_function..
          SystemCostD 
          =E=
-         sum(i,SystemCost(i))
-         +Config("WaterValue","val")*sum(s,WaterSlack(s)) 
-         + sum(uc, Expanded(uc) * C_inv(uc)*PowerCapacity(uc)* 1/card(h));
+         (sum(i,SystemCost(i))
+         +Config("WaterValue","val")*sum(s,WaterSlack(s)))/1E6 
+         ;
 
 
 $endIf
