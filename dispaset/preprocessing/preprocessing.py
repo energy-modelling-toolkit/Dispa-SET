@@ -20,7 +20,7 @@ except ImportError:
     pass
 
 from .data_check import check_units, check_chp, check_sto, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering
-from .utils import clustering, interconnections, incidence_matrix
+from .utils import clustering, interconnections, incidence_matrix, select_units
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, write_to_excel, load_csv
 
 from ..misc.gdx_handler import write_variables
@@ -124,9 +124,8 @@ def build_simulation(config):
             path = config['PowerPlantData'].replace('##', str(c))
             tmp = load_csv(path)
             plants = plants.append(tmp, ignore_index=True)
-    plants = plants[plants['Technology'] != 'Other']
-    plants = plants[pd.notnull(plants['PowerCapacity'])]
-    plants.index = range(len(plants))
+    # reomve invalide power plants:
+    plants = select_units(plants,config)
 
     # Some columns can be in two format (absolute or per unit). If not specified, they are set to zero:
     for key in ['StartUpCost','NoLoadCost']:

@@ -14,6 +14,27 @@ import pandas as pd
 
 from ..misc.str_handler import clean_strings, shrink_to_64
 
+def select_units(units,config):
+    '''
+    Function returning a new list of units by removing the ones that have unknown
+    technology, zero capacity, or unknown zone
+    
+    :param units:       Pandas dataframe with the original list of units
+    :param config:      Dispa-SET config dictionnary
+    :return:            New list of units
+    '''
+    for unit in units.index:
+        if units.loc[unit,'Technology'] == 'Other':
+            logging.warning('Removed Unit ' + str(units.loc[unit,'Unit']) + ' since its technology is unknown')
+            units.drop(unit,inplace=True)
+        elif units.loc[unit,'PowerCapacity'] == 0:
+            logging.warning('Removed Unit ' + str(units.loc[unit,'Unit']) + ' since it has a null capacity')
+            units.drop(unit,inplace=True)
+        elif units.loc[unit,'Zone'] not in config['countries']:
+            logging.warning('Removed Unit ' + str(units.loc[unit,'Unit']) + ' since its zone (' + str(units.loc[unit,'Zone'])+ ') is not in the list of zones')    
+            units.drop(unit,inplace=True)
+    units.index = range(len(units))
+    return units
 
 def incidence_matrix(sets, set_used, parameters, param_used):
     """
