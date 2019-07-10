@@ -542,7 +542,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
                 out.append(sheet.cell_value(i, colstart))
         return out
 
-    config['countries'] = read_truefalse(sheet, 86, 1, 101, 3)
+    config['countries'] = read_truefalse(sheet, 86, 1, 102, 3)
     config['countries'] = config['countries'] + read_truefalse(sheet, 86, 4, 102, 6)
 
     config['modifiers'] = {}
