@@ -164,24 +164,9 @@ def build_simulation(config):
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
-    FuelPrices = pd.DataFrame(columns=fuels, index=idx_utc_noloc)
+    FuelPrices = {}
     for fuel in fuels:
-        if os.path.isfile(config[fuel]):
-            tmp = load_csv(config[fuel], header=None, index_col=0, parse_dates=True)
-            FuelPrices[fuel] = tmp[1][idx_utc_noloc].values
-        elif isinstance(config['default'][fuel], (int, float, complex)):
-            logging.warning('No data file found for "' + fuel + '. Using default value ' + str(config['default'][fuel]) + ' EUR')
-            FuelPrices[fuel] = pd.Series(config['default'][fuel], index=idx_utc_noloc)
-        # Special case for lignite and peat, for backward compatibility
-        elif fuel == 'PriceOfLignite':
-            logging.warning('No price data found for "' + fuel + '. Using the same value as for Black Coal')
-            FuelPrices[fuel] = FuelPrices['PriceOfBlackCoal']
-        elif fuel == 'PriceOfPeat':
-            logging.warning('No price data found for "' + fuel + '. Using the same value as for biomass')
-            FuelPrices[fuel] = FuelPrices['PriceOfBiomass']
-        else:
-            logging.warning('No data file or default value found for "' + fuel + '. Assuming zero marginal price!')
-            FuelPrices[fuel] = pd.Series(0, index=idx_utc_noloc)
+        FuelPrices[fuel] = NodeBasedTable(config[fuel],idx_utc_noloc,config['countries'],tablename=fuel,default=config['default'][fuel])
 
     # Interconnections:
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['countries'], NTC, flows)
@@ -305,7 +290,8 @@ def build_simulation(config):
              name='AF_merged')
     check_df(Outages_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Outages_merged')
     check_df(Inter_RoW, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Inter_RoW')
-    check_df(FuelPrices, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='FuelPrices')
+    for key in FuelPrices:
+        check_df(FuelPrices[key], StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name=key)
     check_df(NTCs, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='NTCs')
     check_df(ReservoirLevels_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
              name='ReservoirLevels_merged')
@@ -336,7 +322,8 @@ def build_simulation(config):
     AF_merged = AF_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
     Inter_RoW = Inter_RoW.reindex(idx_long, method='nearest').fillna(method='bfill')
     NTCs = NTCs.reindex(idx_long, method='nearest').fillna(method='bfill')
-    FuelPrices = FuelPrices.reindex(idx_long, method='nearest').fillna(method='bfill')
+    for key in FuelPrices:
+        FuelPrices[key] = FuelPrices[key].reindex(idx_long, method='nearest').fillna(method='bfill')
     Load = Load.reindex(idx_long, method='nearest').fillna(method='bfill')
     Outages_merged = Outages_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
     ReservoirLevels_merged = ReservoirLevels_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
@@ -536,15 +523,16 @@ def build_simulation(config):
     # Equivalence dictionary between fuel types and price entries in the config sheet:
     FuelEntries = {'BIO':'PriceOfBiomass', 'GAS':'PriceOfGas', 'HRD':'PriceOfBlackCoal', 'LIG':'PriceOfLignite', 'NUC':'PriceOfNuclear', 'OIL':'PriceOfFuelOil', 'PEA':'PriceOfPeat'}
     for unit in range(Nunits):
+        c = Plants_merged['Zone'][unit]    # zone to which the unit belongs
         found = False
         for FuelEntry in FuelEntries:
             if Plants_merged['Fuel'][unit] == FuelEntry:
-                parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]] / Plants_merged['Efficiency'][unit] + \
-                                                             Plants_merged['EmissionRate'][unit] * FuelPrices['PriceOfCO2']
+                parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / Plants_merged['Efficiency'][unit] + \
+                                                             Plants_merged['EmissionRate'][unit] * FuelPrices['PriceOfCO2'][c]
                 found = True
         # Special case for biomass plants, which are not included in EU ETS:
         if Plants_merged['Fuel'][unit] == 'BIO':
-            parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'] / Plants_merged['Efficiency'][
+            parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'][c] / Plants_merged['Efficiency'][
                 unit]
             found = True
         if not found:

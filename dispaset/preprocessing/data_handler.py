@@ -56,20 +56,27 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
         if not tmp.index.is_unique:
             logging.error('The index of data file ' + paths['all'] + ' is not unique. Please check the data')
             sys.exit(1)
-        for key in countries:
-            if key in tmp:
-                data[key] = tmp[key]
-            elif len(tmp.columns) == 1:    # if the country code is not in the header, it can also be because it is a single country simulation and no header is needed:
+        if len(tmp.columns) == 1:    # if there is only one column, assign its value to all the zones, whatever the header
+            try:    # if the column header is numerical, there was probably no header. Load the file again.
+                float(tmp.columns[0])   # this will fail if the header is not numerical
+                tmp = pd.read_csv(paths['all'], header=None, index_col=0, parse_dates=True)
+            except:
+                pass
+            for key in countries:
                 data[key] = tmp.iloc[:,0]
-            else:
-                logging.error('Country ' + key + ' could not be found in the file ' + path + '. Using default value ' + str(default))
-                if default is None:
-                    pass
-                elif isinstance(default,(float,int,long)):
-                    data[key] = default
+        else:
+            for key in countries:
+                if key in tmp:
+                    data[key] = tmp[key]
                 else:
-                    logging.error('Default value provided for table ' + tablename + ' is not valid')
-                    sys.exit(1)
+                    logging.error('Country ' + key + ' could not be found in the file ' + path + '. Using default value ' + str(default))
+                    if default is None:
+                        pass
+                    elif isinstance(default,(float,int)):
+                        data[key] = default
+                    else:
+                        logging.error('Default value provided for table ' + tablename + ' is not valid')
+                        sys.exit(1)
     else: # assembling the files in a single dataframe:
         for c in paths:
             path = paths[c]
