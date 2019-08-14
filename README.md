@@ -36,7 +36,7 @@ If you want to download the latest version from github for use or development pu
 git clone https://github.com/energy-modelling-toolkit/Dispa-SET.git
 cd Dispa-SET
 conda env create  # Automatically creates environment based on environment.yml
-source activate dispaset # in Windows: activate dispaset
+conda activate dispaset # Activate the environment
 pip install -e . # Install editable local version
 pytest # Ensure that the test cases are running
 ```
@@ -64,4 +64,6 @@ Currently the main developers are the following:
 - Sylvain Quoilin (KU Leuven, Belgium)
 - Konstantinos Kavvadias (Joint Research Centre, European Commission)
 - Matija Pavičević  (KU Leuven, Belgium)
+- Matthias Zech (Deutsches Zentrum für Luft-und Raumfahrt, DLR)
+- Matteo De Felice (Joint Research Centre, European Commission)
 
