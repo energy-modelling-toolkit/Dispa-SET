@@ -60,6 +60,7 @@ def NodeBasedTable(path,idx,zones,tablename='',default=None):
             try:    # if the column header is numerical, there was probably no header. Load the file again.
                 float(tmp.columns[0])   # this will fail if the header is not numerical
                 tmp = pd.read_csv(paths['all'], header=None, index_col=0, parse_dates=True)
+                tmp = tmp.tz_localize(None)
             except:
                 pass
             for key in zones:
@@ -469,6 +470,8 @@ def load_csv(filename, TempPath='.pickle', header=0, skiprows=None, skipfooter=0
     if os.path.getmtime(filename) > time_pd:
         data = pd.read_csv(filename, header=header, skiprows=skiprows, skipfooter=skipfooter, index_col=index_col,
                            parse_dates=parse_dates)
+        if parse_dates:
+            data.index = data.index.tz_localize(None)
         data.to_pickle(filepath_pandas)
     else:
         data = pd.read_pickle(filepath_pandas)
