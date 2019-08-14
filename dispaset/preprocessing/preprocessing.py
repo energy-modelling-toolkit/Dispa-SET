@@ -20,7 +20,7 @@ except ImportError:
     pass
 
 from .data_check import check_units, check_chp, check_sto, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering, check_FlexibleDemand
-from .utils import clustering, interconnections, incidence_matrix
+from .utils import clustering, interconnections, incidence_matrix, select_units
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, write_to_excel, load_csv
 
 from ..misc.gdx_handler import write_variables
@@ -84,9 +84,9 @@ def build_simulation(config):
     days_simulation = delta.days + 1
 
     # Load :
-    Load = NodeBasedTable(config['Demand'],idx_utc_noloc,config['countries'],tablename='Demand')
+    Load = NodeBasedTable(config['Demand'],idx_utc_noloc,config['zones'],tablename='Demand')
     # For the peak load, the whole year is considered:
-    PeakLoad = NodeBasedTable(config['Demand'],idx_utc_year_noloc,config['countries'],tablename='PeakLoad').max()
+    PeakLoad = NodeBasedTable(config['Demand'],idx_utc_year_noloc,config['zones'],tablename='PeakLoad').max()
 
     if config['modifiers']['Demand'] != 1:
         logging.info('Scaling load curve by a factor ' + str(config['modifiers']['Demand']))
@@ -106,23 +106,22 @@ def build_simulation(config):
         NTC = pd.DataFrame(index=idx_utc_noloc)
 
     # Load Shedding:
-    LoadShedding = NodeBasedTable(config['LoadShedding'], idx_utc_noloc,config['countries'],tablename='LoadShedding',default=config['default']['LoadShedding'])
-    CostLoadShedding = NodeBasedTable(config['CostLoadShedding'], idx_utc_noloc, config['countries'], tablename='CostLoadShedding', default=config['default'].get('CostLoadShedding',1000))
+    LoadShedding = NodeBasedTable(config['LoadShedding'], idx_utc_noloc,config['zones'],tablename='LoadShedding',default=config['default']['LoadShedding'])
+    CostLoadShedding = NodeBasedTable(config['CostLoadShedding'], idx_utc_noloc, config['zones'], tablename='CostLoadShedding', default=config['default'].get('CostLoadShedding',1000))
     # Flexible Demand
-    ShareOfFlexibleDemand = NodeBasedTable(config['ShareOfFlexibleDemand'],idx_utc_noloc,config['countries'],tablename='ShareOfFlexibleDemand', default=config['default'].get('ShareOfFlexibleDemand',0))
+    ShareOfFlexibleDemand = NodeBasedTable(config['ShareOfFlexibleDemand'],idx_utc_noloc,config['zones'],tablename='ShareOfFlexibleDemand', default=config['default'].get('ShareOfFlexibleDemand',0))
 
     # Power plants:
     plants = pd.DataFrame()
     if os.path.isfile(config['PowerPlantData']):
         plants = load_csv(config['PowerPlantData'])
     elif '##' in config['PowerPlantData']:
-        for c in config['countries']:
-            path = config['PowerPlantData'].replace('##', str(c))
+        for z in config['zones']:
+            path = config['PowerPlantData'].replace('##', str(z))
             tmp = load_csv(path)
-            plants = plants.append(tmp, ignore_index=True, sort=False)
-    plants = plants[plants['Technology'] != 'Other']
-    plants = plants[pd.notnull(plants['PowerCapacity'])]
-    plants.index = range(len(plants))
+            plants = plants.append(tmp, ignore_index=True, sort = False)
+    # remove invalide power plants:
+    plants = select_units(plants,config)
 
     # Some columns can be in two format (absolute or per unit). If not specified, they are set to zero:
     for key in ['StartUpCost','NoLoadCost']:
@@ -148,12 +147,12 @@ def build_simulation(config):
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
 
-    Outages = UnitBasedTable(plants,config['Outages'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='Outages')
-    AF = UnitBasedTable(plants,config['RenewablesAF'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1,RestrictWarning=commons['tech_renewables'])
-    ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
-    ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirScaledInflows',default=0)
-    HeatDemand = UnitBasedTable(plants_chp,config['HeatDemand'],idx_utc_noloc,config['countries'],fallbacks=['Unit'],tablename='HeatDemand',default=0)
-    CostHeatSlack = UnitBasedTable(plants_chp,config['CostHeatSlack'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default'].get('CostHeatSlack',50))
+    Outages = UnitBasedTable(plants,config['Outages'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology'],tablename='Outages')
+    AF = UnitBasedTable(plants,config['RenewablesAF'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1,RestrictWarning=commons['tech_renewables'])
+    ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
+    ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirScaledInflows',default=0)
+    HeatDemand = UnitBasedTable(plants_chp,config['HeatDemand'],idx_utc_noloc,config['zones'],fallbacks=['Unit'],tablename='HeatDemand',default=0)
+    CostHeatSlack = UnitBasedTable(plants_chp,config['CostHeatSlack'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default'].get('CostHeatSlack',50))
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
@@ -162,27 +161,12 @@ def build_simulation(config):
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
-    FuelPrices = pd.DataFrame(columns=fuels, index=idx_utc_noloc)
+    FuelPrices = {}
     for fuel in fuels:
-        if os.path.isfile(config[fuel]):
-            tmp = load_csv(config[fuel], header=None, index_col=0, parse_dates=True)
-            FuelPrices[fuel] = tmp[1][idx_utc_noloc].values
-        elif isinstance(config['default'][fuel], (int, float, complex)):
-            logging.warning('No data file found for "' + fuel + '. Using default value ' + str(config['default'][fuel]) + ' EUR')
-            FuelPrices[fuel] = pd.Series(config['default'][fuel], index=idx_utc_noloc)
-        # Special case for lignite and peat, for backward compatibility
-        elif fuel == 'PriceOfLignite':
-            logging.warning('No price data found for "' + fuel + '. Using the same value as for Black Coal')
-            FuelPrices[fuel] = FuelPrices['PriceOfBlackCoal']
-        elif fuel == 'PriceOfPeat':
-            logging.warning('No price data found for "' + fuel + '. Using the same value as for biomass')
-            FuelPrices[fuel] = FuelPrices['PriceOfBiomass']
-        else:
-            logging.warning('No data file or default value found for "' + fuel + '. Assuming zero marginal price!')
-            FuelPrices[fuel] = pd.Series(0, index=idx_utc_noloc)
+        FuelPrices[fuel] = NodeBasedTable(config[fuel],idx_utc_noloc,config['zones'],tablename=fuel,default=config['default'][fuel])
 
     # Interconnections:
-    [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['countries'], NTC, flows)
+    [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], NTC, flows)
 
     if len(Interconnections_sim.columns) > 0:
         NTCs = Interconnections_sim.reindex(idx_utc_noloc)
@@ -303,7 +287,8 @@ def build_simulation(config):
              name='AF_merged')
     check_df(Outages_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Outages_merged')
     check_df(Inter_RoW, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Inter_RoW')
-    check_df(FuelPrices, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='FuelPrices')
+    for key in FuelPrices:
+        check_df(FuelPrices[key], StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name=key)
     check_df(NTCs, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='NTCs')
     check_df(ReservoirLevels_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
              name='ReservoirLevels_merged')
@@ -336,7 +321,9 @@ def build_simulation(config):
     AF_merged = AF_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
     Inter_RoW = Inter_RoW.reindex(idx_long, method='nearest').fillna(method='bfill')
     NTCs = NTCs.reindex(idx_long, method='nearest').fillna(method='bfill')
-    FuelPrices = FuelPrices.reindex(idx_long, method='nearest').fillna(method='bfill')
+    for key in FuelPrices:
+        FuelPrices[key] = FuelPrices[key].reindex(idx_long, method='nearest').fillna(method='bfill')
+    Load = Load.reindex(idx_long, method='nearest').fillna(method='bfill')
     Outages_merged = Outages_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
     ReservoirLevels_merged = ReservoirLevels_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
     ReservoirScaledInflows_merged = ReservoirScaledInflows_merged.reindex(idx_long, method='nearest').fillna(
@@ -357,7 +344,7 @@ def build_simulation(config):
     sets['h'] = [str(x + 1) for x in range(Nhours_long)]
     sets['z'] = [str(x + 1) for x in range(Nhours_long - config['LookAhead'] * 24)]
     sets['mk'] = ['DA', '2U', '2D','Flex']
-    sets['n'] = config['countries']
+    sets['n'] = config['zones']
     sets['u'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['f'] = commons['Fuels']
@@ -538,15 +525,16 @@ def build_simulation(config):
     # Equivalence dictionary between fuel types and price entries in the config sheet:
     FuelEntries = {'BIO':'PriceOfBiomass', 'GAS':'PriceOfGas', 'HRD':'PriceOfBlackCoal', 'LIG':'PriceOfLignite', 'NUC':'PriceOfNuclear', 'OIL':'PriceOfFuelOil', 'PEA':'PriceOfPeat'}
     for unit in range(Nunits):
+        c = Plants_merged['Zone'][unit]    # zone to which the unit belongs
         found = False
         for FuelEntry in FuelEntries:
             if Plants_merged['Fuel'][unit] == FuelEntry:
-                parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]] / Plants_merged['Efficiency'][unit] + \
-                                                             Plants_merged['EmissionRate'][unit] * FuelPrices['PriceOfCO2']
+                parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / Plants_merged['Efficiency'][unit] + \
+                                                             Plants_merged['EmissionRate'][unit] * FuelPrices['PriceOfCO2'][c]
                 found = True
         # Special case for biomass plants, which are not included in EU ETS:
         if Plants_merged['Fuel'][unit] == 'BIO':
-            parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'] / Plants_merged['Efficiency'][
+            parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'][c] / Plants_merged['Efficiency'][
                 unit]
             found = True
         if not found:
@@ -591,7 +579,7 @@ def build_simulation(config):
 
     # Location
     for i in range(len(sets['n'])):
-        parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['countries'][i]).values
+        parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['zones'][i]).values
 
     # CHPType parameter:
     sets['chp_type'] = ['Extraction','Back-Pressure', 'P2H']

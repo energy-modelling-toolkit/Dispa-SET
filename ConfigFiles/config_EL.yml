@@ -52,7 +52,7 @@ StopDate: !!python/tuple
 WriteExcel: 0
 WriteGDX: 1
 WritePickle: 1
-countries:
+zones:
 - 'EL'
 default:
   CostHeatSlack: 0

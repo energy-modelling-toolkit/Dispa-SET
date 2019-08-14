@@ -47,7 +47,7 @@ CostHeatSlack:  ''
 CostLoadShedding:  ''
 
 #---------------- Countries
-countries: ['AT', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES',
+zones: ['AT', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES',
    'FI', 'FR', 'HR','HU', 'IE', 'IT', 'LT', 'LV', 'NL', 'NO', 'PL',
    'PT', 'RO', 'SE', 'SI', 'SK', 'UK']
 
