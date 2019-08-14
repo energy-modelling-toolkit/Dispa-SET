@@ -71,20 +71,20 @@ def GAMSstatus(statustype,num):
     return str(msg[num])
 
 
-def get_load_data(inputs, c):
+def get_load_data(inputs, z):
     """ 
-    Get the load curve, the residual load curve, and the net residual load curve of a specific country
+    Get the load curve, the residual load curve, and the net residual load curve of a specific zone
 
     :param inputs:  DispaSET inputs (output of the get_sim_results function)
-    :param c:       Country to consider (e.g. 'BE')
+    :param z:       Zone to consider (e.g. 'BE')
     :return out:    Dataframe with the following columns:
-                        Load:               Load curve of the specified country
+                        Load:               Load curve of the specified zone
                         ResidualLoad:       Load minus the production of variable renewable sources
-                        NetResidualLoad:    Residual netted from the interconnections with neightbouring countries
+                        NetResidualLoad:    Residual netted from the interconnections with neightbouring zones
     """
     datain = inputs['param_df']
     out = pd.DataFrame(index=datain['Demand'].index)
-    out['Load'] = datain['Demand']['DA', c]
+    out['Load'] = datain['Demand']['DA', z]
     # Listing power plants with non-dispatchable power generation:
     VREunits = []
     VRE = np.zeros(len(out))
@@ -95,9 +95,9 @@ def get_load_data(inputs, c):
                 VRE = VRE + datain['AvailabilityFactor'][u].values * datain['PowerCapacity'].loc[u, 'PowerCapacity']
     Interconnections = np.zeros(len(out))
     for l in datain['FlowMinimum']:
-        if l[:2] == c:
+        if l[:2] == z:
             Interconnections = Interconnections - datain['FlowMinimum'][l].values
-        elif l[-2:] == c:
+        elif l[-2:] == z:
             Interconnections = Interconnections + datain['FlowMinimum'][l].values
     out['ResidualLoad'] = out['Load'] - VRE
     out['NetResidualLoad'] = out['ResidualLoad'] - Interconnections
@@ -135,35 +135,35 @@ def aggregate_by_fuel(PowerOutput, Inputs, SpecifyFuels=None):
     return PowerByFuel
 
 
-def filter_by_country(PowerOutput, inputs, c):
+def filter_by_zone(PowerOutput, inputs, z):
     """
-    This function filters the dispaset Output Power dataframe by country
+    This function filters the dispaset Output Power dataframe by zone
 
     :param PowerOutput:     Dataframe of power generationwith units as columns and time as index
     :param Inputs:          Dispaset inputs version 2.1.1
-    :param c:               Selected country (e.g. 'BE')
-    :returns Power:          Dataframe with power generation by country
+    :param z:               Selected zone (e.g. 'BE')
+    :returns Power:          Dataframe with power generation by zone
     """
     loc = inputs['units']['Zone']
-    Power = PowerOutput.loc[:, [u for u in PowerOutput.columns if loc[u] == c]]
+    Power = PowerOutput.loc[:, [u for u in PowerOutput.columns if loc[u] == z]]
     return Power
 
 
-def get_plot_data(inputs, results, c):
+def get_plot_data(inputs, results, z):
     """
-    Function that reads the results dataframe of a DispaSET simulation and extract the dispatch data spedific to one country
+    Function that reads the results dataframe of a DispaSET simulation and extract the dispatch data spedific to one zone
 
     :param results:         Pandas dataframe with the results (output of the GdxToDataframe function)
-    :param c:               Country to be considered (e.g. 'BE')
-    :returns plotdata:       Dataframe with the dispatch data storage and outflows are negative
+    :param z:               Zone to be considered (e.g. 'BE')
+    :returns plotdata:      Dataframe with the dispatch data storage and outflows are negative
     """
-    tmp = filter_by_country(results['OutputPower'], inputs, c)
+    tmp = filter_by_zone(results['OutputPower'], inputs, z)
     plotdata = aggregate_by_fuel(tmp, inputs)
 
     if 'OutputStorageInput' in results:
         #onnly take the columns that correspond to storage units (StorageInput is also used for CHP plants):
         cols = [col for col in results['OutputStorageInput'] if inputs['units'].loc[col,'Technology'] in commons['tech_storage']]
-        tmp = filter_by_country(results['OutputStorageInput'][cols], inputs, c)
+        tmp = filter_by_zone(results['OutputStorageInput'][cols], inputs, z)
         plotdata['Storage'] = -tmp.sum(axis=1)
     else:
         plotdata['Storage'] = 0
@@ -173,9 +173,9 @@ def get_plot_data(inputs, results, c):
     plotdata['FlowOut'] = 0
     for col in results['OutputFlow']:
         from_node, to_node = col.split('->')
-        if to_node.strip() == c:
+        if to_node.strip() == z:
             plotdata['FlowIn'] = plotdata['FlowIn'] + results['OutputFlow'][col]
-        if from_node.strip() == c:
+        if from_node.strip() == z:
             plotdata['FlowOut'] = plotdata['FlowOut'] - results['OutputFlow'][col]
 
     # re-ordering columns:
@@ -247,7 +247,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
     axes[0].plot(pdrng, demand[pdrng], color='k')
     axes[0].set_xlim(pdrng[0],pdrng[-1])
 
-    fig.suptitle('Power dispatch for country ' + demand.name[1])
+    fig.suptitle('Power dispatch for zone ' + demand.name[1])
 
     labels = []
     patches = []
@@ -388,34 +388,34 @@ def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=Fal
     axes.ravel()[-1].set_xlim(np.min(x), np.max(x))
 
 
-def plot_energy_country_fuel(inputs, results, PPindicators):
+def plot_energy_zone_fuel(inputs, results, PPindicators):
     """
-    Plots the generation for each country, disaggregated by fuel type
+    Plots the generation for each zone, disaggregated by fuel type
 
     :param results:         Dictionnary with the outputs of the model (output of the function GetResults)
     :param PPindicators:    Por powerplant statistics (output of the function get_indicators_powerplant)
     """
     fuels = PPindicators.Fuel.unique()
-    countries = PPindicators.Zone.unique()
+    zones = PPindicators.Zone.unique()
 
-    GenPerCountry = pd.DataFrame(index=countries, columns=fuels)
+    GenPerZone = pd.DataFrame(index=zones, columns=fuels)
     # First make sure that all fuels are present. If not, initialize an empty series
     for f in commons['Fuels'] + ['FlowIn']:
-        if f not in GenPerCountry:
-            GenPerCountry[f] = 0
-    for c in countries:
+        if f not in GenPerZone:
+            GenPerZone[f] = 0
+    for z in zones:
         for f in fuels:
-            tmp = PPindicators[(PPindicators.Fuel == f) & (PPindicators.Zone == c)]
-            GenPerCountry.loc[c, f] = tmp.Generation.sum()
-        NetImports = get_imports(results['OutputFlow'], c)
+            tmp = PPindicators[(PPindicators.Fuel == f) & (PPindicators.Zone == z)]
+            GenPerZone.loc[z, f] = tmp.Generation.sum()
+        NetImports = get_imports(results['OutputFlow'], z)
         if NetImports > 0:
-            GenPerCountry.loc[c, 'FlowIn'] = NetImports
+            GenPerZone.loc[z, 'FlowIn'] = NetImports
 
-    cols = [col for col in commons['MeritOrder'] if col in GenPerCountry]
-    GenPerCountry = GenPerCountry[cols] / 1E6
-    colors = [commons['colors'][tech] for tech in GenPerCountry.columns]
-    ax = GenPerCountry.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
-                            title='Generation per country (the horizontal lines indicate the demand)')
+    cols = [col for col in commons['MeritOrder'] if col in GenPerZone]
+    GenPerZone = GenPerZone[cols] / 1E6
+    colors = [commons['colors'][tech] for tech in GenPerZone.columns]
+    ax = GenPerZone.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
+                            title='Generation per zone (the horizontal lines indicate the demand)')
     ax.set_ylabel('Generation [TWh]')
     demand = inputs['param_df']['Demand']['DA'].sum() / 1E6
     ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1]*0.005, linewidth=2,
@@ -423,20 +423,20 @@ def plot_energy_country_fuel(inputs, results, PPindicators):
     return ax
 
 
-def plot_country_capacities(inputs,plot=True):
+def plot_zone_capacities(inputs,plot=True):
     """
-    Plots the installed capacity for each country, disaggregated by fuel type
+    Plots the installed capacity for each zone, disaggregated by fuel type
 
     :param inputs:         Dictionnary with the inputs of the model (output of the function GetResults)
     """
     units = inputs['units']
-    CountryFuels = {}
+    ZoneFuels = {}
     for u in units.index:
-        CountryFuels[(units.Zone[u],units.Fuel[u])] = (units.Zone[u],units.Fuel[u])
+        ZoneFuels[(units.Zone[u],units.Fuel[u])] = (units.Zone[u],units.Fuel[u])
     
     PowerCapacity = pd.DataFrame(columns=inputs['sets']['f'],index=inputs['sets']['n'])
     StorageCapacity = pd.DataFrame(columns=inputs['sets']['f'],index=inputs['sets']['n'])
-    for n,f in CountryFuels:
+    for n,f in ZoneFuels:
         idx = ((units.Zone == n) & (units.Fuel==f))
         PowerCapacity.loc[n,f] = (units.PowerCapacity[idx]*units.Nunits[idx]).sum()
         StorageCapacity.loc[n,f] = (units.StorageCapacity[idx]*units.Nunits[idx]).sum()
@@ -446,7 +446,7 @@ def plot_country_capacities(inputs,plot=True):
     if plot:
         colors = [commons['colors'][tech] for tech in PowerCapacity.columns]
         ax = PowerCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=1.0, legend='reverse',
-                                title='Installed capacity per country (the horizontal lines indicate the peak demand)')
+                                title='Installed capacity per zone (the horizontal lines indicate the peak demand)')
         ax.set_ylabel('Capacity [MW]')
         demand = inputs['param_df']['Demand']['DA'].max() 
         ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1]*0.005, linewidth=2,
@@ -567,74 +567,74 @@ def get_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickle'):
     return inputs, results
 
 
-def plot_country(inputs, results, c='', rng=None, rug_plot=True):
+def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
     """
-    Generates plots from the dispa-SET results for one specific country
+    Generates plots from the dispa-SET results for one specific zone
 
     :param inputs:      DispaSET inputs
     :param results:     DispaSET results
-    :param c:           Considered country (e.g. 'BE')
+    :param z:           Considered zone (e.g. 'BE')
     """
-    if c =='':
+    if z =='':
         Nzones = len(inputs['sets']['n'])
-        c = inputs['sets']['n'][np.random.randint(Nzones)]
-        print('Randomly selected zone for the detailed analysis: '+ c)
-    elif c not in inputs['sets']['n']:
-        logging.critical('Country ' + c + ' is not in the results')
+        z = inputs['sets']['n'][np.random.randint(Nzones)]
+        print('Randomly selected zone for the detailed analysis: '+ z)
+    elif z not in inputs['sets']['n']:
+        logging.critical('Zone ' + z + ' is not in the results')
         Nzones = len(inputs['sets']['n'])
-        c = inputs['sets']['n'][np.random.randint(Nzones)]
-        logging.critical('Randomly selected country: '+ c)
+        z = inputs['sets']['n'][np.random.randint(Nzones)]
+        logging.critical('Randomly selected zone: '+ z)
 
-    plotdata = get_plot_data(inputs, results, c) / 1000 # GW
+    plotdata = get_plot_data(inputs, results, z) / 1000 # GW
 
     if 'OutputStorageLevel' in results:
-        level = filter_by_country(results['OutputStorageLevel'], inputs, c) /1E6 #TWh
+        level = filter_by_zone(results['OutputStorageLevel'], inputs, z) /1E6 #TWh
         level = level.sum(axis=1)
     else:
         level = pd.Series(0, index=results['OutputPower'].index)
 
-    demand = inputs['param_df']['Demand'][('DA', c)] / 1000 # GW
+    demand = inputs['param_df']['Demand'][('DA', z)] / 1000 # GW
     sum_generation = plotdata.sum(axis=1)
     #if 'OutputShedLoad' in results:
-    if 'OutputShedLoad' in results and c in results['OutputShedLoad']:
-        shed_load = results['OutputShedLoad'][c] / 1000 # GW
+    if 'OutputShedLoad' in results and z in results['OutputShedLoad']:
+        shed_load = results['OutputShedLoad'][z] / 1000 # GW
     else:
         shed_load = pd.Series(0,index=demand.index) / 1000 # GW
     diff = (sum_generation - demand + shed_load).abs()
     if diff.max() > 0.01 * demand.max():
-        logging.critical('There is up to ' + str(diff.max()/demand.max()*100) + '% difference in the instantaneous energy balance of country ' + c)
+        logging.critical('There is up to ' + str(diff.max()/demand.max()*100) + '% difference in the instantaneous energy balance of zone ' + z)
 
-    if 'OutputCurtailedPower' in results and c in results['OutputCurtailedPower']:
-        curtailment = results['OutputCurtailedPower'][c] / 1000 # GW
+    if 'OutputCurtailedPower' in results and z in results['OutputCurtailedPower']:
+        curtailment = results['OutputCurtailedPower'][z] / 1000 # GW
         plot_dispatch(demand, plotdata, level, curtailment = curtailment, rng=rng)
     else:
         plot_dispatch(demand, plotdata, level, rng=rng)
 
     # Generation plot:
     if rug_plot:
-        CountryGeneration = filter_by_country(results['OutputPower'], inputs, c)
+        ZoneGeneration = filter_by_zone(results['OutputPower'], inputs, z)
         try:
             import enlopy as el  # try to get latest version
-            el.plot_rug(CountryGeneration, on_off=False, cmap='gist_heat_r', fig_title=c)
+            el.plot_rug(ZoneGeneration, on_off=False, cmap='gist_heat_r', fig_title=z)
         except ImportError:
-            plot_rug(CountryGeneration, on_off=False, cmap='gist_heat_r', fig_title=c)
+            plot_rug(ZoneGeneration, on_off=False, cmap='gist_heat_r', fig_title=z)
 
     return True
 
 
-def get_imports(flows, c):
+def get_imports(flows, z):
     """ 
     Function that computes the balance of the imports/exports of a given zone
 
-    :param flows:       Pandas dataframe with the timeseries of the exchanges
-    :param c:           Country (zone) to consider
-    :returns NetImports: Scalar with the net balance over the whole time period
+    :param flows:           Pandas dataframe with the timeseries of the exchanges
+    :param z:               Zone to consider
+    :returns NetImports:    Scalar with the net balance over the whole time period
     """
     NetImports = 0
     for key in flows:
-        if key[:len(c)] == c:
+        if key[:len(z)] == z:
             NetImports -= flows[key].sum()
-        elif key[-len(c):] == c:
+        elif key[-len(z):] == z:
             NetImports += flows[key].sum()
     return NetImports
 
@@ -681,20 +681,20 @@ def get_result_analysis(inputs, results):
     print ('Peak load:' + str(PeakLoad) + ' MW')
     print ('Net importations:' + str(NetImports / 1E6) + ' TWh')
 
-    # Country-specific values:
-    CountryData = pd.DataFrame(index=inputs['sets']['n'])
+    # Zone-specific values:
+    ZoneData = pd.DataFrame(index=inputs['sets']['n'])
 
-    CountryData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6
-    CountryData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0)
+    ZoneData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6
+    ZoneData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0)
 
-    CountryData['NetImports'] = 0
-    for c in CountryData.index:
-        CountryData.loc[c, 'NetImports'] = get_imports(results['OutputFlow'], str(c)) / 1E6
+    ZoneData['NetImports'] = 0
+    for z in ZoneData.index:
+        ZoneData.loc[z, 'NetImports'] = get_imports(results['OutputFlow'], str(z)) / 1E6
 
-    CountryData['LoadShedding'] = results['OutputShedLoad'].sum(axis=0) / 1E6
-    CountryData['Curtailment'] = results['OutputCurtailedPower'].sum(axis=0) / 1E6
-    print('\nCountry-Specific values (in TWh or in MW):')
-    print(CountryData)
+    ZoneData['LoadShedding'] = results['OutputShedLoad'].sum(axis=0) / 1E6
+    ZoneData['Curtailment'] = results['OutputCurtailedPower'].sum(axis=0) / 1E6
+    print('\nZone-Specific values (in TWh or in MW):')
+    print(ZoneData)
 
     # Congestion:
     Congestion = {}
@@ -708,30 +708,30 @@ def get_result_analysis(inputs, results):
     import pprint
     pprint.pprint(Congestion)
 
-    # Country-specific storage data:
+    # Zone-specific storage data:
     try:
         StorageData = pd.DataFrame(index=inputs['sets']['n'])
-        for c in StorageData.index:
+        for z in StorageData.index:
             isstorage = pd.Series(index=inputs['units'].index)
             for u in isstorage.index:
                 isstorage[u] = inputs['units'].Technology[u] in commons['tech_storage']
-            sto_units = inputs['units'][(inputs['units'].Zone == c) & isstorage]
-            StorageData.loc[c,'Storage Capacity [MWh]'] = (sto_units.Nunits*sto_units.StorageCapacity).sum()
-            StorageData.loc[c,'Storage Power [MW]'] = (sto_units.Nunits*sto_units.PowerCapacity).sum()
-            StorageData.loc[c,'Peak load shifting [hours]'] = StorageData.loc[c,'Storage Capacity [MWh]']/CountryData.loc[c,'PeakLoad']
+            sto_units = inputs['units'][(inputs['units'].Zone == z) & isstorage]
+            StorageData.loc[z,'Storage Capacity [MWh]'] = (sto_units.Nunits*sto_units.StorageCapacity).sum()
+            StorageData.loc[z,'Storage Power [MW]'] = (sto_units.Nunits*sto_units.PowerCapacity).sum()
+            StorageData.loc[z,'Peak load shifting [hours]'] = StorageData.loc[z,'Storage Capacity [MWh]']/ZoneData.loc[z,'PeakLoad']
             AverageStorageOutput = 0
             for u in results['OutputPower'].columns:
                 if u in sto_units.index:
                     AverageStorageOutput += results['OutputPower'][u].mean()
-            StorageData.loc[c,'Average daily cycle depth [%]'] = AverageStorageOutput*24/(1e-9+StorageData.loc[c,'Storage Capacity [MWh]'])
-        print('\nCountry-Specific storage data')
+            StorageData.loc[z,'Average daily cycle depth [%]'] = AverageStorageOutput*24/(1e-9+StorageData.loc[z,'Storage Capacity [MWh]'])
+        print('\nZone-Specific storage data')
         print(StorageData)
     except:
         logging.error('Could compute storage data')
         StorageData = None
 
     return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-            'CountryData': CountryData, 'Congestion': Congestion, 'StorageData': StorageData}
+            'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData}
 
 # %%
 def storage_levels(inputs, results):

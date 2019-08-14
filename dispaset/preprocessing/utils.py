@@ -30,7 +30,7 @@ def select_units(units,config):
         elif units.loc[unit,'PowerCapacity'] == 0:
             logging.warning('Removed Unit ' + str(units.loc[unit,'Unit']) + ' since it has a null capacity')
             units.drop(unit,inplace=True)
-        elif units.loc[unit,'Zone'] not in config['countries']:
+        elif units.loc[unit,'Zone'] not in config['zones']:
             logging.warning('Removed Unit ' + str(units.loc[unit,'Unit']) + ' since its zone (' + str(units.loc[unit,'Zone'])+ ') is not in the list of zones')    
             units.drop(unit,inplace=True)
     units.index = range(len(units))
@@ -54,15 +54,15 @@ def incidence_matrix(sets, set_used, parameters, param_used):
 
 def interconnections(Simulation_list, NTC_inter, Historical_flows):
     """
-    Function that checks for the possible interconnections of the countries included
-    in the simulation. If the interconnections occurs between two of the countries
+    Function that checks for the possible interconnections of the zones included
+    in the simulation. If the interconnections occurs between two of the zones
     defined by the user to perform the simulation with, it extracts the NTC between
-    those two countries. If the interconnection occurs between one of the countries
+    those two zones. If the interconnection occurs between one of the zones
     selected by the user and one country outside the simulation, it extracts the
     physical flows; it does so for each pair (country inside-country outside) and
     sums them together creating the interconnection of this country with the RoW.
 
-    :param Simulation_list:     List of simulated countries
+    :param Simulation_list:     List of simulated zones
     :param NTC:                 Day-ahead net transfer capacities (pd dataframe)
     :param Historical_flows:    Historical flows (pd dataframe)
     """
@@ -85,25 +85,25 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
     # List all connections from the dataframe headers:
     ConList = Historical_flows.columns.tolist() + [x for x in NTC_inter.columns.tolist() if x not in Historical_flows.columns.tolist()]
     for connection in ConList:
-        c = connection.split(' -> ')
-        if c[0] in Simulation_list:
+        z = connection.split(' -> ')
+        if z[0] in Simulation_list:
             all_connections.append(connection)
-            if c[1] in Simulation_list:
+            if z[1] in Simulation_list:
                 simulation_connections.append(connection)
-        elif c[1] in Simulation_list:
+        elif z[1] in Simulation_list:
             all_connections.append(connection)
 
-    df_countries_simulated = pd.DataFrame(index=index)
+    df_zones_simulated = pd.DataFrame(index=index)
     for interconnection in simulation_connections:
         if interconnection in NTC_inter.columns:
-            df_countries_simulated[interconnection] = NTC_inter[interconnection]
+            df_zones_simulated[interconnection] = NTC_inter[interconnection]
             logging.info('Detected interconnection ' + interconnection + '. The historical NTCs will be imposed as maximum flow value')
-    interconnections1 = df_countries_simulated.columns
+    interconnections1 = df_zones_simulated.columns
 
-    # Display a warning if a country is isolated:
-    for c in Simulation_list:
-        if not any([c in conn for conn in interconnections1]) and len(Simulation_list)>1:
-            logging.warning('Zone ' + c + ' does not appear to be connected to any other zone in the NTC table. It should be simulated in isolation')
+    # Display a warning if a zone is isolated:
+    for z in Simulation_list:
+        if not any([z in conn for conn in interconnections1]) and len(Simulation_list)>1:
+            logging.warning('Zone ' + z + ' does not appear to be connected to any other zone in the NTC table. It should be simulated in isolation')
 
     df_RoW_temp = pd.DataFrame(index=index)
     connNames = []
@@ -117,7 +117,7 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
         if not k[0:2] in compare_set and k[0:2] in Simulation_list:
             compare_set.add(k[0:2])
 
-    df_countries_RoW = pd.DataFrame(index=index)
+    df_zones_RoW = pd.DataFrame(index=index)
     while compare_set:
         nameToCompare = compare_set.pop()
         exports = []
@@ -133,14 +133,14 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
         flows_out = pd.concat(df_RoW_temp[connNames[exports[i]]] for i in range(len(exports)))
         flows_out = flows_out.groupby(flows_out.index).sum()
         flows_out.name = nameToCompare + ' -> RoW'
-        df_countries_RoW[nameToCompare + ' -> RoW'] = flows_out
+        df_zones_RoW[nameToCompare + ' -> RoW'] = flows_out
         flows_in = pd.concat(df_RoW_temp[connNames[imports[j]]] for j in range(len(imports)))
         flows_in = flows_in.groupby(flows_in.index).sum()
         flows_in.name = 'RoW -> ' + nameToCompare
-        df_countries_RoW['RoW -> ' + nameToCompare] = flows_in
-    interconnections2 = df_countries_RoW.columns
+        df_zones_RoW['RoW -> ' + nameToCompare] = flows_in
+    interconnections2 = df_zones_RoW.columns
     inter = list(interconnections1) + list(interconnections2)
-    return (df_countries_simulated, df_countries_RoW, inter)
+    return (df_zones_simulated, df_zones_RoW, inter)
 
 
 

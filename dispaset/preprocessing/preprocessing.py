@@ -90,9 +90,9 @@ def build_simulation(config):
         config['default']['CostHeatSlack'] = 50
     
     # Load :
-    Load = NodeBasedTable(config['Demand'],idx_utc_noloc,config['countries'],tablename='Demand')
+    Load = NodeBasedTable(config['Demand'],idx_utc_noloc,config['zones'],tablename='Demand')
     # For the peak load, the whole year is considered:
-    PeakLoad = NodeBasedTable(config['Demand'],idx_utc_year_noloc,config['countries'],tablename='PeakLoad').max()
+    PeakLoad = NodeBasedTable(config['Demand'],idx_utc_year_noloc,config['zones'],tablename='PeakLoad').max()
 
     if config['modifiers']['Demand'] != 1:
         logging.info('Scaling load curve by a factor ' + str(config['modifiers']['Demand']))
@@ -112,16 +112,16 @@ def build_simulation(config):
         NTC = pd.DataFrame(index=idx_utc_noloc)
 
     # Load Shedding:
-    LoadShedding = NodeBasedTable(config['LoadShedding'],idx_utc_noloc,config['countries'],tablename='LoadShedding',default=config['default']['LoadShedding'])
-    CostLoadShedding = NodeBasedTable(config['CostLoadShedding'],idx_utc_noloc,config['countries'],tablename='CostLoadShedding',default=config['default']['CostLoadShedding'])
+    LoadShedding = NodeBasedTable(config['LoadShedding'],idx_utc_noloc,config['zones'],tablename='LoadShedding',default=config['default']['LoadShedding'])
+    CostLoadShedding = NodeBasedTable(config['CostLoadShedding'],idx_utc_noloc,config['zones'],tablename='CostLoadShedding',default=config['default']['CostLoadShedding'])
 
     # Power plants:
     plants = pd.DataFrame()
     if os.path.isfile(config['PowerPlantData']):
         plants = load_csv(config['PowerPlantData'])
     elif '##' in config['PowerPlantData']:
-        for c in config['countries']:
-            path = config['PowerPlantData'].replace('##', str(c))
+        for z in config['zones']:
+            path = config['PowerPlantData'].replace('##', str(z))
             tmp = load_csv(path)
             plants = plants.append(tmp, ignore_index=True)
     # reomve invalide power plants:
@@ -151,12 +151,12 @@ def build_simulation(config):
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
 
-    Outages = UnitBasedTable(plants,config['Outages'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='Outages')
-    AF = UnitBasedTable(plants,config['RenewablesAF'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1,RestrictWarning=commons['tech_renewables'])
-    ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
-    ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirScaledInflows',default=0)
-    HeatDemand = UnitBasedTable(plants_chp,config['HeatDemand'],idx_utc_noloc,config['countries'],fallbacks=['Unit'],tablename='HeatDemand',default=0)
-    CostHeatSlack = UnitBasedTable(plants_chp,config['CostHeatSlack'],idx_utc_noloc,config['countries'],fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default']['CostHeatSlack'])
+    Outages = UnitBasedTable(plants,config['Outages'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology'],tablename='Outages')
+    AF = UnitBasedTable(plants,config['RenewablesAF'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1,RestrictWarning=commons['tech_renewables'])
+    ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
+    ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirScaledInflows',default=0)
+    HeatDemand = UnitBasedTable(plants_chp,config['HeatDemand'],idx_utc_noloc,config['zones'],fallbacks=['Unit'],tablename='HeatDemand',default=0)
+    CostHeatSlack = UnitBasedTable(plants_chp,config['CostHeatSlack'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default']['CostHeatSlack'])
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
@@ -166,10 +166,10 @@ def build_simulation(config):
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
     FuelPrices = {}
     for fuel in fuels:
-        FuelPrices[fuel] = NodeBasedTable(config[fuel],idx_utc_noloc,config['countries'],tablename=fuel,default=config['default'][fuel])
+        FuelPrices[fuel] = NodeBasedTable(config[fuel],idx_utc_noloc,config['zones'],tablename=fuel,default=config['default'][fuel])
 
     # Interconnections:
-    [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['countries'], NTC, flows)
+    [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], NTC, flows)
 
     if len(Interconnections_sim.columns) > 0:
         NTCs = Interconnections_sim.reindex(idx_utc_noloc)
@@ -343,7 +343,7 @@ def build_simulation(config):
     sets['h'] = [str(x + 1) for x in range(Nhours_long)]
     sets['z'] = [str(x + 1) for x in range(Nhours_long - config['LookAhead'] * 24)]
     sets['mk'] = ['DA', '2U', '2D']
-    sets['n'] = config['countries']
+    sets['n'] = config['zones']
     sets['u'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['f'] = commons['Fuels']
@@ -577,7 +577,7 @@ def build_simulation(config):
 
     # Location
     for i in range(len(sets['n'])):
-        parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['countries'][i]).values
+        parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['zones'][i]).values
 
     # CHPType parameter:
     sets['chp_type'] = ['Extraction','Back-Pressure', 'P2H']

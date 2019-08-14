@@ -56,13 +56,13 @@ from .misc.gdx_handler import write_variables
 from .preprocessing.data_handler import load_config_excel, load_config_yaml, export_yaml_config
 from .postprocessing.postprocessing import get_sim_results
 from .postprocessing.postprocessing import ds_to_df
-from .postprocessing.postprocessing import plot_country
+from .postprocessing.postprocessing import plot_zone
 from .postprocessing.postprocessing import storage_levels
 from .postprocessing.postprocessing import get_result_analysis
 from .postprocessing.postprocessing import get_indicators_powerplant
 from .postprocessing.postprocessing import aggregate_by_fuel
-from .postprocessing.postprocessing import plot_energy_country_fuel
-from .postprocessing.postprocessing import plot_country_capacities
+from .postprocessing.postprocessing import plot_energy_zone_fuel
+from .postprocessing.postprocessing import plot_zone_capacities
 from .postprocessing.postprocessing import CostExPost
 from .cli import *
 

@@ -12,14 +12,14 @@ except ImportError:
     pass
 
 
-def NodeBasedTable(path,idx,countries,tablename='',default=None):
+def NodeBasedTable(path,idx,zones,tablename='',default=None):
     '''
     This function loads the tabular data stored in csv files relative to each
-    zone (a.k.a node, country) of the simulation.
+    zone of the simulation.
 
     :param path:                Path to the data to be loaded
     :param idx:                 Pandas datetime index to be used for the output
-    :param countries:           List with the country codes to be considered
+    :param zones:               List with the zone codes to be considered
     :param fallback:            List with the order of data source.
     :param tablename:           String with the name of the table being processed
     :param default:             Default value to be applied if no data is found
@@ -32,12 +32,12 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
         paths['all'] = path
         SingleFile=True
     elif '##' in path:
-        for c in countries:
-            path_c = path.replace('##', str(c))
+        for z in zones:
+            path_c = path.replace('##', str(z))
             if os.path.isfile(path_c):
-                paths[str(c)] = path_c
+                paths[str(z)] = path_c
             else:
-                logging.error('No data file found for the table ' + tablename + ' and country ' + c + '. File ' + path_c + ' does not exist')
+                logging.error('No data file found for the table ' + tablename + ' and zone ' + z + '. File ' + path_c + ' does not exist')
                 sys.exit(1)
         SingleFile=False
     data = pd.DataFrame(index=idx)
@@ -46,12 +46,12 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
         if default is None:
             pass
         elif isinstance(default,(float,int)):
-            data = pd.DataFrame(default,index=idx,columns=countries)
+            data = pd.DataFrame(default,index=idx,columns=zones)
         else:
             logging.error('Default value provided for table ' + tablename + ' is not valid')
             sys.exit(1)
     elif SingleFile:
-        # If it is only one file, there is a header with the country code
+        # If it is only one file, there is a header with the zone code
         tmp = load_csv(paths['all'], index_col=0, parse_dates=True)
         if not tmp.index.is_unique:
             logging.error('The index of data file ' + paths['all'] + ' is not unique. Please check the data')
@@ -62,14 +62,14 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
                 tmp = pd.read_csv(paths['all'], header=None, index_col=0, parse_dates=True)
             except:
                 pass
-            for key in countries:
+            for key in zones:
                 data[key] = tmp.iloc[:,0]
         else:
-            for key in countries:
+            for key in zones:
                 if key in tmp:
                     data[key] = tmp[key]
                 else:
-                    logging.error('Country ' + key + ' could not be found in the file ' + path + '. Using default value ' + str(default))
+                    logging.error('Zone ' + key + ' could not be found in the file ' + path + '. Using default value ' + str(default))
                     if default is None:
                         pass
                     elif isinstance(default,(float,int)):
@@ -78,21 +78,21 @@ def NodeBasedTable(path,idx,countries,tablename='',default=None):
                         logging.error('Default value provided for table ' + tablename + ' is not valid')
                         sys.exit(1)
     else: # assembling the files in a single dataframe:
-        for c in paths:
-            path = paths[c]
-            # In case of separated files for each country, there is no header
+        for z in paths:
+            path = paths[z]
+            # In case of separated files for each zone, there is no header
             tmp = load_csv(path, index_col=0, parse_dates=True)
             # check that the loaded file is ok:
             if not tmp.index.is_unique:
                 logging.error('The index of data file ' + paths['all'] + ' is not unique. Please check the data')
                 sys.exit(1)
-            data[c] = tmp.iloc[:,0]
+            data[z] = tmp.iloc[:,0]
      
     return data
 
 
 
-def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',default=None,RestrictWarning=None):
+def UnitBasedTable(plants,path,idx,zones,fallbacks=['Unit'],tablename='',default=None,RestrictWarning=None):
     '''
     This function loads the tabular data stored in csv files and assigns the
     proper values to each unit of the plants dataframe. If the unit-specific 
@@ -107,7 +107,7 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
     :param plants:              Dataframe with the units for which data is required
     :param path:                Path to the data to be loaded
     :param idx:                 Pandas datetime index to be used for the output
-    :param countries:           List with the country codes to be considered
+    :param zones:           List with the zone codes to be considered
     :param fallback:            List with the order of data source. 
     :param tablename:           String with the name of the table being processed
     :param default:             Default value to be applied if no data is found
@@ -121,12 +121,12 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
         paths['all'] = path
         SingleFile=True
     elif '##' in path:
-        for c in countries:
-            path_c = path.replace('##', str(c))
+        for z in zones:
+            path_c = path.replace('##', str(z))
             if os.path.isfile(path_c):
-                paths[str(c)] = path_c
+                paths[str(z)] = path_c
             else:
-                logging.critical('No data file found for the table ' + tablename + ' and country ' + c + '. File ' + path_c + ' does not exist')
+                logging.critical('No data file found for the table ' + tablename + ' and zone ' + z + '. File ' + path_c + ' does not exist')
 #                sys.exit(1)
         SingleFile=False
     data = pd.DataFrame(index=idx)
@@ -141,8 +141,8 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
             sys.exit(1)
     else: # assembling the files in a single dataframe:
         columns = []
-        for c in paths:
-            path = paths[c]
+        for z in paths:
+            path = paths[z]
             tmp = load_csv(path, index_col=0, parse_dates=True)
             # check that the loaded file is ok:
             if not tmp.index.is_unique:
@@ -151,12 +151,12 @@ def UnitBasedTable(plants,path,idx,countries,fallbacks=['Unit'],tablename='',def
             if SingleFile:
                 for key in tmp:
                     data[key] = tmp[key]                
-            else:    # use the multi-index header with the country
+            else:    # use the multi-index header with the zone
                 for key in tmp:
-                    columns.append((c,key))
-                    data[c+','+key] = tmp[key]
+                    columns.append((z,key))
+                    data[z+','+key] = tmp[key]
         if not SingleFile:
-            data.columns = pd.MultiIndex.from_tuples(columns, names=['Country', 'Data'])
+            data.columns = pd.MultiIndex.from_tuples(columns, names=['Zone', 'Data'])
         # For each plant and each fallback key, try to find the corresponding column in the data
         out = pd.DataFrame(index=idx)
         for j in plants.index:
@@ -536,7 +536,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['default']['CostHeatSlack'] = sheet.cell_value(79, 5)
     config['default']['CostLoadShedding'] = sheet.cell_value(80, 5)
 
-    # read the list of countries to consider:
+    # read the list of zones to consider:
     def read_truefalse(sheet, rowstart, colstart, rowstop, colstop):
         """
         Function that reads a two column format with a list of strings in the first
@@ -549,8 +549,8 @@ def load_config_excel(ConfigFile,AbsPath=True):
                 out.append(sheet.cell_value(i, colstart))
         return out
 
-    config['countries'] = read_truefalse(sheet, 86, 1, 102, 3)
-    config['countries'] = config['countries'] + read_truefalse(sheet, 86, 4, 102, 6)
+    config['zones'] = read_truefalse(sheet, 86, 1, 102, 3)
+    config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 102, 6)
 
     config['modifiers'] = {}
     config['modifiers']['Demand'] = sheet.cell_value(111, 2)
