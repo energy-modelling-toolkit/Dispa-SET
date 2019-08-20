@@ -98,8 +98,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     if cache is not None or temp_path is not None:
         logging.warning('Caching option has been removed. Try to save manually the results, e.g. results.to_netcdf("res.nc")')
 
-    with open(inputfile, 'rb') as f:
-        inputs = pd.read_pickle(f)
+    inputs = pd.read_pickle(inputfile)
 
     # Clean power plant names:
     inputs['sets']['u'] = clean_strings(inputs['sets']['u'])
