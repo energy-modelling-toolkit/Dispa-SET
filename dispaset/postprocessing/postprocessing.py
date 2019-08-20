@@ -18,20 +18,20 @@ from ..common import commons
 
 
 
-def get_load_data(inputs, c):
+def get_load_data(inputs, z):
     """ 
-    Get the load curve, the residual load curve, and the net residual load curve of a specific country
+    Get the load curve, the residual load curve, and the net residual load curve of a specific zone
 
     :param inputs:  DispaSET inputs (output of the get_sim_results function)
-    :param c:       Country to consider (e.g. 'BE')
+    :param z:       Zone to consider (e.g. 'BE')
     :return out:    Dataframe with the following columns:
-                        Load:               Load curve of the specified country
+                        Load:               Load curve of the specified zone
                         ResidualLoad:       Load minus the production of variable renewable sources
-                        NetResidualLoad:    Residual netted from the interconnections with neightbouring countries
+                        NetResidualLoad:    Residual netted from the interconnections with neightbouring zones
     """
     datain = inputs['param_df']
     out = pd.DataFrame(index=datain['Demand'].index)
-    out['Load'] = datain['Demand']['DA', c]
+    out['Load'] = datain['Demand']['DA', z]
     # Listing power plants with non-dispatchable power generation:
     VREunits = []
     VRE = np.zeros(len(out))
@@ -42,9 +42,9 @@ def get_load_data(inputs, c):
                 VRE = VRE + datain['AvailabilityFactor'][u].values * datain['PowerCapacity'].loc[u, 'PowerCapacity']
     Interconnections = np.zeros(len(out))
     for l in datain['FlowMinimum']:
-        if l[:2] == c:
+        if l[:2] == z:
             Interconnections = Interconnections - datain['FlowMinimum'][l].values
-        elif l[-2:] == c:
+        elif l[-2:] == z:
             Interconnections = Interconnections + datain['FlowMinimum'][l].values
     out['ResidualLoad'] = out['Load'] - VRE
     out['NetResidualLoad'] = out['ResidualLoad'] - Interconnections
@@ -82,35 +82,35 @@ def aggregate_by_fuel(PowerOutput, Inputs, SpecifyFuels=None):
     return PowerByFuel
 
 
-def filter_by_country(PowerOutput, inputs, c):
+def filter_by_zone(PowerOutput, inputs, z):
     """
-    This function filters the dispaset Output Power dataframe by country
+    This function filters the dispaset Output Power dataframe by zone
 
     :param PowerOutput:     Dataframe of power generationwith units as columns and time as index
     :param Inputs:          Dispaset inputs version 2.1.1
-    :param c:               Selected country (e.g. 'BE')
-    :returns Power:          Dataframe with power generation by country
+    :param z:               Selected zone (e.g. 'BE')
+    :returns Power:          Dataframe with power generation by zone
     """
     loc = inputs['units']['Zone']
-    Power = PowerOutput.loc[:, [u for u in PowerOutput.columns if loc[u] == c]]
+    Power = PowerOutput.loc[:, [u for u in PowerOutput.columns if loc[u] == z]]
     return Power
 
 
-def get_plot_data(inputs, results, c):
+def get_plot_data(inputs, results, z):
     """
-    Function that reads the results dataframe of a DispaSET simulation and extract the dispatch data spedific to one country
+    Function that reads the results dataframe of a DispaSET simulation and extract the dispatch data spedific to one zone
 
     :param results:         Pandas dataframe with the results (output of the GdxToDataframe function)
-    :param c:               Country to be considered (e.g. 'BE')
-    :returns plotdata:       Dataframe with the dispatch data storage and outflows are negative
+    :param z:               Zone to be considered (e.g. 'BE')
+    :returns plotdata:      Dataframe with the dispatch data storage and outflows are negative
     """
-    tmp = filter_by_country(results['OutputPower'], inputs, c)
+    tmp = filter_by_zone(results['OutputPower'], inputs, z)
     plotdata = aggregate_by_fuel(tmp, inputs)
 
     if 'OutputStorageInput' in results:
         #onnly take the columns that correspond to storage units (StorageInput is also used for CHP plants):
         cols = [col for col in results['OutputStorageInput'] if inputs['units'].loc[col,'Technology'] in commons['tech_storage']]
-        tmp = filter_by_country(results['OutputStorageInput'][cols], inputs, c)
+        tmp = filter_by_zone(results['OutputStorageInput'][cols], inputs, z)
         plotdata['Storage'] = -tmp.sum(axis=1)
     else:
         plotdata['Storage'] = 0
@@ -119,10 +119,10 @@ def get_plot_data(inputs, results, c):
     plotdata['FlowIn'] = 0
     plotdata['FlowOut'] = 0
     for col in results['OutputFlow']:
-        if col[-2:] == c:
+        from_node, to_node = col.split('->')
+        if to_node.strip() == z:
             plotdata['FlowIn'] = plotdata['FlowIn'] + results['OutputFlow'][col]
-    for col in results['OutputFlow']:
-        if col[:2] == c:
+        if from_node.strip() == z:
             plotdata['FlowOut'] = plotdata['FlowOut'] - results['OutputFlow'][col]
 
     # re-ordering columns:
@@ -137,19 +137,19 @@ def get_plot_data(inputs, results, c):
     return plotdata
 
 
-def get_imports(flows, c):
+def get_imports(flows, z):
     """ 
     Function that computes the balance of the imports/exports of a given zone
 
-    :param flows:       Pandas dataframe with the timeseries of the exchanges
-    :param c:           Country (zone) to consider
-    :returns NetImports: Scalar with the net balance over the whole time period
+    :param flows:           Pandas dataframe with the timeseries of the exchanges
+    :param z:               Zone to consider
+    :returns NetImports:    Scalar with the net balance over the whole time period
     """
     NetImports = 0
     for key in flows:
-        if key[:len(c)] == c:
+        if key[:len(z)] == z:
             NetImports -= flows[key].sum()
-        elif key[-len(c):] == c:
+        elif key[-len(z):] == z:
             NetImports += flows[key].sum()
     return NetImports
 
@@ -168,7 +168,7 @@ def get_result_analysis(inputs, results):
 
     StartDate = inputs['config']['StartDate']
     StopDate = inputs['config']['StopDate']
-    index = pd.DatetimeIndex(start=pd.datetime(*StartDate), end=pd.datetime(*StopDate), freq='h')
+    index = pd.date_range(start=pd.datetime(*StartDate), end=pd.datetime(*StopDate), freq='h')
 
     # Aggregated values:
     TotalLoad = dfin['Demand']['DA'].loc[index, :].sum().sum()
@@ -196,20 +196,20 @@ def get_result_analysis(inputs, results):
     print ('Peak load:' + str(PeakLoad) + ' MW')
     print ('Net importations:' + str(NetImports / 1E6) + ' TWh')
 
-    # Country-specific values:
-    CountryData = pd.DataFrame(index=inputs['sets']['n'])
+    # Zone-specific values:
+    ZoneData = pd.DataFrame(index=inputs['sets']['n'])
 
-    CountryData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6
-    CountryData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0)
+    ZoneData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6
+    ZoneData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0)
 
-    CountryData['NetImports'] = 0
-    for c in CountryData.index:
-        CountryData.loc[c, 'NetImports'] = get_imports(results['OutputFlow'], str(c)) / 1E6
+    ZoneData['NetImports'] = 0
+    for z in ZoneData.index:
+        ZoneData.loc[z, 'NetImports'] = get_imports(results['OutputFlow'], str(z)) / 1E6
 
-    CountryData['LoadShedding'] = results['OutputShedLoad'].sum(axis=0) / 1E6
-    CountryData['Curtailment'] = results['OutputCurtailedPower'].sum(axis=0) / 1E6
-    print('\nCountry-Specific values (in TWh or in MW):')
-    print(CountryData)
+    ZoneData['LoadShedding'] = results['OutputShedLoad'].sum(axis=0) / 1E6
+    ZoneData['Curtailment'] = results['OutputCurtailedPower'].sum(axis=0) / 1E6
+    print('\nZone-Specific values (in TWh or in MW):')
+    print(ZoneData)
 
     # Congestion:
     Congestion = {}
@@ -223,30 +223,30 @@ def get_result_analysis(inputs, results):
     import pprint
     pprint.pprint(Congestion)
 
-    # Country-specific storage data:
+    # Zone-specific storage data:
     try:
         StorageData = pd.DataFrame(index=inputs['sets']['n'])
-        for c in StorageData.index:
+        for z in StorageData.index:
             isstorage = pd.Series(index=inputs['units'].index)
             for u in isstorage.index:
                 isstorage[u] = inputs['units'].Technology[u] in commons['tech_storage']
-            sto_units = inputs['units'][(inputs['units'].Zone == c) & isstorage]
-            StorageData.loc[c,'Storage Capacity [MWh]'] = (sto_units.Nunits*sto_units.StorageCapacity).sum()
-            StorageData.loc[c,'Storage Power [MW]'] = (sto_units.Nunits*sto_units.PowerCapacity).sum()
-            StorageData.loc[c,'Peak load shifting [hours]'] = StorageData.loc[c,'Storage Capacity [MWh]']/CountryData.loc[c,'PeakLoad']
+            sto_units = inputs['units'][(inputs['units'].Zone == z) & isstorage]
+            StorageData.loc[z,'Storage Capacity [MWh]'] = (sto_units.Nunits*sto_units.StorageCapacity).sum()
+            StorageData.loc[z,'Storage Power [MW]'] = (sto_units.Nunits*sto_units.PowerCapacity).sum()
+            StorageData.loc[z,'Peak load shifting [hours]'] = StorageData.loc[z,'Storage Capacity [MWh]']/ZoneData.loc[z,'PeakLoad']
             AverageStorageOutput = 0
             for u in results['OutputPower'].columns:
                 if u in sto_units.index:
                     AverageStorageOutput += results['OutputPower'][u].mean()
-            StorageData.loc[c,'Average daily cycle depth [%]'] = AverageStorageOutput*24/(1e-9+StorageData.loc[c,'Storage Capacity [MWh]'])
-        print('\nCountry-Specific storage data')
+            StorageData.loc[z,'Average daily cycle depth [%]'] = AverageStorageOutput*24/(1e-9+StorageData.loc[z,'Storage Capacity [MWh]'])
+        print('\nZone-Specific storage data')
         print(StorageData)
     except:
         logging.error('Could compute storage data')
         StorageData = None
 
     return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-            'CountryData': CountryData, 'Congestion': Congestion, 'StorageData': StorageData}
+            'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData}
 
 # %%
 def storage_levels(inputs, results):

@@ -56,7 +56,7 @@ from .solve import solve_GAMS, solve_pyomo
 
 from .postprocessing.data_handler import get_sim_results, ds_to_df
 from .postprocessing.postprocessing import get_result_analysis, get_indicators_powerplant, aggregate_by_fuel, CostExPost
-from .postprocessing.plot import plot_energy_country_fuel, plot_country_capacities, plot_country
+from .postprocessing.plot import plot_energy_zone_fuel, plot_zone_capacities, plot_zone
 
 from .cli import *
 
