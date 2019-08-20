@@ -239,12 +239,14 @@ def inputs_to_xarray(inputs):
 
             all_ds.append(ds)
         inputs = xr.merge(all_ds)
-        inputs.attrs['config'] = config
+        for key in config:
+            if isinstance(config[key], (float,int,str)):
+                inputs.attrs[key] = config[key]
         # Replace h with DateTimeIndex
         StartDate = config['StartDate']
         StopDate = config['StopDate']  # last day of the simulation with look-ahead period
         StopDate_long = dt.datetime(*StopDate) + dt.timedelta(days=config['LookAhead'])
-        index_long = pd.DatetimeIndex(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
+        index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
         inputs.coords['h'] = index_long
 
     except ImportError:
