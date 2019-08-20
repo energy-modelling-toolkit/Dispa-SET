@@ -1,7 +1,7 @@
 name: dispaset
 
 dependencies:
-  - python = 3.7
+  - python=3.7
   - future >= 0.15
   - click >= 3.3
   - numpy>=1.10
