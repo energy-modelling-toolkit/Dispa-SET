@@ -337,7 +337,7 @@ def get_gams_path(gams_dir=None):
     """
     Function that attempts to search for the GAMS installation path (required to write the GDX or run gams)
 
-    It returns the path if it has been found, or an empty string otherwise. If a gams_dir argument is passed 
+    It returns the path if it has been found, or an empty string otherwise. If a gams_dir argument is passed
     it tries to validate before searching
 
     Currently works for Windows, Linux and OSX. More searching rules and patterns should be added in the future
