@@ -31,19 +31,27 @@ def check_AvailabilityFactors(plants,AF):
     Function that checks the validity of the provided availability factors and warns
     if a default value of 100% is used.
     '''
-    if (AF.dropna().values < 0).any():
-        logging.error('Some Availaibility factors are negative')
-        sys.exit(1)
-    if (AF.dropna().values > 1).any():
-        logging.warning('Some Availability factors are higher than one. They must be carefully checked')
     for t in ['WTON', 'WTOF', 'PHOT', 'HROR']:
         for i in plants[plants['Technology']==t].index:
             u = plants.loc[i,'Unit']
             if u in AF:
                 if (AF[u].values == 1).all():
                     logging.critical('The availability factor of unit ' + str(u) + ' + for technology ' + t + ' is always 100%!')
+                if (AF[u].values == np.inf).any():
+                    logging.critical('The Availability factor of unit ' + str(u) + ' + for technology ' + t + ' is of type +Inf. Inputs must be checked carefully')
+                if (AF[u].values == -np.inf).any():
+                    logging.critical('The Availability factor of unit ' + str(u) + ' + for technology ' + t + ' is of type -Inf. Inputs must be checked carefully')
+                if (AF[u].values > 1).any():
+                    logging.critical('The Availability factor of unit ' + str(u) + ' + for technology ' + t + ' is higher than 1. Inputs must be checked carefully')
+                if (AF[u].values < 0).any():
+                    logging.critical('The Availability factor of unit ' + str(u) + ' + for technology ' + t + ' is lower than 0. Inputs must be checked carefully')
             else:
                 logging.critical('Unit ' + str(u) + ' (technology ' + t + ') does not appear in the availbilityFactors table. Its values will be set to 100%!')
+    if (AF.dropna().values < 0).any():
+        logging.error('Some Availaibility factors are negative')
+        sys.exit(1)
+    if (AF.dropna().values > 1).any():
+        logging.warning('Some Availability factors are higher than one. They must be carefully checked')
 
 def check_clustering(plants,plants_merged):
     '''
