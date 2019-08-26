@@ -1,6 +1,7 @@
 name: dispaset
 
 dependencies:
+  - python=3.7
   - future >= 0.15
   - click >= 3.3
   - numpy>=1.10
@@ -8,8 +9,11 @@ dependencies:
   - matplotlib>=1.5.1
   - pandas>= 0.19
   - xlrd >= 0.9
+  - xarray >= 0.11
+  - netcdf4
   - pyyaml
   - pytest
+  - pip
   - pip:
     - gdxcc
     - gamsxcc

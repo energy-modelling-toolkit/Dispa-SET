@@ -25,10 +25,10 @@ head, tail = os.path.split(os.path.split(pathname)[0])
 path = tail + '/' + file 
 
 # List of countries where new reservoir levels should be calculated eg. ['AT','BE',...'UK']
-countries = ['AT', 'CH']
+zones = ['AT', 'CH']
 
 # Calculate and plot new profiles
-new_profiles = ds.mid_term_scheduling(config, countries, path)
+new_profiles = ds.mid_term_scheduling(config, zones, path)
 new_profiles.plot()
 
 # Build simulation data with new profiles

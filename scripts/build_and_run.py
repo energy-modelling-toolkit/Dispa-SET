@@ -11,10 +11,10 @@ import sys,os
 sys.path.append(os.path.abspath('..'))
 
 # Import Dispa-SET
-import DispaSET as ds
+import dispaset as ds
 
 # Load the configuration file
-config = ds.load_config_excel('../ConfigFiles/ConfigTest.xlsx')
+config = ds.load_config_excel('../ConfigFiles/ConfigEU.xlsx')
 
 # Build the simulation environment:
 SimData = ds.build_simulation(config)

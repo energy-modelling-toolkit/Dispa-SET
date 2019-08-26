@@ -18,19 +18,19 @@ import os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('../DispaSET'))
+sys.path.insert(0, os.path.abspath('../dispaset'))
 sys.path.insert(0, os.path.abspath('../'))
-autodoc_mock_imports = ['_tkinter']
+autodoc_mock_imports = ['_tkinter', 'pyomo']
 import matplotlib
 matplotlib.use('agg')
 
 __version__ = None
 # Sets the __version__ variable
-exec(open('../DispaSET/_version.py').read())
+exec(open('../dispaset/_version.py').read())
 
 from subprocess import check_output
 try:
-    __release__ = check_output(["git", "describe"]).strip()
+    __release__ = check_output(["git", "describe"]).strip().decode()
 except:
     __release__ = ''
 
@@ -63,7 +63,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'DispaSET'
-copyright = u'2017, Sylvain Quoilin & Kostas Kavvadias'
+copyright = u'2019, Sylvain Quoilin & Kostas Kavvadias'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

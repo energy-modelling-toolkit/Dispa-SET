@@ -5,12 +5,8 @@ Dispa-SET for the EU28
 
 Description
 -----------
-.. warning::
-    The Dispa-SET for the EU28 is currently in developmend and will be released soon
 
-This is input data of the Dispa-SET model, applied to the EU28 member states
-
-.. Countries included in different scenarios are show in the table [1]_ [2]_ [3]_ [4]_ :
+Dispa-SET is provided with a ready-to-use dataset of the EU28 (+Norway +Switzerland) power system. A detailed description of the model and of the selected input data is available in [1]_ and [2]_.
 
 The power plants in the model are represented as a cluster of units powered by the same fuel type and technology. They can be modelled together with a large number of RES units with separate hourly distribution curves.
  
@@ -32,30 +28,22 @@ The model is expressed as an optimization problem. Continuous variables include 
 - Constraints on the targets for renewables and/or CO2 emissions
 - Yearly schedules for the outages (forced and planned) of each units
 - CHP power plants and thermal storage
+- Integer clustering: a representative unit is considered for each technology and multiplied N times.
 
 The demand is assumed to be inelastic to the price signal. The MILP objective function is therefore the total generation cost over the optimization period. 
 
-Quick start
------------
+Run the EU model
+----------------
 
-If you want to download the latest version from github for use or development purposes, make sure that you have git and the [anaconda distribution](https://www.continuum.io/downloads) installed and type the following::
+A specific config file is provided with the standard Dispa-SET installation (starting from v2.3). After installing Dispa-SET and checking that everything is fine, you can run the EU model in different ways:
 
-	git clone https://github.com/energy-modelling-toolkit/Dispa-SET.git
-	cd Dispa-SET
-	conda env create  # Automatically creates environment based on environment.yml
-	source activate dispaset # in Windows: activate dispaset
-	pip install -e . # Install editable local version
+From the command line (if Dispa-SET was properly installed)::
 
-The above commands create a dedicated environment so that your anconda configuration remains clean from the required dependencies installed.
+	dispaset -c ConfigFiles/ConfigEU.xlsx build simulate
 
-To check that everything runs fine, you can build and run a test case by typing::
+Using the Dispa-SET Api and the provided example script:
 
-	dispaset -c ConfigFiles/ConfigTest.xlsx build simulate
-
-Make sure that the path is changed to local Dispa-SET folder in folowing scripts (the procedure is provided in the scripts)::
-
-	build_and_run.py
-	read_results.py
+	scripts\build_and_run_EU_model.py
 
   
 Documentation
@@ -83,13 +71,8 @@ References
 ----------
 More details regarding the model and its implementation are available in the following publications
 
-.. .. [1] Pavičević, M., Kavvadias, K. & Quoilin, S. (2018). Impact of model formulation on power system simulations - Example with the Dispa-SET Balkans model, EMP-E conference 2018: Modelling Clean Energy Pathways, Brussels.
-.. .. [2] Pavičević, M., Quoilin, S. & Pukšec, T., (2018). Comparison of Different Power Plant Clustering Approaches for Modeling Future Power Systems, Proceedings of the 3rd SEE SDEWES Conference, Novi Sad.
-.. .. [3] Tomić, I., Pavičević, M., Quoilin, S., Zucker, A., Pukšec, T., Krajačić. G. & Duić, N., (2017). Applying the Dispa-SET model on the seven countries from the South East Europe. 8th Energy Planning and Modeling of Energy Systems-Meeting, Belgrade. https://bib.irb.hr/prikazi-rad?rad=901595
-.. .. [4] Pavičević, M., Tomić, I., Quoilin, S., Zucker, A., Pukšec, T., Krajačić. G. & Duić, N., (2017). Applying the Dispa-SET model on the Western Balkans power systems. Proceedings of the 2017 12th SDEWES Conference, Dubrovnik. http://hdl.handle.net/2268/215095
+.. [1] Kavvadias, K., Hidalgo Gonzalez, I., Zucker, A., & Quoilin, S. (2018). Integrated modelling of future EU power and heat systems - The Dispa-SET v2.2 open-source model (EUR 29085 EN). Luxembourg: European Commission.
 
-Other contributors
-------------------
-
+.. [2] Matija Pavičević, Wouter Nijs, Konstantinos Kavvadias, Sylvain Quoilin,  Modelling flexible power demand and supply in the EU power system: soft-linking between JRC-EU-TIMES and the open-source Dispa-SET model, ECOS 2019 
 
 
