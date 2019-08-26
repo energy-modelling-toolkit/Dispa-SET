@@ -5,7 +5,7 @@ This is the main file of the DispaSET pre-processing tool. It comprises a single
 @author: S. Quoilin
 """
 
-import DispaSET as ds
+import dispaset as ds
 import datetime as dt
 import logging
 import os
