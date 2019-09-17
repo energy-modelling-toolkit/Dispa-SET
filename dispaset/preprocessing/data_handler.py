@@ -514,6 +514,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['SimulationType'] = sheet.cell_value(46, 2)
     config['ReserveCalculation'] = sheet.cell_value(47, 2)
     config['AllowCurtailment'] = sheet.cell_value(48, 2)
+    config['HydroScheduling'] = sheet.cell_value(49, 2)
 
     # List of parameters for which an external file path must be specified:
     params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',

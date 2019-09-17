@@ -885,7 +885,6 @@ def get_temp_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickl
     results = gdx_to_dataframe(gdx_to_list(gams_dir, resultfile, varname='all', verbose=True), fixindex=True,
                                verbose=True)
     return results
-    
 
 def mid_term_scheduling(config, zones, path='.',profiles=None):
     """
@@ -935,5 +934,44 @@ def mid_term_scheduling(config, zones, path='.',profiles=None):
         temp = results_t
     temp = temp.set_index(idx)
     temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})
-    
     return temp
+
+def build_dispaset_simulation(config, zones_mts=None, mts_plot=None):
+    '''
+    Dispa-SET function that builds different simulation environments
+    
+    :config:                    Read config file
+    :zones_mts:                 List of zones where new reservoir levels should be calculated eg. ['AT','BE',...'UK']
+    '''
+    # locate simmulation folder with temporary solutions
+    pathname = config['SimulationDirectory']
+    path, file = os.path.split(pathname)
+    head, tail = os.path.split(os.path.split(pathname)[0])
+    path = tail + '/' + file 
+    
+    if config['HydroScheduling'] == 'None':
+        SimData = ds.build_simulation(config)
+        print('Simulation without mid therm scheduling')
+        
+    elif config['HydroScheduling'] == 'Standard':
+        if zones_mts == None:
+            new_profiles = ds.mid_term_scheduling(config, config['zones'], path)
+            print('Simulation with all zones selected')
+            if mts_plot == True:
+                new_profiles.plot()
+            else:
+                print('No temporary profiles selected for display')
+        else:
+            # Calculate and plot new profiles
+            new_profiles = ds.mid_term_scheduling(config, zones_mts, path)
+            if mts_plot == True:
+                new_profiles.plot()
+            else:
+                print('No temporary profiles selected for display')
+       
+        # Build simulation data with new profiles
+        SimData = ds.build_simulation(config, new_profiles)
+    else:
+    # TODO: Enable different types of mid_term_scheduling options        
+        print('Has to be implemented')
+    return SimData
