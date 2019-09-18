@@ -5,7 +5,6 @@ This is the main file of the DispaSET pre-processing tool. It comprises a single
 @author: S. Quoilin
 """
 
-import dispaset as ds
 import datetime as dt
 import logging
 import os
@@ -24,6 +23,7 @@ from .data_check import check_units, check_chp, check_sto, check_heat_demand, ch
 from .utils import clustering, interconnections, incidence_matrix, select_units
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, write_to_excel, load_csv
 
+from ..solve import solve_GAMS, solve_GAMS_simple, solve_pyomo
 
 from ..misc.gdx_handler import write_variables, gdx_to_list, gdx_to_dataframe
 from ..common import commons  # Load fuel types, technologies, timestep, etc:
@@ -633,7 +633,7 @@ def build_simulation(config, profiles=None):
         [0, 0, 0, 1e5],     # Value of lost load
         [0, 0, 0, 0.5],       # allowed Share of quick start units in reserve
         [0, 0, 0, 1],       # Cost of spillage (EUR/MWh)
-        [0, 0, 0, 100],       # Value of water (for unsatisfied water reservoir levels, EUR/MWh)
+        [0, 0, 0, 1000000],       # Value of water (for unsatisfied water reservoir levels, EUR/MWh)
     ])
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
@@ -870,7 +870,7 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
             os.remove('Inputs.gdx')
     return SimData
 
-def get_temp_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickle'):
+def get_temp_sim_results(config, gams_dir=None, cache=False, temp_path='.pickle'):
     """
     This function reads the simulation environment folder once it has been solved and loads
     the input variables together with the results.
@@ -881,23 +881,19 @@ def get_temp_sim_results(path='.', gams_dir=None, cache=False, temp_path='.pickl
     :returns inputs,results:    Two dictionaries with all the outputs 
     """
 
-    resultfile = path + '/Results_simple.gdx'
+    resultfile = config['SimulationDirectory'] + '/Results_simple.gdx'
     results = gdx_to_dataframe(gdx_to_list(gams_dir, resultfile, varname='all', verbose=True), fixindex=True,
                                verbose=True)
     return results
 
-def mid_term_scheduling(config, zones, path='.',profiles=None):
+def mid_term_scheduling(config, zones,profiles=None):
     """
     This function reads the DispaSET config file, searches for active zones,
     loads data for each zone individually and solves model using UCM_h_simple.gms
     
     :config:                    Read config file
-    :path:                      --->>> CHECK IF NEEDED: provide path to the simulation folder
     """
-#    import datetime as dt
-#    import pandas as pd
-#    from .common import commons
-    
+
     # Day/hour corresponding to the first and last days of the simulation:
     # Note that the first available data corresponds to 2015.01.31 (23.00) and the
     # last day with data is 2015.12.31 (22.00)
@@ -921,9 +917,9 @@ def mid_term_scheduling(config, zones, path='.',profiles=None):
         print('[INFO    ] (Curently simulating Zone): ' + str(i) + ' out of ' + str(no_of_zones))
         temp_config = dict(config)
         temp_config['zones'] = [c]                    # Override country that needs to be simmulated
-        SimData = ds.build_simulation(temp_config)        # Create temporary SimData   
-        r = ds.solve_GAMS_simple(temp_config['SimulationDirectory'], temp_config['GAMS_folder'])
-        temp_results[c] = get_temp_sim_results(path=path)
+        SimData = build_simulation(temp_config)        # Create temporary SimData   
+        r = solve_GAMS_simple(temp_config['SimulationDirectory'], temp_config['GAMS_folder'])
+        temp_results[c] = get_temp_sim_results(config)
 #        print('Zones simulated: ' + str(i) + '/' + str(no_of_zones))
     for c in zones:
         results[c] = dict(temp_results[c]['OutputStorageLevel'])
@@ -936,12 +932,18 @@ def mid_term_scheduling(config, zones, path='.',profiles=None):
     temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})
     return temp
 
-def build_dispaset_simulation(config, zones_mts=None, mts_plot=None):
+def build_full_simulation(config, zones_mts=None, mts_plot=None):
     '''
-    Dispa-SET function that builds different simulation environments
+    Dispa-SET function that builds different simulation environments based on the hydro scheduling option in the config file
+    Hydro scheduling options:
+        Off      -  Hydro scheduling turned off, normal call of BuildSimulation function
+        Standard -  Standard variation of hydro scheduling, if zones are not individually specified in a list (e.a. zones = ['AT','DE'])
+                    hydro scheduling is imposed on all active zones from the Config file
+        TODO: Multiple zones at once
     
     :config:                    Read config file
     :zones_mts:                 List of zones where new reservoir levels should be calculated eg. ['AT','BE',...'UK']
+    :mts_plot:                  If ms_plot = True indicative plot with temporary computed reservoir levels is displayed
     '''
     # locate simmulation folder with temporary solutions
     pathname = config['SimulationDirectory']
@@ -949,13 +951,13 @@ def build_dispaset_simulation(config, zones_mts=None, mts_plot=None):
     head, tail = os.path.split(os.path.split(pathname)[0])
     path = tail + '/' + file 
     
-    if config['HydroScheduling'] == 'None':
-        SimData = ds.build_simulation(config)
+    if config['HydroScheduling'] == 'Off':
+        SimData = build_simulation(config)
         print('Simulation without mid therm scheduling')
         
     elif config['HydroScheduling'] == 'Standard':
         if zones_mts == None:
-            new_profiles = ds.mid_term_scheduling(config, config['zones'], path)
+            new_profiles = mid_term_scheduling(config, config['zones'])
             print('Simulation with all zones selected')
             if mts_plot == True:
                 new_profiles.plot()
@@ -963,15 +965,15 @@ def build_dispaset_simulation(config, zones_mts=None, mts_plot=None):
                 print('No temporary profiles selected for display')
         else:
             # Calculate and plot new profiles
-            new_profiles = ds.mid_term_scheduling(config, zones_mts, path)
+            new_profiles = mid_term_scheduling(config, zones_mts)
             if mts_plot == True:
                 new_profiles.plot()
             else:
                 print('No temporary profiles selected for display')
        
         # Build simulation data with new profiles
-        SimData = ds.build_simulation(config, new_profiles)
+        SimData = build_simulation(config, new_profiles)
     else:
-    # TODO: Enable different types of mid_term_scheduling options        
-        print('Has to be implemented')
+    # TODO: Enable mid_term_scheduling option for analysing multiple nodes at once        
+        print('Work in progress - Has yet to be implemented')
     return SimData

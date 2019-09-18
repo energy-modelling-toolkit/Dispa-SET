@@ -9,20 +9,20 @@ The script can be run in ipython, but for some reasons, it does not work more th
 """
 
 # Change directory to the root folder of Dispa-SET:
-import os
-os.chdir('..')
+import sys,os
+sys.path.append(os.path.abspath('..'))
 
 # Import Dispa-SET
 import dispaset as ds
 
 # Load the configuration file
-config = ds.load_config_excel('ConfigFiles/Config_Mid_Term_Scheduling.xlsx')
+config = ds.load_config_excel('../ConfigFiles/Config_Mid_Term_Scheduling.xlsx')
 
 ## List of countries where new reservoir levels should be calculated eg. ['AT','BE',...'UK']
 zones = ['AT','FR']
 
 ## Build simulation data with new profiles
-SimData = ds.build_dispaset_simulation(config,zones,mts_plot=True)
+SimData = ds.build_full_simulation(config,zones,mts_plot=True)
 
 #Solve using GAMS:
 r = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
