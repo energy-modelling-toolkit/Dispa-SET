@@ -633,7 +633,7 @@ def build_simulation(config, profiles=None):
         [0, 0, 0, 1e5],     # Value of lost load
         [0, 0, 0, 0.5],       # allowed Share of quick start units in reserve
         [0, 0, 0, 1],       # Cost of spillage (EUR/MWh)
-        [0, 0, 0, 1000000],       # Value of water (for unsatisfied water reservoir levels, EUR/MWh)
+        [0, 0, 0, 100],       # Value of water (for unsatisfied water reservoir levels, EUR/MWh)
     ])
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
@@ -906,30 +906,51 @@ def mid_term_scheduling(config, zones,profiles=None):
                                freq=commons['TimeStep'])
     idx_utc_noloc = idx_std - dt.timedelta(hours=1)
     idx = idx_utc_noloc
-
-    # Solving reservoir levels for each country
-    no_of_zones = len(zones)
-    results = {}
-    temp_results = {}
-    i = 0
-    for c in zones:
-        i = i + 1  
-        print('[INFO    ] (Curently simulating Zone): ' + str(i) + ' out of ' + str(no_of_zones))
-        temp_config = dict(config)
-        temp_config['zones'] = [c]                    # Override country that needs to be simmulated
+    
+    # Checking which type of hydro scheduling simulation is specified in the config file:
+    # Solving reservoir levels for each zone individually
+    if config['HydroScheduling'] == 'Zonal':
+        no_of_zones = len(zones)
+        results = {}
+        temp_results = {}
+        i = 0
+        for c in zones:
+            i = i + 1  
+            print('[INFO    ] (Curently simulating Zone): ' + str(i) + ' out of ' + str(no_of_zones))
+            temp_config = dict(config)
+            temp_config['zones'] = [c]                    # Override zone that needs to be simmulated
+            SimData = build_simulation(temp_config)       # Create temporary SimData   
+            r = solve_GAMS_simple(temp_config['SimulationDirectory'], temp_config['GAMS_folder'])
+            temp_results[c] = get_temp_sim_results(config)
+    #        print('Zones simulated: ' + str(i) + '/' + str(no_of_zones))
+        for c in zones:
+            results[c] = dict(temp_results[c]['OutputStorageLevel'])
+        temp = pd.DataFrame()
+        for c in zones:
+            r = pd.DataFrame.from_dict(results[c], orient='columns')
+            results_t = pd.concat([temp, r], axis = 1)
+            temp = results_t
+        temp = temp.set_index(idx)
+        temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})
+    # Solving reservoir levels for all regions simultaneously
+    elif config['HydroScheduling'] == 'Regional':
+        if zones == None:
+            temp_config = dict(config)
+        else:
+            temp_config = dict(config)
+            temp_config['zones'] = zones               # Override zones that need to be simmulated            
         SimData = build_simulation(temp_config)        # Create temporary SimData   
         r = solve_GAMS_simple(temp_config['SimulationDirectory'], temp_config['GAMS_folder'])
-        temp_results[c] = get_temp_sim_results(config)
-#        print('Zones simulated: ' + str(i) + '/' + str(no_of_zones))
-    for c in zones:
-        results[c] = dict(temp_results[c]['OutputStorageLevel'])
-    temp = pd.DataFrame()
-    for c in zones:
-        r = pd.DataFrame.from_dict(results[c], orient='columns')
+        temp_results = get_temp_sim_results(config)
+        results = dict(temp_results['OutputStorageLevel'])
+        temp = pd.DataFrame()
+        r = pd.DataFrame.from_dict(results, orient='columns')
         results_t = pd.concat([temp, r], axis = 1)
         temp = results_t
-    temp = temp.set_index(idx)
-    temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})
+        temp = temp.set_index(idx)
+        temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})        
+    else:
+        print('Mid term scheduling turned off')
     return temp
 
 def build_full_simulation(config, zones_mts=None, mts_plot=None):
@@ -937,43 +958,50 @@ def build_full_simulation(config, zones_mts=None, mts_plot=None):
     Dispa-SET function that builds different simulation environments based on the hydro scheduling option in the config file
     Hydro scheduling options:
         Off      -  Hydro scheduling turned off, normal call of BuildSimulation function
-        Standard -  Standard variation of hydro scheduling, if zones are not individually specified in a list (e.a. zones = ['AT','DE'])
+        Zonal    -  Zonal variation of hydro scheduling, if zones are not individually specified in a list (e.a. zones = ['AT','DE'])
                     hydro scheduling is imposed on all active zones from the Config file
-        TODO: Multiple zones at once
+        Regional -  Regional variation of hydro scheduling, if zones from a specific region are not individually specified in a list 
+                    (e.a. zones = ['AT','DE']), hydro scheduling is imposed on all active zones from the Config file simultaneously
     
     :config:                    Read config file
     :zones_mts:                 List of zones where new reservoir levels should be calculated eg. ['AT','BE',...'UK']
     :mts_plot:                  If ms_plot = True indicative plot with temporary computed reservoir levels is displayed
     '''
-    # locate simmulation folder with temporary solutions
-    pathname = config['SimulationDirectory']
-    path, file = os.path.split(pathname)
-    head, tail = os.path.split(os.path.split(pathname)[0])
-    path = tail + '/' + file 
     
     if config['HydroScheduling'] == 'Off':
         SimData = build_simulation(config)
         print('Simulation without mid therm scheduling')
         
-    elif config['HydroScheduling'] == 'Standard':
+    elif config['HydroScheduling'] == 'Zonal':
         if zones_mts == None:
             new_profiles = mid_term_scheduling(config, config['zones'])
             print('Simulation with all zones selected')
-            if mts_plot == True:
-                new_profiles.plot()
-            else:
-                print('No temporary profiles selected for display')
         else:
             # Calculate and plot new profiles
             new_profiles = mid_term_scheduling(config, zones_mts)
-            if mts_plot == True:
-                new_profiles.plot()
-            else:
-                print('No temporary profiles selected for display')
-       
+        if mts_plot == True:
+            new_profiles.plot()
+            print('Simulation with specified zones selected')
+        else:
+            print('No temporary profiles selected for display')
+         # Build simulation data with new profiles
+        SimData = build_simulation(config, new_profiles)
+
+    elif config['HydroScheduling'] == 'Regional':
+        if zones_mts == None:
+            new_profiles = mid_term_scheduling(config, config['zones'])
+            print('Simulation with all zones from the region selected')
+        else:
+            new_profiles = mid_term_scheduling(config, zones_mts)
+            print('Simulation with zones from a specified region selected')
+        if mts_plot == True:
+            new_profiles.plot()
+        else:
+            print('No temporary profiles selected for display')
         # Build simulation data with new profiles
         SimData = build_simulation(config, new_profiles)
+
     else:
-    # TODO: Enable mid_term_scheduling option for analysing multiple nodes at once        
-        print('Work in progress - Has yet to be implemented')
+        logging.error('The hydro scheduling option must be either: Off, Zonal or Regional')
+        sys.exit(1)
     return SimData
