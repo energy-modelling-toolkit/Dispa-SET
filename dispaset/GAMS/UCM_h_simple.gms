@@ -263,7 +263,6 @@ SystemCost(h)              [EUR]   Hourly system cost
 Reserve_2U(u,h)            [MW]    Spinning reserve up
 Reserve_2D(u,h)            [MW]    Spinning reserve down
 Reserve_3U(u,h)            [MW]    Non spinning quick start reserve up
-WaterSlack(s)              [MWh]   Unsatisfied water level constraint
 ;
 
 free variable
@@ -338,7 +337,6 @@ EQ_Objective_function..
          SystemCostD
          =E=
          sum(i,SystemCost(i))
-         +Config("WaterValue","val")*sum(s,WaterSlack(s))
 ;
 
 EQ_CostRampUp(u,i)$(CostRampUp(u) <> 0)..
@@ -471,8 +469,8 @@ EQ_Storage_balance(s,i)..
 * Minimum level at the end of the optimization horizon:
 EQ_Storage_boundaries(s,i)$(ord(i) = card(i))..
          StorageFinalMin(s)
-         =L=
-         StorageLevel(s,i) + WaterSlack(s)
+         =E=
+         StorageLevel(s,i)
 ;
 
 *Total emissions are capped
@@ -562,10 +560,13 @@ set days /1,'ndays'/;
 display days;
 PARAMETER elapsed(days);
 
-FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("RollingHorizon Length","day"),
+*FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("RollingHorizon Length","day"),
+FOR(day = 1 TO ndays by ndays,
          FirstHour = (day-1)*24+1;
-         LastHour = min(card(h),FirstHour + (Config("RollingHorizon Length","day")+Config("RollingHorizon LookAhead","day")) * 24 - 1);
-         LastKeptHour = LastHour - Config("RollingHorizon LookAhead","day") * 24;
+*         LastHour = min(card(h),FirstHour + (Config("RollingHorizon Length","day")+Config("RollingHorizon LookAhead","day")) * 24 - 1);
+         LastHour = min(card(h),FirstHour + ndays * 24 - 1);
+*         LastKeptHour = LastHour - Config("RollingHorizon LookAhead","day") * 24;
+         LastKeptHour = LastHour;
          i(h) = no;
          i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
          display day,FirstHour,LastHour,LastKeptHour;
