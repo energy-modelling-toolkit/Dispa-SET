@@ -263,6 +263,7 @@ SystemCost(h)              [EUR]   Hourly system cost
 Reserve_2U(u,h)            [MW]    Spinning reserve up
 Reserve_2D(u,h)            [MW]    Spinning reserve down
 Reserve_3U(u,h)            [MW]    Non spinning quick start reserve up
+WaterSlack(s)              [MWh]   Unsatisfied water level constraint
 ;
 
 free variable
@@ -275,7 +276,7 @@ SystemCostD                ![EUR]   Total system cost for one optimization perio
 * Definition of the minimum stable load:
 PowerMinStable(u) = PartLoadMin(u)*PowerCapacity(u);
 
-LoadMaximum(u,h)= AvailabilityFactor(u,h)*(1-OutageFactor(u,h));
+LoadMaximum(u,h)= AvailabilityFactor(u,h)*(1-OutageFactor(u,h))*Nunits(u);
 
 * parameters for clustered formulation (quickstart is defined as the capability to go to minimum power in 15 min)
 QuickStartPower(u,h) = 0;
@@ -337,6 +338,7 @@ EQ_Objective_function..
          SystemCostD
          =E=
          sum(i,SystemCost(i))
+         +Config("WaterValue","val")*sum(s,WaterSlack(s))
 ;
 
 EQ_CostRampUp(u,i)$(CostRampUp(u) <> 0)..
@@ -469,8 +471,8 @@ EQ_Storage_balance(s,i)..
 * Minimum level at the end of the optimization horizon:
 EQ_Storage_boundaries(s,i)$(ord(i) = card(i))..
          StorageFinalMin(s)
-         =E=
-         StorageLevel(s,i)
+         =L=
+         StorageLevel(s,i) + WaterSlack(s)
 ;
 
 *Total emissions are capped
@@ -625,6 +627,8 @@ LostLoad_2D(n,h)
 LostLoad_2U(n,h)
 LostLoad_3U(n,h)
 OutputGenMargin(n,h)
+LostLoad_WaterSlack(s)
+StorageShadowPrice(s,h)
 ;
 
 OutputFlow(l,z) = Flow.L(l,z);
@@ -641,23 +645,28 @@ LostLoad_2D(n,z) = LL_2D.L(n,z);
 LostLoad_2U(n,z) = LL_2U.L(n,z);
 LostLoad_3U(n,z) = LL_3U.L(n,z);
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
+LostLoad_WaterSlack(s) = WaterSlack.L(s);
+StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
+
 
 EXECUTE_UNLOAD "Results_simple.gdx"
-*OutputFlow,
-*OutputPower,
-*OutputStorageInput,
+OutputFlow,
+OutputPower,
+OutputStorageInput,
 OutputStorageLevel,
-*OutputSystemCost,
-*OutputSpillage,
-*OutputShedLoad,
-*OutputCurtailedPower,
-*OutputGenMargin,
-*LostLoad_MaxPower,
-*LostLoad_MinPower,
-*LostLoad_2D,
-*LostLoad_2U,
-*LostLoad_3U,
-*ShadowPrice,
+OutputSystemCost,
+OutputSpillage,
+OutputShedLoad,
+OutputCurtailedPower,
+OutputGenMargin,
+LostLoad_MaxPower,
+LostLoad_MinPower,
+LostLoad_2D,
+LostLoad_2U,
+LostLoad_3U,
+ShadowPrice,
+LostLoad_WaterSlack,
+StorageShadowPrice,
 status
 ;
 

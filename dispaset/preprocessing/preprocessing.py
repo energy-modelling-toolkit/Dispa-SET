@@ -630,10 +630,10 @@ def build_simulation(config, profiles=None):
         [dd_end.year, dd_end.month, dd_end.day, 0],
         [0, 0, config['HorizonLength'], 0],
         [0, 0, config['LookAhead'], 0],
-        [0, 0, 0, 1e5],     # Value of lost load
+        [0, 0, 0, config['default']['ValueOfLostLoad']],     # Value of lost load
         [0, 0, 0, 0.5],       # allowed Share of quick start units in reserve
-        [0, 0, 0, 1],       # Cost of spillage (EUR/MWh)
-        [0, 0, 0, 100],       # Value of water (for unsatisfied water reservoir levels, EUR/MWh)
+        [0, 0, 0, config['default']['PriceOfSpillage']],       # Cost of spillage (EUR/MWh)
+        [0, 0, 0, config['default']['WaterValue']],       # Value of water (for unsatisfied water reservoir levels, EUR/MWh)
     ])
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
@@ -984,8 +984,11 @@ def build_full_simulation(config, zones_mts=None, mts_plot=None):
             print('Simulation with specified zones selected')
         else:
             print('No temporary profiles selected for display')
+        # Export temporary results
+        
          # Build simulation data with new profiles
         SimData = build_simulation(config, new_profiles)
+
 
     elif config['HydroScheduling'] == 'Regional':
         if zones_mts == None:
