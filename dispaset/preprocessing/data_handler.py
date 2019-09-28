@@ -514,7 +514,10 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['SimulationType'] = sheet.cell_value(46, 2)
     config['ReserveCalculation'] = sheet.cell_value(47, 2)
     config['AllowCurtailment'] = sheet.cell_value(48, 2)
-    config['HydroScheduling'] = sheet.cell_value(49, 2)
+
+    config['HydroScheduling'] = sheet.cell_value(53, 2)
+    config['HydroSchedulingHorizon'] = sheet.cell_value(54, 2)
+    config['InitialFinalReservoirLevel'] = sheet.cell_value(55, 2)
 
     # List of parameters for which an external file path must be specified:
     params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
@@ -536,6 +539,8 @@ def load_config_excel(ConfigFile,AbsPath=True):
                 config[param] = os.path.join(basefolder,config[param])
 
     config['default'] = {}
+    config['default']['ReservoirLevelInitial'] = sheet.cell_value(56, 5)
+    config['default']['ReservoirLevelFinal'] = sheet.cell_value(57, 5)
     config['default']['PriceOfNuclear'] = sheet.cell_value(69, 5)
     config['default']['PriceOfBlackCoal'] = sheet.cell_value(70, 5)
     config['default']['PriceOfGas'] = sheet.cell_value(71, 5)
@@ -547,6 +552,9 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['default']['LoadShedding'] = sheet.cell_value(65, 5)
     config['default']['CostHeatSlack'] = sheet.cell_value(79, 5)
     config['default']['CostLoadShedding'] = sheet.cell_value(80, 5)
+    config['default']['ValueOfLostLoad'] = sheet.cell_value(81, 5)
+    config['default']['PriceOfSpillage'] = sheet.cell_value(82, 5)    
+    config['default']['WaterValue'] = sheet.cell_value(83, 5)
 
     # read the list of zones to consider:
     def read_truefalse(sheet, rowstart, colstart, rowstop, colstop):
@@ -561,8 +569,8 @@ def load_config_excel(ConfigFile,AbsPath=True):
                 out.append(sheet.cell_value(i, colstart))
         return out
 
-    config['zones'] = read_truefalse(sheet, 86, 1, 102, 3)
-    config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 102, 6)
+    config['zones'] = read_truefalse(sheet, 86, 1, 108, 3)
+    config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 108, 6)
 
     config['modifiers'] = {}
     config['modifiers']['Demand'] = sheet.cell_value(111, 2)
