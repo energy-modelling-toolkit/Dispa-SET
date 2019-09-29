@@ -26,39 +26,37 @@ def isStorage(tech):
 
 
 
-def check_AvailabilityFactors(plants,AF):
+def check_AvailabilityFactors(plants, AF):
     '''
     Function that checks the validity of the provided availability factors and warns
     if a default value of 100% is used.
     '''
-    for t in ['WTON', 'WTOF', 'PHOT', 'HROR']:
-        for i in plants[plants['Technology']==t].index:
-            u = plants.loc[i,'Unit']
-            if u in AF:
-                if (AF[u].values == 1).all():
-                    logging.critical('The availability factor of unit ' + str(u) + ' + for technology ' + t + ' is always 100%!')
-                if (AF[u].values == np.inf).any():
-                    logging.critical('The Availability factor of unit ' + str(u) + ' + for technology ' + t + ' is of type +Inf. Inputs must be checked carefully')
-                if (AF[u].values == -np.inf).any():
-                    logging.critical('The Availability factor of unit ' + str(u) + ' + for technology ' + t + ' is of type -Inf. Inputs must be checked carefully')
-                if (AF[u].values > 1).any():
-                    logging.critical('The Availability factor of unit ' + str(u) + ' + for technology ' + t + ' is higher than 1. Inputs must be checked carefully')
-                if (AF[u].values < 0).any():
-                    logging.critical('The Availability factor of unit ' + str(u) + ' + for technology ' + t + ' is lower than 0. Inputs must be checked carefully')
-            else:
-                logging.critical('Unit ' + str(u) + ' (technology ' + t + ') does not appear in the availbilityFactors table. Its values will be set to 100%!')
-    if (AF.dropna().values < 0).any():
-        logging.error('Some Availaibility factors are negative')
-        sys.exit(1)
-    if (AF.dropna().values > 1).any():
-        logging.warning('Some Availability factors are higher than one. They must be carefully checked')
+    RES = ['WTON', 'WTOF', 'PHOT', 'HROR']
+    for i,v in plants.iterrows():
+        u = v['Unit']
+        t = v['Technology']
+        if t in RES and u not in AF:
+            logging.error('Unit ' + str(u) + ' (technology ' + t + ') does not appear in the availbilityFactors table. Please provide')
+            raise ValueError('Please provide RES AF timeseries for '+str(u))
+        if u in AF:
+            if pd.isna(AF[u]).any():
+                logging.warning('The Availability factor of unit ' + str(u) + ' + for technology ' + t + ' contains empty values.')
+            df_af = AF[u].dropna()
+            if (df_af == 1).all(axis=None):
+                logging.debug('The availability factor of unit ' + str(u) + ' + for technology ' + t + ' is always 100%!')
+            if ((0 > df_af) & (df_af > 1)).any(axis=None):
+                logging.error('The Availability factor of unit ' + str(u) + ' + for technology ' + t + ' should be between 0 and 1. Inputs must be checked carefully')
+        else:
+            logging.error('Unit ' + str(u) + ' (technology ' + t + ') does not appear in the availbilityFactors table. Its values will be set to 100%!')
 
 def check_clustering(plants,plants_merged):
     '''
     Function that checks that the installed capacities are still equal after the clustering process
 
     :param plants:  Non-clustered list of units
-    :param plants_merged:  clustered list of units
+    :param plants_me    for i in techs.index:            if not (np.isfinite(AF[uu].valuu].values)).all(axis=None):
+    for i in techs.index:            if not (np.isfinite(AF[uu].valuu].values)).all(axis=None):
+rged:  clustered list of units
     '''
     # First, list all pairs of technology - fuel
     techs = pd.DataFrame( [[plants.Technology[idx],plants.Fuel[idx]] for idx in plants.index] )
