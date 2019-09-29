@@ -34,16 +34,13 @@ _ = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
 inputs,results = ds.get_sim_results(config['SimulationDirectory'],cache=False)
 
 # Generate country-specific plots
-ds.plot_country(inputs,results)
+ds.plot_zone(inputs,results)
 
 # Bar plot with the installed capacities in all countries:
-cap = ds.plot_country_capacities(inputs)
+cap = ds.plot_zone_capacities(inputs)
 
 # Bar plot with the energy balances in all countries:
-ds.plot_energy_country_fuel(inputs,results,ds.get_indicators_powerplant(inputs,results))
+ds.plot_energy_zone_fuel(inputs,results,ds.get_indicators_powerplant(inputs,results))
 
 # Analyse the results for each country and provide quantitative indicators:
 r = ds.get_result_analysis(inputs,results)
-
-# Plot the reservoir levels
-ds.storage_levels(inputs,results)

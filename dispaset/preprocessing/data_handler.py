@@ -553,7 +553,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['default']['CostHeatSlack'] = sheet.cell_value(79, 5)
     config['default']['CostLoadShedding'] = sheet.cell_value(80, 5)
     config['default']['ValueOfLostLoad'] = sheet.cell_value(81, 5)
-    config['default']['PriceOfSpillage'] = sheet.cell_value(82, 5)    
+    config['default']['PriceOfSpillage'] = sheet.cell_value(82, 5)
     config['default']['WaterValue'] = sheet.cell_value(83, 5)
 
     # read the list of zones to consider:
@@ -569,8 +569,8 @@ def load_config_excel(ConfigFile,AbsPath=True):
                 out.append(sheet.cell_value(i, colstart))
         return out
 
-    config['zones'] = read_truefalse(sheet, 86, 1, 108, 3)
-    config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 108, 6)
+    config['zones'] = read_truefalse(sheet, 86, 1, 109, 3)
+    config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 109, 6)
 
     config['modifiers'] = {}
     config['modifiers']['Demand'] = sheet.cell_value(111, 2)
