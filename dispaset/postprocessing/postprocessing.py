@@ -182,15 +182,18 @@ def get_result_analysis(inputs, results):
     print ('\nAverage electricity cost : ' + str(Cost_kwh) + ' EUR/MWh')
 
     for key in ['LostLoad_RampUp', 'LostLoad_2D', 'LostLoad_MinPower',
-                'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower']:
-        LL = results[key].values.sum()
+                'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_WaterSlack']:
+        if key == 'LostLoad_WaterSlack':
+            LL = results[key]
+        else:
+            LL = results[key].values.sum()
         if LL > 0.0001 * TotalLoad:
             logging.critical('\nThere is a significant amount of lost load for ' + key + ': ' + str(
                 LL) + ' MWh. The results should be checked carefully')
         elif LL > 100:
             logging.warning('\nThere is lost load for ' + key + ': ' + str(
                 LL) + ' MWh. The results should be checked')
-
+    
     print ('\nAggregated statistics for the considered area:')
     print ('Total consumption:' + str(TotalLoad / 1E6) + ' TWh')
     print ('Peak load:' + str(PeakLoad) + ' MW')

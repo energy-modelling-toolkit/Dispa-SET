@@ -125,12 +125,12 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     index_long = pd.date_range(start=pd.datetime(*StartDate), end=StopDate_long, freq='h')
 
     keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
-            'LostLoad_RampDown', 'LostLoad_2D', 'ShadowPrice'] #'status'
+            'LostLoad_RampDown', 'LostLoad_2D','ShadowPrice', 'StorageShadowPrice'] #'status'
 
     keys_sparse = ['OutputPower', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
                    'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput', 'OutputHeat',
                    'OutputHeatSlack']
-
+    
     # Setting the proper index to the result dataframes:
     from itertools import chain
     for key in chain(keys, keys_sparse):
@@ -147,12 +147,19 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
                     results[key] = results[key].reindex(index).fillna(0)
         else:
             results[key] = pd.DataFrame(index=index)
-
+    
+    # Include water slack in the results (only one number)
+    if 'LostLoad_WaterSlack' in results:
+        results['LostLoad_WaterSlack'] = results['LostLoad_WaterSlack']
+    else:
+        results['LostLoad_WaterSlack'] = 0
+        
     # Clean power plant names:
     results['OutputPower'].columns = clean_strings(results['OutputPower'].columns.tolist())
     # Remove epsilons:
     if 'ShadowPrice' in results:
         results['ShadowPrice'][results['ShadowPrice'] >= 1e300] = 0
+        results['StorageShadowPrice'][results['StorageShadowPrice'] >= 1e300] = 0
 
     status = {}
     if "model" in results['status']:

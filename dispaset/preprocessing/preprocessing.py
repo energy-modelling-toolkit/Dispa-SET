@@ -986,30 +986,47 @@ def build_full_simulation(config, zones_mts=None, mts_plot=None):
     :zones_mts:                 List of zones where new reservoir levels should be calculated eg. ['AT','BE',...'UK']
     :mts_plot:                  If ms_plot = True indicative plot with temporary computed reservoir levels is displayed
     '''
-    
+    y_start, m_start, d_start, __, __, __ = config['StartDate']
+    y_stop, m_stop, d_stop, __, __, __ = config['StopDate']
+    # Hydro scheduling turned off, build_simulation performed without temporary computed reservoir levels
     if config['HydroScheduling'] == 'Off':
         SimData = build_simulation(config)
         print('Simulation without mid therm scheduling')
-        
+    # Hydro scheduling per Zone    
     elif config['HydroScheduling'] == 'Zonal':
+        # Dates for the mid term scheduling
+        if config['HydroSchedulingHorizon'] == 'Annual':
+            config['StartDate'] = (y_start, 1, 1, 00, 00, 00)   # updating start date to the beginning of the year
+            config['StopDate'] = (y_start, 12, 31, 23, 59, 00)  # updating stopdate to the end of the year
+            logging.info('Hydro scheduling is performed for the period between 01.01.' + str(y_start) + ' and 12.31.' + str(y_start)) 
+        else:
+            logging.info('Hydro scheduling is performed between Start and Stop dates!') 
+        # Mid term scheduling zone selection and new profile calculation
         if zones_mts == None:
             new_profiles = mid_term_scheduling(config, config['zones'])
             print('Simulation with all zones selected')
         else:
-            # Calculate and plot new profiles
             new_profiles = mid_term_scheduling(config, zones_mts)
+        # Plot new profiles
         if mts_plot == True:
             new_profiles.plot()
             print('Simulation with specified zones selected')
         else:
             print('No temporary profiles selected for display')
-        # Export temporary results
-        
          # Build simulation data with new profiles
+        config['StartDate'] = (y_start, m_start, d_start, 00, 00, 00)   # updating start date to the beginning of the year
+        config['StopDate'] = (y_stop, m_stop, d_stop, 23, 59, 00)  # updating stopdate to the end of the year
         SimData = build_simulation(config, new_profiles)
-
-
+    # Hydro scheduling per region
     elif config['HydroScheduling'] == 'Regional':
+        # Dates for the mid term scheduling
+        if config['HydroSchedulingHorizon'] == 'Annual':
+            config['StartDate'] = (y_start, 1, 1, 00, 00, 00)   # updating start date to the beginning of the year
+            config['StopDate'] = (y_start, 12, 31, 23, 59, 00)  # updating stopdate to the end of the year
+            logging.info('Hydro scheduling is performed for the period between 01.01.' + str(y_start) + ' and 12.31.' + str(y_start)) 
+        else:
+            logging.info('Hydro scheduling is performed between Start and Stop dates!')
+        # Mid term scheduling zone selection and new profile calculation
         if zones_mts == None:
             new_profiles = mid_term_scheduling(config, config['zones'])
             print('Simulation with all zones from the region selected')
@@ -1021,9 +1038,7 @@ def build_full_simulation(config, zones_mts=None, mts_plot=None):
         else:
             print('No temporary profiles selected for display')
         # Build simulation data with new profiles
+        config['StartDate'] = (y_start, m_start, d_start, 00, 00, 00)   # updating start date to the beginning of the year
+        config['StopDate'] = (y_stop, m_stop, d_stop, 23, 59, 00)  # updating stopdate to the end of the year
         SimData = build_simulation(config, new_profiles)
-
-    else:
-        logging.error('The hydro scheduling option must be either: Off, Zonal or Regional')
-        sys.exit(1)
     return SimData
