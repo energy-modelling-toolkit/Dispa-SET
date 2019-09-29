@@ -470,17 +470,36 @@ def build_simulation(config, profiles=None):
 
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
-        if s in ReservoirLevels_merged:
-            # get the time
-            parameters['StorageInitial']['val'][i] = ReservoirLevels_merged[s][idx_long[0]] * \
-                                                     Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
-            parameters['StorageProfile']['val'][i, :] = ReservoirLevels_merged[s][idx_long].values
-            if any(ReservoirLevels_merged[s] > 1):
-                logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
+        if profiles is None:
+            if config['InitialFinalReservoirLevel'] == 0:
+                if s in ReservoirLevels_merged:
+                    # get the time
+                    parameters['StorageInitial']['val'][i] = ReservoirLevels_merged[s][idx_long[0]] * \
+                                                             Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
+                    parameters['StorageProfile']['val'][i, :] = ReservoirLevels_merged[s][idx_long].values
+                    if any(ReservoirLevels_merged[s] > 1):
+                        logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
+                else:
+                    logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
+                    parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
+                    parameters['StorageProfile']['val'][i, :] = 0.5
+            else:
+                if config['default']['ReservoirLevelInitial'] or config['default']['ReservoirLevelFinal'] > 1:
+                    logging.warning(s + ': The initial or final reservoir levels are higher than its capacity!' )
+                parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * Plants_sto['StorageCapacity'][s]
+                parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
         else:
-            logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
-            parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
-            parameters['StorageProfile']['val'][i, :] = 0.5
+            if s in ReservoirLevels_merged:
+                # get the time
+                parameters['StorageInitial']['val'][i] = ReservoirLevels_merged[s][idx_long[0]] * \
+                                                         Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
+                parameters['StorageProfile']['val'][i, :] = ReservoirLevels_merged[s][idx_long].values
+                if any(ReservoirLevels_merged[s] > 1):
+                    logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
+            else:
+                logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
+                parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
+                parameters['StorageProfile']['val'][i, :] = 0.5
 
     # Storage Inflows:
     for i, s in enumerate(sets['s']):
