@@ -560,8 +560,8 @@ def load_config_excel(ConfigFile,AbsPath=True):
                 out.append(sheet.cell_value(i, colstart))
         return out
 
-    config['zones'] = read_truefalse(sheet, 86, 1, 102, 3)
-    config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 102, 6)
+    config['zones'] = read_truefalse(sheet, 86, 1, 109, 3)
+    config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 109, 6)
 
     config['modifiers'] = {}
     config['modifiers']['Demand'] = sheet.cell_value(111, 2)
