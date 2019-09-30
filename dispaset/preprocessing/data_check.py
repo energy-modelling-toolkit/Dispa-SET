@@ -40,12 +40,15 @@ def check_AvailabilityFactors(plants, AF):
             raise ValueError('Please provide RES AF timeseries for '+str(u))
         if u in AF:
             if pd.isna(AF[u]).any():
-                logging.warning('The Availability factor of unit ' + str(u) + ' + for technology ' + t + ' contains empty values.')
+                Nna = pd.isna(AF[u]).count()
+                logging.warning('The Availability factor of unit {} for technology {} contains {} empty values.'.format(str(u),t,Nna))
             df_af = AF[u].dropna()
             if (df_af == 1).all(axis=None):
                 logging.debug('The availability factor of unit ' + str(u) + ' + for technology ' + t + ' is always 100%!')
-            if ((0 > df_af) & (df_af > 1)).any(axis=None):
-                logging.error('The Availability factor of unit ' + str(u) + ' + for technology ' + t + ' should be between 0 and 1. Inputs must be checked carefully')
+            if ((df_af < 0) | (df_af > 1)).any(axis=None):
+                Nup = df_af[df_af>1].count()
+                Ndo = df_af[df_af<0].count()
+                logging.error('The Availability factor of unit {} for technology {} should be between 0 and 1. There are {} values above 1.0 and {} below 0.0'.format(str(u),t,Nup,Ndo))
         else:
             logging.error('Unit ' + str(u) + ' (technology ' + t + ') does not appear in the availbilityFactors table. Its values will be set to 100%!')
 
@@ -54,9 +57,7 @@ def check_clustering(plants,plants_merged):
     Function that checks that the installed capacities are still equal after the clustering process
 
     :param plants:  Non-clustered list of units
-    :param plants_me    for i in techs.index:            if not (np.isfinite(AF[uu].valuu].values)).all(axis=None):
-    for i in techs.index:            if not (np.isfinite(AF[uu].valuu].values)).all(axis=None):
-rged:  clustered list of units
+    :param plants_merged:  clustered list of units
     '''
     # First, list all pairs of technology - fuel
     techs = pd.DataFrame( [[plants.Technology[idx],plants.Fuel[idx]] for idx in plants.index] )
