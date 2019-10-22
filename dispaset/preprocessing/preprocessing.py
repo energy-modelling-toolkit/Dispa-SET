@@ -484,7 +484,7 @@ def build_simulation(config, profiles=None):
                     parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
                     parameters['StorageProfile']['val'][i, :] = 0.5
             else:
-                if config['default']['ReservoirLevelInitial'] or config['default']['ReservoirLevelFinal'] > 1:
+                if config['default']['ReservoirLevelInitial'] > 1 or config['default']['ReservoirLevelFinal'] > 1:
                     logging.warning(s + ': The initial or final reservoir levels are higher than its capacity!' )
                 parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * Plants_sto['StorageCapacity'][s]
                 parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
