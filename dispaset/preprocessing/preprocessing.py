@@ -471,7 +471,7 @@ def build_simulation(config, profiles=None):
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
         if profiles is None:
-            if config['InitialFinalReservoirLevel'] == 0:
+            if (config['InitialFinalReservoirLevel'] == 0) or (config['InitialFinalReservoirLevel'] == ""):
                 if s in ReservoirLevels_merged:
                     # get the time
                     parameters['StorageInitial']['val'][i] = ReservoirLevels_merged[s][idx_long[0]] * \
@@ -484,7 +484,7 @@ def build_simulation(config, profiles=None):
                     parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
                     parameters['StorageProfile']['val'][i, :] = 0.5
             else:
-                if config['default']['ReservoirLevelInitial'] > 1 or config['default']['ReservoirLevelFinal'] > 1:
+                if (config['default']['ReservoirLevelInitial'] > 1) or (config['default']['ReservoirLevelFinal'] > 1):
                     logging.warning(s + ': The initial or final reservoir levels are higher than its capacity!' )
                 parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * Plants_sto['StorageCapacity'][s]
                 parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
@@ -644,16 +644,36 @@ def build_simulation(config, profiles=None):
     dd_end = idx_long[-2]
 
 #TODO: integrated the parameters (VOLL, Water value, etc) from the excel config file
-    values = np.array([
-        [dd_begin.year, dd_begin.month, dd_begin.day, 0],
+    # Check if values are specified in the config and overwrite the default ones
+    values_lst = ['ValueOfLostLoad','ShareOfQuickStartUnits','PriceOfSpillage','WaterValue']
+    values_val = [1e5,0.5,1,100]
+    values = np.array([[dd_begin.year, dd_begin.month, dd_begin.day, 0],
         [dd_end.year, dd_end.month, dd_end.day, 0],
         [0, 0, config['HorizonLength'], 0],
-        [0, 0, config['LookAhead'], 0],
-        [0, 0, 0, config['default']['ValueOfLostLoad']],     # Value of lost load
-        [0, 0, 0, 0.5],       # allowed Share of quick start units in reserve
-        [0, 0, 0, config['default']['PriceOfSpillage']],       # Cost of spillage (EUR/MWh)
-        [0, 0, 0, config['default']['WaterValue']],       # Value of water (for unsatisfied water reservoir levels, EUR/MWh)
-    ])
+        [0, 0, config['LookAhead'], 0]])
+    for vl in values_lst:
+        if vl in config['default']:
+            if config['default'][vl] == "":
+                if vl == 'ValueOfLostLoad':
+                    tmp_value = np.array([[0,0,0,values_val[0]]])
+                if vl == 'ShareOfQuickStartUnits':
+                    tmp_value = np.array([[0,0,0,values_val[1]]])
+                if vl == 'PriceOfSpillage':
+                    tmp_value = np.array([[0,0,0,values_val[2]]])
+                if vl == 'WaterValue':
+                    tmp_value = np.array([[0,0,0,values_val[3]]])
+            else:
+                tmp_value = np.array([[0,0,0,config['default'][vl]]])
+        else:
+            if vl == 'ValueOfLostLoad':
+                tmp_value = np.array([[0,0,0,values_val[0]]])
+            if vl == 'ShareOfQuickStartUnits':
+                tmp_value = np.array([[0,0,0,values_val[1]]])
+            if vl == 'PriceOfSpillage':
+                tmp_value = np.array([[0,0,0,values_val[2]]])
+            if vl == 'WaterValue':
+                tmp_value = np.array([[0,0,0,values_val[3]]])
+        values = np.append(values, tmp_value, axis=0)
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
     # %%#################################################################################################################
@@ -905,7 +925,7 @@ def get_temp_sim_results(config, gams_dir=None, cache=False, temp_path='.pickle'
                                verbose=True)
     return results
 
-def mid_term_scheduling(config, zones,profiles=None):
+def mid_term_scheduling(config, zones, profiles=None):
     """
     This function reads the DispaSET config file, searches for active zones,
     loads data for each zone individually and solves model using UCM_h_simple.gms
@@ -921,7 +941,8 @@ def mid_term_scheduling(config, zones,profiles=None):
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
     
     # Indexes of the simualtion:
-    idx_std = pd.DatetimeIndex(start=pd.datetime(*config['StartDate']), end=pd.datetime(*config['StopDate']),
+    idx_std = pd.DatetimeIndex(start=pd.datetime(*config['StartDate']), 
+                               end=pd.datetime(*config['StopDate']),
                                freq=commons['TimeStep'])
     idx_utc_noloc = idx_std - dt.timedelta(hours=1)
     idx = idx_utc_noloc
@@ -935,11 +956,12 @@ def mid_term_scheduling(config, zones,profiles=None):
         i = 0
         for c in zones:
             i = i + 1  
-            print('[INFO    ] (Curently simulating Zone): ' + str(i) + ' out of ' + str(no_of_zones))
+            logging.info('(Curently simulating Zone): ' + str(i) + ' out of ' + str(no_of_zones))
             temp_config = dict(config)
             temp_config['zones'] = [c]                    # Override zone that needs to be simmulated
             SimData = build_simulation(temp_config)       # Create temporary SimData   
-            r = solve_GAMS_simple(temp_config['SimulationDirectory'], temp_config['GAMS_folder'])
+            r = solve_GAMS_simple(temp_config['SimulationDirectory'], 
+                                  temp_config['GAMS_folder'])
             temp_results[c] = get_temp_sim_results(config)
     #        print('Zones simulated: ' + str(i) + '/' + str(no_of_zones))
         for c in zones:
@@ -969,7 +991,7 @@ def mid_term_scheduling(config, zones,profiles=None):
         temp = temp.set_index(idx)
         temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})        
     else:
-        print('Mid term scheduling turned off')
+        logging.info('Mid term scheduling turned off')
     return temp
 
 def build_full_simulation(config, zones_mts=None, mts_plot=None):
@@ -988,10 +1010,11 @@ def build_full_simulation(config, zones_mts=None, mts_plot=None):
     '''
     y_start, m_start, d_start, __, __, __ = config['StartDate']
     y_stop, m_stop, d_stop, __, __, __ = config['StopDate']
+    # Check existance of hydro scheduling module in the config file
     # Hydro scheduling turned off, build_simulation performed without temporary computed reservoir levels
-    if config['HydroScheduling'] == 'Off':
+    if (config['HydroScheduling'] == 'Off') or (config['HydroScheduling'] == ""):
+        logging.info('Simulation without mid therm scheduling')
         SimData = build_simulation(config)
-        print('Simulation without mid therm scheduling')
     # Hydro scheduling per Zone    
     elif config['HydroScheduling'] == 'Zonal':
         # Dates for the mid term scheduling
@@ -1004,15 +1027,15 @@ def build_full_simulation(config, zones_mts=None, mts_plot=None):
         # Mid term scheduling zone selection and new profile calculation
         if zones_mts == None:
             new_profiles = mid_term_scheduling(config, config['zones'])
-            print('Simulation with all zones selected')
+            logging.info('Simulation with all zones selected')
         else:
             new_profiles = mid_term_scheduling(config, zones_mts)
         # Plot new profiles
         if mts_plot == True:
             new_profiles.plot()
-            print('Simulation with specified zones selected')
+            logging.infot('Simulation with specified zones selected')
         else:
-            print('No temporary profiles selected for display')
+            logging.info('No temporary profiles selected for display')
          # Build simulation data with new profiles
         config['StartDate'] = (y_start, m_start, d_start, 00, 00, 00)   # updating start date to the beginning of the year
         config['StopDate'] = (y_stop, m_stop, d_stop, 23, 59, 00)  # updating stopdate to the end of the year
@@ -1029,14 +1052,14 @@ def build_full_simulation(config, zones_mts=None, mts_plot=None):
         # Mid term scheduling zone selection and new profile calculation
         if zones_mts == None:
             new_profiles = mid_term_scheduling(config, config['zones'])
-            print('Simulation with all zones from the region selected')
+            logging.info('Simulation with all zones from the region selected')
         else:
             new_profiles = mid_term_scheduling(config, zones_mts)
-            print('Simulation with zones from a specified region selected')
+            logging.info('Simulation with zones from a specified region selected')
         if mts_plot == True:
             new_profiles.plot()
         else:
-            print('No temporary profiles selected for display')
+            logging.info('No temporary profiles selected for display')
         # Build simulation data with new profiles
         config['StartDate'] = (y_start, m_start, d_start, 00, 00, 00)   # updating start date to the beginning of the year
         config['StopDate'] = (y_stop, m_stop, d_stop, 23, 59, 00)  # updating stopdate to the end of the year
