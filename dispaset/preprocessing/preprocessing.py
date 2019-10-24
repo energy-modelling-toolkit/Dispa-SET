@@ -470,7 +470,7 @@ def build_simulation(config, profiles=None):
 
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
-        if profiles is None:
+        if profiles is not None:
             if (config['InitialFinalReservoirLevel'] == 0) or (config['InitialFinalReservoirLevel'] == ""):
                 if s in ReservoirLevels_merged:
                     # get the time

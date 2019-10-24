@@ -28,6 +28,8 @@ col_keys = {'OutputCommitted':('u','h'),
             'LostLoad_RampUp':('n','h'),
             'LostLoad_RampDown':('n','h'),
             'ShadowPrice':('n','h'),
+            'StorageShadowPrice':('u','h'),
+            'LostLoad_WaterSlack':('u'),
             'status':tuple(),
             '*':tuple()
           }
@@ -203,10 +205,14 @@ def results_to_xarray(results):
                                       dims=[ind[1], ind[0]],
                                       name=var_name)
                 elif len(ind) == 1:
-                    ds = xr.DataArray(df.values,
-                                      coords={ind[0]: df.index.values,},
-                                      dims=[ind[0]],
-                                      name=var_name)
+                    if k == 'LostLoad_WaterSlack':
+                        ds = xr.DataArray(df,
+                                          name=var_name)
+                    else:
+                        ds = xr.DataArray(df.values,
+                                          coords={ind[0]: df.index.values,},
+                                          dims=[ind[0]],
+                                          name=var_name)
                 else:
                     pass #print('Ignoring ', var_name)
                 all_ds.append(ds)
