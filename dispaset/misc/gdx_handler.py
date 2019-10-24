@@ -345,10 +345,10 @@ def get_gams_path(gams_dir=None):
     if isinstance(gams_dir, bytes):
         gams_dir = gams_dir.decode()
     if gams_dir is not None:
-        if not os.path.exists(gams_dir):
-            logging.warning('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
+        if os.path.isdir(gams_dir):
+            return gams_dir.encode()
         else:
-            return os.path.dirname(gams_dir).encode()
+            logging.warning('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
 
     import subprocess
     out = None
