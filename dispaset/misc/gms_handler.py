@@ -52,7 +52,7 @@ def solve_low_level(gams_folder,sim_folder,output_lst=False,logoption=3):
     model = os.path.abspath(os.path.join(sim_folder, 'UCM_h.gms'))
 
     def callGams(gamsxHandle, optHandle, sysDir, model):
-        deffile = force_str(sysDir + u'/optgams.def')
+        deffile = force_str(os.path.join(sysDir, 'optgams.def'))
 
         if optReadDefinition(optHandle, deffile):
             logging.error("*** Error ReadDefinition, cannot read def file:" + deffile)
