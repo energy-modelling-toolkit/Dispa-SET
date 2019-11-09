@@ -132,7 +132,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
         plt.legend(handles=[line_demand] + patches[::-1], loc=4)
     else:
         plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_SOC] + patches[::-1], loc=4)
-
+    plt.show()
 
 def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=False):
     """Create multiaxis rug plot from pandas Dataframe
@@ -333,5 +333,25 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
             el.plot_rug(ZoneGeneration, on_off=False, cmap='gist_heat_r', fig_title=z)
         except ImportError:
             plot_rug(ZoneGeneration, on_off=False, cmap='gist_heat_r', fig_title=z)
+
+    return True
+
+
+def storage_levels(inputs, results):
+    """
+    Reads the DispaSET results and provides the difference between the minimum storage profile and the computed storage profile
+
+    :param inputs:      DispaSET inputs
+    :param results:     DispaSET results
+    """
+    isstorage = pd.Series(index=inputs['units'].index)
+    for u in isstorage.index:
+        isstorage[u] = inputs['units'].Technology[u] in commons['tech_storage']
+    sto_units = inputs['units'][isstorage]
+    results['OutputStorageLevel'].plot(figsize=(12,6),title='Storage levels')
+    StorageError = ((inputs['param_df']['StorageProfile']*sto_units.StorageCapacity).subtract(results['OutputStorageLevel'],'columns')).divide((sto_units.StorageCapacity),'columns')*(-100)
+    StorageError = StorageError.dropna(1)
+    ax = StorageError.plot(figsize=(12,6),title='Difference between the calculated storage Levels and the (imposed) minimum level')
+    ax.set_ylabel('%')
 
     return True
