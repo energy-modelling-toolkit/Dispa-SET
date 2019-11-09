@@ -63,7 +63,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
     sumplot_pos['zero'] = 0
     sumplot_pos = sumplot_pos[['zero'] + sumplot_pos.columns[:-1].tolist()]
 
-    fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(figsize), frameon=False,  # 14 4*2
+    fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(figsize), frameon=True,  # 14 4*2
                              gridspec_kw={'height_ratios': [2.7, .8], 'hspace': 0.04})
 
     # Create left axis:
@@ -180,7 +180,7 @@ def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=Fal
 
     __, axes = plt.subplots(nrows=rows, ncols=1, sharex=True,
                             figsize=(16, 0.25 * rows), squeeze=False,
-                            frameon=False, gridspec_kw={'hspace': 0.15})
+                            frameon=True, gridspec_kw={'hspace': 0.15})
 
     for (item, iseries), iax in zip(df_series.iteritems(), axes.ravel()):
         format_axis(iax)
