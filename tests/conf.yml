@@ -17,6 +17,7 @@ Clustering: 1.0
 SimulationType:  'MILP'  #LP, LP clustered
 ReserveCalculation:  'Generic'
 AllowCurtailment: 1.0
+CEP: 1
 
 #-------------------
 CostHeatSlack:  ''

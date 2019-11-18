@@ -1,7 +1,7 @@
 $Title UCM model
 
 $eolcom //
-Option threads=20;
+Option threads=4;
 Option IterLim=1000000000;
 Option ResLim = 10000000000;
 *Option optca=0.0;
@@ -44,14 +44,11 @@ $set InputFileName Inputs.gdx
 
 * Definition of the equations that will be present in LP or MIP
 * (1 for LP 0 for MIP TC)
-$setglobal LPFormulation 1
+$setglobal LPFormulation 0
 * Flag to retrieve status or not
 * (1 to retrieve 0 to not)
 $setglobal RetrieveStatus 0
 
-* Definition of the capacity expansion decision
-* (1 for yes 0 for no)
-$setglobal CEPFormulation 1
 
 
 *===============================================================================
@@ -440,9 +437,9 @@ EQ_Force_Commitment
 EQ_Force_DeCommitment
 EQ_LoadShedding
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
-$If %CEPFormulation% == 1 EQ_Committed_Cap
-$If %CEPFormulation% == 1 EQ_Startup_Cap
-$If %CEPFormulation% == 1 EQ_Shutdown_Cap
+EQ_Committed_Cap
+EQ_Startup_Cap
+EQ_Shutdown_Cap
 ;
 
 $If %RetrieveStatus% == 0 $goto skipequation
@@ -472,6 +469,7 @@ EQ_SystemCost(i)..
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
          +Config("CostOfSpillage","val")*sum(s,spillage(s,i))
+         +sum(uc, Expanded(uc) * C_inv(uc)*PowerCapacity(uc)* 1/card(h))
          ;
 $else
 
@@ -490,31 +488,18 @@ EQ_SystemCost(i)..
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
          +Config("CostOfSpillage","val")*sum(s,spillage(s,i))
-         
+         +sum(uc, Expanded(uc) * C_inv(uc)*PowerCapacity(uc)* 1/card(h))
          ;
 
 $endIf
 ;
 
-
-$ifthen [%CEPFormulation% == 1]
-
 EQ_Objective_function..
-         SystemCostD 
+         SystemCostD
          =E=
-         (sum(i,SystemCost(i))
+         sum(i,SystemCost(i))
          +Config("WaterValue","val")*sum(s,WaterSlack(s))
-         + sum(uc, Expanded(uc) * C_inv(uc)*PowerCapacity(uc)* 1/card(h)))/1E6;
-$else
-EQ_Objective_function..
-         SystemCostD 
-         =E=
-         (sum(i,SystemCost(i))
-         +Config("WaterValue","val")*sum(s,WaterSlack(s)))/1E6 
-         ;
-
-
-$endIf
+        + sum(uc, Expanded(uc) * C_inv(uc)*PowerCapacity(uc)* 1/card(h))
 ;
 
 * 3 binary commitment status
@@ -813,7 +798,6 @@ EQ_Heat_Storage_level(chp,i)..
 *         StorageLevel(chp,i)
 *;
 
-$ifthen %CEPFormulation% == 1
 
 **** CAPACITY EXPANSION
 EQ_Startup_Cap(uc,i)..
@@ -837,8 +821,7 @@ EQ_Committed_Cap(uc,i)..
         =L=
     Expanded(uc) ;
 
-$endif
-;
+
 
 *===============================================================================
 *Definition of models
@@ -889,9 +872,9 @@ EQ_Force_Commitment,
 EQ_Force_DeCommitment,
 EQ_LoadShedding,
 $If %RetrieveStatus% == 1 EQ_CommittedCalc,
-$If %CEPFormulation% == 1 EQ_Committed_Cap,
-$If %CEPFormulation% == 1 EQ_Startup_Cap,
-$If %CEPFormulation% == 1 EQ_Shutdown_Cap
+EQ_Committed_Cap,
+EQ_Startup_Cap,
+EQ_Shutdown_Cap
 /
 ;
 UCM_SIMPLE.optcr = 0.01;
@@ -927,20 +910,18 @@ display days;
 PARAMETER elapsed(days);
 
 * Capacity expansion for a rolling horizon does not make sense without further methods
-$If %CEPFormulation% == 1 Config("RollingHorizon Length","day") = ndays;
+day=1;
+FirstHour = (day-1)*24+1;
+LastHour = min(card(h),FirstHour + (Config("RollingHorizon Length","day")+Config("RollingHorizon LookAhead","day")) * 24 - 1);
+LastKeptHour = LastHour - Config("RollingHorizon LookAhead","day") * 24;
+i(h) = no;
+i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
+display day,FirstHour,LastHour,LastKeptHour;
 
-FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("RollingHorizon Length","day"),
-         FirstHour = (day-1)*24+1;
-         LastHour = min(card(h),FirstHour + (Config("RollingHorizon Length","day")+Config("RollingHorizon LookAhead","day")) * 24 - 1);
-         LastKeptHour = LastHour - Config("RollingHorizon LookAhead","day") * 24;
-         i(h) = no;
-         i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
-         display day,FirstHour,LastHour,LastKeptHour;
-
-*        Defining the minimum level at the end of the horizon, ensuring that it is feasible with the provided inflows:
-         StorageFinalMin(s) =  min(StorageInitial(s) + (sum(i,StorageInflow(s,i)) - sum(i,StorageOutflow(s,i)))*Nunits(s), sum(i$(ord(i)=card(i)),StorageProfile(s,i)*Nunits(s)*StorageCapacity(s)*AvailabilityFactor(s,i)));
-*        Correcting the minimum level to avoid the infeasibility in case it is too close to the StorageCapacity:
-         StorageFinalMin(s) = min(StorageFinalMin(s),Nunits(s)*StorageCapacity(s) - Nunits(s)*smax(i,StorageInflow(s,i)));
+* Defining the minimum level at the end of the horizon, ensuring that it is feasible with the provided inflows:
+StorageFinalMin(s) =  min(StorageInitial(s) + (sum(i,StorageInflow(s,i)) - sum(i,StorageOutflow(s,i)))*Nunits(s), sum(i$(ord(i)=card(i)),StorageProfile(s,i)*Nunits(s)*StorageCapacity(s)*AvailabilityFactor(s,i)));
+* Correcting the minimum level to avoid the infeasibility in case it is too close to the StorageCapacity:
+StorageFinalMin(s) = min(StorageFinalMin(s),Nunits(s)*StorageCapacity(s) - Nunits(s)*smax(i,StorageInflow(s,i)));
 
 $If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
 
@@ -952,24 +933,23 @@ $If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp
 $If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Commitment.M, EQ_MinUpTime.M, EQ_MinDownTime.M, EQ_RampUp_TC.M, EQ_RampDown_TC.M, EQ_Demand_balance_DA.M, EQ_Demand_balance_2U.M, EQ_Demand_balance_2D.M, EQ_Demand_balance_3U.M, EQ_Reserve_2U_capability.M, EQ_Reserve_2D_capability.M, EQ_Reserve_3U_capability.M, EQ_Power_must_run.M, EQ_Power_available.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_SystemCost.M, EQ_Flow_limits_lower.M, EQ_Flow_limits_upper.M, EQ_Force_Commitment.M, EQ_Force_DeCommitment.M, EQ_LoadShedding.M ;
 $label skipdisplay2
 
-         status("model",i) = UCM_SIMPLE.Modelstat;
-         status("solver",i) = UCM_SIMPLE.Solvestat;
+status("model",i) = UCM_SIMPLE.Modelstat;
+status("solver",i) = UCM_SIMPLE.Solvestat;
 
 if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, CommittedInitial_dbg(u) = CommittedInitial(u); PowerInitial_dbg(u) = PowerInitial(u); StorageInitial_dbg(s) = StorageInitial(s);
                                                                            EXECUTE_UNLOAD "debug.gdx" day, status, CommittedInitial_dbg, PowerInitial_dbg, StorageInitial_dbg;
                                                                            failed=1;);
 
-         CommittedInitial(u)=sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(u,i));
-         PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
+CommittedInitial(u)=sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(u,i));
+PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
 
-         StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
-         StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
+StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
+StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
 
 
 *Loop variables to display after solving:
 $If %Verbose% == 1 Display LastKeptHour,PowerInitial,CostStartUpH.L,CostShutDownH.L,CostRampUpH.L;
 
-);
 
 CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n));
 
