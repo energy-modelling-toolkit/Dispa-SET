@@ -6,13 +6,14 @@ import numpy as np
 import pandas as pd
 
 from six.moves import reload_module
+from ..common import commons 
 try:
     from future.builtins import int
 except ImportError:
     pass
 
 
-def NodeBasedTable(path,idx,zones,tablename='',default=None):
+def NodeBasedTable(path,config,zones,tablename='',default=None):
     '''
     This function loads the tabular data stored in csv files relative to each
     zone of the simulation.
@@ -40,26 +41,22 @@ def NodeBasedTable(path,idx,zones,tablename='',default=None):
                 logging.error('No data file found for the table ' + tablename + ' and zone ' + z + '. File ' + path_c + ' does not exist')
                 sys.exit(1)
         SingleFile=False
-    data = pd.DataFrame(index=idx)
+    data = pd.DataFrame(index=config['idx_long'])
     if len(paths) == 0:
         logging.info('No data file found for the table ' + tablename + '. Using default value ' + str(default))
         if default is None:
             pass
         elif isinstance(default,(float,int)):
-            data = pd.DataFrame(default,index=idx,columns=zones)
+            data = pd.DataFrame(default,index=config['idx_long'],columns=zones)
         else:
             logging.error('Default value provided for table ' + tablename + ' is not valid')
             sys.exit(1)
     elif SingleFile:
         # If it is only one file, there is a header with the zone code
-        tmp = load_csv(paths['all'], index_col=0, parse_dates=True)
-        if len(tmp.index)!=len(idx):
-            logging.error('File {} index different size ({}) than desired index ({}).'.format(paths['all'],
-                                                                                             len(tmp.index),
-                                                                                             len(idx)))
-        if not tmp.index.is_unique:
-            logging.error('The index of data file ' + paths['all'] + ' is not unique. Please check the data')
-            sys.exit(1)
+        tmp = load_time_series(config,paths['all'])
+        
+
+            
         if len(tmp.columns) == 1:    # if there is only one column, assign its value to all the zones, whatever the header
             try:    # if the column header is numerical, there was probably no header. Load the file again.
                 float(tmp.columns[0])   # this will fail if the header is not numerical
@@ -91,10 +88,10 @@ def NodeBasedTable(path,idx,zones,tablename='',default=None):
             if not tmp.index.is_unique:
                 logging.error('The index of data file ' + paths['all'] + ' is not unique. Please check the data')
                 sys.exit(1)
-            if len(tmp.index) != len(idx):
+            if len(tmp.index) != len(config['idx']):
                 logging.error('File {} index different size ({}) than desired index ({}).'.format(path,
                                                                                                   len(tmp.index),
-                                                                                                  len(idx)))
+                                                                                                  len(config['idx'])))
             data[z] = tmp.iloc[:,0]
 
     return data
@@ -453,6 +450,63 @@ def write_to_excel(xls_out, list_vars):
     gmsfile.close()
 
     logging.info('Data Successfully written to the ' + xls_out + ' directory.')
+
+
+
+
+
+def load_time_series(config,path):
+    """
+    Function that loads time series data, checks the compatibility of the indexes
+    and guesses when no exact match between the required index and the data is 
+    present
+    """
+
+    data = pd.read_csv(path, index_col=0, parse_dates=True)
+    
+    if not data.index.is_unique:
+        logging.error('The index of data file ' + path + ' is not unique. Please check the data')
+        sys.exit(1)  
+    
+    # First convert numerical indexes into datetimeindex:
+    if data.index.is_numeric():
+        if len(data) == len(config['idx']):  # The data has the same length as the provided index range
+            logging.info('A numerical index has been found for file ' + path + 
+                         '. It has the same length as the target simulation and is therefore considered valid')
+            data.index=config['idx']
+        elif len(data) == 8760:
+            logging.info('A numerical index has been found for file ' + path + 
+                         '. Since it contains 8760 elements, it is assumed that it corresponds to a whole year')
+            data.index = pd.DatetimeIndex(start=pd.datetime(*(config['idx'][0].year,1,1,0,0)),
+                                                        end=pd.datetime(*(config['idx'][0].year,12,31,23,59,59)),
+                                                        freq=commons['TimeStep'])
+        else:
+            logging.error('A numerical index has been found for file ' + path + 
+                         '. However, its length does not allow guessing its timestamps. Please use a 8760 elements time series')
+            sys.exit(1)
+
+    if data.index.is_all_dates:   
+        data.index = data.index.tz_localize(None)   # removing locational data
+        # Checking if the required index entries are in the data:
+        common = data.index.tz_localize(None).intersection(config['idx'])
+        if len(common) == 0:
+            # try to see if it is just a year-mismatch
+            index2 = data.index.shift(8760 * (config['idx'][0].year - data.index[0].year),freq=commons['TimeStep'])
+            common2 = index2.intersection(config['idx'])
+            if len(common2) == len(config['idx']):
+                logging.warn('File ' + path + ': data for year '+ str(data.index[0].year) + ' is used instead of year ' + str(config['idx'][0].year))
+                data.index=index2
+        elif len(common) == len(config['idx'])-1:  # there is only one data point missing. This is deemed acceptable
+            logging.warn('File ' + path + ': there is on data point missing in the time series. It will be filled with the nearest data')
+        elif len(common) < len(config['idx'])-1:
+            logging.error('File ' + path + ': the index does not contain the necessary time range (from ' + str(config['idx'][0]) + ' to ' + str(config['idx'][-1]) + ')')
+            sys.exit(1)
+    else:
+        logging.error('Index for file ' + path + ' is not valid')
+        sys.exit(1)
+        
+    # re-indexing with the longer index (including look-ahead) and filling possibly missing data at the beginning and at the end::
+    return data.reindex(config['idx_long'], method='nearest').fillna(method='bfill')
 
 
 def load_csv(filename, TempPath='.pickle', header=0, skiprows=None, skipfooter=0, index_col=None, parse_dates=False):

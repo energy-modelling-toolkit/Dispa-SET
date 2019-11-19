@@ -60,27 +60,31 @@ def build_simulation(config):
     __, m_start, d_start, __, __, __ = config['StartDate']
     y_end, m_end, d_end, _, _, _ = config['StopDate']
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
-
+    
     # Indexes of the simulation:
-    idx_std = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*config['StartDate']),
+    config['idx'] = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*config['StartDate']),
                                              end=pd.datetime(*config['StopDate']),
-                                             freq=commons['TimeStep'])
-                               )
-    idx_utc_noloc = idx_std - dt.timedelta(hours=1)
-    idx_utc = idx_utc_noloc.tz_localize('UTC')
+                                             freq=commons['TimeStep'])).tz_localize(None)
+
 
     # Indexes for the whole year considered in StartDate
-    idx_utc_year_noloc = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*(config['StartDate'][0],1,1,0,0)),
+    idx_year = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*(config['StartDate'][0],1,1,0,0)),
                                                         end=pd.datetime(*(config['StartDate'][0],12,31,23,59,59)),
                                                         freq=commons['TimeStep'])
                                           )
+    
+    # Indexes including the last look-ahead period
+    enddate_long = config['idx'][-1] + dt.timedelta(days=config['LookAhead'])
+    idx_long = pd.DatetimeIndex(pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep']))
+    Nhours_long = len(idx_long)
+    config['idx_long'] = idx_long
 
     # %%#################################################################################################################
     #####################################   Data Loading    ###########################################################
     ###################################################################################################################
 
     # Start and end of the simulation:
-    delta = idx_utc[-1] - idx_utc[0]
+    delta = config['idx'][-1] - config['idx'][0]
     days_simulation = delta.days + 1
 
     # Defining missing configuration fields for backwards compatibility:
@@ -90,9 +94,8 @@ def build_simulation(config):
         config['default']['CostHeatSlack'] = 50
     
     # Load :
-    Load = NodeBasedTable(config['Demand'],idx_utc_noloc,config['zones'],tablename='Demand')
-    # For the peak load, the whole year is considered:
-    PeakLoad = NodeBasedTable(config['Demand'],idx_utc_year_noloc,config['zones'],tablename='PeakLoad').max()
+    Load = NodeBasedTable(config['Demand'],config,config['zones'],tablename='Demand')
+    PeakLoad = Load.max()
 
     if config['modifiers']['Demand'] != 1:
         logging.info('Scaling load curve by a factor ' + str(config['modifiers']['Demand']))
@@ -104,16 +107,16 @@ def build_simulation(config):
         flows = load_csv(config['Interconnections'], index_col=0, parse_dates=True).fillna(0)
     else:
         logging.warning('No historical flows will be considered (no valid file provided)')
-        flows = pd.DataFrame(index=idx_utc_noloc)
+        flows = pd.DataFrame(index=config['idx'])
     if os.path.isfile(config['NTC']):
         NTC = load_csv(config['NTC'], index_col=0, parse_dates=True).fillna(0)
     else:
         logging.warning('No NTC values will be considered (no valid file provided)')
-        NTC = pd.DataFrame(index=idx_utc_noloc)
+        NTC = pd.DataFrame(index=config['idx'])
 
     # Load Shedding:
-    LoadShedding = NodeBasedTable(config['LoadShedding'],idx_utc_noloc,config['zones'],tablename='LoadShedding',default=config['default']['LoadShedding'])
-    CostLoadShedding = NodeBasedTable(config['CostLoadShedding'],idx_utc_noloc,config['zones'],tablename='CostLoadShedding',default=config['default']['CostLoadShedding'])
+    LoadShedding = NodeBasedTable(config['LoadShedding'],config,config['zones'],tablename='LoadShedding',default=config['default']['LoadShedding'])
+    CostLoadShedding = NodeBasedTable(config['CostLoadShedding'],config,config['zones'],tablename='CostLoadShedding',default=config['default']['CostLoadShedding'])
 
     # Power plants:
     plants = pd.DataFrame()
@@ -151,12 +154,12 @@ def build_simulation(config):
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
 
-    Outages = UnitBasedTable(plants,config['Outages'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology'],tablename='Outages')
-    AF = UnitBasedTable(plants,config['RenewablesAF'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1,RestrictWarning=commons['tech_renewables'])
-    ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
-    ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirScaledInflows',default=0)
-    HeatDemand = UnitBasedTable(plants_chp,config['HeatDemand'],idx_utc_noloc,config['zones'],fallbacks=['Unit'],tablename='HeatDemand',default=0)
-    CostHeatSlack = UnitBasedTable(plants_chp,config['CostHeatSlack'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default']['CostHeatSlack'])
+    Outages = UnitBasedTable(plants,config['Outages'],config['idx'],config['zones'],fallbacks=['Unit','Technology'],tablename='Outages')
+    AF = UnitBasedTable(plants,config['RenewablesAF'],config['idx'],config['zones'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1,RestrictWarning=commons['tech_renewables'])
+    ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],config['idx'],config['zones'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
+    ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],config['idx'],config['zones'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirScaledInflows',default=0)
+    HeatDemand = UnitBasedTable(plants_chp,config['HeatDemand'],config['idx'],config['zones'],fallbacks=['Unit'],tablename='HeatDemand',default=0)
+    CostHeatSlack = UnitBasedTable(plants_chp,config['CostHeatSlack'],config['idx'],config['zones'],fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default']['CostHeatSlack'])
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
@@ -166,16 +169,16 @@ def build_simulation(config):
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
     FuelPrices = {}
     for fuel in fuels:
-        FuelPrices[fuel] = NodeBasedTable(config[fuel],idx_utc_noloc,config['zones'],tablename=fuel,default=config['default'][fuel])
+        FuelPrices[fuel] = NodeBasedTable(config[fuel],config,config['zones'],tablename=fuel,default=config['default'][fuel])
 
     # Interconnections:
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], NTC, flows)
 
     if len(Interconnections_sim.columns) > 0:
-        NTCs = Interconnections_sim.reindex(idx_utc_noloc)
+        NTCs = Interconnections_sim.reindex(config['idx'])
     else:
-        NTCs = pd.DataFrame(index=idx_utc_noloc)
-    Inter_RoW = Interconnections_RoW.reindex(idx_utc_noloc)
+        NTCs = pd.DataFrame(index=config['idx'])
+    Inter_RoW = Interconnections_RoW.reindex(config['idx'])
 
     # Clustering of the plants:
     Plants_merged, mapping = clustering(plants, method=config['SimulationType'])
@@ -285,37 +288,32 @@ def build_simulation(config):
 
     # %%
     # checking data
-    check_df(Load, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Load')
-    check_df(AF_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(Load, StartDate=config['idx'][0], StopDate=config['idx'][-1], name='Load')
+    check_df(AF_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='AF_merged')
-    check_df(Outages_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Outages_merged')
-    check_df(Inter_RoW, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Inter_RoW')
+    check_df(Outages_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1], name='Outages_merged')
+    check_df(Inter_RoW, StartDate=config['idx'][0], StopDate=config['idx'][-1], name='Inter_RoW')
     for key in FuelPrices:
-        check_df(FuelPrices[key], StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name=key)
-    check_df(NTCs, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='NTCs')
-    check_df(ReservoirLevels_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+        check_df(FuelPrices[key], StartDate=config['idx'][0], StopDate=config['idx'][-1], name=key)
+    check_df(NTCs, StartDate=config['idx'][0], StopDate=config['idx'][-1], name='NTCs')
+    check_df(ReservoirLevels_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='ReservoirLevels_merged')
-    check_df(ReservoirScaledInflows_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(ReservoirScaledInflows_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='ReservoirScaledInflows_merged')
-    check_df(HeatDemand_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(HeatDemand_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='HeatDemand_merged')
-    check_df(CostHeatSlack_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(CostHeatSlack_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='CostHeatSlack_merged')
-    check_df(LoadShedding, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(LoadShedding, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='LoadShedding')
-    check_df(CostLoadShedding, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(CostLoadShedding, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='CostLoadShedding')
 
 #    for key in Renewables:
-#        check_df(Renewables[key], StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+#        check_df(Renewables[key], StartDate=config['idx'][0], StopDate=config['idx'][-1],
 #                 name='Renewables["' + key + '"]')
 
     # %%%
-
-    # Extending the data to include the look-ahead period (with constant values assumed)
-    enddate_long = idx_utc_noloc[-1] + dt.timedelta(days=config['LookAhead'])
-    idx_long = pd.DatetimeIndex(pd.date_range(start=idx_utc_noloc[0], end=enddate_long, freq=commons['TimeStep']))
-    Nhours_long = len(idx_long)
 
     # re-indexing with the longer index and filling possibly missing data at the beginning and at the end::
     Load = Load.reindex(idx_long, method='nearest').fillna(method='bfill')
