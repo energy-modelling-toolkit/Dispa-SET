@@ -94,7 +94,7 @@ def build_simulation(config):
         config['default']['CostHeatSlack'] = 50
     
     # Load :
-    Load = NodeBasedTable(config['Demand'],config,config['zones'],tablename='Demand')
+    Load = NodeBasedTable('Demand',config)
     PeakLoad = Load.max()
 
     if config['modifiers']['Demand'] != 1:
@@ -115,8 +115,8 @@ def build_simulation(config):
         NTC = pd.DataFrame(index=config['idx'])
 
     # Load Shedding:
-    LoadShedding = NodeBasedTable(config['LoadShedding'],config,config['zones'],tablename='LoadShedding',default=config['default']['LoadShedding'])
-    CostLoadShedding = NodeBasedTable(config['CostLoadShedding'],config,config['zones'],tablename='CostLoadShedding',default=config['default']['CostLoadShedding'])
+    LoadShedding = NodeBasedTable('LoadShedding',config,default=config['default']['LoadShedding'])
+    CostLoadShedding = NodeBasedTable('CostLoadShedding',config,default=config['default']['CostLoadShedding'])
 
     # Power plants:
     plants = pd.DataFrame()
@@ -154,12 +154,12 @@ def build_simulation(config):
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
 
-    Outages = UnitBasedTable(plants,config['Outages'],config['idx'],config['zones'],fallbacks=['Unit','Technology'],tablename='Outages')
-    AF = UnitBasedTable(plants,config['RenewablesAF'],config['idx'],config['zones'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1,RestrictWarning=commons['tech_renewables'])
-    ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],config['idx'],config['zones'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
-    ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],config['idx'],config['zones'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirScaledInflows',default=0)
-    HeatDemand = UnitBasedTable(plants_chp,config['HeatDemand'],config['idx'],config['zones'],fallbacks=['Unit'],tablename='HeatDemand',default=0)
-    CostHeatSlack = UnitBasedTable(plants_chp,config['CostHeatSlack'],config['idx'],config['zones'],fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default']['CostHeatSlack'])
+    Outages = UnitBasedTable(plants,'Outages',config,fallbacks=['Unit','Technology'])
+    AF = UnitBasedTable(plants,'RenewablesAF',config,fallbacks=['Unit','Technology'],default=1,RestrictWarning=commons['tech_renewables'])
+    ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
+    ReservoirScaledInflows = UnitBasedTable(plants_sto,'ReservoirScaledInflows',config,fallbacks=['Unit','Technology','Zone'],default=0)
+    HeatDemand = UnitBasedTable(plants_chp,'HeatDemand',config,fallbacks=['Unit'],default=0)
+    CostHeatSlack = UnitBasedTable(plants_chp,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
@@ -169,7 +169,7 @@ def build_simulation(config):
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
     FuelPrices = {}
     for fuel in fuels:
-        FuelPrices[fuel] = NodeBasedTable(config[fuel],config,config['zones'],tablename=fuel,default=config['default'][fuel])
+        FuelPrices[fuel] = NodeBasedTable(fuel,config,default=config['default'][fuel])
 
     # Interconnections:
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], NTC, flows)

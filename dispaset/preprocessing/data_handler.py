@@ -13,21 +13,22 @@ except ImportError:
     pass
 
 
-def NodeBasedTable(path,config,zones,tablename='',default=None):
+def NodeBasedTable(varname,config,default=None):
     '''
     This function loads the tabular data stored in csv files relative to each
     zone of the simulation.
 
-    :param path:                Path to the data to be loaded
+    :param varname:             Variable name (as defined in config)
     :param idx:                 Pandas datetime index to be used for the output
     :param zones:               List with the zone codes to be considered
     :param fallback:            List with the order of data source.
-    :param tablename:           String with the name of the table being processed
     :param default:             Default value to be applied if no data is found
 
     :return:           Dataframe with the time series for each unit
     '''
-              
+    
+    path = config[varname]
+    zones=config['zones']       
     paths = {}
     if os.path.isfile(path):
         paths['all'] = path
@@ -38,30 +39,27 @@ def NodeBasedTable(path,config,zones,tablename='',default=None):
             if os.path.isfile(path_c):
                 paths[str(z)] = path_c
             else:
-                logging.error('No data file found for the table ' + tablename + ' and zone ' + z + '. File ' + path_c + ' does not exist')
+                logging.error('No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c + ' does not exist')
                 sys.exit(1)
         SingleFile=False
     data = pd.DataFrame(index=config['idx_long'])
     if len(paths) == 0:
-        logging.info('No data file found for the table ' + tablename + '. Using default value ' + str(default))
+        logging.info('No data file found for the table ' + varname + '. Using default value ' + str(default))
         if default is None:
             pass
         elif isinstance(default,(float,int)):
             data = pd.DataFrame(default,index=config['idx_long'],columns=zones)
         else:
-            logging.error('Default value provided for table ' + tablename + ' is not valid')
+            logging.error('Default value provided for table ' + varname + ' is not valid')
             sys.exit(1)
     elif SingleFile:
         # If it is only one file, there is a header with the zone code
         tmp = load_time_series(config,paths['all'])
-        
-
-            
+           
         if len(tmp.columns) == 1:    # if there is only one column, assign its value to all the zones, whatever the header
             try:    # if the column header is numerical, there was probably no header. Load the file again.
                 float(tmp.columns[0])   # this will fail if the header is not numerical
-                tmp = pd.read_csv(paths['all'], header=None, index_col=0, parse_dates=True)
-                tmp = tmp.tz_localize(None)
+                tmp = load_time_series(config,paths['all'],header=None)
             except:
                 pass
             for key in zones:
@@ -77,28 +75,19 @@ def NodeBasedTable(path,config,zones,tablename='',default=None):
                     elif isinstance(default,(float,int)):
                         data[key] = default
                     else:
-                        logging.error('Default value provided for table ' + tablename + ' is not valid')
+                        logging.error('Default value provided for table ' + varname + ' is not valid')
                         sys.exit(1)
     else: # assembling the files in a single dataframe:
         for z in paths:
-            path = paths[z]
             # In case of separated files for each zone, there is no header
-            tmp = load_csv(path, index_col=0, parse_dates=True)
-            # check that the loaded file is ok:
-            if not tmp.index.is_unique:
-                logging.error('The index of data file ' + paths['all'] + ' is not unique. Please check the data')
-                sys.exit(1)
-            if len(tmp.index) != len(config['idx']):
-                logging.error('File {} index different size ({}) than desired index ({}).'.format(path,
-                                                                                                  len(tmp.index),
-                                                                                                  len(config['idx'])))
+            tmp = load_time_series(config,paths[z])  
             data[z] = tmp.iloc[:,0]
 
     return data
 
 
 
-def UnitBasedTable(plants,path,idx,zones,fallbacks=['Unit'],tablename='',default=None,RestrictWarning=None):
+def UnitBasedTable(plants,varname,config,fallbacks=['Unit'],default=None,RestrictWarning=None):
     '''
     This function loads the tabular data stored in csv files and assigns the
     proper values to each unit of the plants dataframe. If the unit-specific 
@@ -111,17 +100,17 @@ def UnitBasedTable(plants,path,idx,zones,fallbacks=['Unit'],tablename='',default
     default value is assigned.
 
     :param plants:              Dataframe with the units for which data is required
-    :param path:                Path to the data to be loaded
+    :param varname:             Variable name (as defined in config)
     :param idx:                 Pandas datetime index to be used for the output
     :param zones:           List with the zone codes to be considered
     :param fallback:            List with the order of data source. 
-    :param tablename:           String with the name of the table being processed
     :param default:             Default value to be applied if no data is found
     :param RestrictWarning:     Only display the warnings if the unit belongs to the list of technologies provided in this parameter
     
     :return:           Dataframe with the time series for each unit
     '''
-              
+    path = config[varname]   
+    zones = config['zones']    
     paths = {}
     if os.path.isfile(path):
         paths['all'] = path
@@ -132,28 +121,23 @@ def UnitBasedTable(plants,path,idx,zones,fallbacks=['Unit'],tablename='',default
             if os.path.isfile(path_c):
                 paths[str(z)] = path_c
             else:
-                logging.critical('No data file found for the table ' + tablename + ' and zone ' + z + '. File ' + path_c + ' does not exist')
+                logging.critical('No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c + ' does not exist')
 #                sys.exit(1)
         SingleFile=False
-    data = pd.DataFrame(index=idx)
+    data = pd.DataFrame(index=config['idx'])
     if len(paths) == 0:
-        logging.info('No data file found for the table ' + tablename + '. Using default value ' + str(default))
+        logging.info('No data file found for the table ' + varname + '. Using default value ' + str(default))
         if default is None:
-            out = pd.DataFrame(index=idx)
+            out = pd.DataFrame(index=config['idx'])
         elif isinstance(default,(float,int)):
-            out = pd.DataFrame(default,index=idx,columns=plants['Unit'])
+            out = pd.DataFrame(default,index=config['idx'],columns=plants['Unit'])
         else:
-            logging.error('Default value provided for table ' + tablename + ' is not valid')
+            logging.error('Default value provided for table ' + varname + ' is not valid')
             sys.exit(1)
     else: # assembling the files in a single dataframe:
         columns = []
         for z in paths:
-            path = paths[z]
-            tmp = load_csv(path, index_col=0, parse_dates=True)
-            # check that the loaded file is ok:
-            if not tmp.index.is_unique:
-                logging.error('The index of data file ' + path + ' is not unique. Please check the data')
-                sys.exit(1)
+            tmp = load_time_series(config,paths[z])
             if SingleFile:
                 for key in tmp:
                     data[key] = tmp[key]                
@@ -164,7 +148,7 @@ def UnitBasedTable(plants,path,idx,zones,fallbacks=['Unit'],tablename='',default
         if not SingleFile:
             data.columns = pd.MultiIndex.from_tuples(columns, names=['Zone', 'Data'])
         # For each plant and each fallback key, try to find the corresponding column in the data
-        out = pd.DataFrame(index=idx)
+        out = pd.DataFrame(index=config['idx'])
         for j in plants.index:
             warning = True
             if not RestrictWarning is None:
@@ -182,15 +166,15 @@ def UnitBasedTable(plants,path,idx,zones,fallbacks=['Unit'],tablename='',default
                     out[u] = data[header]
                     found = True
                     if i > 0 and warning:
-                        logging.warning('No specific information was found for unit ' + u + ' in table ' + tablename + '. The generic information for ' + str(header) + ' has been used')
+                        logging.warning('No specific information was found for unit ' + u + ' in table ' + varname + '. The generic information for ' + str(header) + ' has been used')
                     break
             if not found:
                 if warning:
-                    logging.info('No specific information was found for unit ' + u + ' in table ' + tablename + '. Using default value ' + str(default))
+                    logging.info('No specific information was found for unit ' + u + ' in table ' + varname + '. Using default value ' + str(default))
                 if not default is None:
                     out[u] = default
     if not out.columns.is_unique:
-        logging.error('The column headers of table "' + tablename + '" are not unique!. The following headers are duplicated: ' + str(out.columns.get_duplicates()))
+        logging.error('The column headers of table "' + varname + '" are not unique!. The following headers are duplicated: ' + str(out.columns.get_duplicates()))
         sys.exit(1)
     return out
 
@@ -455,14 +439,14 @@ def write_to_excel(xls_out, list_vars):
 
 
 
-def load_time_series(config,path):
+def load_time_series(config,path,header='infer'):
     """
     Function that loads time series data, checks the compatibility of the indexes
     and guesses when no exact match between the required index and the data is 
     present
     """
 
-    data = pd.read_csv(path, index_col=0, parse_dates=True)
+    data = pd.read_csv(path, index_col=0, parse_dates=True, header=header)
     
     if not data.index.is_unique:
         logging.error('The index of data file ' + path + ' is not unique. Please check the data')
