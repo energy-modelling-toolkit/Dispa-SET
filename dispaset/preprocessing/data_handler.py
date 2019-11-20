@@ -481,7 +481,7 @@ def load_time_series(config,path,header='infer'):
                 logging.warn('File ' + path + ': data for year '+ str(data.index[0].year) + ' is used instead of year ' + str(config['idx'][0].year))
                 data.index=index2
         elif len(common) == len(config['idx'])-1:  # there is only one data point missing. This is deemed acceptable
-            logging.warn('File ' + path + ': there is on data point missing in the time series. It will be filled with the nearest data')
+            logging.warn('File ' + path + ': there is one data point missing in the time series. It will be filled with the nearest data')
         elif len(common) < len(config['idx'])-1:
             logging.error('File ' + path + ': the index does not contain the necessary time range (from ' + str(config['idx'][0]) + ' to ' + str(config['idx'][-1]) + ')')
             sys.exit(1)

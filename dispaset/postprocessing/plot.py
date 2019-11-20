@@ -25,6 +25,8 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
     """
     import matplotlib.patches as mpatches
     import matplotlib.lines as mlines
+    
+    pd.plotting.register_matplotlib_converters()
 
     if rng is None:
         pdrng = plotdata.index[:min(len(plotdata) - 1, 7 * 24)]
