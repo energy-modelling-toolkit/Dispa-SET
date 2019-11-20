@@ -21,7 +21,7 @@ except ImportError:
 
 from .data_check import check_units, check_chp, check_sto, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering
 from .utils import clustering, interconnections, incidence_matrix, select_units
-from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, write_to_excel, load_csv
+from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, load_time_series
 
 from ..misc.gdx_handler import write_variables
 from ..common import commons  # Load fuel types, technologies, timestep, etc:
@@ -104,15 +104,15 @@ def build_simulation(config):
 
     # Interconnections:
     if os.path.isfile(config['Interconnections']):
-        flows = load_csv(config['Interconnections'], index_col=0, parse_dates=True).fillna(0)
+        flows = load_time_series(config,config['Interconnections']).fillna(0)
     else:
         logging.warning('No historical flows will be considered (no valid file provided)')
-        flows = pd.DataFrame(index=config['idx'])
+        flows = pd.DataFrame(index=config['idx_long'])
     if os.path.isfile(config['NTC']):
-        NTC = load_csv(config['NTC'], index_col=0, parse_dates=True).fillna(0)
+        NTC = load_time_series(config,config['NTC']).fillna(0)
     else:
         logging.warning('No NTC values will be considered (no valid file provided)')
-        NTC = pd.DataFrame(index=config['idx'])
+        NTC = pd.DataFrame(index=config['idx_long'])
 
     # Load Shedding:
     LoadShedding = NodeBasedTable('LoadShedding',config,default=config['default']['LoadShedding'])
@@ -121,11 +121,11 @@ def build_simulation(config):
     # Power plants:
     plants = pd.DataFrame()
     if os.path.isfile(config['PowerPlantData']):
-        plants = load_csv(config['PowerPlantData'])
+        plants = pd.read_csv(config['PowerPlantData'])
     elif '##' in config['PowerPlantData']:
         for z in config['zones']:
             path = config['PowerPlantData'].replace('##', str(z))
-            tmp = load_csv(path)
+            tmp = pd.read_csv(path)
             plants = plants.append(tmp, ignore_index=True)
     # reomve invalide power plants:
     plants = select_units(plants,config)
@@ -175,10 +175,10 @@ def build_simulation(config):
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], NTC, flows)
 
     if len(Interconnections_sim.columns) > 0:
-        NTCs = Interconnections_sim.reindex(config['idx'])
+        NTCs = Interconnections_sim.reindex(config['idx_long'])
     else:
-        NTCs = pd.DataFrame(index=config['idx'])
-    Inter_RoW = Interconnections_RoW.reindex(config['idx'])
+        NTCs = pd.DataFrame(index=config['idx_long'])
+    Inter_RoW = Interconnections_RoW.reindex(config['idx_long'])
 
     # Clustering of the plants:
     Plants_merged, mapping = clustering(plants, method=config['SimulationType'])
@@ -313,24 +313,6 @@ def build_simulation(config):
 #        check_df(Renewables[key], StartDate=config['idx'][0], StopDate=config['idx'][-1],
 #                 name='Renewables["' + key + '"]')
 
-    # %%%
-
-    # re-indexing with the longer index and filling possibly missing data at the beginning and at the end::
-    Load = Load.reindex(idx_long, method='nearest').fillna(method='bfill')
-    AF_merged = AF_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
-    Inter_RoW = Inter_RoW.reindex(idx_long, method='nearest').fillna(method='bfill')
-    NTCs = NTCs.reindex(idx_long, method='nearest').fillna(method='bfill')
-    for key in FuelPrices:
-        FuelPrices[key] = FuelPrices[key].reindex(idx_long, method='nearest').fillna(method='bfill')
-    Load = Load.reindex(idx_long, method='nearest').fillna(method='bfill')
-    Outages_merged = Outages_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
-    ReservoirLevels_merged = ReservoirLevels_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
-    ReservoirScaledInflows_merged = ReservoirScaledInflows_merged.reindex(idx_long, method='nearest').fillna(
-        method='bfill')
-    LoadShedding = LoadShedding.reindex(idx_long, method='nearest').fillna(method='bfill')
-    CostLoadShedding = CostLoadShedding.reindex(idx_long, method='nearest').fillna(method='bfill')
-#    for tr in Renewables:
-#        Renewables[tr] = Renewables[tr].reindex(idx_long, method='nearest').fillna(method='bfill')
 
     # %%################################################################################################################
     ############################################   Sets    ############################################################
@@ -679,9 +661,6 @@ def build_simulation(config):
     # Copy bat file to generate gdx file directly from excel:
     shutil.copy(os.path.join(GMS_FOLDER, 'makeGDX.bat'),
                 os.path.join(sim, 'makeGDX.bat'))
-
-    if config['WriteExcel']:
-        write_to_excel(sim, [sets, parameters])
 
     if config['WritePickle']:
         try:

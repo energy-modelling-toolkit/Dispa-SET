@@ -124,13 +124,13 @@ def UnitBasedTable(plants,varname,config,fallbacks=['Unit'],default=None,Restric
                 logging.critical('No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c + ' does not exist')
 #                sys.exit(1)
         SingleFile=False
-    data = pd.DataFrame(index=config['idx'])
+    data = pd.DataFrame(index=config['idx_long'])
     if len(paths) == 0:
         logging.info('No data file found for the table ' + varname + '. Using default value ' + str(default))
         if default is None:
-            out = pd.DataFrame(index=config['idx'])
+            out = pd.DataFrame(index=config['idx_long'])
         elif isinstance(default,(float,int)):
-            out = pd.DataFrame(default,index=config['idx'],columns=plants['Unit'])
+            out = pd.DataFrame(default,index=config['idx_long'],columns=plants['Unit'])
         else:
             logging.error('Default value provided for table ' + varname + ' is not valid')
             sys.exit(1)
@@ -148,7 +148,7 @@ def UnitBasedTable(plants,varname,config,fallbacks=['Unit'],default=None,Restric
         if not SingleFile:
             data.columns = pd.MultiIndex.from_tuples(columns, names=['Zone', 'Data'])
         # For each plant and each fallback key, try to find the corresponding column in the data
-        out = pd.DataFrame(index=config['idx'])
+        out = pd.DataFrame(index=config['idx_long'])
         for j in plants.index:
             warning = True
             if not RestrictWarning is None:
@@ -291,153 +291,6 @@ def invert_dic_df(dic,tablename=''):
     return dic_out
 
 
-def write_to_excel(xls_out, list_vars):
-    """
-    Function that reads all the variables (in list_vars) and inserts them one by one to excel
-
-    :param xls_out: The path of the folder where the excel files are to be written
-    :param list_vars: List containing the dispaset variables
-    :returns: Binary variable (True)
-    """
-
-
-    reload_module(sys)
-    try: # Hack needed in 2.7
-        sys.setdefaultencoding("utf-8")
-    except:
-        pass
-
-    if not os.path.exists(xls_out):
-        os.mkdir(xls_out)
-
-
-        # Printing all sets in one sheet:
-    writer = pd.ExcelWriter(os.path.join(xls_out, 'InputDispa-SET - Sets.xlsx'), engine='xlsxwriter')
-
-    [sets, parameters] = list_vars
-
-    try:
-        config = parameters['Config']['val']
-        first_day = pd.datetime(config[0, 0], config[0, 1], config[0, 2], 0)
-        last_day = pd.datetime(config[1, 0], config[1, 1], config[1, 2], 23)
-        dates = pd.date_range(start=first_day, end=last_day, freq='1h')
-    except:
-        dates = []
-
-    i = 0
-    for s in sets:
-        df = pd.DataFrame(sets[s], columns=[s])
-        df.to_excel(writer, sheet_name='Sets', startrow=1, startcol=i, header=True, index=False)
-        i += 1
-    writer.save()
-    logging.info('All sets successfully written to excel')
-
-    # Printing each parameter in a separate sheet and workbook:
-    for p in parameters:
-        var = parameters[p]
-        dim = len(var['sets'])
-        if var['sets'][-1] == 'h' and isinstance(dates, pd.DatetimeIndex) and dim > 1:
-            if len(dates) != var['val'].shape[-1]:
-                logging.critical('The date range in the Config variable (' + str(
-                    len(dates)) + ' time steps) does not match the length of the time index (' + str(
-                    var['val'].shape[-1]) + ') for variable ' + p)
-                sys.exit(1)
-            var['firstrow'] = 5
-        else:
-            var['firstrow'] = 1
-        writer = pd.ExcelWriter(os.path.join(xls_out, 'InputDispa-SET - ' + p + '.xlsx'), engine='xlsxwriter')
-        if dim == 1:
-            df = pd.DataFrame(var['val'], columns=[p], index=sets[var['sets'][0]])
-            df.to_excel(writer, sheet_name=p, startrow=var['firstrow'], startcol=0, header=True, index=True)
-            worksheet = writer.sheets[p]
-            worksheet.write_string(0, 0, p + '(' + var['sets'][0] + ')')
-            worksheet.set_column(0, 0, 30)
-        elif dim == 2:
-            list_sets = [sets[var['sets'][0]], sets[var['sets'][1]]]
-            values = var['val']
-            df = pd.DataFrame(values, columns=list_sets[1], index=list_sets[0])
-            df.to_excel(writer, sheet_name=p, startrow=var['firstrow'], startcol=0, header=True, index=True)
-            worksheet = writer.sheets[p]
-            if var['firstrow'] == 5:
-                worksheet.write_row(1, 1, dates.year)
-                worksheet.write_row(2, 1, dates.month)
-                worksheet.write_row(3, 1, dates.day)
-                worksheet.write_row(4, 1, dates.hour + 1)
-            worksheet.write_string(0, 0, p + '(' + var['sets'][0] + ',' + var['sets'][1] + ')')
-            worksheet.freeze_panes(var['firstrow'] + 1, 1)
-            worksheet.set_column(0, 0, 30)
-        elif dim == 3:
-            list_sets = [sets[var['sets'][0]], sets[var['sets'][1]], sets[var['sets'][2]]]
-            values = var['val']
-            for i in range(len(list_sets[0])):
-                key = list_sets[0][i]
-                Nrows = len(list_sets[1])
-                df = pd.DataFrame(values[i, :, :], columns=list_sets[2], index=list_sets[1])
-                df.to_excel(writer, sheet_name=p, startrow=var['firstrow'] + 1 + i * Nrows, startcol=1, header=False,
-                            index=True)
-                df2 = pd.DataFrame(np.array([key]).repeat(Nrows))
-                df2.to_excel(writer, sheet_name=p, startrow=var['firstrow'] + 1 + i * Nrows, startcol=0, header=False,
-                             index=False)
-            worksheet = writer.sheets[p]
-            if var['firstrow'] == 5:
-                worksheet.write_row(1, 2, dates.year)
-                worksheet.write_row(2, 2, dates.month)
-                worksheet.write_row(3, 2, dates.day)
-                worksheet.write_row(4, 2, dates.hour + 1)
-            worksheet.write_string(0, 0, p + '(' + var['sets'][0] + ',' + var['sets'][1] + ',' + var['sets'][2] + ')')
-            worksheet.write_string(var['firstrow'] - 1, 0, var['sets'][0])
-            worksheet.write_string(var['firstrow'] - 1, 1, var['sets'][1])
-            worksheet.freeze_panes(var['firstrow'], 2)
-            worksheet.set_column(0, 1, 30)
-            df = pd.DataFrame(columns=list_sets[2])
-            df.to_excel(writer, sheet_name=p, startrow=var['firstrow'], startcol=2, header=True, index=False)
-        else:
-            logging.error('Only three dimensions currently supported. Parameter ' + p + ' has ' + str(dim) + ' dimensions.')
-        writer.save()
-        logging.info('Parameter ' + p + ' successfully written to excel')
-
-
-    # Writing a gams file to process the excel sheets:
-    gmsfile = open(os.path.join(xls_out, 'make_gdx.gms'), 'w')
-    i = 0
-
-    for s in sets:
-        gmsfile.write('\n')
-        gmsfile.write('$CALL GDXXRW "InputDispa-SET - Sets.xlsx" Set=' + s + ' rng=' + chr(
-            i + ord('A')) + '3 Rdim=1  O=' + s + '.gdx \n')
-        gmsfile.write('$GDXIN ' + s + '.gdx \n')
-        gmsfile.write('Set ' + s + '; \n')
-        gmsfile.write('$LOAD ' + s + '\n')
-        gmsfile.write('$GDXIN \n')
-        i = i + 1
-
-    for p in parameters:
-        var = parameters[p]
-        dim = len(var['sets'])
-        gmsfile.write('\n')
-        if dim == 1:
-            gmsfile.write('$CALL GDXXRW "InputDispa-SET - ' + p + '.xlsx" par=' + p + ' rng=A' + str(
-                var['firstrow'] + 1) + ' Rdim=1 \n')
-        elif dim == 2:
-            gmsfile.write('$CALL GDXXRW "InputDispa-SET - ' + p + '.xlsx" par=' + p + ' rng=A' + str(
-                var['firstrow'] + 1) + ' Rdim=1 Cdim=1 \n')
-        elif dim == 3:
-            gmsfile.write('$CALL GDXXRW "InputDispa-SET - ' + p + '.xlsx" par=' + p + ' rng=A' + str(
-                var['firstrow'] + 1) + ' Rdim=2 Cdim=1 \n')
-        gmsfile.write('$GDXIN "InputDispa-SET - ' + p + '.gdx" \n')
-        gmsfile.write('Parameter ' + p + '; \n')
-        gmsfile.write('$LOAD ' + p + '\n')
-        gmsfile.write('$GDXIN \n')
-
-    gmsfile.write('\n')
-    gmsfile.write('Execute_Unload "Inputs.gdx"')
-    gmsfile.close()
-
-    logging.info('Data Successfully written to the ' + xls_out + ' directory.')
-
-
-
-
 
 def load_time_series(config,path,header='infer'):
     """
@@ -492,36 +345,6 @@ def load_time_series(config,path,header='infer'):
     # re-indexing with the longer index (including look-ahead) and filling possibly missing data at the beginning and at the end::
     return data.reindex(config['idx_long'], method='nearest').fillna(method='bfill')
 
-
-def load_csv(filename, TempPath='.pickle', header=0, skiprows=None, skipfooter=0, index_col=None, parse_dates=False):
-    """
-    Function that loads acsv sheet into a dataframe and saves a temporary pickle version of it.
-    If the pickle is newer than the sheet, do no load the sheet again.
-
-    :param filename: path to csv file
-    :param TempPath: path to store the temporary data files
-    """
-
-    import hashlib
-    m = hashlib.new('md5', filename.encode('utf-8'))
-    resultfile_hash = m.hexdigest()
-    filepath_pandas = TempPath + os.sep + resultfile_hash + '.p'
-    
-    if not os.path.isdir(TempPath):
-        os.mkdir(TempPath)
-    if not os.path.isfile(filepath_pandas):
-        time_pd = 0
-    else:
-        time_pd = os.path.getmtime(filepath_pandas)
-    if os.path.getmtime(filename) > time_pd:
-        data = pd.read_csv(filename, header=header, skiprows=skiprows, skipfooter=skipfooter, index_col=index_col,
-                           parse_dates=parse_dates)
-        if parse_dates:
-            data.index = data.index.tz_localize(None)
-        data.to_pickle(filepath_pandas)
-    else:
-        data = pd.read_pickle(filepath_pandas)
-    return data
 
 
 def load_config_excel(ConfigFile,AbsPath=True):
