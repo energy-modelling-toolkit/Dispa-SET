@@ -39,7 +39,7 @@ def NodeBasedTable(varname,config,default=None):
             if os.path.isfile(path_c):
                 paths[str(z)] = path_c
             else:
-                logging.error('No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c + ' does not exist')
+                logging.critical('No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c + ' does not exist')
                 sys.exit(1)
         SingleFile=False
     data = pd.DataFrame(index=config['idx_long'])
@@ -50,7 +50,7 @@ def NodeBasedTable(varname,config,default=None):
         elif isinstance(default,(float,int)):
             data = pd.DataFrame(default,index=config['idx_long'],columns=zones)
         else:
-            logging.error('Default value provided for table ' + varname + ' is not valid')
+            logging.critical('Default value provided for table ' + varname + ' is not valid')
             sys.exit(1)
     elif SingleFile:
         # If it is only one file, there is a header with the zone code
@@ -75,7 +75,7 @@ def NodeBasedTable(varname,config,default=None):
                     elif isinstance(default,(float,int)):
                         data[key] = default
                     else:
-                        logging.error('Default value provided for table ' + varname + ' is not valid')
+                        logging.critical('Default value provided for table ' + varname + ' is not valid')
                         sys.exit(1)
     else: # assembling the files in a single dataframe:
         for z in paths:
@@ -132,7 +132,7 @@ def UnitBasedTable(plants,varname,config,fallbacks=['Unit'],default=None,Restric
         elif isinstance(default,(float,int)):
             out = pd.DataFrame(default,index=config['idx_long'],columns=plants['Unit'])
         else:
-            logging.error('Default value provided for table ' + varname + ' is not valid')
+            logging.critical('Default value provided for table ' + varname + ' is not valid')
             sys.exit(1)
     else: # assembling the files in a single dataframe:
         columns = []
@@ -174,7 +174,7 @@ def UnitBasedTable(plants,varname,config,fallbacks=['Unit'],default=None,Restric
                 if not default is None:
                     out[u] = default
     if not out.columns.is_unique:
-        logging.error('The column headers of table "' + varname + '" are not unique!. The following headers are duplicated: ' + str(out.columns.get_duplicates()))
+        logging.critical('The column headers of table "' + varname + '" are not unique!. The following headers are duplicated: ' + str(out.columns.get_duplicates()))
         sys.exit(1)
     return out
 
@@ -200,7 +200,7 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
     unitnames = plants.Unit.values.tolist()
     # First check the data:
     if not isinstance(data,pd.DataFrame):
-        logging.error('The input "' + tablename + '" to the merge_series function must be a dataframe')
+        logging.critical('The input "' + tablename + '" to the merge_series function must be a dataframe')
         sys.exit(1)
     for key in data:
         if str(data[key].dtype) not in ['bool','int','float','float16', 'float32', 'float64', 'float128','int8', 'int16', 'int32', 'int64']:
@@ -278,7 +278,7 @@ def invert_dic_df(dic,tablename=''):
     index = dic[dic.keys()[0]].index
     for key in dic:
         if len(dic[key].index) != len(index):
-            logging.error('The indexes of the data tables "' + tablename + '" are not equal in all the files')
+            logging.critical('The indexes of the data tables "' + tablename + '" are not equal in all the files')
             sys.exit(1)
     # Then put the data in a panda Panel with minor orientation:
     panel = pd.Panel.fromDict(dic, orient='minor')
@@ -302,11 +302,11 @@ def load_time_series(config,path,header='infer'):
     data = pd.read_csv(path, index_col=0, parse_dates=True, header=header)
     
     if not data.index.is_unique:
-        logging.error('The index of data file ' + path + ' is not unique. Please check the data')
+        logging.critical('The index of data file ' + path + ' is not unique. Please check the data')
         sys.exit(1)  
         
     if not data.index.is_monotonic_increasing:
-        logging.error('The index of data file ' + path + ' is not monotoneously increasing. Please check that you have used the proper american date format (yyyy-mm-dd hh:mm:ss)')
+        logging.critical('The index of data file ' + path + ' is not monotoneously increasing. Please check that you have used the proper american date format (yyyy-mm-dd hh:mm:ss)')
         # uncomment this to correct the file:
         #data = pd.read_csv(path,dayfirst=True,index_col=0,parse_dates=True);data.to_csv(path)
         sys.exit(1)  
@@ -324,7 +324,7 @@ def load_time_series(config,path,header='infer'):
                                                         end=pd.datetime(*(config['idx'][0].year,12,31,23,59,59)),
                                                         freq=commons['TimeStep'])
         else:
-            logging.error('A numerical index has been found for file ' + path + 
+            logging.critical('A numerical index has been found for file ' + path + 
                          '. However, its length does not allow guessing its timestamps. Please use a 8760 elements time series')
             sys.exit(1)
 
@@ -342,10 +342,10 @@ def load_time_series(config,path,header='infer'):
         elif len(common) == len(config['idx'])-1:  # there is only one data point missing. This is deemed acceptable
             logging.warn('File ' + path + ': there is one data point missing in the time series. It will be filled with the nearest data')
         elif len(common) < len(config['idx'])-1:
-            logging.error('File ' + path + ': the index does not contain the necessary time range (from ' + str(config['idx'][0]) + ' to ' + str(config['idx'][-1]) + ')')
+            logging.critical('File ' + path + ': the index does not contain the necessary time range (from ' + str(config['idx'][0]) + ' to ' + str(config['idx'][-1]) + ')')
             sys.exit(1)
     else:
-        logging.error('Index for file ' + path + ' is not valid')
+        logging.critical('Index for file ' + path + ' is not valid')
         sys.exit(1)
         
     # re-indexing with the longer index (including look-ahead) and filling possibly missing data at the beginning and at the end::
