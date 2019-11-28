@@ -42,9 +42,11 @@ def NodeBasedTable(varname,config,default=None):
                 logging.critical('No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c + ' does not exist')
                 sys.exit(1)
         SingleFile=False
+    elif path != '':
+        logging.error('A path has been specified for table ' + varname + ' (' + path + ') but no file has been found')
     data = pd.DataFrame(index=config['idx_long'])
     if len(paths) == 0:
-        logging.info('No data file found for the table ' + varname + '. Using default value ' + str(default))
+        logging.info('No data file specified for the table ' + varname + '. Using default value ' + str(default))
         if default is None:
             pass
         elif isinstance(default,(float,int)):
@@ -121,12 +123,15 @@ def UnitBasedTable(plants,varname,config,fallbacks=['Unit'],default=None,Restric
             if os.path.isfile(path_c):
                 paths[str(z)] = path_c
             else:
-                logging.critical('No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c + ' does not exist')
+                logging.error('No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c + ' does not exist')
 #                sys.exit(1)
         SingleFile=False
+    elif path != '':
+        logging.error('A path has been specified for table ' + varname + ' (' + path + ') but no file has been found')
+
     data = pd.DataFrame(index=config['idx_long'])
     if len(paths) == 0:
-        logging.info('No data file found for the table ' + varname + '. Using default value ' + str(default))
+        logging.info('No data file specified for the table ' + varname + '. Using default value ' + str(default))
         if default is None:
             out = pd.DataFrame(index=config['idx_long'])
         elif isinstance(default,(float,int)):
@@ -398,7 +403,9 @@ def load_config_excel(ConfigFile,AbsPath=True):
         if not os.path.isabs(config['SimulationDirectory']):
             config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
         for param in params:
-            if not os.path.isabs(config[param]):
+            if config[param] == '' or config[param].isspace():
+                config[param] = ''
+            elif not os.path.isabs(config[param]):
                 config[param] = os.path.join(basefolder,config[param])
 
     config['default'] = {}
