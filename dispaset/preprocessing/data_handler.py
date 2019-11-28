@@ -304,7 +304,11 @@ def load_time_series(config,path,header='infer'):
     if not data.index.is_unique:
         logging.error('The index of data file ' + path + ' is not unique. Please check the data')
         sys.exit(1)  
-    
+        
+    if not data.index.is_monotonic_increasing:
+        logging.error('The index of data file ' + path + ' is not monotoneously increasing. Please check that you have used the proper american date format (yyyy-mm-dd hh:mm:ss)')
+        sys.exit(1)  
+        
     # First convert numerical indexes into datetimeindex:
     if data.index.is_numeric():
         if len(data) == len(config['idx']):  # The data has the same length as the provided index range
