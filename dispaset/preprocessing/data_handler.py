@@ -307,6 +307,8 @@ def load_time_series(config,path,header='infer'):
         
     if not data.index.is_monotonic_increasing:
         logging.error('The index of data file ' + path + ' is not monotoneously increasing. Please check that you have used the proper american date format (yyyy-mm-dd hh:mm:ss)')
+        # uncomment this to correct the file:
+        #data = pd.read_csv(path,dayfirst=True,index_col=0,parse_dates=True);data.to_csv(path)
         sys.exit(1)  
         
     # First convert numerical indexes into datetimeindex:
