@@ -43,7 +43,8 @@ def NodeBasedTable(varname,config,default=None):
                 sys.exit(1)
         SingleFile=False
     elif path != '':
-        logging.error('A path has been specified for table ' + varname + ' (' + path + ') but no file has been found')
+        logging.critical('A path has been specified for table ' + varname + ' (' + path + ') but no file has been found')
+        sys.exit(1)
     data = pd.DataFrame(index=config['idx_long'])
     if len(paths) == 0:
         logging.info('No data file specified for the table ' + varname + '. Using default value ' + str(default))
@@ -127,7 +128,8 @@ def UnitBasedTable(plants,varname,config,fallbacks=['Unit'],default=None,Restric
 #                sys.exit(1)
         SingleFile=False
     elif path != '':
-        logging.error('A path has been specified for table ' + varname + ' (' + path + ') but no file has been found')
+        logging.critical('A path has been specified for table ' + varname + ' (' + path + ') but no file has been found')
+        sys.exit(1)
 
     data = pd.DataFrame(index=config['idx_long'])
     if len(paths) == 0:
