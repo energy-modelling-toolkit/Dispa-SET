@@ -964,13 +964,18 @@ def mid_term_scheduling(config, zones, profiles=None):
                                   temp_config['GAMS_folder'])
             temp_results[c] = get_temp_sim_results(config)
     #        print('Zones simulated: ' + str(i) + '/' + str(no_of_zones))
-        for c in zones:
-            results[c] = dict(temp_results[c]['OutputStorageLevel'])
         temp = pd.DataFrame()
         for c in zones:
-            r = pd.DataFrame.from_dict(results[c], orient='columns')
-            results_t = pd.concat([temp, r], axis = 1)
-            temp = results_t
+            if 'OutputStorageLevel' not in temp_results[c]:
+                logging.critical('Storage levels in zone ' + c + ' were not computed, please check that storage units '
+                                'are present in the ' + c + ' power plant database! If not, unselect ' + c + ' form the '
+                                'zones in the MTS module')
+                sys.exit(0)
+            else:
+                results[c] = dict(temp_results[c]['OutputStorageLevel'])
+                r = pd.DataFrame.from_dict(results[c], orient='columns')
+                results_t = pd.concat([temp, r], axis = 1)
+                temp = results_t
         temp = temp.set_index(idx)
         temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})
     # Solving reservoir levels for all regions simultaneously
@@ -983,7 +988,13 @@ def mid_term_scheduling(config, zones, profiles=None):
         SimData = build_simulation(temp_config)        # Create temporary SimData   
         r = solve_GAMS_simple(temp_config['SimulationDirectory'], temp_config['GAMS_folder'])
         temp_results = get_temp_sim_results(config)
-        results = dict(temp_results['OutputStorageLevel'])
+        if 'OutputStorageLevel' not in temp_results:
+            logging.critical('Storage levels in the selected region were not computed, please check that storage units '
+                             'are present in the power plant database! If not, unselect zones with no storage units form '
+                             'the zones in the MTS module')
+            sys.exit(0)
+        else:
+            results = dict(temp_results['OutputStorageLevel'])
         temp = pd.DataFrame()
         r = pd.DataFrame.from_dict(results, orient='columns')
         results_t = pd.concat([temp, r], axis = 1)
@@ -1033,7 +1044,7 @@ def build_full_simulation(config, zones_mts=None, mts_plot=None):
         # Plot new profiles
         if mts_plot == True:
             new_profiles.plot()
-            logging.infot('Simulation with specified zones selected')
+            logging.info('Simulation with specified zones selected')
         else:
             logging.info('No temporary profiles selected for display')
          # Build simulation data with new profiles
