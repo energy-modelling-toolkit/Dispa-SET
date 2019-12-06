@@ -557,7 +557,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['default']['WaterValue'] = sheet.cell_value(83, 5)
 
     # read the list of zones to consider:
-    def read_truefalse(sheet, rowstart, colstart, rowstop, colstop):
+    def read_truefalse(sheet, rowstart, colstart, rowstop, colstop, colapart=1):
         """
         Function that reads a two column format with a list of strings in the first
         columns and a list of true false in the second column
@@ -565,12 +565,15 @@ def load_config_excel(ConfigFile,AbsPath=True):
         """
         out = []
         for i in range(rowstart, rowstop):
-            if sheet.cell_value(i, colstart + 1) == 1:
+            if sheet.cell_value(i, colstart + colapart) == 1:
                 out.append(sheet.cell_value(i, colstart))
         return out
 
     config['zones'] = read_truefalse(sheet, 86, 1, 109, 3)
     config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 109, 6)
+
+    config['mts_zones'] = read_truefalse(sheet, 86, 1, 109, 3, 2)
+    config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 86, 4, 109, 6, 2)
 
     config['modifiers'] = {}
     config['modifiers']['Demand'] = sheet.cell_value(111, 2)

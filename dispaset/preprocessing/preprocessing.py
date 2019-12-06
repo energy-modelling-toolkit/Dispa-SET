@@ -923,6 +923,8 @@ def get_temp_sim_results(config, gams_dir=None, cache=False, temp_path='.pickle'
     resultfile = config['SimulationDirectory'] + '/Results_simple.gdx'
     results = gdx_to_dataframe(gdx_to_list(gams_dir, resultfile, varname='all', verbose=True), fixindex=True,
                                verbose=True)
+    results['OutputStorageLevel'] = results['OutputStorageLevel'].reindex(list(range(results['OutputStorageLevel'].index.min(),
+                                                         results['OutputStorageLevel'].index.max() + 1)), fill_value=0)
     return results
 
 def mid_term_scheduling(config, zones, profiles=None):
@@ -984,7 +986,7 @@ def mid_term_scheduling(config, zones, profiles=None):
             temp_config = dict(config)
         else:
             temp_config = dict(config)
-            temp_config['zones'] = zones               # Override zones that need to be simmulated            
+            temp_config['zones'] = zones               # Override zones that need to be simmulated
         SimData = build_simulation(temp_config)        # Create temporary SimData   
         r = solve_GAMS_simple(temp_config['SimulationDirectory'], temp_config['GAMS_folder'])
         temp_results = get_temp_sim_results(config)
@@ -1005,7 +1007,7 @@ def mid_term_scheduling(config, zones, profiles=None):
         logging.info('Mid term scheduling turned off')
     return temp
 
-def build_full_simulation(config, zones_mts=None, mts_plot=None):
+def build_full_simulation(config, mts_plot=None):
     '''
     Dispa-SET function that builds different simulation environments based on the hydro scheduling option in the config file
     Hydro scheduling options:
@@ -1027,7 +1029,7 @@ def build_full_simulation(config, zones_mts=None, mts_plot=None):
         logging.info('Simulation without mid therm scheduling')
         SimData = build_simulation(config)
     # Hydro scheduling per Zone    
-    elif config['HydroScheduling'] == 'Zonal':
+    else:
         # Dates for the mid term scheduling
         if config['HydroSchedulingHorizon'] == 'Annual':
             config['StartDate'] = (y_start, 1, 1, 00, 00, 00)   # updating start date to the beginning of the year
@@ -1036,11 +1038,11 @@ def build_full_simulation(config, zones_mts=None, mts_plot=None):
         else:
             logging.info('Hydro scheduling is performed between Start and Stop dates!') 
         # Mid term scheduling zone selection and new profile calculation
-        if zones_mts == None:
+        if config['mts_zones'] == None:
             new_profiles = mid_term_scheduling(config, config['zones'])
             logging.info('Simulation with all zones selected')
         else:
-            new_profiles = mid_term_scheduling(config, zones_mts)
+            new_profiles = mid_term_scheduling(config, config['mts_zones'])
         # Plot new profiles
         if mts_plot == True:
             new_profiles.plot()
@@ -1048,30 +1050,6 @@ def build_full_simulation(config, zones_mts=None, mts_plot=None):
         else:
             logging.info('No temporary profiles selected for display')
          # Build simulation data with new profiles
-        config['StartDate'] = (y_start, m_start, d_start, 00, 00, 00)   # updating start date to the beginning of the year
-        config['StopDate'] = (y_stop, m_stop, d_stop, 23, 59, 00)  # updating stopdate to the end of the year
-        SimData = build_simulation(config, new_profiles)
-    # Hydro scheduling per region
-    elif config['HydroScheduling'] == 'Regional':
-        # Dates for the mid term scheduling
-        if config['HydroSchedulingHorizon'] == 'Annual':
-            config['StartDate'] = (y_start, 1, 1, 00, 00, 00)   # updating start date to the beginning of the year
-            config['StopDate'] = (y_start, 12, 31, 23, 59, 00)  # updating stopdate to the end of the year
-            logging.info('Hydro scheduling is performed for the period between 01.01.' + str(y_start) + ' and 12.31.' + str(y_start)) 
-        else:
-            logging.info('Hydro scheduling is performed between Start and Stop dates!')
-        # Mid term scheduling zone selection and new profile calculation
-        if zones_mts == None:
-            new_profiles = mid_term_scheduling(config, config['zones'])
-            logging.info('Simulation with all zones from the region selected')
-        else:
-            new_profiles = mid_term_scheduling(config, zones_mts)
-            logging.info('Simulation with zones from a specified region selected')
-        if mts_plot == True:
-            new_profiles.plot()
-        else:
-            logging.info('No temporary profiles selected for display')
-        # Build simulation data with new profiles
         config['StartDate'] = (y_start, m_start, d_start, 00, 00, 00)   # updating start date to the beginning of the year
         config['StopDate'] = (y_stop, m_stop, d_stop, 23, 59, 00)  # updating stopdate to the end of the year
         SimData = build_simulation(config, new_profiles)

@@ -18,11 +18,8 @@ import dispaset as ds
 # Load the configuration file
 config = ds.load_config_excel('../ConfigFiles/Config_Mid_Term_Scheduling.xlsx')
 
-## List of countries where new reservoir levels should be calculated eg. ['AT','BE',...'UK']
-zones = ['AT','FR']
-
 ## Build simulation data with new profiles
-SimData = ds.build_full_simulation(config,zones,mts_plot=True)
+SimData = ds.build_full_simulation(config,mts_plot=True)
 
 #Solve using GAMS:
 r = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
@@ -31,7 +28,7 @@ r = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
 inputs,results = ds.get_sim_results(config['SimulationDirectory'],cache=False)
 
 # Generate country-specific plots
-ds.plot_zone(inputs,results,z='AT')
+ds.plot_zone(inputs,results,z='DE')
 
 # Bar plot with the installed capacities in all countries:
 cap = ds.plot_zone_capacities(inputs)

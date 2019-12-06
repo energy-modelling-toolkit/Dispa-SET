@@ -58,9 +58,10 @@ PriceOfSpillage: ''
 WaterValue: ''
 
 #---------------- Countries
-zones: ['AT', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES',
-   'FI', 'FR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LV', 'NL', 'NO', 'PL',
-   'PT', 'RO', 'SE', 'SI', 'SK', 'UK']
+zones: ['AT', 'DE', 'FR']
+
+#---------------- Coutries where MTS should be performed
+mts_zones: ['AT', 'DE']
 
 #---------------- Reserves
 ReserveParticipation: ['COMC', 'GTUR', 'HDAM', 'HPHS', 'ICEN', 'CAES', 'BATS', 'BEVS']
