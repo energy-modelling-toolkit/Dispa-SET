@@ -208,12 +208,15 @@ def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
 
 
 
-    from gdxcc import gdxSymbolInfo, gdxCreateD, gdxOpenRead, GMS_SSSIZE, gdxDataReadDone, new_gdxHandle_tp, \
+    from gdxcc import gdxSymbolInfo, gdxCreate, gdxCreateD, gdxOpenRead, GMS_SSSIZE, gdxDataReadDone, new_gdxHandle_tp, \
         gdxDataReadStr, gdxFindSymbol, gdxErrorStr, gdxDataReadStrStart, gdxGetLastError
     out = {}
     tgdx = tm.time()
     gdxHandle = new_gdxHandle_tp()
-    gdxCreateD(gdxHandle, force_str(gams_dir), GMS_SSSIZE)
+    if gams_dir == None:
+        gdxCreate(gdxHandle, GMS_SSSIZE)
+    else:
+        gdxCreateD(gdxHandle, force_str(gams_dir), GMS_SSSIZE)
 
     # make sure the file path is properly formatted:
     filename = filename.replace('/', os.path.sep).replace('\\\\', os.path.sep).replace('\\', os.path.sep)

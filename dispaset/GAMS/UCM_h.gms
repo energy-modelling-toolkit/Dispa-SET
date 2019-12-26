@@ -919,6 +919,8 @@ LostLoad_RampDown(n,h)
 OutputGenMargin(n,h)
 OutputHeat(chp,h)
 OutputHeatSlack(chp,h)
+LostLoad_WaterSlack(s)
+StorageShadowPrice(s,h)
 ;
 
 OutputCommitted(u,z)=Committed.L(u,z);
@@ -942,6 +944,8 @@ LostLoad_3U(n,z) = LL_3U.L(n,z);
 LostLoad_RampUp(n,z)    = sum(u,LL_RampUp.L(u,z)*Location(u,n));
 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
+LostLoad_WaterSlack(s) = WaterSlack.L(s);
+StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
@@ -964,6 +968,8 @@ LostLoad_3U,
 LostLoad_RampUp,
 LostLoad_RampDown,
 ShadowPrice,
+LostLoad_WaterSlack,
+StorageShadowPrice,
 status
 ;
 
