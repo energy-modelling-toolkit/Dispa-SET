@@ -389,10 +389,6 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['ReserveCalculation'] = sheet.cell_value(47, 2)
     config['AllowCurtailment'] = sheet.cell_value(48, 2)
 
-    config['HydroScheduling'] = sheet.cell_value(53, 2)
-    config['HydroSchedulingHorizon'] = sheet.cell_value(54, 2)
-    config['InitialFinalReservoirLevel'] = sheet.cell_value(55, 2)
-
     # List of parameters for which an external file path must be specified:
     params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
               'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
@@ -415,8 +411,6 @@ def load_config_excel(ConfigFile,AbsPath=True):
                 config[param] = os.path.join(basefolder,config[param])
 
     config['default'] = {}
-    config['default']['ReservoirLevelInitial'] = sheet.cell_value(56, 5)
-    config['default']['ReservoirLevelFinal'] = sheet.cell_value(57, 5)
     config['default']['PriceOfNuclear'] = sheet.cell_value(69, 5)
     config['default']['PriceOfBlackCoal'] = sheet.cell_value(70, 5)
     config['default']['PriceOfGas'] = sheet.cell_value(71, 5)
@@ -428,12 +422,9 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['default']['LoadShedding'] = sheet.cell_value(65, 5)
     config['default']['CostHeatSlack'] = sheet.cell_value(79, 5)
     config['default']['CostLoadShedding'] = sheet.cell_value(80, 5)
-    config['default']['ValueOfLostLoad'] = sheet.cell_value(81, 5)
-    config['default']['PriceOfSpillage'] = sheet.cell_value(82, 5)
-    config['default']['WaterValue'] = sheet.cell_value(83, 5)
 
     # read the list of zones to consider:
-    def read_truefalse(sheet, rowstart, colstart, rowstop, colstop, colapart=1):
+    def read_truefalse(sheet, rowstart, colstart, rowstop, colstop):
         """
         Function that reads a two column format with a list of strings in the first
         columns and a list of true false in the second column
@@ -441,15 +432,12 @@ def load_config_excel(ConfigFile,AbsPath=True):
         """
         out = []
         for i in range(rowstart, rowstop):
-            if sheet.cell_value(i, colstart + colapart) == 1:
+            if sheet.cell_value(i, colstart + 1) == 1:
                 out.append(sheet.cell_value(i, colstart))
         return out
 
     config['zones'] = read_truefalse(sheet, 86, 1, 109, 3)
     config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 109, 6)
-
-    config['mts_zones'] = read_truefalse(sheet, 86, 1, 109, 3, 2)
-    config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 86, 4, 109, 6, 2)
 
     config['modifiers'] = {}
     config['modifiers']['Demand'] = sheet.cell_value(111, 2)
@@ -490,8 +478,10 @@ def load_config_yaml(filename,AbsPath=True):
             config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
         for param in params:
             if not os.path.isabs(config[param]):
-                config[param] = os.path.join(basefolder,config[param])
-
+                if config[param] == '' or config[param].isspace():
+                    config[param] = ''
+                elif not os.path.isabs(config[param]):
+                    config[param] = os.path.join(basefolder,config[param])
     return config
 
 def export_yaml_config(ExcelFile,YAMLFile):
