@@ -157,8 +157,8 @@ def build_simulation(config, profiles=None):
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
 
-    Outages = UnitBasedTable(plants,config,fallbacks=['Unit','Technology'],tablename='Outages')
-    AF = UnitBasedTable(plants,config,fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1,RestrictWarning=commons['tech_renewables'])
+    Outages = UnitBasedTable(plants,'Outages',config,fallbacks=['Unit','Technology'])
+    AF = UnitBasedTable(plants,'RenewablesAF',config,fallbacks=['Unit','Technology'],default=1,RestrictWarning=commons['tech_renewables'])
 
     # Reservoir levels
     """
@@ -166,15 +166,15 @@ def build_simulation(config, profiles=None):
                     from the mid term scheduling simulations
     """
     if profiles is None:
-        ReservoirLevels = UnitBasedTable(plants_sto,config,fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
+        ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
     else:
-        ReservoirLevels = UnitBasedTable(plants_sto,config,fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
+        ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
         MidTermSchedulingProfiles = profiles
         ReservoirLevels.update(MidTermSchedulingProfiles)
 
-    ReservoirScaledInflows = UnitBasedTable(plants_sto,config,fallbacks=['Unit','Technology','Zone'],tablename='ReservoirScaledInflows',default=0)
-    HeatDemand = UnitBasedTable(plants_chp,config,fallbacks=['Unit'],tablename='HeatDemand',default=0)
-    CostHeatSlack = UnitBasedTable(plants_chp,config,fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default']['CostHeatSlack'])
+    ReservoirScaledInflows = UnitBasedTable(plants_sto,'ReservoirScaledInflows',config,fallbacks=['Unit','Technology','Zone'],default=0)
+    HeatDemand = UnitBasedTable(plants_chp,'HeatDemand',config,fallbacks=['Unit'],default=0)
+    CostHeatSlack = UnitBasedTable(plants_chp,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
