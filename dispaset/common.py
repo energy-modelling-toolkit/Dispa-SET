@@ -10,7 +10,7 @@ commons['TimeStep'] = '1h'
 
 # DispaSET technologies:
 commons['Technologies'] = ['COMC', 'GTUR', 'HDAM', 'HROR', 'HPHS', 'ICEN', 'PHOT', 'STUR', 'WTOF', 'WTON', 'CAES', 'BATS',
-                'BEVS', 'THMS', 'P2GS']
+                'BEVS', 'THMS', 'P2GS','P2HT']
 # List of renewable technologies:
 commons['tech_renewables'] = ['WTON', 'WTOF', 'PHOT', 'HROR']
 # List of storage technologies:
