@@ -19,11 +19,11 @@ except ImportError:
     logging.warning("Couldn't import future package. Numeric operations may differ among different versions due to incompatible variable types")
     pass
 
-from .data_check import check_units, check_chp, check_sto, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering
+from .data_check import check_units, check_chp, check_sto, check_p2h, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering
 from .utils import clustering, interconnections, incidence_matrix, select_units
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, load_time_series
 
-from ..solve import solve_GAMS, solve_GAMS_simple, solve_pyomo
+from ..solve import solve_GAMS_simple
 
 from ..misc.gdx_handler import write_variables, gdx_to_list, gdx_to_dataframe
 from ..common import commons  # Load fuel types, technologies, timestep, etc:
@@ -157,6 +157,9 @@ def build_simulation(config, profiles=None):
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
 
+    # Defining the P2H units:
+    plants_p2h = plants[plants['Technology']=='P2HT']
+
     Outages = UnitBasedTable(plants,'Outages',config,fallbacks=['Unit','Technology'])
     AF = UnitBasedTable(plants,'RenewablesAF',config,fallbacks=['Unit','Technology'],default=1,RestrictWarning=commons['tech_renewables'])
 
@@ -266,25 +269,30 @@ def build_simulation(config, profiles=None):
         Plants_merged.loc[u,'PartLoadMin'] = Plants_merged.loc[u,'PartLoadMin'] * PowerCapacity / PurePowerCapacity  # FIXME: Is this correct?
         Plants_merged.loc[u,'PowerCapacity'] = PurePowerCapacity
         
+    Plants_p2h = Plants_merged[Plants_merged['Technology']=='P2HT'].copy()
+    # check chp plants:
+    check_p2h(config, Plants_p2h)
+        
+    
     # Get the hydro time series corresponding to the original plant list: #FIXME Unused variable ?
     #StorageFormerIndexes = [s for s in plants.index if
     #                        plants['Technology'][s] in commons['tech_storage']]
 
     # Same with the CHPs:
     # Get the heat demand time series corresponding to the original plant list:
-    CHPFormerIndexes = [s for s in plants.index if
-                            plants['CHPType'][s] in commons['types_CHP']]
-    for s in CHPFormerIndexes:  # for all the old plant indexes
-        # get the old plant name corresponding to s:
-        oldname = plants['Unit'][s]
-        # newname = mapping['NewIndex'][s] #FIXME Unused variable ?
-        if oldname not in HeatDemand:
-            logging.warning('No heat demand profile found for CHP plant "' + str(oldname) + '". Assuming zero')
-            HeatDemand[oldname] = 0
-        if oldname not in CostHeatSlack:
-            logging.warning('No heat cost profile found for CHP plant "' + str(oldname) + '". Assuming zero')
-            CostHeatSlack[oldname] = 0
- 
+#    CHPFormerIndexes = [s for s in plants.index if
+#                            plants['CHPType'][s] in commons['types_CHP']]
+#    for s in CHPFormerIndexes:  # for all the old plant indexes
+#        # get the old plant name corresponding to s:
+#        oldname = plants['Unit'][s]
+#        # newname = mapping['NewIndex'][s] #FIXME Unused variable ?
+#        if oldname not in HeatDemand:
+#            logging.warning('No heat demand profile found for CHP plant "' + str(oldname) + '". Assuming zero')
+#            HeatDemand[oldname] = 0
+#        if oldname not in CostHeatSlack:
+#            logging.warning('No heat cost profile found for CHP plant "' + str(oldname) + '". Assuming zero')
+#            CostHeatSlack[oldname] = 0
+# 
 
     # merge the outages:
     for i in plants.index:  # for all the old plant indexes
@@ -339,12 +347,14 @@ def build_simulation(config, profiles=None):
     sets['z'] = [str(x + 1) for x in range(Nhours_long - config['LookAhead'] * 24)]
     sets['mk'] = ['DA', '2U', '2D']
     sets['n'] = config['zones']
-    sets['u'] = Plants_merged.index.tolist()
+    sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
+    sets['u'] = Plants_merged[Plants_merged['Technology']!='P2H'].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
+    sets['p2h'] = Plants_p2h.index.tolist()
     sets['t'] = commons['Technologies']
     sets['tr'] = commons['tech_renewables']
 
@@ -357,55 +367,55 @@ def build_simulation(config, profiles=None):
 
     # Each parameter is associated with certain sets, as defined in the following list:
     sets_param = {}
-    sets_param['AvailabilityFactor'] = ['u', 'h']
+    sets_param['AvailabilityFactor'] = ['au', 'h']
     sets_param['CHPPowerToHeat'] = ['chp']
     sets_param['CHPPowerLossFactor'] = ['chp']
     sets_param['CHPMaxHeat'] = ['chp']
-    sets_param['CostFixed'] = ['u']
+    sets_param['CostFixed'] = ['au']
     sets_param['CostHeatSlack'] = ['chp','h']
     sets_param['CostLoadShedding'] = ['n','h']
-    sets_param['CostRampUp'] = ['u']
-    sets_param['CostRampDown'] = ['u']
-    sets_param['CostShutDown'] = ['u']
-    sets_param['CostStartUp'] = ['u']
-    sets_param['CostVariable'] = ['u', 'h']
+    sets_param['CostRampUp'] = ['au']
+    sets_param['CostRampDown'] = ['au']
+    sets_param['CostShutDown'] = ['au']
+    sets_param['CostStartUp'] = ['au']
+    sets_param['CostVariable'] = ['au', 'h']
     sets_param['Curtailment'] = ['n']
     sets_param['Demand'] = ['mk', 'n', 'h']
-    sets_param['Efficiency'] = ['u']
+    sets_param['Efficiency'] = ['au']
     sets_param['EmissionMaximum'] = ['n', 'p']
-    sets_param['EmissionRate'] = ['u', 'p']
+    sets_param['EmissionRate'] = ['au', 'p']
     sets_param['FlowMaximum'] = ['l', 'h']
     sets_param['FlowMinimum'] = ['l', 'h']
-    sets_param['Fuel'] = ['u', 'f']
+    sets_param['Fuel'] = ['au', 'f']
     sets_param['HeatDemand'] = ['chp','h']
     sets_param['LineNode'] = ['l', 'n']
     sets_param['LoadShedding'] = ['n','h']
-    sets_param['Location'] = ['u', 'n']
-    sets_param['Markup'] = ['u', 'h']
-    sets_param['Nunits'] = ['u']
-    sets_param['OutageFactor'] = ['u', 'h']
-    sets_param['PartLoadMin'] = ['u']
-    sets_param['PowerCapacity'] = ['u']
-    sets_param['PowerInitial'] = ['u']
+    sets_param['Location'] = ['au', 'n']
+    sets_param['Markup'] = ['au', 'h']
+    sets_param['Nunits'] = ['au']
+    sets_param['OutageFactor'] = ['au', 'h']
+    sets_param['PartLoadMin'] = ['au']
+    sets_param['PowerCapacity'] = ['au']
+    sets_param['PowerInitial'] = ['au']
     sets_param['PriceTransmission'] = ['l', 'h']
-    sets_param['RampUpMaximum'] = ['u']
-    sets_param['RampDownMaximum'] = ['u']
-    sets_param['RampStartUpMaximum'] = ['u']
-    sets_param['RampShutDownMaximum'] = ['u']
+    sets_param['RampUpMaximum'] = ['au']
+    sets_param['RampDownMaximum'] = ['au']
+    sets_param['RampStartUpMaximum'] = ['au']
+    sets_param['RampShutDownMaximum'] = ['au']
     sets_param['Reserve'] = ['t']
-    sets_param['StorageCapacity'] = ['u']
+    sets_param['StorageCapacity'] = ['au']
     sets_param['StorageChargingCapacity'] = ['s']
     sets_param['StorageChargingEfficiency'] = ['s']
     sets_param['StorageDischargeEfficiency'] = ['s']
-    sets_param['StorageSelfDischarge'] = ['u']
+    sets_param['StorageSelfDischarge'] = ['au']
     sets_param['StorageInflow'] = ['s', 'h']
     sets_param['StorageInitial'] = ['s']
     sets_param['StorageMinimum'] = ['s']
     sets_param['StorageOutflow'] = ['s', 'h']
     sets_param['StorageProfile'] = ['s', 'h']
-    sets_param['Technology'] = ['u', 't']
-    sets_param['TimeUpMinimum'] = ['u']
-    sets_param['TimeDownMinimum'] = ['u']
+    sets_param['Technology'] = ['au', 't']
+    sets_param['TimeUpMinimum'] = ['au']
+    sets_param['TimeDownMinimum'] = ['au']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -507,7 +517,7 @@ def build_simulation(config, profiles=None):
 
     # Availability Factors
     if len(AF_merged.columns) != 0:
-        for i, u in enumerate(sets['u']):
+        for i, u in enumerate(sets['au']):
             if u in AF_merged.columns:
                 parameters['AvailabilityFactor']['val'][i, :] = AF_merged[u].values
 
@@ -569,7 +579,7 @@ def build_simulation(config, profiles=None):
 
     # Outage Factors
     if len(Outages_merged.columns) != 0:
-        for i, u in enumerate(sets['u']):
+        for i, u in enumerate(sets['au']):
             if u in Outages_merged.columns:
                 parameters['OutageFactor']['val'][i, :] = Outages_merged[u].values
             else:
@@ -938,7 +948,7 @@ def mid_term_scheduling(config, zones, profiles=None):
             logging.info('(Curently simulating Zone): ' + str(i) + ' out of ' + str(no_of_zones))
             temp_config = dict(config)
             temp_config['zones'] = [c]                    # Override zone that needs to be simmulated
-            SimData = build_simulation(temp_config)       # Create temporary SimData   
+            _ = build_simulation(temp_config)       # Create temporary SimData   
             r = solve_GAMS_simple(temp_config['SimulationDirectory'], 
                                   temp_config['GAMS_folder'])
             temp_results[c] = get_temp_sim_results(config)
@@ -964,7 +974,7 @@ def mid_term_scheduling(config, zones, profiles=None):
         else:
             temp_config = dict(config)
             temp_config['zones'] = zones               # Override zones that need to be simmulated
-        SimData = build_simulation(temp_config)        # Create temporary SimData   
+        _ = build_simulation(temp_config)        # Create temporary SimData   
         r = solve_GAMS_simple(temp_config['SimulationDirectory'], temp_config['GAMS_folder'])
         temp_results = get_temp_sim_results(config)
         if 'OutputStorageLevel' not in temp_results:

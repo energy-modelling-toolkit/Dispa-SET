@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 import logging
 
+from ..common import commons  # Load fuel types, technologies, timestep, etc
+
 
 def isVRE(tech):
     '''
@@ -135,6 +137,59 @@ def check_sto(config, plants,raw_data=True):
             if np.isnan(plants.loc[u, key]):
                 logging.critical('The power plants data is missing for unit ' + unitname + ' and parameter "' + key + '"')
                 sys.exit(1)
+
+    return True
+
+
+
+
+
+
+def check_p2h(config, plants):
+    """
+    Function that checks the p2h unit characteristics
+    """   
+    keys = []
+    NonNaNKeys = []
+    StrKeys = []
+    
+    for key in keys:
+        if key not in plants:
+            logging.critical('The power plants data does not contain the field "' + key + '", which is mandatory for CHP units')
+            sys.exit(1)
+
+    for key in NonNaNKeys:
+        for u in plants.index:
+            if 'Unit' in plants:
+                unitname = plants.loc[u,'Unit']
+            else:
+                unitname = str(u)
+            if type(plants.loc[u, key]) == str:
+                logging.critical('A non numeric value was detected in the power plants inputs for parameter "' + key + '"')
+                sys.exit(1)
+            if np.isnan(plants.loc[u, key]):
+                logging.critical('The power plants data is missing for unit number ' + unitname + ' and parameter "' + key + '"')
+                sys.exit(1)
+
+    for key in StrKeys:
+        for u in plants.index:
+            if 'Unit' in plants:
+                unitname = plants.loc[u,'Unit']
+            else:
+                unitname = str(u)
+            if not isinstance(plants.loc[u, key], str):
+                logging.critical(
+                    'A numeric value was detected in the power plants inputs for parameter "' + key + '". This column should contain strings only.')
+                sys.exit(1)
+            elif plants.loc[u, key] == '':
+                logging.critical('An empty value was detected in the power plants inputs for unit "' + unitname + '" and parameter "' + key + '"')
+                sys.exit(1)
+    
+    # Check the efficiency values:
+    for u in plants.index:
+        if plants.loc[u,'Efficiency'] < 0 or plants.loc[u,'Efficiency'] > 20:
+            logging.critical('The efficiency value of P2H units is actually a COP value. It must be comprised between 0 and 20. The provided value for unit ' + u + ' is "' + str(plants.loc[u,'Efficiency'] + '"'))
+            sys.exit(1)                               
 
     return True
 
@@ -396,6 +451,14 @@ def check_heat_demand(plants,data):
                 logging.warning('The minimum thermal demand for unit ' + str(u) + ' (' + str(data[u].min()) + ') is lower than its minimum thermal generation (' + str(Qmin) + ' MWth)')
         else:
             logging.warning('The heat demand profile with header "' + str(u) + '" does not correspond to any CHP plant. It will be ignored.')
+
+    # check that a heating demand has been provided for all heating technologies
+    plants_heating = plants[[str(plants['CHPType'][u]).lower() in commons['types_CHP'] or plants.loc[u,'Technology']=='P2HT' for u in plants.index]]
+    for u in plants_heating.index:
+        if u not in data:
+            sys.critical('No heat demand data was found for unit ' + u)
+            sys.exit(1)
+ 
     return True
 
 
