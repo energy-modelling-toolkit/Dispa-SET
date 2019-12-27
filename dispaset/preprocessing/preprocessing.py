@@ -159,6 +159,9 @@ def build_simulation(config, profiles=None):
 
     # Defining the P2H units:
     plants_p2h = plants[plants['Technology']=='P2HT']
+    
+    # All heating units:
+    plants_heat = plants_chp.append(plants_p2h)
 
     Outages = UnitBasedTable(plants,'Outages',config,fallbacks=['Unit','Technology'])
     AF = UnitBasedTable(plants,'RenewablesAF',config,fallbacks=['Unit','Technology'],default=1,RestrictWarning=commons['tech_renewables'])
@@ -176,8 +179,8 @@ def build_simulation(config, profiles=None):
         ReservoirLevels.update(MidTermSchedulingProfiles)
 
     ReservoirScaledInflows = UnitBasedTable(plants_sto,'ReservoirScaledInflows',config,fallbacks=['Unit','Technology','Zone'],default=0)
-    HeatDemand = UnitBasedTable(plants_chp,'HeatDemand',config,fallbacks=['Unit'],default=0)
-    CostHeatSlack = UnitBasedTable(plants_chp,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
+    HeatDemand = UnitBasedTable(plants_heat,'HeatDemand',config,fallbacks=['Unit'],default=0)
+    CostHeatSlack = UnitBasedTable(plants_heat,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
@@ -268,10 +271,14 @@ def build_simulation(config, profiles=None):
             PurePowerCapacity = PowerCapacity + Plants_chp.loc[u,'CHPPowerLossFactor'] * MaxHeat
         Plants_merged.loc[u,'PartLoadMin'] = Plants_merged.loc[u,'PartLoadMin'] * PowerCapacity / PurePowerCapacity  # FIXME: Is this correct?
         Plants_merged.loc[u,'PowerCapacity'] = PurePowerCapacity
-        
+    
+    #for p2h, assigning the cop to the efficiency in order not to multiply the variables:
+    Plants_merged.loc[Plants_merged['Technology']=='P2HT','Efficiency']=Plants_merged[Plants_merged['Technology']=='P2HT']['COP']
     Plants_p2h = Plants_merged[Plants_merged['Technology']=='P2HT'].copy()
     # check chp plants:
     check_p2h(config, Plants_p2h)
+    # All heating plants:
+    Plants_heat = Plants_chp.append(Plants_p2h)
         
     
     # Get the hydro time series corresponding to the original plant list: #FIXME Unused variable ?
@@ -355,6 +362,7 @@ def build_simulation(config, profiles=None):
     sets['u'] = Plants_merged[Plants_merged['Technology']!='P2H'].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
     sets['p2h'] = Plants_p2h.index.tolist()
+    sets['th'] = Plants_heat.index.tolist()
     sets['t'] = commons['Technologies']
     sets['tr'] = commons['tech_renewables']
 
@@ -372,7 +380,7 @@ def build_simulation(config, profiles=None):
     sets_param['CHPPowerLossFactor'] = ['chp']
     sets_param['CHPMaxHeat'] = ['chp']
     sets_param['CostFixed'] = ['au']
-    sets_param['CostHeatSlack'] = ['chp','h']
+    sets_param['CostHeatSlack'] = ['th','h']
     sets_param['CostLoadShedding'] = ['n','h']
     sets_param['CostRampUp'] = ['au']
     sets_param['CostRampDown'] = ['au']
@@ -387,7 +395,7 @@ def build_simulation(config, profiles=None):
     sets_param['FlowMaximum'] = ['l', 'h']
     sets_param['FlowMinimum'] = ['l', 'h']
     sets_param['Fuel'] = ['au', 'f']
-    sets_param['HeatDemand'] = ['chp','h']
+    sets_param['HeatDemand'] = ['th','h']
     sets_param['LineNode'] = ['l', 'n']
     sets_param['LoadShedding'] = ['n','h']
     sets_param['Location'] = ['au', 'n']
@@ -497,7 +505,7 @@ def build_simulation(config, profiles=None):
             parameters['StorageInflow']['val'][i, :] = ReservoirScaledInflows_merged[s][idx_long].values * \
                                                        Plants_sto['PowerCapacity'][s]
     # CHP time series:
-    for i, u in enumerate(sets['chp']):
+    for i, u in enumerate(sets['th']):
         if u in HeatDemand_merged:
             parameters['HeatDemand']['val'][i, :] = HeatDemand_merged[u][idx_long].values
             parameters['CostHeatSlack']['val'][i, :] = CostHeatSlack_merged[u][idx_long].values

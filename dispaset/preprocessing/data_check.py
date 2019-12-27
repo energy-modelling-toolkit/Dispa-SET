@@ -149,8 +149,8 @@ def check_p2h(config, plants):
     """
     Function that checks the p2h unit characteristics
     """   
-    keys = []
-    NonNaNKeys = []
+    keys = ['COP']
+    NonNaNKeys = ['COP']
     StrKeys = []
     
     for key in keys:
@@ -185,10 +185,10 @@ def check_p2h(config, plants):
                 logging.critical('An empty value was detected in the power plants inputs for unit "' + unitname + '" and parameter "' + key + '"')
                 sys.exit(1)
     
-    # Check the efficiency values:
+    # Check the COP values:
     for u in plants.index:
-        if plants.loc[u,'Efficiency'] < 0 or plants.loc[u,'Efficiency'] > 20:
-            logging.critical('The efficiency value of P2H units is actually a COP value. It must be comprised between 0 and 20. The provided value for unit ' + u + ' is "' + str(plants.loc[u,'Efficiency'] + '"'))
+        if plants.loc[u,'COP'] < 0 or plants.loc[u,'COP'] > 20:
+            logging.critical('The COP value of p2h units must be comprised between 0 and 20. The provided value for unit ' + u + ' is "' + str(plants.loc[u,'COP'] + '"'))
             sys.exit(1)                               
 
     return True
@@ -414,18 +414,20 @@ def check_heat_demand(plants,data):
     :param     plants:  List of CHP plants
     '''
     plants.index = plants['Unit']
+    plants_heating = plants[[str(plants['CHPType'][u]).lower() in commons['types_CHP'] or plants.loc[u,'Technology']=='P2HT' for u in plants.index]]
+    plants_chp = plants[[str(plants['CHPType'][u]).lower() in commons['types_CHP'] for u in plants.index]]
+
     for u in data:
-        if u in plants.index:
-            if 'Nunits' in plants:
+        if u in plants_heating.index:
+            if 'Nunits' in plants_heating:
                 Nunits = plants.loc[u,'Nunits']
             else:
                 Nunits = 1
-            # Check if there is demand data for that unit:
-            if u not in data.columns:
-                logging.error('Heat demand data for CHP unit "' + u + '" could not be found.')
-                sys.exit(1)
-            elif (data[u] == 0).all():
+            if (data[u] == 0).all():
                 logging.critical('Heat demand data for CHP unit "' + u + '" is either no found or always equal to zero')
+        else:
+            logging.warning('The heat demand profile with header "' + str(u) + '" does not correspond to any CHP plant. It will be ignored.')
+        if u in plants_chp.index:
             plant_CHP_type = plants.loc[u,'CHPType'].lower()
             if pd.isnull(plants.loc[u, 'CHPMaxHeat']):
                 plant_Qmax = +np.inf
@@ -449,14 +451,12 @@ def check_heat_demand(plants,data):
                 logging.warning('The maximum thermal demand for unit ' + str(u) + ' (' + str(data[u].max()) + ') is higher than its thermal capacity (' + str(Qmax) + '). Slack heat will be used to cover that.')
             if data[u].min() < Qmin:
                 logging.warning('The minimum thermal demand for unit ' + str(u) + ' (' + str(data[u].min()) + ') is lower than its minimum thermal generation (' + str(Qmin) + ' MWth)')
-        else:
-            logging.warning('The heat demand profile with header "' + str(u) + '" does not correspond to any CHP plant. It will be ignored.')
+
 
     # check that a heating demand has been provided for all heating technologies
-    plants_heating = plants[[str(plants['CHPType'][u]).lower() in commons['types_CHP'] or plants.loc[u,'Technology']=='P2HT' for u in plants.index]]
     for u in plants_heating.index:
         if u not in data:
-            sys.critical('No heat demand data was found for unit ' + u)
+            logging.critical('No heat demand data was found for unit ' + u)
             sys.exit(1)
  
     return True
