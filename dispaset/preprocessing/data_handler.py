@@ -397,6 +397,15 @@ def load_config_excel(ConfigFile,AbsPath=True):
     for i, param in enumerate(params):
         config[param] = sheet.cell_value(61 + i, 2)
 
+    # List of new parameters for which an external file path must be specified:
+    params2 = ['Temperatures']
+    if sheet.nrows>150:                 # for backward compatibility (old excel sheets had less than 150 rows)
+        for i, param in enumerate(params2):
+            config[param] = sheet.cell_value(156 + i, 2)
+    else:
+        for param in params2:
+            config[param] = ''
+
     if AbsPath:
     # Changing all relative paths to absolute paths. Relative paths must be defined 
     # relative to the parent folder of the config file.
@@ -404,7 +413,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
         basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath),os.pardir))
         if not os.path.isabs(config['SimulationDirectory']):
             config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
-        for param in params:
+        for param in params+params2:
             if config[param] == '' or config[param].isspace():
                 config[param] = ''
             elif not os.path.isabs(config[param]):
@@ -422,6 +431,9 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['default']['LoadShedding'] = sheet.cell_value(65, 5)
     config['default']['CostHeatSlack'] = sheet.cell_value(79, 5)
     config['default']['CostLoadShedding'] = sheet.cell_value(80, 5)
+    config['default']['ValueOfLostLoad'] = sheet.cell_value(81, 5)
+    config['default']['PriceOfSpillage'] = sheet.cell_value(82, 5)
+    config['default']['WaterValue'] = sheet.cell_value(83, 5)
 
     # read the list of zones to consider:
     def read_truefalse(sheet, rowstart, colstart, rowstop, colstop):

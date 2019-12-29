@@ -19,7 +19,7 @@ except ImportError:
     logging.warning("Couldn't import future package. Numeric operations may differ among different versions due to incompatible variable types")
     pass
 
-from .data_check import check_units, check_chp, check_sto, check_p2h, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering
+from .data_check import check_units, check_chp, check_sto, check_p2h, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering, check_temperatures
 from .utils import clustering, interconnections, incidence_matrix, select_units
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, load_time_series
 
@@ -181,10 +181,12 @@ def build_simulation(config, profiles=None):
     ReservoirScaledInflows = UnitBasedTable(plants_sto,'ReservoirScaledInflows',config,fallbacks=['Unit','Technology','Zone'],default=0)
     HeatDemand = UnitBasedTable(plants_heat,'HeatDemand',config,fallbacks=['Unit'],default=0)
     CostHeatSlack = UnitBasedTable(plants_heat,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
+    Temperatures = NodeBasedTable('Temperatures',config)
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
     check_heat_demand(plants,HeatDemand)
+    check_temperatures(plants,Temperatures)
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
@@ -641,7 +643,6 @@ def build_simulation(config, profiles=None):
     dd_begin = idx_long[4]
     dd_end = idx_long[-2]
 
-#TODO: integrated the parameters (VOLL, Water value, etc) from the excel config file
     # Check if values are specified in the config and overwrite the default ones
     values_lst = ['ValueOfLostLoad','ShareOfQuickStartUnits','PriceOfSpillage','WaterValue']
     values_val = [1e5,0.5,1,100]

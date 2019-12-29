@@ -10,6 +10,7 @@ import sys
 import numpy as np
 import pandas as pd
 import logging
+from pandas.api.types import is_numeric_dtype
 
 from ..common import commons  # Load fuel types, technologies, timestep, etc
 
@@ -459,6 +460,31 @@ def check_heat_demand(plants,data):
             logging.critical('No heat demand data was found for unit ' + u)
             sys.exit(1)
  
+    return True
+
+
+
+def check_temperatures(plants,Temperatures):
+    '''
+    Function that checks the presence and validity of the temperatures profiles for
+    units with temperature-dependent characteristics
+
+    :param     plants:  List of all units
+    '''
+    
+    plants.index = plants['Unit']
+    if 'TNominal' in plants and is_numeric_dtype(plants['TNominal']):
+        plants_T = plants[plants.TNominal > 0]
+        if 'coef_COP_a' not in plants or 'coef_COP_b' not in plants:
+            logging.critical('Columns coef_COP_a and coef_COP_b must be defined in the units table')
+            sys.exit(1)
+    else:
+        plants_T= pd.DataFrame(columns=plants.columns)
+    for u in plants_T.index:
+        if plants_T.loc[u,'Zone'] not in Temperatures:
+            logging.critical('No temperature data has been found for zone ' + plants_T.loc[u,'Zone'] +", although it is required for temperature-dependent unit " + u)
+            sys.exit(1)
+
     return True
 
 
