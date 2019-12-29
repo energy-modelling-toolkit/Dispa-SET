@@ -20,7 +20,7 @@ except ImportError:
     pass
 
 from .data_check import check_units, check_chp, check_sto, check_p2h, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering, check_temperatures
-from .utils import clustering, interconnections, incidence_matrix, select_units
+from .utils import clustering, interconnections, incidence_matrix, select_units, EfficiencyTimeSeries
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, load_time_series
 
 from ..solve import solve_GAMS_simple
@@ -274,14 +274,14 @@ def build_simulation(config, profiles=None):
         Plants_merged.loc[u,'PartLoadMin'] = Plants_merged.loc[u,'PartLoadMin'] * PowerCapacity / PurePowerCapacity  # FIXME: Is this correct?
         Plants_merged.loc[u,'PowerCapacity'] = PurePowerCapacity
     
-    #for p2h, assigning the cop to the efficiency in order not to multiply the variables:
-    Plants_merged.loc[Plants_merged['Technology']=='P2HT','Efficiency']=Plants_merged[Plants_merged['Technology']=='P2HT']['COP']
     Plants_p2h = Plants_merged[Plants_merged['Technology']=='P2HT'].copy()
     # check chp plants:
     check_p2h(config, Plants_p2h)
     # All heating plants:
     Plants_heat = Plants_chp.append(Plants_p2h)
-        
+    
+    # Calculating the efficiency time series for each unit:
+    Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
     
     # Get the hydro time series corresponding to the original plant list: #FIXME Unused variable ?
     #StorageFormerIndexes = [s for s in plants.index if
@@ -361,7 +361,7 @@ def build_simulation(config, profiles=None):
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
-    sets['u'] = Plants_merged[Plants_merged['Technology']!='P2H'].index.tolist()
+    sets['u'] = Plants_merged[Plants_merged['Technology']!='P2HT'].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
     sets['p2h'] = Plants_p2h.index.tolist()
     sets['th'] = Plants_heat.index.tolist()
@@ -391,7 +391,7 @@ def build_simulation(config, profiles=None):
     sets_param['CostVariable'] = ['au', 'h']
     sets_param['Curtailment'] = ['n']
     sets_param['Demand'] = ['mk', 'n', 'h']
-    sets_param['Efficiency'] = ['au']
+    sets_param['Efficiency'] = ['p2h','h']
     sets_param['EmissionMaximum'] = ['n', 'p']
     sets_param['EmissionRate'] = ['au', 'p']
     sets_param['FlowMaximum'] = ['l', 'h']
@@ -447,7 +447,7 @@ def build_simulation(config, profiles=None):
 
     # %%
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
-    for var in ['Efficiency', 'PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
+    for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
                 'CostRampUp','StorageCapacity', 'StorageSelfDischarge']:
         parameters[var]['val'] = Plants_merged[var].values
 
@@ -531,6 +531,10 @@ def build_simulation(config, profiles=None):
             if u in AF_merged.columns:
                 parameters['AvailabilityFactor']['val'][i, :] = AF_merged[u].values
 
+    # Efficiencies (currently limited to p2h units, but can be extended to all units):
+    if len(Efficiencies) != 0:
+        for i, u in enumerate(sets['p2h']):
+            parameters['Efficiency']['val'][i, :] = Efficiencies[u].values
 
     # Demand
     # Dayahead['NL'][1800:1896] = Dayahead['NL'][1632:1728]

@@ -103,7 +103,7 @@ CostHeatSlack(th,h)             [EUR\MWh]  Cost of supplying heat via other mean
 CostLoadShedding(n,h)            [EUR\MWh] Cost of load shedding
 Curtailment(n)                   [n.a]    Curtailment allowed or not {1 0} at node n
 Demand(mk,n,h)                   [MW]     Demand
-Efficiency(au)                  [%]      Efficiency
+Efficiency(p2h,h)                  [%]      Efficiency
 EmissionMaximum(n,p)             [tP]     Emission limit
 EmissionRate(u,p)                [tP\MWh] P emission rate
 FlowMaximum(l,h)                 [MW]     Line limits
@@ -375,7 +375,7 @@ K_QuickStart(n) = Config("QuickStartShare","val");
 
 $If %Verbose% == 1 Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial;
 
-$offorder    
+$offorder
 
 
 *===============================================================================
@@ -747,7 +747,7 @@ EQ_CHP_max_heat(chp,i)..
 EQ_P2H(p2h,i)..
          Heat(p2h,i)
          =E=
-         PowerConsumption(p2h,i) * Efficiency(p2h)
+         PowerConsumption(p2h,i) * Efficiency(p2h,i)
 ;
 
 EQ_CHP_demand_satisfaction(th,i)..

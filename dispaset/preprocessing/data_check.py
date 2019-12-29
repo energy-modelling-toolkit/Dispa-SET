@@ -473,8 +473,8 @@ def check_temperatures(plants,Temperatures):
     '''
     
     plants.index = plants['Unit']
-    if 'TNominal' in plants and is_numeric_dtype(plants['TNominal']):
-        plants_T = plants[plants.TNominal > 0]
+    if 'Tnominal' in plants and is_numeric_dtype(plants['Tnominal']):
+        plants_T = plants[plants.Tnominal > 0]
         if 'coef_COP_a' not in plants or 'coef_COP_b' not in plants:
             logging.critical('Columns coef_COP_a and coef_COP_b must be defined in the units table')
             sys.exit(1)
