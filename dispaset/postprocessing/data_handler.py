@@ -12,6 +12,7 @@ from ..misc.str_handler import clean_strings
 col_keys = {'OutputCommitted':('u','h'),
             'OutputFlow':('l','h'),
             'OutputPower':('u','h'),
+            'OutputPowerConsumption':('u','h'),
             'OutputHeat':('u','h'),
             'OutputHeatSlack':('u','h'),
             'OutputStorageInput':('u','h'),
@@ -129,7 +130,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
             'LostLoad_RampDown', 'LostLoad_2D','ShadowPrice', 'StorageShadowPrice'] #'status'
 
-    keys_sparse = ['OutputPower', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
+    keys_sparse = ['OutputPower','OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
                    'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput', 'OutputHeat',
                    'OutputHeatSlack']
     
