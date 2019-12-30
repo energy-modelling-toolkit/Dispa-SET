@@ -405,6 +405,7 @@ EQ_Demand_balance_2U
 EQ_Demand_balance_3U
 EQ_Demand_balance_2D
 EQ_P2H
+EQ_Max_P2H
 EQ_Power_must_run
 EQ_Power_available
 EQ_Reserve_2U_capability
@@ -750,6 +751,13 @@ EQ_P2H(p2h,i)..
          PowerConsumption(p2h,i) * Efficiency(p2h,i)
 ;
 
+
+EQ_Max_P2H(p2h,i)..
+         PowerConsumption(p2h,i)
+         =L=
+         PowerCapacity(p2h,i)
+;
+
 EQ_CHP_demand_satisfaction(th,i)..
          Heat(th,i)    + HeatSlack(th,i)
          =E=
@@ -812,6 +820,7 @@ EQ_Demand_balance_2D,
 EQ_Demand_balance_3U,
 $If not %LPFormulation% == 1 EQ_Power_must_run,
 EQ_P2H,
+EQ_Max_P2H,
 EQ_Power_available,
 EQ_Heat_Storage_balance,
 EQ_Heat_Storage_minimum,
