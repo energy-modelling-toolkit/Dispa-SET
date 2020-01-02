@@ -755,7 +755,7 @@ EQ_P2H(p2h,i)..
 EQ_Max_P2H(p2h,i)..
          PowerConsumption(p2h,i)
          =L=
-         PowerCapacity(p2h,i)
+         PowerCapacity(p2h) * Nunits(p2h)
 ;
 
 EQ_CHP_demand_satisfaction(th,i)..
