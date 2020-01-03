@@ -310,7 +310,16 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
     else:
         level = pd.Series(0, index=results['OutputPower'].index)
 
-    demand = inputs['param_df']['Demand'][('DA', z)] / 1000 # GW
+    if 'OutputPowerConsumption' in results:
+        demand_p2h = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1000 #GW
+        demand_p2h = demand_p2h.sum(axis=1)
+    else:
+        demand_p2h = pd.Series(0, index=results['OutputPower'].index)
+
+    demand_da = inputs['param_df']['Demand'][('DA', z)] / 1000 # GW
+    demand = pd.DataFrame(demand_da + demand_p2h, columns = [('DA', z)])
+    demand = demand[('DA', z)]
+
     sum_generation = plotdata.sum(axis=1)
     #if 'OutputShedLoad' in results:
     if 'OutputShedLoad' in results and z in results['OutputShedLoad']:
