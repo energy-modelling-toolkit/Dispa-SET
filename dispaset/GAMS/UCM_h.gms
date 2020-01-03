@@ -247,7 +247,7 @@ f,
 p,
 s,
 chp,
-p2h
+p2h,
 h,
 AvailabilityFactor,
 CHPPowerLossFactor,
@@ -746,7 +746,7 @@ EQ_CHP_max_heat(chp,i)..
 
 * Power to heat units
 EQ_P2H(p2h,i)..
-         Heat(p2h,i)
+         StorageInput(p2h,i)
          =E=
          PowerConsumption(p2h,i) * Efficiency(p2h,i)
 ;
@@ -759,7 +759,7 @@ EQ_Max_P2H(p2h,i)..
 ;
 
 EQ_CHP_demand_satisfaction(th,i)..
-         Heat(th,i)    + HeatSlack(th,i)
+         Heat(th,i) + HeatSlack(th,i)
          =E=
          HeatDemand(th,i)
 ;
@@ -928,12 +928,11 @@ $If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.
 
 PARAMETER
 OutputCommitted(u,h)
-OutputHeat(chp,h)
 OutputFlow(l,h)
 OutputPower(u,h)
 OutputPowerConsumption(p2h,h)
-OutputStorageInput(u,h)
-OutputStorageLevel(u,h)
+OutputStorageInput(au,h)
+OutputStorageLevel(au,h)
 OutputSystemCost(h)
 OutputSpillage(s,h)
 OutputShedLoad(n,h)
@@ -947,22 +946,22 @@ LostLoad_3U(n,h)
 LostLoad_RampUp(n,h)
 LostLoad_RampDown(n,h)
 OutputGenMargin(n,h)
-OutputHeat(chp,h)
-OutputHeatSlack(chp,h)
+OutputHeat(au,h)
+OutputHeatSlack(au,h)
 LostLoad_WaterSlack(s)
-StorageShadowPrice(s,h)
+StorageShadowPrice(au,h)
 ;
 
 OutputCommitted(u,z)=Committed.L(u,z);
 OutputFlow(l,z)=Flow.L(l,z);
 OutputPower(u,z)=Power.L(u,z);
 OutputPowerConsumption(p2h,z)=PowerConsumption.L(p2h,z);
-OutputHeat(chp,z)=Heat.L(chp,z);
-OutputHeatSlack(chp,z)=HeatSlack.L(chp,z);
+OutputHeat(au,z)=Heat.L(au,z);
+OutputHeatSlack(au,z)=HeatSlack.L(au,z);
 OutputStorageInput(s,z)=StorageInput.L(s,z);
-OutputStorageInput(chp,z)=StorageInput.L(chp,z);
+OutputStorageInput(th,z)=StorageInput.L(th,z);
 OutputStorageLevel(s,z)=StorageLevel.L(s,z);
-OutputStorageLevel(chp,z)=StorageLevel.L(chp,z);
+OutputStorageLevel(th,z)=StorageLevel.L(th,z);
 OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(s,z)  = Spillage.L(s,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
@@ -977,6 +976,7 @@ LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
 LostLoad_WaterSlack(s) = WaterSlack.L(s);
 StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
+StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
