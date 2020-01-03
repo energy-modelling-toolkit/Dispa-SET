@@ -447,23 +447,21 @@ def load_csv(filename, TempPath='.pickle', header=0, skiprows=None, skipfooter=0
     :param filename: path to csv file
     :param TempPath: path to store the temporary data files
     """
-
     import hashlib
     m = hashlib.new('md5', filename.encode('utf-8'))
     resultfile_hash = m.hexdigest()
     filepath_pandas = TempPath + os.sep + resultfile_hash + '.p'
-    
     if not os.path.isdir(TempPath):
         os.mkdir(TempPath)
     if not os.path.isfile(filepath_pandas):
         time_pd = 0
     else:
         time_pd = os.path.getmtime(filepath_pandas)
-    if os.path.getmtime(filename) > time_pd:
+    if os.path.getmtime(filename) > time_pd- 1E1000:
         data = pd.read_csv(filename, header=header, skiprows=skiprows, skipfooter=skipfooter, index_col=index_col,
                            parse_dates=parse_dates)
         data.to_pickle(filepath_pandas)
-    else:
+    else:   
         data = pd.read_pickle(filepath_pandas)
     return data
 

@@ -412,6 +412,8 @@ def check_df(df, StartDate=None, StopDate=None, name=''):
     if not df.columns.is_unique:
         logging.error('The column headers of table "' + name + '" are not unique!. The following headers are duplicated: ' + str(df.columns.get_duplicates()))
         sys.exit(1)
+    if not np.nansum(df.values)>=0:
+        logging.error("Your file only contains NaNs")
     return True
 
 
