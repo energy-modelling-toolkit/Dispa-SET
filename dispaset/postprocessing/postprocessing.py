@@ -184,7 +184,11 @@ def get_result_analysis(inputs, results):
     for key in ['LostLoad_RampUp', 'LostLoad_2D', 'LostLoad_MinPower',
                 'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_WaterSlack']:
         if key == 'LostLoad_WaterSlack':
-            LL = results[key].sum()
+            if results[key] == 0:
+                LL = results[key]
+                print('Is integer')
+            else:
+                LL = results[key].sum()
         else:
             LL = results[key].values.sum()
         if LL > 0.0001 * TotalLoad:

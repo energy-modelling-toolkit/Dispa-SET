@@ -1005,6 +1005,8 @@ def mid_term_scheduling(config, zones, profiles=None):
         temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})        
     else:
         logging.info('Mid term scheduling turned off')
+    import pickle
+    pickle.dump(temp, open( "temp_profiles.p", "wb" ))
     return temp
 
 def build_full_simulation(config, mts_plot=None):

@@ -89,7 +89,7 @@ CostVariable(u,h)                [EUR\MW]   Variable costs
 CostLoadShedding(n,h)            [EUR\MWh] Cost of load shedding
 Curtailment(n)                   [n.a]    Curtailment allowed or not {1 0} at node n
 Demand(mk,n,h)                   [MW]     Demand
-Efficiency(u)                    [%]      Efficiency
+*Efficiency(u)                    [%]      Efficiency
 EmissionMaximum(n,p)             [tP]     Emission limit
 EmissionRate(u,p)                [tP\MWh] P emission rate
 FlowMaximum(l,h)                 [MW]     Line limits
@@ -158,7 +158,7 @@ $LOAD CostVariable
 $LOAD Curtailment
 $LOAD Demand
 $LOAD StorageDischargeEfficiency
-$LOAD Efficiency
+*$LOAD Efficiency
 $LOAD EmissionMaximum
 $LOAD EmissionRate
 $LOAD FlowMaximum
@@ -209,7 +209,7 @@ CostRampUp,
 CostVariable,
 Demand,
 StorageDischargeEfficiency,
-Efficiency,
+*Efficiency,
 EmissionMaximum,
 EmissionRate,
 FlowMaximum,
