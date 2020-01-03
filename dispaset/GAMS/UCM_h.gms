@@ -938,6 +938,7 @@ OutputSpillage(s,h)
 OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
 ShadowPrice(n,h)
+HeatShadowPrice(au,h)
 LostLoad_MaxPower(n,h)
 LostLoad_MinPower(n,h)
 LostLoad_2D(n,h)
@@ -974,6 +975,7 @@ LostLoad_3U(n,z) = LL_3U.L(n,z);
 LostLoad_RampUp(n,z)    = sum(u,LL_RampUp.L(u,z)*Location(u,n));
 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
+HeatShadowPrice(au,z) = EQ_CHP_demand_satisfaction.m(au,z);
 LostLoad_WaterSlack(s) = WaterSlack.L(s);
 StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
 StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
@@ -1000,6 +1002,7 @@ LostLoad_3U,
 LostLoad_RampUp,
 LostLoad_RampDown,
 ShadowPrice,
+HeatShadowPrice,
 LostLoad_WaterSlack,
 StorageShadowPrice,
 status
