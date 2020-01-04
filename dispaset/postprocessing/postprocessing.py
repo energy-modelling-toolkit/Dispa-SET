@@ -335,8 +335,8 @@ def CostExPost(inputs,results):
     #%% Fixed Costs:
     costs['FixedCosts'] = 0
     for u in results['OutputCommitted']:
-        if u in dfin:
-            costs['FixedCosts'] =+ dfin[u] * results['OutputCommited'][u]
+        if u in dfin['CostFixed'].index:
+            costs['FixedCosts'] =+ dfin['CostFixed'].loc[u,'CostFixed'] * results['OutputCommitted'][u]
     
             
     #%% Ramping and startup costs:
@@ -357,7 +357,7 @@ def CostExPost(inputs,results):
     committedlong_shifted.iloc[1:,:] = committedlong.iloc[:-1,:].values
     
     ramping = powerlong - powerlong_shifted
-    startups = committedlong - committedlong_shifted
+    startups = committedlong.astype(int) - committedlong_shifted.astype(int)
     ramping.drop([ramping.index[0]],inplace=True); startups.drop([startups.index[0]],inplace=True)
     
     CostStartUp = pd.DataFrame(index=startups.index,columns=startups.columns)
@@ -403,18 +403,21 @@ def CostExPost(inputs,results):
     costs['CostLoadShedding'] = (results['OutputShedLoad'] * dfin['CostLoadShedding']).fillna(0).sum(axis=1)
     
     #%% Heating costs:
-    costs['CostHeatSlack'] = (results['OutputHeatSlack'] * dfin['CostHeatSlack']).fillna(0).sum(axis=0)
-    CostHeat = (results['OutputHeatSlack'] * dfin['CostHeatSlack']).fillna(0)
+    costs['CostHeatSlack'] = (results['OutputHeatSlack'] * dfin['CostHeatSlack']).fillna(0).sum(axis=1)
+    # CostHeat = (results['OutputHeatSlack'] * dfin['CostHeatSlack']).fillna(0)
     CostHeat = pd.DataFrame(index=results['OutputHeat'].index,columns=results['OutputHeat'].columns)
     for u in CostHeat:
         if u in dfin['CHPPowerLossFactor'].index:
             CostHeat[u] = dfin['CostVariable'][u].fillna(0) * results['OutputHeat'][u].fillna(0) * dfin['CHPPowerLossFactor'].loc[u,'CHPPowerLossFactor']
         else:
             print('Unit ' + u + ' not found in input table CHPPowerLossFactor!')
+            CostHeat[u] = dfin['CostVariable'][u].fillna(0) * results['OutputHeat'][u].fillna(0)
     costs['CostHeat'] = CostHeat.sum(axis=1).fillna(0)
     
     #%% Lost loads:
     # NB: the value of lost load is currently hard coded. This will have to be updated
+    # Locate prices for LL
+    #TODO:
     costs['LostLoad'] = 80e3* (results['LostLoad_2D'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_2U'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0))  \
                        + 100e3*(results['LostLoad_MaxPower'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_MinPower'].reindex(timeindex).sum(axis=1).fillna(0)) \
                        + 70e3*(results['LostLoad_RampDown'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_RampUp'].reindex(timeindex).sum(axis=1).fillna(0))
@@ -426,7 +429,7 @@ def CostExPost(inputs,results):
     # Drop na columns:
     costs.dropna(axis=1, how='all',inplace=True)
     # Delete all-zero columns:
-    costs = costs.loc[:, (costs != 0).any(axis=0)]
+    # costs = costs.loc[:, (costs != 0).any(axis=0)]
     
     sumcost = costs.cumsum(axis=1)
     sumcost['OutputSystemCost'] = results['OutputSystemCost']
