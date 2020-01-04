@@ -171,9 +171,24 @@ def get_result_analysis(inputs, results):
     index = pd.date_range(start=pd.datetime(*StartDate), end=pd.datetime(*StopDate), freq='h')
 
     # Aggregated values:
-    TotalLoad = dfin['Demand']['DA'].loc[index, :].sum().sum()
-    # PeakLoad = inputs['parameters']['Demand']['val'][0,:,idx].sum(axis=0).max()
-    PeakLoad = dfin['Demand']['DA'].sum(axis=1).max(axis=0)
+    demand = {}
+    for z in inputs['sets']['n']:
+        if 'OutputPowerConsumption' in results:
+            demand_p2h = filter_by_zone(results['OutputPowerConsumption'], inputs, z)
+            demand_p2h = demand_p2h.sum(axis=1)
+        else:
+            demand_p2h = pd.Series(0, index=results['OutputPower'].index)
+        demand_da = inputs['param_df']['Demand'][('DA', z)]
+        demand[z] = pd.DataFrame(demand_da + demand_p2h, columns = [('DA', z)])
+    demand = pd.concat(demand, axis=1)
+    demand.columns = demand.columns.droplevel(-1)
+
+    TotalLoad = demand.sum().sum()
+    PeakLoad = demand.sum(axis=1).max(axis=0)
+
+    # TotalLoad = dfin['Demand']['DA'].loc[index, :].sum().sum()
+    # # PeakLoad = inputs['parameters']['Demand']['val'][0,:,idx].sum(axis=0).max()
+    # PeakLoad = dfin['Demand']['DA'].sum(axis=1).max(axis=0)
 
     NetImports = -get_imports(results['OutputFlow'], 'RoW')
 
@@ -184,11 +199,10 @@ def get_result_analysis(inputs, results):
     for key in ['LostLoad_RampUp', 'LostLoad_2D', 'LostLoad_MinPower',
                 'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_WaterSlack']:
         if key == 'LostLoad_WaterSlack':
-            if results[key] == 0:
-                LL = results[key]
-                print('Is integer')
-            else:
+            if isinstance(results[key], pd.Series):
                 LL = results[key].sum()
+            else:
+                LL = results[key]
         else:
             LL = results[key].values.sum()
         if LL > 0.0001 * TotalLoad:
