@@ -8,7 +8,6 @@ from matplotlib import pyplot as plt
 from ..misc.str_handler import clean_strings
 from ..common import commons
 
-
 from .postprocessing import get_imports, get_plot_data, filter_by_zone
 
 
@@ -25,7 +24,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
     """
     import matplotlib.patches as mpatches
     import matplotlib.lines as mlines
-    
+
     pd.plotting.register_matplotlib_converters()
 
     if rng is None:
@@ -136,6 +135,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
         plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_SOC] + patches[::-1], loc=4)
     plt.show()
 
+
 def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=False):
     """Create multiaxis rug plot from pandas Dataframe
 
@@ -244,10 +244,10 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
     GenPerZone = GenPerZone[cols] / 1E6
     colors = [commons['colors'][tech] for tech in GenPerZone.columns]
     ax = GenPerZone.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
-                            title='Generation per zone (the horizontal lines indicate the demand)')
+                         title='Generation per zone (the horizontal lines indicate the demand)')
     ax.set_ylabel('Generation [TWh]')
     demand = inputs['param_df']['Demand']['DA'].sum() / 1E6
-    ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1]*0.005, linewidth=2,
+    ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005, linewidth=2,
             color='k')
     return ax
 
@@ -292,47 +292,48 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
     :param results:     DispaSET results
     :param z:           Considered zone (e.g. 'BE')
     """
-    if z =='':
+    if z == '':
         Nzones = len(inputs['sets']['n'])
         z = inputs['sets']['n'][np.random.randint(Nzones)]
-        print('Randomly selected zone for the detailed analysis: '+ z)
+        print('Randomly selected zone for the detailed analysis: ' + z)
     elif z not in inputs['sets']['n']:
         logging.critical('Zone ' + z + ' is not in the results')
         Nzones = len(inputs['sets']['n'])
         z = inputs['sets']['n'][np.random.randint(Nzones)]
-        logging.critical('Randomly selected zone: '+ z)
+        logging.critical('Randomly selected zone: ' + z)
 
-    plotdata = get_plot_data(inputs, results, z) / 1000 # GW
+    plotdata = get_plot_data(inputs, results, z) / 1000  # GW
 
     if 'OutputStorageLevel' in results:
-        level = filter_by_zone(results['OutputStorageLevel'], inputs, z) /1E6 #TWh
+        level = filter_by_zone(results['OutputStorageLevel'], inputs, z) / 1E6  # TWh
         level = level.sum(axis=1)
     else:
         level = pd.Series(0, index=results['OutputPower'].index)
 
     if 'OutputPowerConsumption' in results:
-        demand_p2h = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1000 #GW
+        demand_p2h = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1000  # GW
         demand_p2h = demand_p2h.sum(axis=1)
     else:
         demand_p2h = pd.Series(0, index=results['OutputPower'].index)
 
-    demand_da = inputs['param_df']['Demand'][('DA', z)] / 1000 # GW
-    demand = pd.DataFrame(demand_da + demand_p2h, columns = [('DA', z)])
+    demand_da = inputs['param_df']['Demand'][('DA', z)] / 1000  # GW
+    demand = pd.DataFrame(demand_da + demand_p2h, columns=[('DA', z)])
     demand = demand[('DA', z)]
 
     sum_generation = plotdata.sum(axis=1)
-    #if 'OutputShedLoad' in results:
+    # if 'OutputShedLoad' in results:
     if 'OutputShedLoad' in results and z in results['OutputShedLoad']:
-        shed_load = results['OutputShedLoad'][z] / 1000 # GW
+        shed_load = results['OutputShedLoad'][z] / 1000  # GW
     else:
-        shed_load = pd.Series(0,index=demand.index) / 1000 # GW
+        shed_load = pd.Series(0, index=demand.index) / 1000  # GW
     diff = (sum_generation - demand + shed_load).abs()
     if diff.max() > 0.01 * demand.max():
-        logging.critical('There is up to ' + str(diff.max()/demand.max()*100) + '% difference in the instantaneous energy balance of zone ' + z)
+        logging.critical('There is up to ' + str(
+            diff.max() / demand.max() * 100) + '% difference in the instantaneous energy balance of zone ' + z)
 
     if 'OutputCurtailedPower' in results and z in results['OutputCurtailedPower']:
-        curtailment = results['OutputCurtailedPower'][z] / 1000 # GW
-        plot_dispatch(demand, plotdata, level, curtailment = curtailment, rng=rng)
+        curtailment = results['OutputCurtailedPower'][z] / 1000  # GW
+        plot_dispatch(demand, plotdata, level, curtailment=curtailment, rng=rng)
     else:
         plot_dispatch(demand, plotdata, level, rng=rng)
 
@@ -359,10 +360,12 @@ def storage_levels(inputs, results):
     for u in isstorage.index:
         isstorage[u] = inputs['units'].Technology[u] in commons['tech_storage']
     sto_units = inputs['units'][isstorage]
-    results['OutputStorageLevel'].plot(figsize=(12,6),title='Storage levels')
-    StorageError = ((inputs['param_df']['StorageProfile']*sto_units.StorageCapacity).subtract(results['OutputStorageLevel'],'columns')).divide((sto_units.StorageCapacity),'columns')*(-100)
+    results['OutputStorageLevel'].plot(figsize=(12, 6), title='Storage levels')
+    StorageError = ((inputs['param_df']['StorageProfile'] * sto_units.StorageCapacity).subtract(
+        results['OutputStorageLevel'], 'columns')).divide((sto_units.StorageCapacity), 'columns') * (-100)
     StorageError = StorageError.dropna(1)
-    ax = StorageError.plot(figsize=(12,6),title='Difference between the calculated storage Levels and the (imposed) minimum level')
+    ax = StorageError.plot(figsize=(12, 6),
+                           title='Difference between the calculated storage Levels and the (imposed) minimum level')
     ax.set_ylabel('%')
 
     return True

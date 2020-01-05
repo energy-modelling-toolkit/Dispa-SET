@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from ..common import commons
+from .data_handler import ds_to_df
 
 
 
@@ -77,7 +78,7 @@ def aggregate_by_fuel(PowerOutput, Inputs, SpecifyFuels=None):
         if uFuel[u] in fuels:
             PowerByFuel[uFuel[u]] = PowerByFuel[uFuel[u]] + PowerOutput[u]
         else:
-            logging.warn('Fuel not found for unit ' + u + ' with fuel ' + uFuel[u])
+            logging.warning('Fuel not found for unit ' + u + ' with fuel ' + uFuel[u])
 
     return PowerByFuel
 
@@ -266,8 +267,27 @@ def get_result_analysis(inputs, results):
         logging.error('Could compute storage data')
         StorageData = None
 
+    co2 = results['OutputPower'].sum() * inputs['param_df']['EmissionRate'] # MWh * tCO2 / MWh = tCO2
+    co2.fillna(0,inplace=True)
+
+    UnitData = pd.DataFrame(index=inputs['sets']['u'])
+    UnitData.loc[:, 'Fuel'] = inputs['units']['Fuel']
+    UnitData.loc[:, 'Technology'] = inputs['units']['Technology']
+    UnitData.loc[:, 'Zone'] = inputs['units']['Zone']
+    UnitData.loc[:, 'CHP'] = inputs['units']['CHPType']
+    UnitData.loc[:, 'Generation [TWh]'] = results['OutputPower'].sum() / 1e6
+    UnitData.loc[:, 'CO2 [t]'] = co2.loc['CO2',:]
+    UnitData.loc[:, 'Total Costs [EUR]'] = get_units_operation_cost(inputs, results).sum()
+
+    FuelData = pd.DataFrame(index=inputs['sets']['f'])
+
+
+    print('\nUnit-Specific data')
+    print(UnitData)
+
     return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-            'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData}
+            'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData, 'UnitData': UnitData,
+            'FuelData': FuelData}
 
 
 def get_indicators_powerplant(inputs, results):
@@ -404,13 +424,11 @@ def CostExPost(inputs,results):
     
     #%% Heating costs:
     costs['CostHeatSlack'] = (results['OutputHeatSlack'] * dfin['CostHeatSlack']).fillna(0).sum(axis=1)
-    # CostHeat = (results['OutputHeatSlack'] * dfin['CostHeatSlack']).fillna(0)
     CostHeat = pd.DataFrame(index=results['OutputHeat'].index,columns=results['OutputHeat'].columns)
     for u in CostHeat:
         if u in dfin['CHPPowerLossFactor'].index:
             CostHeat[u] = dfin['CostVariable'][u].fillna(0) * results['OutputHeat'][u].fillna(0) * dfin['CHPPowerLossFactor'].loc[u,'CHPPowerLossFactor']
         else:
-            print('Unit ' + u + ' not found in input table CHPPowerLossFactor!')
             CostHeat[u] = dfin['CostVariable'][u].fillna(0) * results['OutputHeat'][u].fillna(0)
     costs['CostHeat'] = CostHeat.sum(axis=1).fillna(0)
     
@@ -443,8 +461,6 @@ def CostExPost(inputs,results):
     return costs,sumcost
 
 
-
-
 def get_units_operation_cost(inputs, results):
     """
     Function that computes the operation cost for each power unit at each instant of time from the DispaSET results
@@ -452,7 +468,7 @@ def get_units_operation_cost(inputs, results):
 
     :param inputs:      DispaSET inputs
     :param results:     DispaSET results
-    :returns out:       Dataframe with the the power units in columns and the operatopn cost at each instant in rows
+    :returns out:       Dataframe with the the power units in columns and the operation cost at each instant in rows
 
     Main Author: @AbdullahAlawad
     """
