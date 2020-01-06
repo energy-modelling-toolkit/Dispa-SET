@@ -186,6 +186,10 @@ def get_result_analysis(inputs, results):
 
     TotalLoad = demand.sum().sum()
     PeakLoad = demand.sum(axis=1).max(axis=0)
+    LoadShedding = results['OutputShedLoad'].sum().sum() / 1e6
+    Curtailment = results['OutputCurtailedPower'].sum().sum()
+    MaxCurtailemnt = results['OutputCurtailedPower'].sum(axis=1).max() / 1e6
+    MaxLoadShedding = results['OutputShedLoad'].sum(axis=1).max()
 
     # TotalLoad = dfin['Demand']['DA'].loc[index, :].sum().sum()
     # # PeakLoad = inputs['parameters']['Demand']['val'][0,:,idx].sum(axis=0).max()
@@ -214,9 +218,13 @@ def get_result_analysis(inputs, results):
                 LL) + ' MWh. The results should be checked')
     
     print ('\nAggregated statistics for the considered area:')
-    print ('Total consumption:' + str(TotalLoad / 1E6) + ' TWh')
-    print ('Peak load:' + str(PeakLoad) + ' MW')
-    print ('Net importations:' + str(NetImports / 1E6) + ' TWh')
+    print ('Total Consumption:' + str(TotalLoad / 1E6) + ' TWh')
+    print ('Peak Load:' + str(PeakLoad) + ' MW')
+    print ('Net Importations:' + str(NetImports / 1E6) + ' TWh')
+    print ('Total Load Shedding:' + str(LoadShedding) + ' TWh')
+    print ('Maximum Load Shedding:' + str(MaxLoadShedding) + ' MW')
+    print ('Total Curtailed RES:' + str(Curtailment) + ' TWh')
+    print ('Maximum Curtailed RES:' + str(MaxCurtailemnt) + ' MW')
 
     # Zone-specific values:
     ZoneData = pd.DataFrame(index=inputs['sets']['n'])
@@ -229,7 +237,10 @@ def get_result_analysis(inputs, results):
         ZoneData.loc[z, 'NetImports'] = get_imports(results['OutputFlow'], str(z)) / 1E6
 
     ZoneData['LoadShedding'] = results['OutputShedLoad'].sum(axis=0) / 1E6
+    ZoneData['MaxLoadShedding'] = results['OutputShedLoad'].max()
     ZoneData['Curtailment'] = results['OutputCurtailedPower'].sum(axis=0) / 1E6
+    ZoneData['MaxCurtailment'] = results['OutputCurtailedPower'].max()
+
     print('\nZone-Specific values (in TWh or in MW):')
     print(ZoneData)
 
@@ -278,16 +289,27 @@ def get_result_analysis(inputs, results):
     UnitData.loc[:, 'Generation [TWh]'] = results['OutputPower'].sum() / 1e6
     UnitData.loc[:, 'CO2 [t]'] = co2.loc['CO2',:]
     UnitData.loc[:, 'Total Costs [EUR]'] = get_units_operation_cost(inputs, results).sum()
-
-    FuelData = pd.DataFrame(index=inputs['sets']['f'])
-
-
     print('\nUnit-Specific data')
     print(UnitData)
 
+    FuelData = {}
+    chp = {'Extraction': 'CHP', 'back-pressure': 'CHP', 'P2H': 'CHP', '': 'Non-CHP'}
+    tmp = UnitData
+    tmp['CHP'] = tmp['CHP'].map(chp)
+    for bo in ['CHP', 'Non-CHP']:
+        tmp_data = tmp.loc[tmp['CHP'] == bo]
+        FuelData[bo] = {}
+        for l in ['Generation [TWh]','CO2 [t]','Total Costs [EUR]']:
+            FuelData[bo][l] = pd.DataFrame(index=inputs['sets']['f'], columns=inputs['sets']['t'])
+            for f in inputs['sets']['f']:
+                for t in inputs['sets']['t']:
+                    FuelData[bo][l].loc[f,t] = tmp_data.loc[(tmp_data['Fuel'] == f) &
+                                                            (tmp_data['Technology'] == t)][l].sum()
+
     return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-            'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData, 'UnitData': UnitData,
-            'FuelData': FuelData}
+            'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt, 'ShedLoad': LoadShedding,
+            'MaxShedLoad': MaxLoadShedding, 'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
+            'UnitData': UnitData, 'FuelData': FuelData}
 
 
 def get_indicators_powerplant(inputs, results):
