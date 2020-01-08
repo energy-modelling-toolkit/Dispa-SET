@@ -692,7 +692,7 @@ def build_simulation(config, profiles=None):
     # list_vars = []
     gdx_out = "Inputs.gdx"
     if config['WriteGDX']:
-        write_variables(config['GAMS_folder'], gdx_out, [sets, parameters])
+        write_variables(config, gdx_out, [sets, parameters])
 
     # if the sim variable was not defined:
     if 'sim' not in locals():
@@ -838,7 +838,7 @@ def adjust_capacity(inputs,tech_fuel,scaling=1,value=None,singleunit=False,write
         with open(os.path.join(dest_path, 'Inputs.p'), 'wb') as pfile:
             pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
         if write_gdx:
-            write_variables(SimData['config']['GAMS_folder'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
+            write_variables(SimData['config'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
             shutil.copy('Inputs.gdx', dest_path + '/')
             os.remove('Inputs.gdx')
     return SimData
@@ -904,7 +904,7 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
         with open(os.path.join(dest_path, 'Inputs.p'), 'wb') as pfile:
             cPickle.dump(SimData, pfile, protocol=cPickle.HIGHEST_PROTOCOL)
         if write_gdx:
-            write_variables(SimData['config']['GAMS_folder'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
+            write_variables(SimData['config'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
             shutil.copy('Inputs.gdx', dest_path + '/')
             os.remove('Inputs.gdx')
     return SimData

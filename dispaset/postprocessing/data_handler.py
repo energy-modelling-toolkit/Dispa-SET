@@ -112,7 +112,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
         inputs['param_df'] = ds_to_df(inputs)
 
     # We need to pass the dir in config if we run it in clusters. PBS script fail to autolocate
-    gams_dir = get_gams_path(gams_dir=inputs['config']['GAMS_folder'].encode()).encode()
+    gams_dir = get_gams_path(gams_dir=inputs['config']['GAMS_folder'].encode())
     if not gams_dir: # couldn't locate
         logging.error('GAMS path cannot be located. Cannot parse gdx files')
         return False

@@ -164,22 +164,23 @@ def _insert_symbols(gdxHandle, sets, parameters):
     logging.debug('Set ' + s + ' successfully written')
 
 
-def write_variables(gams_dir, gdx_out, list_vars):
+def write_variables(config, gdx_out, list_vars):
     """
     This function performs the following:
     * Use the gdxcc library to create a gdxHandle instance
     * Check that the gams path is well defined
     * Call the 'insert_symbols' function to write all sets and parameters to gdxHandle
 
-    :param gams_dir:        (Relative) path to the gams directory
+    :param config:          Main config dictionary
     :param gdx_out:         (Relative) path to the gdx file to be written
     :param list_vars:       List with the sets and parameters to be written
     """
-    gams_dir = get_gams_path(gams_dir=gams_dir.encode())
+    gams_dir = get_gams_path(gams_dir=config['GAMS_folder'].encode())
     if not gams_dir:  # couldn't locate
         logging.critical('GDXCC: Could not find the specified gams directory: ' + gams_dir)
         sys.exit(1)
     gams_dir = force_str(gams_dir)
+    config['GAMS_folder'] = gams_dir         # updating the config dictionary
     gdx_out = force_str(gdx_out)
 
     gdxHandle = gdxcc.new_gdxHandle_tp()
