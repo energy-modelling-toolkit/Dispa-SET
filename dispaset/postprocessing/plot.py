@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 from ..misc.str_handler import clean_strings
 from ..common import commons
 
-from .postprocessing import get_imports, get_plot_data, filter_by_zone
+from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage
 
 
 def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None, rng=None,
@@ -140,16 +140,16 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None,
     # plt.legend(handles=[line_demand] + patches[::-1], loc=4)
 
     if shedload is None and level is None:
-        plt.legend(handles=[line_demand] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 1.3))
+        plt.legend(handles=[line_demand] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
     if shedload is None:
-        plt.legend(handles=[line_demand] + [line_SOC] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 1.3))
+        plt.legend(handles=[line_demand] + [line_SOC] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
     elif level is None:
-        plt.legend(handles=[line_demand] + [line_shedload] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 1.3))
+        plt.legend(handles=[line_demand] + [line_shedload] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
         axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
                          linestyle='dashed')
     else:
         plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_shedload] + [line_SOC] +
-                                                                   patches[::-1], loc=4, bbox_to_anchor=(1.2, 1.3))
+                                                                   patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
         axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
                              linestyle='dashed')
 
@@ -327,7 +327,8 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
     plotdata = get_plot_data(inputs, results, z) / 1000  # GW
 
     if 'OutputStorageLevel' in results:
-        level = filter_by_zone(results['OutputStorageLevel'], inputs, z) / 1E6  # TWh
+        levels = filter_by_zone(results['OutputStorageLevel'], inputs, z) / 1E6  # TWh
+        level = filter_by_storage(levels, inputs, StorageSubset='s')
         level = level.sum(axis=1)
     else:
         level = pd.Series(0, index=results['OutputPower'].index)

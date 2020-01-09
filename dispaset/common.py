@@ -20,7 +20,9 @@ commons['types_CHP'] = ['extraction','back-pressure', 'p2h']
 # DispaSET fuels:
 commons['Fuels'] = ['BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH', 'GEO']
 # Ordered list of fuels for plotting (the first ones are negative):
-commons['MeritOrder'] = ['Storage','FlowOut','GEO','NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT']
+# commons['MeritOrder'] = ['Storage','FlowOut','GEO','NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT']
+commons['MeritOrder'] = ['THMS','BATS','BEVS','HDAM','HPHS','FlowOut','GEO','NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT']
+
 # Colors associated with each fuel:
 commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': '#af4b91b2', 'OIL': '#af4b91ff',
                      'GAS': '#d7642dff',
@@ -30,7 +32,12 @@ commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': '#af4b91b2',
                      'WAT': '#00a0e1ff',
                      'BIO': '#7daf4bff', 'GEO': '#7daf4bbf',
                      'Storage': '#b93c46ff', 'FlowIn': '#b93c46b2', 'FlowOut': '#b93c4666',
-                     'OTH': '#b9c33799', 'WST': '#b9c337ff'}
+                     'OTH': '#b9c33799', 'WST': '#b9c337ff',
+                     'HDAM': '#78C7C7',
+                     'HPHS': '#3090C7ff',
+                     'THMS': '#C04000ff',
+                     'BATS': '#41A317ff',
+                     'BEVS': '#4863A0ff'}
 commons['colors']['curtailment'] = 'red'
 # Hatches associated with each fuel:
 commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '',
@@ -41,7 +48,8 @@ commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '',
                       'WAT': '',
                       'BIO': '', 'GEO': '',
                       'Storage': '', 'FlowIn': '/', 'FlowOut': '\\',
-                      'WST': '', 'OTH': ''
+                      'WST': '', 'OTH': '',
+                      'HDAM': '','HPHS': '','THMS': '','BATS': '','BEVS': ''
                       }
 
 commons['logfile'] = str(datetime.datetime.now()).replace(':','-').replace(' ','_') + '.dispa.log'
