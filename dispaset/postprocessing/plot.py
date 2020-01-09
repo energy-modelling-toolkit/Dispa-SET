@@ -11,7 +11,7 @@ from ..common import commons
 from .postprocessing import get_imports, get_plot_data, filter_by_zone
 
 
-def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
+def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None, rng=None,
                   alpha=None, figsize=(13, 6)):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
@@ -20,6 +20,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
     :param plotdata:    Pandas Dataframe with the data to be plotted. Negative columns should be at the beginning. Output of the function GetPlotData
     :param level:       Optional pandas series with an aggregated reservoir level for the considered zone.
     :param curtailment: Optional pandas series with the value of the curtailment
+    :param shedload:    Optional pandas series with the value of the shed load
     :param rng:         Indexes of the values to be plotted. If undefined, the first week is plotted
     """
     import matplotlib.patches as mpatches
@@ -34,7 +35,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
         raise ValueError()
     elif rng[0] < plotdata.index[0] or rng[0] > plotdata.index[-1] or rng[-1] < plotdata.index[0] or rng[-1] > \
             plotdata.index[-1]:
-        logging.warn('Plotting range is not properly defined, considering the first simulated week')
+        logging.warning('Plotting range is not properly defined, considering the first simulated week')
         pdrng = plotdata.index[:min(len(plotdata) - 1, 7 * 24)]
     else:
         pdrng = rng
@@ -127,12 +128,32 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, rng=None,
         axes[1].yaxis.label.set_fontsize(12)
         line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Reservoir', linestyle=':')
 
+    if isinstance(shedload, pd.Series):
+        if not shedload.index.equals(demand.index):
+            logging.error('The shedload time series must have the same index as the demand')
+            sys.exit(1)
+        reduced_demand = demand - shedload
+        axes[0].plot(pdrng, reduced_demand[pdrng], color='k', alpha=alpha, linestyle='dashed')
+        line_shedload = mlines.Line2D([], [], color='black', alpha=alpha, label='Shed Load', linestyle='dashed')
+
     line_demand = mlines.Line2D([], [], color='black', label='Load')
-    plt.legend(handles=[line_demand] + patches[::-1], loc=4)
-    if level is None:
-        plt.legend(handles=[line_demand] + patches[::-1], loc=4)
+    # plt.legend(handles=[line_demand] + patches[::-1], loc=4)
+
+    if shedload is None and level is None:
+        plt.legend(handles=[line_demand] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 1.3))
+    if shedload is None:
+        plt.legend(handles=[line_demand] + [line_SOC] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 1.3))
+    elif level is None:
+        plt.legend(handles=[line_demand] + [line_shedload] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 1.3))
+        axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
+                         linestyle='dashed')
     else:
-        plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_SOC] + patches[::-1], loc=4)
+        plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_shedload] + [line_SOC] +
+                                                                   patches[::-1], loc=4, bbox_to_anchor=(1.2, 1.3))
+        axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
+                             linestyle='dashed')
+
+    plt.subplots_adjust(right=0.8)
     plt.show()
 
 
@@ -249,6 +270,7 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
     demand = inputs['param_df']['Demand']['DA'].sum() / 1E6
     ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005, linewidth=2,
             color='k')
+    plt.show()
     return ax
 
 
@@ -324,6 +346,7 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
     # if 'OutputShedLoad' in results:
     if 'OutputShedLoad' in results and z in results['OutputShedLoad']:
         shed_load = results['OutputShedLoad'][z] / 1000  # GW
+        shed_load = pd.Series(shed_load, index=demand.index).fillna(0)
     else:
         shed_load = pd.Series(0, index=demand.index) / 1000  # GW
     diff = (sum_generation - demand + shed_load).abs()
@@ -331,9 +354,15 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
         logging.critical('There is up to ' + str(
             diff.max() / demand.max() * 100) + '% difference in the instantaneous energy balance of zone ' + z)
 
-    if 'OutputCurtailedPower' in results and z in results['OutputCurtailedPower']:
+    if 'OutputCurtailedPower' in results and z in results['OutputCurtailedPower'] \
+            and 'OutputShedLoad' in results and z in results['OutputShedLoad']:
+        curtailment = results['OutputCurtailedPower'][z] / 1000  # GW
+        plot_dispatch(demand, plotdata, level, curtailment=curtailment, shedload = shed_load, rng=rng)
+    elif 'OutputCurtailedPower' in results and z in results['OutputCurtailedPower']:
         curtailment = results['OutputCurtailedPower'][z] / 1000  # GW
         plot_dispatch(demand, plotdata, level, curtailment=curtailment, rng=rng)
+    elif 'OutputShedLoad' in results and z in results['OutputShedLoad']:
+        plot_dispatch(demand, plotdata, level, shedload = shed_load, rng=rng)
     else:
         plot_dispatch(demand, plotdata, level, rng=rng)
 
