@@ -18,7 +18,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None,
 
     :param demand:      Pandas Series with the demand curve
     :param plotdata:    Pandas Dataframe with the data to be plotted. Negative columns should be at the beginning. Output of the function GetPlotData
-    :param level:       Optional pandas series with an aggregated reservoir level for the considered zone.
+    :param level:       Optional pandas series/dataframe with an (dis)aggregated reservoir level for the considered zone.
     :param curtailment: Optional pandas series with the value of the curtailment
     :param shedload:    Optional pandas series with the value of the shed load
     :param rng:         Indexes of the values to be plotted. If undefined, the first week is plotted
@@ -75,22 +75,50 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None,
 
     fig.suptitle('Power dispatch for zone ' + demand.name[1])
 
+    # Define labels, patches and colors
     labels = []
     patches = []
     colorlist = []
 
-    #    # Plot negative values:
+    # Plot reservoir levels (either separated or as one value)
+    if level is not None:
+        if isinstance(level, pd.DataFrame):
+            cols_lvl = level.columns.tolist()
+            sumplot_lev = level[cols_lvl[0:]].cumsum(axis=1)
+            sumplot_lev['zero'] = 0
+            sumplot_lev = sumplot_lev[['zero'] + sumplot_lev.columns[:-1].tolist()]
+            print('Its dataframe')
+            for j in range(len(sumplot_lev.columns) - 1):
+                col3 = sumplot_lev.columns[j]
+                col4 = sumplot_lev.columns[j + 1]
+                rez_color = commons['colors'][col4]
+                rez_hatch = commons['hatches'][col4]
+                axes[1].fill_between(pdrng, sumplot_lev.loc[pdrng, col3], sumplot_lev.loc[pdrng, col4],
+                                     facecolor=rez_color, alpha=alpha, hatch=rez_hatch)
+                labels.append(col4)
+                patches.append(mpatches.Patch(facecolor=rez_color, alpha=alpha, hatch=rez_hatch, label=col4))
+                colorlist.append(rez_color)
+        elif isinstance(level, pd.Series):
+            # Create right axis:
+            axes[1].plot(pdrng, level[pdrng], color='k', alpha=alpha, linestyle=':')
+            axes[1].fill_between(pdrng, 0, level[pdrng],
+                                 facecolor=commons['colors']['WAT'], alpha=.3)
+        axes[1].set_ylabel('Level [TWh]')
+        axes[1].yaxis.label.set_fontsize(12)
+        line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Reservoir', linestyle=':')
+
+    # Plot negative values:
     for j in range(idx_zero):
         col1 = sumplot_neg.columns[j]
         col2 = sumplot_neg.columns[j + 1]
         color = commons['colors'][col2]
         hatch = commons['hatches'][col2]
         axes[0].fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2], facecolor=color,
-                             alpha=alpha,
-                             hatch=hatch)
-        labels.append(col1)
-        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
-        colorlist.append(color)
+                             alpha=alpha, hatch=hatch)
+        if col2 not in labels:
+            labels.append(col1)
+            patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
+            colorlist.append(color)
 
     # Plot Positive values:
     for j in range(len(sumplot_pos.columns) - 1):
@@ -117,16 +145,6 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None,
 
     axes[0].set_ylabel('Power [GW]')
     axes[0].yaxis.label.set_fontsize(12)
-
-    if level is not None:
-        # Create right axis:
-        axes[1].plot(pdrng, level[pdrng], color='k', alpha=alpha, linestyle=':')
-        axes[1].fill_between(pdrng, 0, level[pdrng],
-                             facecolor=commons['colors']['WAT'], alpha=.3)
-
-        axes[1].set_ylabel('Level [TWh]')
-        axes[1].yaxis.label.set_fontsize(12)
-        line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Reservoir', linestyle=':')
 
     if isinstance(shedload, pd.Series):
         if not shedload.index.equals(demand.index):
@@ -296,7 +314,7 @@ def plot_zone_capacities(inputs, plot=True):
     PowerCapacity = PowerCapacity[cols]
     if plot:
         colors = [commons['colors'][tech] for tech in PowerCapacity.columns]
-        ax = PowerCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=1.0, legend='reverse',
+        ax = PowerCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
                                 title='Installed capacity per zone (the horizontal lines indicate the peak demand)')
         ax.set_ylabel('Capacity [MW]')
         demand = inputs['param_df']['Demand']['DA'].max()
@@ -326,10 +344,22 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
 
     plotdata = get_plot_data(inputs, results, z) / 1000  # GW
 
+    aggregation = False
     if 'OutputStorageLevel' in results:
-        levels = filter_by_zone(results['OutputStorageLevel'], inputs, z) / 1E6  # TWh
-        level = filter_by_storage(levels, inputs, StorageSubset='s')
-        level = level.sum(axis=1)
+        lev = filter_by_zone(results['OutputStorageLevel'], inputs, z) / 1E6  # TWh
+        level = filter_by_storage(lev, inputs, StorageSubset='s')
+        levels = pd.DataFrame(index=results['OutputStorageLevel'].index,columns=inputs['sets']['t'])
+        for t in ['HDAM','HPHS','BEVS','BATS']:
+            temp = filter_by_tech(level,inputs,t)
+            levels[t] = temp.sum(axis=1)
+        levels.dropna(axis=1,inplace=True)
+        for col in levels.columns:
+            if levels[col].max() == 0 and levels[col].min() == 0:
+                del levels[col]
+        if aggregation is True:
+            level = level.sum(axis=1)
+        else:
+            level = levels
     else:
         level = pd.Series(0, index=results['OutputPower'].index)
 
@@ -358,14 +388,14 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
     if 'OutputCurtailedPower' in results and z in results['OutputCurtailedPower'] \
             and 'OutputShedLoad' in results and z in results['OutputShedLoad']:
         curtailment = results['OutputCurtailedPower'][z] / 1000  # GW
-        plot_dispatch(demand, plotdata, level, curtailment=curtailment, shedload = shed_load, rng=rng)
+        plot_dispatch(demand, plotdata, level, curtailment=curtailment, shedload = shed_load, rng=rng, alpha=0.8)
     elif 'OutputCurtailedPower' in results and z in results['OutputCurtailedPower']:
         curtailment = results['OutputCurtailedPower'][z] / 1000  # GW
-        plot_dispatch(demand, plotdata, level, curtailment=curtailment, rng=rng)
+        plot_dispatch(demand, plotdata, level, curtailment=curtailment, rng=rng, alpha=0.8)
     elif 'OutputShedLoad' in results and z in results['OutputShedLoad']:
-        plot_dispatch(demand, plotdata, level, shedload = shed_load, rng=rng)
+        plot_dispatch(demand, plotdata, level, shedload = shed_load, rng=rng, alpha=0.8)
     else:
-        plot_dispatch(demand, plotdata, level, rng=rng)
+        plot_dispatch(demand, plotdata, level, rng=rng, alpha=0.8)
 
     # Generation plot:
     if rug_plot:
