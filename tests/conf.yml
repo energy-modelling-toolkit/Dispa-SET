@@ -39,6 +39,7 @@ PriceOfPeat:  'Database/FuelPrices/Biomass/2015.csv'
 RenewablesAF:  'tests/dummy_data/AvailabilityFactors/##/2015.csv'
 ReservoirLevels:  ''
 ReservoirScaledInflows:  ''
+Temperatures: 'tests/dummy_data/Temperatures.csv'
 
 #----------------
 zones: [ 'Z1', 'Z2', 'ZZ3']
