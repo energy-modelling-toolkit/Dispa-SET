@@ -483,12 +483,18 @@ def load_config_yaml(filename,AbsPath=True):
         except yaml.YAMLError as exc:
             logging.error('Cannot parse config file: {}'.format(filename))
             raise exc
+            
+    # List of parameters to be added if not present (for backward compatibility):
+    params_to_be_added = ['Temperatures']
+    for param in params_to_be_added:
+        if param not in config:
+            config[param] = ''
 
     # List of parameters for which an external file path must be specified:
     params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
               'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
               'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
-              'CostHeatSlack','CostLoadShedding']
+              'CostHeatSlack','CostLoadShedding','Temperatures']
 
     if AbsPath:
     # Changing all relative paths to absolute paths. Relative paths must be defined 
