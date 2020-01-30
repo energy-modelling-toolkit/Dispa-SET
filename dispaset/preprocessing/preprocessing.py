@@ -57,6 +57,14 @@ def build_simulation(config, profiles=None):
     # Boolean variable to check wether it is milp or lp:
     LP = config['SimulationType'] == 'LP' or config['SimulationType'] == 'LP clustered'
 
+    # check time steps:
+    if config['DataTimeStep'] != 1:
+        logging.critical('The data time step can only be 1 hour in this version of Dispa-SET. A value of ' + str(config['DataTimeStep'])  + ' hours was provided')
+        sys.exit(1)
+        # check time steps:
+    if config['SimulationTimeStep'] not in (1,24):
+        logging.critical('The simulation time step can only be 1 or 24 hour in this version of Dispa-SET. A value of ' + str(config['DataTimeStep'])  + ' hours was provided')
+        sys.exit(1)
     # Day/hour corresponding to the first and last days of the simulation:
     # Note that the first available data corresponds to 2015.01.31 (23.00) and the
     # last day with data is 2015.12.31 (22.00)

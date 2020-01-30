@@ -384,6 +384,8 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(31, 2), wb.datemode)
     config['HorizonLength'] = int(sheet.cell_value(32, 2))
     config['LookAhead'] = int(sheet.cell_value(33, 2))
+    config['DataTimeStep'] = sheet.cell_value(34, 2)
+    config['SimulationTimeStep'] = sheet.cell_value(35, 2)
 
     config['SimulationType'] = sheet.cell_value(46, 2)
     config['ReserveCalculation'] = sheet.cell_value(47, 2)
@@ -392,6 +394,16 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['HydroScheduling'] = sheet.cell_value(53, 2)
     config['HydroSchedulingHorizon'] = sheet.cell_value(54, 2)
     config['InitialFinalReservoirLevel'] = sheet.cell_value(55, 2)
+
+    # Set default numrical values (for backward compatibility):
+    NumParameters = {'DataTimeStep':1,'SimulationTimeStep':1}
+    for param in NumParameters:
+        if not isinstance(config[param], (int, float, complex)):
+            try:
+                config[param] = float(config[param])
+            except:
+                config[param] = NumParameters[param]
+
 
     # List of parameters for which an external file path must be specified:
     params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
@@ -484,11 +496,12 @@ def load_config_yaml(filename,AbsPath=True):
             logging.error('Cannot parse config file: {}'.format(filename))
             raise exc
             
-    # List of parameters to be added if not present (for backward compatibility):
-    params_to_be_added = ['Temperatures']
+    # List of parameters to be added with a default value if not present (for backward compatibility):
+    
+    params_to_be_added = {'Temperatures':'','DataTimeStep':1,'SimulationTimeStep':1}
     for param in params_to_be_added:
         if param not in config:
-            config[param] = ''
+            config[param] = params_to_be_added[param]
 
     # List of parameters for which an external file path must be specified:
     params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
