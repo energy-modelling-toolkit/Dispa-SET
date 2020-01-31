@@ -163,7 +163,7 @@ StorageFinalMin(s)               [MWh]   Minimum storage level at the end of the
 * Scalar variables necessary to the loop:
 scalar FirstHour,LastHour,LastKeptHour,day,ndays,failed;
 FirstHour = 1;
-Scalar TimeStep /1/;
+Scalar TimeStep;
 
 *===============================================================================
 *Data import
@@ -381,6 +381,9 @@ PowerMustRun(u,h)$(sum(tr,Technology(u,tr))>=1 and smin(n,Location(u,n)*(1-Curta
 
 * Part of the reserve that can be provided by offline quickstart units:
 K_QuickStart(n) = Config("QuickStartShare","val");
+
+* Time step
+TimeStep = Config("SimulationTimeStep","val");
 
 $If %Verbose% == 1 Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial;
 $offorder
