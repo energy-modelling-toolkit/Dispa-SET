@@ -240,7 +240,6 @@ $LOAD CostRampDown
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
 ;
 
-
 $If %Verbose% == 0 $goto skipdisplay
 
 Display
@@ -384,7 +383,6 @@ K_QuickStart(n) = Config("QuickStartShare","val");
 
 * Time step
 TimeStep = Config("SimulationTimeStep","val");
-
 $If %Verbose% == 1 Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial;
 $offorder
 
@@ -947,8 +945,8 @@ UCM_SIMPLE.optfile=1;
 ndays = floor(card(h)*TimeStep/24);
 
 if (Config("RollingHorizon LookAhead","day") > ndays -1, abort "The look ahead period is longer than the simulation length";);
-if (mod(Config("RollingHorizon LookAhead","day"),TimeStep) <> 0, abort "The look ahead period is not a multiple of TimeStep";);
-if (mod(Config("RollingHorizon Length","day"),TimeStep) <> 0, abort "The rolling horizon length is not a multiple of TimeStep";);
+if (mod(Config("RollingHorizon LookAhead","day")*24,TimeStep) <> 0, abort "The look ahead period is not a multiple of TimeStep";);
+if (mod(Config("RollingHorizon Length","day")*24,TimeStep) <> 0, abort "The rolling horizon length is not a multiple of TimeStep";);
 
 $if %MTS% == 0 $goto skipMTS
 Config("RollingHorizon LookAhead","day")=0;
