@@ -15,6 +15,22 @@ import pandas as pd
 from ..misc.str_handler import clean_strings, shrink_to_64
 
 
+def pd_timestep(hours):
+    '''
+    Function that converts time steps in hours into pandas frequencies (e.g '1h', '15min', ...)
+    '''
+    if not isinstance(hours,(int,float)):
+        logging.critical('Time steps must be provided in hours (integer or float number')
+        sys.exit(1)
+    if hours==1:
+        return '1h'
+    elif hours==0.25:
+        return '15min'
+    elif hours==24:
+        return '24h'
+    else:
+        return ''
+
 
 def EfficiencyTimeSeries(config,plants,Temperatures):
     '''

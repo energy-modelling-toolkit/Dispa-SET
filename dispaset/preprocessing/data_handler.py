@@ -395,14 +395,16 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['HydroSchedulingHorizon'] = sheet.cell_value(54, 2)
     config['InitialFinalReservoirLevel'] = sheet.cell_value(55, 2)
 
-    # Set default numrical values (for backward compatibility):
-    NumParameters = {'DataTimeStep':1,'SimulationTimeStep':1}
-    for param in NumParameters:
-        if not isinstance(config[param], (int, float, complex)):
-            try:
-                config[param] = float(config[param])
-            except:
-                config[param] = NumParameters[param]
+    # Set default values (for backward compatibility):
+    NonEmptyarameters = {'DataTimeStep':1,'SimulationTimeStep':1,'HydroScheduling':'Off','HydroSchedulingHorizon':'Annual','InitialFinalReservoirLevel':True}
+    for param in NonEmptyarameters:
+        if config[param]=='':
+            config[param]=NonEmptyarameters[param]
+#        if not isinstance(config[param], (int, float, complex)):
+#            try:
+#                config[param] = float(config[param])
+#            except:
+#                config[param] = NonEmptyarameters[param]
 
 
     # List of parameters for which an external file path must be specified:
@@ -452,6 +454,13 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['default']['ValueOfLostLoad'] = sheet.cell_value(81, 5)
     config['default']['PriceOfSpillage'] = sheet.cell_value(82, 5)
     config['default']['WaterValue'] = sheet.cell_value(83, 5)
+    config['default']['ShareOfQuickStartUnits'] = 0.5          # to be added to xlsx file
+    
+    # Set default values (for backward compatibility):
+    NonEmptyDefaultss = {'ReservoirLevelInitial':0.5,'ReservoirLevelFinal':0.5,'ValueOfLostLoad':1E5,'PriceOfSpillage':1,'WaterValue':100,'ShareOfQuickStartUnits':0.5}
+    for param in NonEmptyDefaultss:
+        if config['default'][param]=='':
+            config['default'][param]=NonEmptyDefaultss[param]
 
     # read the list of zones to consider:
     def read_truefalse(sheet, rowstart, colstart, rowstop, colstop, colapart=1):
@@ -498,10 +507,16 @@ def load_config_yaml(filename,AbsPath=True):
             
     # List of parameters to be added with a default value if not present (for backward compatibility):
     
-    params_to_be_added = {'Temperatures':'','DataTimeStep':1,'SimulationTimeStep':1}
+    params_to_be_added = {'Temperatures':'','DataTimeStep':1,'SimulationTimeStep':1,'HydroScheduling':'Off','HydroSchedulingHorizon':'Annual','InitialFinalReservoirLevel':True}
     for param in params_to_be_added:
         if param not in config:
             config[param] = params_to_be_added[param]
+                        
+    # Set default values (for backward compatibility):
+    NonEmptyDefaultss = {'ReservoirLevelInitial':0.5,'ReservoirLevelFinal':0.5,'ValueOfLostLoad':1E5,'PriceOfSpillage':1,'WaterValue':100,'ShareOfQuickStartUnits':0.5}
+    for param in NonEmptyDefaultss:
+        if param not in config['default']:
+            config['default'][param]=NonEmptyDefaultss[param]
 
     # List of parameters for which an external file path must be specified:
     params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
