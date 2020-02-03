@@ -70,14 +70,18 @@ def incidence_matrix(sets, set_used, parameters, param_used):
     This function generates the incidence matrix of the lines within the nodes
     A particular case is considered for the node "Rest Of the World", which is no explicitely defined in DispaSET
     """
-
-    for i in range(len(sets[set_used])):
-        [from_node, to_node] = sets[set_used][i].split('->')
+    for i,l in enumerate(sets[set_used]):
+        [from_node, to_node] = l.split('->')
         if (from_node.strip() in sets['n']) and (to_node.strip() in sets['n']):
             parameters[param_used]['val'][i, sets['n'].index(to_node.strip())] = 1
             parameters[param_used]['val'][i, sets['n'].index(from_node.strip())] = -1
+        elif (from_node.strip() in sets['n']) and (to_node.strip() == 'RoW'):
+            parameters[param_used]['val'][i, sets['n'].index(from_node.strip())] = -1
+        elif (from_node.strip() == 'RoW') and (to_node.strip() in sets['n']):
+            parameters[param_used]['val'][i, sets['n'].index(to_node.strip())] = 1
         else:
-            logging.warning("The line " + str(sets[set_used][i]) + " contains unrecognized nodes")
+            logging.error("The line " + str(l) + " contains unrecognized nodes (" + from_node.strip() + ' or ' + to_node.strip() + ")")
+
     return parameters[param_used]
 
 
