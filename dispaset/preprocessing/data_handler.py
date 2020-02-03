@@ -359,6 +359,18 @@ def load_time_series(config,path,header='infer'):
     return data.reindex(config['idx_long'], method='nearest').fillna(method='bfill')
 
 
+def load_config(ConfigFile,AbsPath=True):
+    """
+    Wrapper function around load_config_excel and load_config_yaml
+    """
+    if ConfigFile[-5:] == '.xlsx':
+        config = load_config_excel(ConfigFile,AbsPath=True)
+    elif ConfigFile[-4:] == '.yml':
+        config = load_config_yaml(ConfigFile,AbsPath=True)
+    else:
+        logging.critical('The extension of the config file should be .xlsx or .yml')
+        sys.exit(1)
+    return config
 
 def load_config_excel(ConfigFile,AbsPath=True):
     """

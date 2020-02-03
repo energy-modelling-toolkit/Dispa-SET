@@ -16,7 +16,7 @@ sys.path.append(os.path.abspath('..'))
 import dispaset as ds
 
 # Load the configuration file
-config = ds.load_config_excel('../ConfigFiles/Config_Mid_Term_Scheduling.xlsx')
+config = ds.load_config('../ConfigFiles/Config_Mid_Term_Scheduling.xlsx')
 
 ## Build simulation data with new profiles
 SimData = ds.build_full_simulation(config,mts_plot=True)
