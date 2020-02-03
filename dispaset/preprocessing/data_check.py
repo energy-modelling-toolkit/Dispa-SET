@@ -154,9 +154,12 @@ def check_p2h(config, plants):
     NonNaNKeys = ['COP']
     StrKeys = []
     
+    if len(plants)==0:  # If there are no P2HT units, exit the check
+        return True
+    
     for key in keys:
         if key not in plants:
-            logging.critical('The power plants data does not contain the field "' + key + '", which is mandatory for CHP units')
+            logging.critical('The power plants data does not contain the field "' + key + '", which is mandatory for P2HT units')
             sys.exit(1)
 
     for key in NonNaNKeys:
