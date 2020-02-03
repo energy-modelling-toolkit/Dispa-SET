@@ -385,6 +385,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
     sheet = wb.sheet_by_name('main')
 
     config = {}
+    config['Description'] = sheet.cell_value(5, 1)
     config['SimulationDirectory'] = sheet.cell_value(17, 2)
     config['WriteExcel'] = sheet.cell_value(18, 2)
     config['WriteGDX'] = sheet.cell_value(19, 2)
@@ -483,7 +484,8 @@ def load_config_excel(ConfigFile,AbsPath=True):
 
     logging.info("Using config file " + ConfigFile + " to build the simulation environment")
     logging.info("Using " + config['SimulationDirectory'] + " as simulation folder")
-
+    logging.info("Description of the simulation: "+ config['Description'])
+    
     return config
 
 def load_config_yaml(filename,AbsPath=True):
