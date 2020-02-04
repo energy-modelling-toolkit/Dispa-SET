@@ -406,6 +406,8 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(31, 2), wb.datemode)
     config['HorizonLength'] = int(sheet.cell_value(32, 2))
     config['LookAhead'] = int(sheet.cell_value(33, 2))
+    config['DataTimeStep'] = sheet.cell_value(34, 2)
+    config['SimulationTimeStep'] = sheet.cell_value(35, 2)
 
     config['SimulationType'] = sheet.cell_value(46, 2)
     config['ReserveCalculation'] = sheet.cell_value(47, 2)
@@ -414,6 +416,18 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['HydroScheduling'] = sheet.cell_value(53, 2)
     config['HydroSchedulingHorizon'] = sheet.cell_value(54, 2)
     config['InitialFinalReservoirLevel'] = sheet.cell_value(55, 2)
+
+    # Set default values (for backward compatibility):
+    NonEmptyarameters = {'DataTimeStep':1,'SimulationTimeStep':1,'HydroScheduling':'Off','HydroSchedulingHorizon':'Annual','InitialFinalReservoirLevel':True}
+    for param in NonEmptyarameters:
+        if config[param]=='':
+            config[param]=NonEmptyarameters[param]
+#        if not isinstance(config[param], (int, float, complex)):
+#            try:
+#                config[param] = float(config[param])
+#            except:
+#                config[param] = NonEmptyarameters[param]
+
 
     # List of parameters for which an external file path must be specified:
     global PARAMS
@@ -459,6 +473,13 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['default']['ValueOfLostLoad'] = sheet.cell_value(81, 5)
     config['default']['PriceOfSpillage'] = sheet.cell_value(82, 5)
     config['default']['WaterValue'] = sheet.cell_value(83, 5)
+    config['default']['ShareOfQuickStartUnits'] = 0.5          # to be added to xlsx file
+    
+    # Set default values (for backward compatibility):
+    NonEmptyDefaultss = {'ReservoirLevelInitial':0.5,'ReservoirLevelFinal':0.5,'ValueOfLostLoad':1E5,'PriceOfSpillage':1,'WaterValue':100,'ShareOfQuickStartUnits':0.5}
+    for param in NonEmptyDefaultss:
+        if config['default'][param]=='':
+            config['default'][param]=NonEmptyDefaultss[param]
 
 #    config['default']['ShareOfFlexibleDemand'] = sheet.cell_value(81, 5)
 #    for def_value in config['default']:
@@ -511,11 +532,18 @@ def load_config_yaml(filename,AbsPath=True):
             logging.error('Cannot parse config file: {}'.format(filename))
             raise exc
             
-    # List of parameters to be added if not present (for backward compatibility):
-    params_to_be_added = ['Temperatures']
+    # List of parameters to be added with a default value if not present (for backward compatibility):
+    
+    params_to_be_added = {'Temperatures':'','DataTimeStep':1,'SimulationTimeStep':1,'HydroScheduling':'Off','HydroSchedulingHorizon':'Annual','InitialFinalReservoirLevel':True}
     for param in params_to_be_added:
         if param not in config:
-            config[param] = ''
+            config[param] = params_to_be_added[param]
+                        
+    # Set default values (for backward compatibility):
+    NonEmptyDefaultss = {'ReservoirLevelInitial':0.5,'ReservoirLevelFinal':0.5,'ValueOfLostLoad':1E5,'PriceOfSpillage':1,'WaterValue':100,'ShareOfQuickStartUnits':0.5}
+    for param in NonEmptyDefaultss:
+        if param not in config['default']:
+            config['default'][param]=NonEmptyDefaultss[param]
 
 
     # Define missing parameters if they were not provided in the config file
