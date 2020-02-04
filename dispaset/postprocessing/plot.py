@@ -364,8 +364,9 @@ def storage_levels(inputs, results):
     StorageError = ((inputs['param_df']['StorageProfile'] * sto_units.StorageCapacity).subtract(
         results['OutputStorageLevel'], 'columns')).divide((sto_units.StorageCapacity), 'columns') * (-100)
     StorageError = StorageError.dropna(1)
-    ax = StorageError.plot(figsize=(12, 6),
-                           title='Difference between the calculated storage Levels and the (imposed) minimum level')
-    ax.set_ylabel('%')
+    if not StorageError.empty:
+        ax = StorageError.plot(figsize=(12, 6),
+                               title='Difference between the calculated storage Levels and the (imposed) minimum level')
+        ax.set_ylabel('%')
 
     return True
