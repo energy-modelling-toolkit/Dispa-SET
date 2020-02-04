@@ -7,11 +7,12 @@ and build batch runs in GAMS or PYOMO
 """
 
 from itertools import product
-import cPickle as pickle
+import pickle
 import logging
 
-import os
-os.chdir('..')
+# Add the root folder of Dispa-SET to the path so that the library can be loaded:
+import sys,os
+sys.path.append(os.path.abspath('..'))
 
 # Import Dispa-SET
 import dispaset as ds
@@ -20,14 +21,14 @@ import dispaset as ds
 path_to_save = r'./scenario_runs'
 
 # Load the configuration file
-config = ds.load_config_excel('ConfigFiles/ConfigCY.xlsx')
+config = ds.load_config_excel('../ConfigFiles/ConfigCY.xlsx')
 
 # Define your different input files as a list. The number of total runs will be the product of the length of the defined lists.
-heat_demand_scen = ['./Database/Heat_demand/CY/Vassilikos_CCP2.csv',
-                    './Database/Heat_demand/CY/Vassilikos_CCP2.csv_80']
+heat_demand_scen = ['../Database/Heat_demand/CY/Vassilikos_CCP2.csv',
+                    '../Database/Heat_demand/CY/Vassilikos_CCP2.csv_80']
 
-power_scen = ['./Database/PowerPlants/##/2015.csv',
-              './Database/PowerPlants/##/2015_heat.csv',
+power_scen = ['../Database/PowerPlants/##/2015.csv',
+              '../Database/PowerPlants/##/2015_heat.csv',
               ]
 
 cost_heat_slack_scen = [20.0, 51.0, 100.0]

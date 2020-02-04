@@ -31,8 +31,8 @@ ReserveParticipation:
 -  'CAES'
 -  'BATS'
 -  'BEVS'
-ReservoirLevels:  'Database/HydroData/ReservoirLevel/EL/1h/dry09.csv'
-ReservoirScaledInflows:  'Database/HydroData/ScaledInflows/EL/1h/dry09.csv'
+ReservoirLevels:  'Database/HydroData/ReservoirLevel/EL/1h/dry.csv'
+ReservoirScaledInflows:  'Database/HydroData/ScaledInflows/EL/1h/dry.csv'
 SimulationDirectory:  'Simulations/simulationEL'
 SimulationType:  'MILP'
 StartDate: !!python/tuple
@@ -63,9 +63,9 @@ default:
   PriceOfCO2: 7.5
   PriceOfFuelOil: 35.0
   PriceOfGas: 25.0
-  PriceOfLignite:  ''
+  PriceOfLignite:  9.0
   PriceOfNuclear: 3.0
-  PriceOfPeat:  ''
+  PriceOfPeat:  9.0
 modifiers:
   Demand: 1.0
   Solar: 1.0
