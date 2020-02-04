@@ -115,6 +115,8 @@ dmypy.json
 *.lst
 *.lxi
 *.log
+*.dat
+225a
 
 # temp dir/files
 Simulations/*
