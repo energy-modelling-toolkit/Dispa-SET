@@ -19,11 +19,13 @@ except ImportError:
     logging.warning("Couldn't import future package. Numeric operations may differ among different versions due to incompatible variable types")
     pass
 
-from .data_check import check_units, check_chp, check_sto, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering, check_FlexibleDemand
-from .utils import clustering, interconnections, incidence_matrix, select_units
-from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, write_to_excel, load_csv
+from .data_check import check_units, check_chp, check_sto, check_p2h, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering, , check_FlexibleDemand, check_temperatures
+from .utils import clustering, interconnections, incidence_matrix, select_units, EfficiencyTimeSeries
+from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, load_time_series
 
-from ..misc.gdx_handler import write_variables
+from ..solve import solve_GAMS_simple
+
+from ..misc.gdx_handler import write_variables, gdx_to_list, gdx_to_dataframe
 from ..common import commons  # Load fuel types, technologies, timestep, etc:
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
@@ -36,14 +38,15 @@ def get_git_revision_tag():
     except:
         return 'NA'
 
-def build_simulation(config):
+def build_simulation(config, profiles=None):
     """
     This function reads the DispaSET config, loads the specified data,
     processes it when needed, and formats it in the proper DispaSET format.
     The output of the function is a directory with all inputs and simulation files required to run a DispaSET simulation
 
-    :param config: Dictionary with all the configuration fields loaded from the excel file. Output of the 'LoadConfig' function.
-    :param plot_load: Boolean used to display a plot of the demand curves in the different zones
+    :param config:        Dictionary with all the configuration fields loaded from the excel file. Output of the 'LoadConfig' function.
+    :param plot_load:     Boolean used to display a plot of the demand curves in the different zones
+    :param profiles:      Profiles from mid term scheduling simulations
     """
     dispa_version = str(get_git_revision_tag())
     logging.info('New build started. DispaSET version: ' + dispa_version)
@@ -60,33 +63,36 @@ def build_simulation(config):
     __, m_start, d_start, __, __, __ = config['StartDate']
     y_end, m_end, d_end, _, _, _ = config['StopDate']
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
-
+    
     # Indexes of the simulation:
-    idx_std = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*config['StartDate']),
+    config['idx'] = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*config['StartDate']),
                                              end=pd.datetime(*config['StopDate']),
-                                             freq=commons['TimeStep'])
-                               )
-    idx_utc_noloc = idx_std - dt.timedelta(hours=1)
-    idx_utc = idx_utc_noloc.tz_localize('UTC')
+                                             freq=commons['TimeStep'])).tz_localize(None)
+
 
     # Indexes for the whole year considered in StartDate
-    idx_utc_year_noloc = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*(config['StartDate'][0],1,1,0,0)),
+    idx_year = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*(config['StartDate'][0],1,1,0,0)),
                                                         end=pd.datetime(*(config['StartDate'][0],12,31,23,59,59)),
                                                         freq=commons['TimeStep'])
                                           )
+    
+    # Indexes including the last look-ahead period
+    enddate_long = config['idx'][-1] + dt.timedelta(days=config['LookAhead'])
+    idx_long = pd.DatetimeIndex(pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep']))
+    Nhours_long = len(idx_long)
+    config['idx_long'] = idx_long
 
     # %%#################################################################################################################
     #####################################   Data Loading    ###########################################################
     ###################################################################################################################
 
     # Start and end of the simulation:
-    delta = idx_utc[-1] - idx_utc[0]
+    delta = config['idx'][-1] - config['idx'][0]
     days_simulation = delta.days + 1
 
     # Load :
-    Load = NodeBasedTable(config['Demand'],idx_utc_noloc,config['zones'],tablename='Demand')
-    # For the peak load, the whole year is considered:
-    PeakLoad = NodeBasedTable(config['Demand'],idx_utc_year_noloc,config['zones'],tablename='PeakLoad').max()
+    Load = NodeBasedTable('Demand',config)
+    PeakLoad = Load.max()
 
     if config['modifiers']['Demand'] != 1:
         logging.info('Scaling load curve by a factor ' + str(config['modifiers']['Demand']))
@@ -95,30 +101,29 @@ def build_simulation(config):
 
     # Interconnections:
     if os.path.isfile(config['Interconnections']):
-        flows = load_csv(config['Interconnections'], index_col=0, parse_dates=True).fillna(0)
+        flows = load_time_series(config,config['Interconnections']).fillna(0)
     else:
         logging.warning('No historical flows will be considered (no valid file provided)')
-        flows = pd.DataFrame(index=idx_utc_noloc)
+        flows = pd.DataFrame(index=config['idx_long'])
     if os.path.isfile(config['NTC']):
-        NTC = load_csv(config['NTC'], index_col=0, parse_dates=True).fillna(0)
+        NTC = load_time_series(config,config['NTC']).fillna(0)
     else:
         logging.warning('No NTC values will be considered (no valid file provided)')
-        NTC = pd.DataFrame(index=idx_utc_noloc)
+        NTC = pd.DataFrame(index=config['idx_long'])
 
     # Load Shedding:
-    LoadShedding = NodeBasedTable(config['LoadShedding'], idx_utc_noloc,config['zones'],tablename='LoadShedding',default=config['default']['LoadShedding'])
-    CostLoadShedding = NodeBasedTable(config['CostLoadShedding'], idx_utc_noloc, config['zones'], tablename='CostLoadShedding', default=config['default'].get('CostLoadShedding',1000))
-    # Flexible Demand
-    ShareOfFlexibleDemand = NodeBasedTable(config['ShareOfFlexibleDemand'],idx_utc_noloc,config['zones'],tablename='ShareOfFlexibleDemand', default=config['default'].get('ShareOfFlexibleDemand',0))
-
+    LoadShedding = NodeBasedTable('LoadShedding',config,default=config['default']['LoadShedding'])
+    CostLoadShedding = NodeBasedTable('CostLoadShedding',config,default=config['default']['CostLoadShedding'])
+	ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand',config, default=config['default'].get('ShareOfFlexibleDemand',0))
+    
     # Power plants:
     plants = pd.DataFrame()
     if os.path.isfile(config['PowerPlantData']):
-        plants = load_csv(config['PowerPlantData'])
+        plants = pd.read_csv(config['PowerPlantData'])
     elif '##' in config['PowerPlantData']:
         for z in config['zones']:
             path = config['PowerPlantData'].replace('##', str(z))
-            tmp = load_csv(path)
+            tmp = pd.read_csv(path)
             plants = plants.append(tmp, ignore_index=True, sort = False)
     # remove invalide power plants:
     plants = select_units(plants,config)
@@ -147,32 +152,52 @@ def build_simulation(config):
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
 
-    Outages = UnitBasedTable(plants,config['Outages'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology'],tablename='Outages')
-    AF = UnitBasedTable(plants,config['RenewablesAF'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology'],tablename='AvailabilityFactors',default=1,RestrictWarning=commons['tech_renewables'])
-    ReservoirLevels = UnitBasedTable(plants_sto,config['ReservoirLevels'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirLevels',default=0)
-    ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirScaledInflows',default=0)
-    HeatDemand = UnitBasedTable(plants_chp,config['HeatDemand'],idx_utc_noloc,config['zones'],fallbacks=['Unit'],tablename='HeatDemand',default=0)
-    CostHeatSlack = UnitBasedTable(plants_chp,config['CostHeatSlack'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Zone'],tablename='CostHeatSlack',default=config['default'].get('CostHeatSlack',50))
+    # Defining the P2H units:
+    plants_p2h = plants[plants['Technology']=='P2HT']
+    
+    # All heating units:
+    plants_heat = plants_chp.append(plants_p2h)
+
+    Outages = UnitBasedTable(plants,'Outages',config,fallbacks=['Unit','Technology'])
+    AF = UnitBasedTable(plants,'RenewablesAF',config,fallbacks=['Unit','Technology'],default=1,RestrictWarning=commons['tech_renewables'])
+
+    # Reservoir levels
+    """
+    :profiles:      if turned on reservoir levels are overwritten by newly calculated ones 
+                    from the mid term scheduling simulations
+    """
+    if profiles is None:
+        ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
+    else:
+        ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
+        MidTermSchedulingProfiles = profiles
+        ReservoirLevels.update(MidTermSchedulingProfiles)
+
+    ReservoirScaledInflows = UnitBasedTable(plants_sto,'ReservoirScaledInflows',config,fallbacks=['Unit','Technology','Zone'],default=0)
+    HeatDemand = UnitBasedTable(plants_heat,'HeatDemand',config,fallbacks=['Unit'],default=0)
+    CostHeatSlack = UnitBasedTable(plants_heat,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
+    Temperatures = NodeBasedTable('Temperatures',config)
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
     check_heat_demand(plants,HeatDemand)
-    check_FlexibleDemand(ShareOfFlexibleDemand)
+    check_temperatures(plants,Temperatures)
+	check_FlexibleDemand(ShareOfFlexibleDemand)
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
     FuelPrices = {}
     for fuel in fuels:
-        FuelPrices[fuel] = NodeBasedTable(config[fuel],idx_utc_noloc,config['zones'],tablename=fuel,default=config['default'][fuel])
+        FuelPrices[fuel] = NodeBasedTable(fuel,config,default=config['default'][fuel])
 
     # Interconnections:
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], NTC, flows)
 
     if len(Interconnections_sim.columns) > 0:
-        NTCs = Interconnections_sim.reindex(idx_utc_noloc)
+        NTCs = Interconnections_sim.reindex(config['idx_long'])
     else:
-        NTCs = pd.DataFrame(index=idx_utc_noloc)
-    Inter_RoW = Interconnections_RoW.reindex(idx_utc_noloc)
+        NTCs = pd.DataFrame(index=config['idx_long'])
+    Inter_RoW = Interconnections_RoW.reindex(config['idx_long'])
 
     # Clustering of the plants:
     Plants_merged, mapping = clustering(plants, method=config['SimulationType'])
@@ -244,26 +269,35 @@ def build_simulation(config):
             PurePowerCapacity = PowerCapacity + Plants_chp.loc[u,'CHPPowerLossFactor'] * MaxHeat
         Plants_merged.loc[u,'PartLoadMin'] = Plants_merged.loc[u,'PartLoadMin'] * PowerCapacity / PurePowerCapacity  # FIXME: Is this correct?
         Plants_merged.loc[u,'PowerCapacity'] = PurePowerCapacity
-        
+    
+    Plants_p2h = Plants_merged[Plants_merged['Technology']=='P2HT'].copy()
+    # check chp plants:
+    check_p2h(config, Plants_p2h)
+    # All heating plants:
+    Plants_heat = Plants_chp.append(Plants_p2h)
+    
+    # Calculating the efficiency time series for each unit:
+    Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
+    
     # Get the hydro time series corresponding to the original plant list: #FIXME Unused variable ?
     #StorageFormerIndexes = [s for s in plants.index if
     #                        plants['Technology'][s] in commons['tech_storage']]
 
     # Same with the CHPs:
     # Get the heat demand time series corresponding to the original plant list:
-    CHPFormerIndexes = [s for s in plants.index if
-                            plants['CHPType'][s] in commons['types_CHP']]
-    for s in CHPFormerIndexes:  # for all the old plant indexes
-        # get the old plant name corresponding to s:
-        oldname = plants['Unit'][s]
-        # newname = mapping['NewIndex'][s] #FIXME Unused variable ?
-        if oldname not in HeatDemand:
-            logging.warning('No heat demand profile found for CHP plant "' + str(oldname) + '". Assuming zero')
-            HeatDemand[oldname] = 0
-        if oldname not in CostHeatSlack:
-            logging.warning('No heat cost profile found for CHP plant "' + str(oldname) + '". Assuming zero')
-            CostHeatSlack[oldname] = 0
- 
+#    CHPFormerIndexes = [s for s in plants.index if
+#                            plants['CHPType'][s] in commons['types_CHP']]
+#    for s in CHPFormerIndexes:  # for all the old plant indexes
+#        # get the old plant name corresponding to s:
+#        oldname = plants['Unit'][s]
+#        # newname = mapping['NewIndex'][s] #FIXME Unused variable ?
+#        if oldname not in HeatDemand:
+#            logging.warning('No heat demand profile found for CHP plant "' + str(oldname) + '". Assuming zero')
+#            HeatDemand[oldname] = 0
+#        if oldname not in CostHeatSlack:
+#            logging.warning('No heat cost profile found for CHP plant "' + str(oldname) + '". Assuming zero')
+#            CostHeatSlack[oldname] = 0
+# 
 
     # merge the outages:
     for i in plants.index:  # for all the old plant indexes
@@ -282,58 +316,33 @@ def build_simulation(config):
 
     # %%
     # checking data
-    check_df(Load, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Load')
-    check_df(AF_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(Load, StartDate=config['idx'][0], StopDate=config['idx'][-1], name='Load')
+    check_df(AF_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='AF_merged')
-    check_df(Outages_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Outages_merged')
-    check_df(Inter_RoW, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Inter_RoW')
+    check_df(Outages_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1], name='Outages_merged')
+    check_df(Inter_RoW, StartDate=config['idx'][0], StopDate=config['idx'][-1], name='Inter_RoW')
     for key in FuelPrices:
-        check_df(FuelPrices[key], StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name=key)
-    check_df(NTCs, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='NTCs')
-    check_df(ReservoirLevels_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+        check_df(FuelPrices[key], StartDate=config['idx'][0], StopDate=config['idx'][-1], name=key)
+    check_df(NTCs, StartDate=config['idx'][0], StopDate=config['idx'][-1], name='NTCs')
+    check_df(ReservoirLevels_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='ReservoirLevels_merged')
-    check_df(ReservoirScaledInflows_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(ReservoirScaledInflows_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='ReservoirScaledInflows_merged')
-    check_df(HeatDemand_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(HeatDemand_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='HeatDemand_merged')
-    check_df(CostHeatSlack_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(CostHeatSlack_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='CostHeatSlack_merged')
-    check_df(LoadShedding, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(LoadShedding, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='LoadShedding')
-    check_df(CostLoadShedding, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(CostLoadShedding, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='CostLoadShedding')
     check_df(ShareOfFlexibleDemand, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
              name='ShareOfFlexibleDemand')
 
 #    for key in Renewables:
-#        check_df(Renewables[key], StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+#        check_df(Renewables[key], StartDate=config['idx'][0], StopDate=config['idx'][-1],
 #                 name='Renewables["' + key + '"]')
 
-    # %%%
-
-    # Extending the data to include the look-ahead period (with constant values assumed)
-    enddate_long = idx_utc_noloc[-1] + dt.timedelta(days=config['LookAhead'])
-    idx_long = pd.DatetimeIndex(pd.date_range(start=idx_utc_noloc[0], end=enddate_long, freq=commons['TimeStep']))
-    Nhours_long = len(idx_long)
-
-    # re-indexing with the longer index and filling possibly missing data at the beginning and at the end::
-    Load = Load.reindex(idx_long, method='nearest').fillna(method='bfill')
-    AF_merged = AF_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
-    Inter_RoW = Inter_RoW.reindex(idx_long, method='nearest').fillna(method='bfill')
-    NTCs = NTCs.reindex(idx_long, method='nearest').fillna(method='bfill')
-    for key in FuelPrices:
-        FuelPrices[key] = FuelPrices[key].reindex(idx_long, method='nearest').fillna(method='bfill')
-    Load = Load.reindex(idx_long, method='nearest').fillna(method='bfill')
-    Outages_merged = Outages_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
-    ReservoirLevels_merged = ReservoirLevels_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
-    ReservoirScaledInflows_merged = ReservoirScaledInflows_merged.reindex(idx_long, method='nearest').fillna(
-        method='bfill')
-    LoadShedding = LoadShedding.reindex(idx_long, method='nearest').fillna(method='bfill')
-    CostLoadShedding = CostLoadShedding.reindex(idx_long, method='nearest').fillna(method='bfill')
-    ShareOfFlexibleDemand = ShareOfFlexibleDemand.reindex(idx_long, method='nearest').fillna(method='bfill')
-
-#    for tr in Renewables:
-#        Renewables[tr] = Renewables[tr].reindex(idx_long, method='nearest').fillna(method='bfill')
 
     # %%################################################################################################################
     ############################################   Sets    ############################################################
@@ -345,12 +354,15 @@ def build_simulation(config):
     sets['z'] = [str(x + 1) for x in range(Nhours_long - config['LookAhead'] * 24)]
     sets['mk'] = ['DA', '2U', '2D','Flex']
     sets['n'] = config['zones']
-    sets['u'] = Plants_merged.index.tolist()
+    sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
+    sets['u'] = Plants_merged[Plants_merged['Technology']!='P2HT'].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
+    sets['p2h'] = Plants_p2h.index.tolist()
+    sets['th'] = Plants_heat.index.tolist()
     sets['t'] = commons['Technologies']
     sets['tr'] = commons['tech_renewables']
 
@@ -363,55 +375,55 @@ def build_simulation(config):
 
     # Each parameter is associated with certain sets, as defined in the following list:
     sets_param = {}
-    sets_param['AvailabilityFactor'] = ['u', 'h']
+    sets_param['AvailabilityFactor'] = ['au', 'h']
     sets_param['CHPPowerToHeat'] = ['chp']
     sets_param['CHPPowerLossFactor'] = ['chp']
     sets_param['CHPMaxHeat'] = ['chp']
-    sets_param['CostFixed'] = ['u']
-    sets_param['CostHeatSlack'] = ['chp','h']
+    sets_param['CostFixed'] = ['au']
+    sets_param['CostHeatSlack'] = ['th','h']
     sets_param['CostLoadShedding'] = ['n','h']
-    sets_param['CostRampUp'] = ['u']
-    sets_param['CostRampDown'] = ['u']
-    sets_param['CostShutDown'] = ['u']
-    sets_param['CostStartUp'] = ['u']
-    sets_param['CostVariable'] = ['u', 'h']
+    sets_param['CostRampUp'] = ['au']
+    sets_param['CostRampDown'] = ['au']
+    sets_param['CostShutDown'] = ['au']
+    sets_param['CostStartUp'] = ['au']
+    sets_param['CostVariable'] = ['au', 'h']
     sets_param['Curtailment'] = ['n']
     sets_param['Demand'] = ['mk', 'n', 'h']
-    sets_param['Efficiency'] = ['u']
+    sets_param['Efficiency'] = ['p2h','h']
     sets_param['EmissionMaximum'] = ['n', 'p']
-    sets_param['EmissionRate'] = ['u', 'p']
+    sets_param['EmissionRate'] = ['au', 'p']
     sets_param['FlowMaximum'] = ['l', 'h']
     sets_param['FlowMinimum'] = ['l', 'h']
-    sets_param['Fuel'] = ['u', 'f']
-    sets_param['HeatDemand'] = ['chp','h']
+    sets_param['Fuel'] = ['au', 'f']
+    sets_param['HeatDemand'] = ['th','h']
     sets_param['LineNode'] = ['l', 'n']
     sets_param['LoadShedding'] = ['n','h']
-    sets_param['Location'] = ['u', 'n']
-    sets_param['Markup'] = ['u', 'h']
-    sets_param['Nunits'] = ['u']
-    sets_param['OutageFactor'] = ['u', 'h']
-    sets_param['PartLoadMin'] = ['u']
-    sets_param['PowerCapacity'] = ['u']
-    sets_param['PowerInitial'] = ['u']
+    sets_param['Location'] = ['au', 'n']
+    sets_param['Markup'] = ['au', 'h']
+    sets_param['Nunits'] = ['au']
+    sets_param['OutageFactor'] = ['au', 'h']
+    sets_param['PartLoadMin'] = ['au']
+    sets_param['PowerCapacity'] = ['au']
+    sets_param['PowerInitial'] = ['au']
     sets_param['PriceTransmission'] = ['l', 'h']
-    sets_param['RampUpMaximum'] = ['u']
-    sets_param['RampDownMaximum'] = ['u']
-    sets_param['RampStartUpMaximum'] = ['u']
-    sets_param['RampShutDownMaximum'] = ['u']
+    sets_param['RampUpMaximum'] = ['au']
+    sets_param['RampDownMaximum'] = ['au']
+    sets_param['RampStartUpMaximum'] = ['au']
+    sets_param['RampShutDownMaximum'] = ['au']
     sets_param['Reserve'] = ['t']
-    sets_param['StorageCapacity'] = ['u']
+    sets_param['StorageCapacity'] = ['au']
     sets_param['StorageChargingCapacity'] = ['s']
     sets_param['StorageChargingEfficiency'] = ['s']
     sets_param['StorageDischargeEfficiency'] = ['s']
-    sets_param['StorageSelfDischarge'] = ['u']
+    sets_param['StorageSelfDischarge'] = ['au']
     sets_param['StorageInflow'] = ['s', 'h']
     sets_param['StorageInitial'] = ['s']
     sets_param['StorageMinimum'] = ['s']
     sets_param['StorageOutflow'] = ['s', 'h']
     sets_param['StorageProfile'] = ['s', 'h']
-    sets_param['Technology'] = ['u', 't']
-    sets_param['TimeUpMinimum'] = ['u']
-    sets_param['TimeDownMinimum'] = ['u']
+    sets_param['Technology'] = ['au', 't']
+    sets_param['TimeUpMinimum'] = ['au']
+    sets_param['TimeDownMinimum'] = ['au']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -433,7 +445,7 @@ def build_simulation(config):
 
     # %%
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
-    for var in ['Efficiency', 'PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
+    for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
                 'CostRampUp','StorageCapacity', 'StorageSelfDischarge']:
         parameters[var]['val'] = Plants_merged[var].values
 
@@ -456,17 +468,36 @@ def build_simulation(config):
 
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
-        if s in ReservoirLevels_merged:
-            # get the time
-            parameters['StorageInitial']['val'][i] = ReservoirLevels_merged[s][idx_long[0]] * \
-                                                     Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
-            parameters['StorageProfile']['val'][i, :] = ReservoirLevels_merged[s][idx_long].values
-            if any(ReservoirLevels_merged[s] > 1):
-                logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
+        if profiles is not None:
+            if (config['InitialFinalReservoirLevel'] == 0) or (config['InitialFinalReservoirLevel'] == ""):
+                if s in ReservoirLevels_merged:
+                    # get the time
+                    parameters['StorageInitial']['val'][i] = ReservoirLevels_merged[s][idx_long[0]] * \
+                                                             Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
+                    parameters['StorageProfile']['val'][i, :] = ReservoirLevels_merged[s][idx_long].values
+                    if any(ReservoirLevels_merged[s] > 1):
+                        logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
+                else:
+                    logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
+                    parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
+                    parameters['StorageProfile']['val'][i, :] = 0.5
+            else:
+                if (config['default']['ReservoirLevelInitial'] > 1) or (config['default']['ReservoirLevelFinal'] > 1):
+                    logging.warning(s + ': The initial or final reservoir levels are higher than its capacity!' )
+                parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * Plants_sto['StorageCapacity'][s]
+                parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
         else:
-            logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
-            parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
-            parameters['StorageProfile']['val'][i, :] = 0.5
+            if s in ReservoirLevels_merged:
+                # get the time
+                parameters['StorageInitial']['val'][i] = ReservoirLevels_merged[s][idx_long[0]] * \
+                                                         Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
+                parameters['StorageProfile']['val'][i, :] = ReservoirLevels_merged[s][idx_long].values
+                if any(ReservoirLevels_merged[s] > 1):
+                    logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
+            else:
+                logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
+                parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
+                parameters['StorageProfile']['val'][i, :] = 0.5
 
     # Storage Inflows:
     for i, s in enumerate(sets['s']):
@@ -474,7 +505,7 @@ def build_simulation(config):
             parameters['StorageInflow']['val'][i, :] = ReservoirScaledInflows_merged[s][idx_long].values * \
                                                        Plants_sto['PowerCapacity'][s]
     # CHP time series:
-    for i, u in enumerate(sets['chp']):
+    for i, u in enumerate(sets['th']):
         if u in HeatDemand_merged:
             parameters['HeatDemand']['val'][i, :] = HeatDemand_merged[u][idx_long].values
             parameters['CostHeatSlack']['val'][i, :] = CostHeatSlack_merged[u][idx_long].values
@@ -494,10 +525,14 @@ def build_simulation(config):
 
     # Availability Factors
     if len(AF_merged.columns) != 0:
-        for i, u in enumerate(sets['u']):
+        for i, u in enumerate(sets['au']):
             if u in AF_merged.columns:
                 parameters['AvailabilityFactor']['val'][i, :] = AF_merged[u].values
 
+    # Efficiencies (currently limited to p2h units, but can be extended to all units):
+    if len(Efficiencies) != 0:
+        for i, u in enumerate(sets['p2h']):
+            parameters['Efficiency']['val'][i, :] = Efficiencies[u].values
 
     # Demand
     # Dayahead['NL'][1800:1896] = Dayahead['NL'][1632:1728]
@@ -557,7 +592,7 @@ def build_simulation(config):
 
     # Outage Factors
     if len(Outages_merged.columns) != 0:
-        for i, u in enumerate(sets['u']):
+        for i, u in enumerate(sets['au']):
             if u in Outages_merged.columns:
                 parameters['OutageFactor']['val'][i, :] = Outages_merged[u].values
             else:
@@ -611,18 +646,36 @@ def build_simulation(config):
     dd_begin = idx_long[4]
     dd_end = idx_long[-2]
 
-#TODO: integrated the parameters (VOLL, Water value, etc) from the excel config file
-    values = np.array([
-        [dd_begin.year, dd_begin.month, dd_begin.day, 0],
+    # Check if values are specified in the config and overwrite the default ones
+    values_lst = ['ValueOfLostLoad','ShareOfQuickStartUnits','PriceOfSpillage','WaterValue']
+    values_val = [1e5,0.5,1,100]
+    values = np.array([[dd_begin.year, dd_begin.month, dd_begin.day, 0],
         [dd_end.year, dd_end.month, dd_end.day, 0],
         [0, 0, config['HorizonLength'], 0],
-        [0, 0, config['LookAhead'], 0],
-        [0, 0, 0, 1e5],     # Value of lost load
-        [0, 0, 0, 0.5],       # allowed Share of quick start units in reserve
-        [0, 0, 0, 1],       # Cost of spillage (EUR/MWh)
-        [0, 0, 0, 100],       # Value of water (for unsatisfied water reservoir levels, EUR/MWh)
-        [0, 0, 0, 2],       # Demand flexibility: number of hours by which the flexible demand can be time-shifted
-    ])
+        [0, 0, config['LookAhead'], 0]])
+    for vl in values_lst:
+        if vl in config['default']:
+            if config['default'][vl] == "":
+                if vl == 'ValueOfLostLoad':
+                    tmp_value = np.array([[0,0,0,values_val[0]]])
+                if vl == 'ShareOfQuickStartUnits':
+                    tmp_value = np.array([[0,0,0,values_val[1]]])
+                if vl == 'PriceOfSpillage':
+                    tmp_value = np.array([[0,0,0,values_val[2]]])
+                if vl == 'WaterValue':
+                    tmp_value = np.array([[0,0,0,values_val[3]]])
+            else:
+                tmp_value = np.array([[0,0,0,config['default'][vl]]])
+        else:
+            if vl == 'ValueOfLostLoad':
+                tmp_value = np.array([[0,0,0,values_val[0]]])
+            if vl == 'ShareOfQuickStartUnits':
+                tmp_value = np.array([[0,0,0,values_val[1]]])
+            if vl == 'PriceOfSpillage':
+                tmp_value = np.array([[0,0,0,values_val[2]]])
+            if vl == 'WaterValue':
+                tmp_value = np.array([[0,0,0,values_val[3]]])
+        values = np.append(values, tmp_value, axis=0)
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
     # %%#################################################################################################################
@@ -638,7 +691,7 @@ def build_simulation(config):
     # list_vars = []
     gdx_out = "Inputs.gdx"
     if config['WriteGDX']:
-        write_variables(config['GAMS_folder'], gdx_out, [sets, parameters])
+        write_variables(config, gdx_out, [sets, parameters])
 
     # if the sim variable was not defined:
     if 'sim' not in locals():
@@ -654,9 +707,15 @@ def build_simulation(config):
             fout.write(line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1'))
         fin.close()
         fout.close()
+        # additionally allso copy UCM_h_simple.gms
+        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+                        os.path.join(sim, 'UCM_h_simple.gms'))
     else:
         shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h.gms'),
                         os.path.join(sim, 'UCM_h.gms'))
+        # additionally allso copy UCM_h_simple.gms
+        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+                        os.path.join(sim, 'UCM_h_simple.gms'))
     gmsfile = open(os.path.join(sim, 'UCM.gpr'), 'w')
     gmsfile.write(
         '[PROJECT] \n \n[RP:UCM_H] \n1= \n[OPENWINDOW_1] \nFILE0=UCM_h.gms \nFILE1=UCM_h.gms \nMAXIM=1 \nTOP=50 \nLEFT=50 \nHEIGHT=400 \nWIDTH=400')
@@ -685,9 +744,6 @@ def build_simulation(config):
     shutil.copy(os.path.join(GMS_FOLDER, 'makeGDX.bat'),
                 os.path.join(sim, 'makeGDX.bat'))
 
-    if config['WriteExcel']:
-        write_to_excel(sim, [sets, parameters])
-
     if config['WritePickle']:
         try:
             import cPickle as pickle
@@ -699,7 +755,6 @@ def build_simulation(config):
     
     if os.path.isfile(commons['logfile']):
         shutil.copy(commons['logfile'], os.path.join(sim, 'warn_preprocessing.log'))
-
 
     return SimData
 
@@ -782,7 +837,7 @@ def adjust_capacity(inputs,tech_fuel,scaling=1,value=None,singleunit=False,write
         with open(os.path.join(dest_path, 'Inputs.p'), 'wb') as pfile:
             pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
         if write_gdx:
-            write_variables(SimData['config']['GAMS_folder'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
+            write_variables(SimData['config'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
             shutil.copy('Inputs.gdx', dest_path + '/')
             os.remove('Inputs.gdx')
     return SimData
@@ -848,11 +903,155 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
         with open(os.path.join(dest_path, 'Inputs.p'), 'wb') as pfile:
             cPickle.dump(SimData, pfile, protocol=cPickle.HIGHEST_PROTOCOL)
         if write_gdx:
-            write_variables(SimData['config']['GAMS_folder'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
+            write_variables(SimData['config'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
             shutil.copy('Inputs.gdx', dest_path + '/')
             os.remove('Inputs.gdx')
     return SimData
 
+def get_temp_sim_results(config, gams_dir=None, cache=False, temp_path='.pickle'):
+    """
+    This function reads the simulation environment folder once it has been solved and loads
+    the input variables together with the results.
 
+    :param path:                Relative path to the simulation environment folder (current path by default)
+    :param cache:               If true, caches the simulation results in a pickle file for faster loading the next time
+    :param temp_path:           Temporary path to store the cache file
+    :returns inputs,results:    Two dictionaries with all the outputs 
+    """
 
+    resultfile = config['SimulationDirectory'] + '/Results_simple.gdx'
+    results = gdx_to_dataframe(gdx_to_list(gams_dir, resultfile, varname='all', verbose=True), fixindex=True,
+                               verbose=True)
+    results['OutputStorageLevel'] = results['OutputStorageLevel'].reindex(list(range(results['OutputStorageLevel'].index.min(),
+                                                         results['OutputStorageLevel'].index.max() + 1)), fill_value=0)
+    return results
 
+def mid_term_scheduling(config, zones, profiles=None):
+    """
+    This function reads the DispaSET config file, searches for active zones,
+    loads data for each zone individually and solves model using UCM_h_simple.gms
+    
+    :config:                    Read config file
+    """
+
+    # Day/hour corresponding to the first and last days of the simulation:
+    # Note that the first available data corresponds to 2015.01.31 (23.00) and the
+    # last day with data is 2015.12.31 (22.00)
+    __, m_start, d_start, __, __, __ = config['StartDate']
+    y_end, m_end, d_end, _, _, _ = config['StopDate']
+    config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
+    
+    # Indexes of the simualtion:
+    idx_std = pd.DatetimeIndex(start=pd.datetime(*config['StartDate']), 
+                               end=pd.datetime(*config['StopDate']),
+                               freq=commons['TimeStep'])
+    idx_utc_noloc = idx_std - dt.timedelta(hours=1)
+    idx = idx_utc_noloc
+    
+    # Checking which type of hydro scheduling simulation is specified in the config file:
+    # Solving reservoir levels for each zone individually
+    if config['HydroScheduling'] == 'Zonal':
+        no_of_zones = len(zones)
+        results = {}
+        temp_results = {}
+        i = 0
+        for c in zones:
+            i = i + 1  
+            logging.info('(Curently simulating Zone): ' + str(i) + ' out of ' + str(no_of_zones))
+            temp_config = dict(config)
+            temp_config['zones'] = [c]                    # Override zone that needs to be simmulated
+            _ = build_simulation(temp_config)       # Create temporary SimData   
+            r = solve_GAMS_simple(temp_config['SimulationDirectory'], 
+                                  temp_config['GAMS_folder'])
+            temp_results[c] = get_temp_sim_results(config)
+    #        print('Zones simulated: ' + str(i) + '/' + str(no_of_zones))
+        temp = pd.DataFrame()
+        for c in zones:
+            if 'OutputStorageLevel' not in temp_results[c]:
+                logging.critical('Storage levels in zone ' + c + ' were not computed, please check that storage units '
+                                'are present in the ' + c + ' power plant database! If not, unselect ' + c + ' form the '
+                                'zones in the MTS module')
+                sys.exit(0)
+            else:
+                results[c] = dict(temp_results[c]['OutputStorageLevel'])
+                r = pd.DataFrame.from_dict(results[c], orient='columns')
+                results_t = pd.concat([temp, r], axis = 1)
+                temp = results_t
+        temp = temp.set_index(idx)
+        temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})
+    # Solving reservoir levels for all regions simultaneously
+    elif config['HydroScheduling'] == 'Regional':
+        if zones == None:
+            temp_config = dict(config)
+        else:
+            temp_config = dict(config)
+            temp_config['zones'] = zones               # Override zones that need to be simmulated
+        _ = build_simulation(temp_config)        # Create temporary SimData   
+        r = solve_GAMS_simple(temp_config['SimulationDirectory'], temp_config['GAMS_folder'])
+        temp_results = get_temp_sim_results(config)
+        if 'OutputStorageLevel' not in temp_results:
+            logging.critical('Storage levels in the selected region were not computed, please check that storage units '
+                             'are present in the power plant database! If not, unselect zones with no storage units form '
+                             'the zones in the MTS module')
+            sys.exit(0)
+        else:
+            results = dict(temp_results['OutputStorageLevel'])
+        temp = pd.DataFrame()
+        r = pd.DataFrame.from_dict(results, orient='columns')
+        results_t = pd.concat([temp, r], axis = 1)
+        temp = results_t
+        temp = temp.set_index(idx)
+        temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})        
+    else:
+        logging.info('Mid term scheduling turned off')
+    import pickle
+    pickle.dump(temp, open( "temp_profiles.p", "wb" ))
+    return temp
+
+def build_full_simulation(config, mts_plot=None):
+    '''
+    Dispa-SET function that builds different simulation environments based on the hydro scheduling option in the config file
+    Hydro scheduling options:
+        Off      -  Hydro scheduling turned off, normal call of BuildSimulation function
+        Zonal    -  Zonal variation of hydro scheduling, if zones are not individually specified in a list (e.a. zones = ['AT','DE'])
+                    hydro scheduling is imposed on all active zones from the Config file
+        Regional -  Regional variation of hydro scheduling, if zones from a specific region are not individually specified in a list 
+                    (e.a. zones = ['AT','DE']), hydro scheduling is imposed on all active zones from the Config file simultaneously
+    
+    :config:                    Read config file
+    :zones_mts:                 List of zones where new reservoir levels should be calculated eg. ['AT','BE',...'UK']
+    :mts_plot:                  If ms_plot = True indicative plot with temporary computed reservoir levels is displayed
+    '''
+    y_start, m_start, d_start, __, __, __ = config['StartDate']
+    y_stop, m_stop, d_stop, __, __, __ = config['StopDate']
+    # Check existance of hydro scheduling module in the config file
+    # Hydro scheduling turned off, build_simulation performed without temporary computed reservoir levels
+    if (config['HydroScheduling'] == 'Off') or (config['HydroScheduling'] == ""):
+        logging.info('Simulation without mid therm scheduling')
+        SimData = build_simulation(config)
+    # Hydro scheduling per Zone    
+    else:
+        # Dates for the mid term scheduling
+        if config['HydroSchedulingHorizon'] == 'Annual':
+            config['StartDate'] = (y_start, 1, 1, 00, 00, 00)   # updating start date to the beginning of the year
+            config['StopDate'] = (y_start, 12, 31, 23, 59, 00)  # updating stopdate to the end of the year
+            logging.info('Hydro scheduling is performed for the period between 01.01.' + str(y_start) + ' and 12.31.' + str(y_start)) 
+        else:
+            logging.info('Hydro scheduling is performed between Start and Stop dates!') 
+        # Mid term scheduling zone selection and new profile calculation
+        if config['mts_zones'] == None:
+            new_profiles = mid_term_scheduling(config, config['zones'])
+            logging.info('Simulation with all zones selected')
+        else:
+            new_profiles = mid_term_scheduling(config, config['mts_zones'])
+        # Plot new profiles
+        if mts_plot == True:
+            new_profiles.plot()
+            logging.info('Simulation with specified zones selected')
+        else:
+            logging.info('No temporary profiles selected for display')
+         # Build simulation data with new profiles
+        config['StartDate'] = (y_start, m_start, d_start, 00, 00, 00)   # updating start date to the beginning of the year
+        config['StopDate'] = (y_stop, m_stop, d_stop, 23, 59, 00)  # updating stopdate to the end of the year
+        SimData = build_simulation(config, new_profiles)
+    return SimData

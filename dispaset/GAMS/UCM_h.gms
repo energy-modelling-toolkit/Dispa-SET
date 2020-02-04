@@ -59,16 +59,19 @@ SETS
 mk               Markets
 n                Nodes
 l                Lines
-u                Units
+au               All Units
+u(au)           Generation units
 t                Generation technologies
 tr(t)            Renewable generation technologies
 f                Fuel types
 p                Pollutants
 s(u)             Storage Units (with reservoir)
 chp(u)           CHP units
+p2h(au)          Power to heat units
+th(au)           Units with thermal storage
 h                Hours
 i(h)             Subset of simulated hours for one iteration
-z(h)             Subset of all simulated hours
+z(h)             Subset of every simulated hour
 ;
 
 Alias(mk,mkmk);
@@ -99,50 +102,50 @@ CostRampDown(u)                  [EUR\MW\h] Ramp-down costs
 CostShutDown(u)                  [EUR\u]    Shut-down costs
 CostStartUp(u)                   [EUR\u]    Start-up costs
 CostVariable(u,h)                [EUR\MW]   Variable costs
-CostHeatSlack(chp,h)             [EUR\MWh]  Cost of supplying heat via other means
+CostHeatSlack(th,h)             [EUR\MWh]  Cost of supplying heat via other means
 CostLoadShedding(n,h)            [EUR\MWh] Cost of load shedding
 Curtailment(n)                   [n.a]    Curtailment allowed or not {1 0} at node n
 Demand(mk,n,h)                   [MW]     Demand
-Efficiency(u)                    [%]      Efficiency
+Efficiency(p2h,h)                  [%]      Efficiency
 EmissionMaximum(n,p)             [tP]     Emission limit
 EmissionRate(u,p)                [tP\MWh] P emission rate
 FlowMaximum(l,h)                 [MW]     Line limits
 FlowMinimum(l,h)                 [MW]     Minimum flow
 Fuel(u,f)                        [n.a.]   Fuel type {1 0}
-HeatDemand(chp,h)                [MWh\u]  Heat demand profile for chp units
+HeatDemand(au,h)                [MWh\u]  Heat demand profile for chp units
 LineNode(l,n)                    [n.a.]   Incidence matrix {-1 +1}
 LoadShedding(n,h)                [MW]   Load shedding capacity
-Location(u,n)                    [n.a.]   Location {1 0}
+Location(au,n)                    [n.a.]   Location {1 0}
 Markup(u,h)                      [EUR\MW]   Markup
 OutageFactor(u,h)                [%]      Outage Factor (100% = full outage)
-PartLoadMin(u)                   [%]      Minimum part load
-PowerCapacity(u)                 [MW\u]     Installed capacity
+PartLoadMin(au)                 [%]      Minimum part load
+PowerCapacity(au)               [MW\u]     Installed capacity
 PowerInitial(u)                  [MW\u]     Power output before initial period
-PowerMinStable(u)                [MW\u]     Minimum power output
+PowerMinStable(au)              [MW\u]     Minimum power output
 PriceTransmission(l,h)           [EUR\MWh]  Transmission price
-StorageChargingCapacity(u)       [MW\u]     Storage capacity
-StorageChargingEfficiency(u)     [%]      Charging efficiency
-StorageSelfDischarge(u)          [%\day]  Self-discharge of the storage units
+StorageChargingCapacity(au)       [MW\u]     Storage capacity
+StorageChargingEfficiency(au)   [%]      Charging efficiency
+StorageSelfDischarge(au)        [%\day]  Self-discharge of the storage units
 RampDownMaximum(u)               [MW\h\u]   Ramp down limit
 RampShutDownMaximum(u)           [MW\h\u]   Shut-down ramp limit
 RampStartUpMaximum(u)            [MW\h\u]   Start-up ramp limit
-RampStartUpMaximumH(u,h)       [MW\h\u]   Start-up ramp limit - Clustered formulation
-RampShutDownMaximumH(u,h)      [MW\h\u]   Shut-down ramp limit - Clustered formulation
+RampStartUpMaximumH(u,h)         [MW\h\u]   Start-up ramp limit - Clustered formulation
+RampShutDownMaximumH(u,h)        [MW\h\u]   Shut-down ramp limit - Clustered formulation
 RampUpMaximum(u)                 [MW\h\u]   Ramp up limit
 Reserve(t)                       [n.a.]   Reserve technology {1 0}
-StorageCapacity(u)               [MWh\u]    Storage capacity
-StorageDischargeEfficiency(u)    [%]      Discharge efficiency
+StorageCapacity(au)             [MWh\u]    Storage capacity
+StorageDischargeEfficiency(au)  [%]      Discharge efficiency
 StorageOutflow(u,h)              [MWh\u]    Storage outflows
 StorageInflow(u,h)               [MWh\u]    Storage inflows (potential energy)
-StorageInitial(u)                [MWh]    Storage level before initial period
+StorageInitial(au)                [MWh]    Storage level before initial period
 StorageProfile(u,h)              [MWh]    Storage level to be resepected at the end of each horizon
-StorageMinimum(u)                [MWh\u]    Storage minimum
+StorageMinimum(au)                [MWh\u]    Storage minimum
 Technology(u,t)                  [n.a.]   Technology type {1 0}
 TimeDownMinimum(u)               [h]      Minimum down time
 TimeUpMinimum(u)                 [h]      Minimum up time
 $If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment status as for the MILP
-Nunits(u)                        [n.a.]   Number of units inside the cluster (upper bound value for integer variables)
-K_QuickStart(n)                      [n.a.]   Part of the reserve that can be provided by offline quickstart units
+Nunits(au)                      [n.a.]   Number of units inside the cluster (upper bound value for integer variables)
+K_QuickStart(n)                  [n.a.]   Part of the reserve that can be provided by offline quickstart units
 QuickStartPower(u,h)            [MW\h\u]   Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
 ;
 
@@ -170,6 +173,7 @@ $gdxin %inputfilename%
 $LOAD mk
 $LOAD n
 $LOAD l
+$LOAD au
 $LOAD u
 $LOAD t
 $LOAD tr
@@ -177,6 +181,8 @@ $LOAD f
 $LOAD p
 $LOAD s
 $LOAD chp
+$LOAD p2h
+$LOAD th
 $LOAD h
 $LOAD z
 $LOAD AvailabilityFactor
@@ -247,6 +253,7 @@ f,
 p,
 s,
 chp,
+p2h,
 h,
 AvailabilityFactor,
 CHPPowerLossFactor,
@@ -320,11 +327,12 @@ CostRampDownH(u,h)         [EUR]   Ramping cost
 CurtailedPower(n,h)        [MW]    Curtailed power at node n
 Flow(l,h)                  [MW]    Flow through lines
 Power(u,h)                 [MW]    Power output
+PowerConsumption(p2h,h)    [MW]    Power consumption by P2H units
 PowerMaximum(u,h)          [MW]    Power output
 PowerMinimum(u,h)          [MW]    Power output
 ShedLoad(n,h)              [MW]    Shed load
-StorageInput(u,h)          [MWh]   Charging input for storage units
-StorageLevel(u,h)          [MWh]   Storage level of charge
+StorageInput(au,h)        [MWh]   Charging input for storage units
+StorageLevel(au,h)        [MWh]   Storage level of charge
 LL_MaxPower(n,h)           [MW]    Deficit in terms of maximum power
 LL_RampUp(u,h)             [MW]    Deficit in terms of ramping up for each plant
 LL_RampDown(u,h)           [MW]    Deficit in terms of ramping down
@@ -337,8 +345,8 @@ SystemCost(h)              [EUR]   Hourly system cost
 Reserve_2U(u,h)            [MW]    Spinning reserve up
 Reserve_2D(u,h)            [MW]    Spinning reserve down
 Reserve_3U(u,h)            [MW]    Non spinning quick start reserve up
-Heat(chp,h)                [MW]    Heat output by chp plant
-HeatSlack(chp,h)           [MW]    Heat satisfied by other sources
+Heat(au,h)                [MW]    Heat output by chp plant
+HeatSlack(au,h)           [MW]    Heat satisfied by other sources
 WaterSlack(s)              [MWh]   Unsatisfied water level constraint
 ;
 
@@ -351,12 +359,13 @@ DemandModulation(n,h)      [MW] Difference between the flexible demand and the b
 *Assignment of initial values
 *===============================================================================
 
+
 *Initial commitment status
 CommittedInitial(u)=0;
 CommittedInitial(u)$(PowerInitial(u)>0)=1;
 
 * Definition of the minimum stable load:
-PowerMinStable(u) = PartLoadMin(u)*PowerCapacity(u);
+PowerMinStable(au) = PartLoadMin(au)*PowerCapacity(au);
 
 LoadMaximum(u,h)= AvailabilityFactor(u,h)*(1-OutageFactor(u,h));
 
@@ -380,6 +389,7 @@ AccumulatedOverSupply_inital(n) = 0;
 $If %Verbose% == 1 Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial;
 
 $offorder
+
 
 *===============================================================================
 *Declaration and definition of equations
@@ -407,6 +417,8 @@ EQ_Demand_balance_DA
 EQ_Demand_balance_2U
 EQ_Demand_balance_3U
 EQ_Demand_balance_2D
+EQ_P2H
+EQ_Max_P2H
 EQ_Power_must_run
 EQ_Power_available
 EQ_Reserve_2U_capability
@@ -472,7 +484,7 @@ EQ_SystemCost(i)..
          +sum(u,CostVariable(u,i) * Power(u,i))
          +sum(l,PriceTransmission(l,i)*Flow(l,i))
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
-         +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
+         +sum(th, CostHeatSlack(th,i) * HeatSlack(th,i))
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
          +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
@@ -563,6 +575,7 @@ EQ_Demand_balance_DA(n,i)..
          +DemandModulation(n,i)
          +sum(s,StorageInput(s,i)*Location(s,n))
          -ShedLoad(n,i)
+         +sum(p2h,PowerConsumption(p2h,i)*Location(p2h,n))
          -LL_MaxPower(n,i)
          +LL_MinPower(n,i)
 ;
@@ -787,35 +800,49 @@ EQ_CHP_max_heat(chp,i)..
          CHPMaxHeat(chp)*Nunits(chp)
 ;
 
-EQ_CHP_demand_satisfaction(chp,i)..
-         Heat(chp,i) + HeatSlack(chp,i)
+* Power to heat units
+EQ_P2H(p2h,i)..
+         StorageInput(p2h,i)
          =E=
-         HeatDemand(chp,i)
+         PowerConsumption(p2h,i) * Efficiency(p2h,i)
+;
+
+
+EQ_Max_P2H(p2h,i)..
+         PowerConsumption(p2h,i)
+         =L=
+         PowerCapacity(p2h) * Nunits(p2h)
+;
+
+EQ_CHP_demand_satisfaction(th,i)..
+         Heat(th,i) + HeatSlack(th,i)
+         =E=
+         HeatDemand(th,i)
 ;
 
 *Heat Storage balance
-EQ_Heat_Storage_balance(chp,i)..
-          StorageInitial(chp)$(ord(i) = 1)
-         +StorageLevel(chp,i-1)$(ord(i) > 1)
-         +StorageInput(chp,i)
+EQ_Heat_Storage_balance(th,i)..
+          StorageInitial(th)$(ord(i) = 1)
+         +StorageLevel(th,i-1)$(ord(i) > 1)
+         +StorageInput(th,i)
          =E=
-         StorageLevel(chp,i)
-         +Heat(chp,i) + StorageSelfDischarge(chp) * StorageLevel(chp,i)/24
+         StorageLevel(th,i)
+         +Heat(th,i) + StorageSelfDischarge(th) * StorageLevel(th,i)/24
 ;
 * The self-discharge proportional to the charging level is a bold hypothesis, but it avoids keeping self-discharging if the level reaches zero
 
 *Storage level must be above a minimum
-EQ_Heat_Storage_minimum(chp,i)..
-         StorageMinimum(chp)*Nunits(chp)
+EQ_Heat_Storage_minimum(th,i)..
+         StorageMinimum(th)*Nunits(th)
          =L=
-         StorageLevel(chp,i)
+         StorageLevel(th,i)
 ;
 
 *Storage level must below storage capacity
-EQ_Heat_Storage_level(chp,i)..
-         StorageLevel(chp,i)
+EQ_Heat_Storage_level(th,i)..
+         StorageLevel(th,i)
          =L=
-         StorageCapacity(chp)*Nunits(chp)
+         StorageCapacity(th)*Nunits(th)
 ;
 
 * Minimum level at the end of the optimization horizon:
@@ -848,6 +875,8 @@ EQ_Demand_balance_2U,
 EQ_Demand_balance_2D,
 EQ_Demand_balance_3U,
 $If not %LPFormulation% == 1 EQ_Power_must_run,
+EQ_P2H,
+EQ_Max_P2H,
 EQ_Power_available,
 EQ_Heat_Storage_balance,
 EQ_Heat_Storage_minimum,
@@ -962,11 +991,11 @@ $If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.
 
 PARAMETER
 OutputCommitted(u,h)
-OutputHeat(chp,h)
 OutputFlow(l,h)
 OutputPower(u,h)
-OutputStorageInput(u,h)
-OutputStorageLevel(u,h)
+OutputPowerConsumption(p2h,h)
+OutputStorageInput(au,h)
+OutputStorageLevel(au,h)
 OutputSystemCost(h)
 OutputSpillage(s,h)
 OutputShedLoad(n,h)
@@ -981,19 +1010,22 @@ LostLoad_3U(n,h)
 LostLoad_RampUp(n,h)
 LostLoad_RampDown(n,h)
 OutputGenMargin(n,h)
-OutputHeat(chp,h)
-OutputHeatSlack(chp,h)
+OutputHeat(au,h)
+OutputHeatSlack(au,h)
+LostLoad_WaterSlack(s)
+StorageShadowPrice(au,h)
 ;
 
 OutputCommitted(u,z)=Committed.L(u,z);
 OutputFlow(l,z)=Flow.L(l,z);
 OutputPower(u,z)=Power.L(u,z);
-OutputHeat(chp,z)=Heat.L(chp,z);
-OutputHeatSlack(chp,z)=HeatSlack.L(chp,z);
+OutputPowerConsumption(p2h,z)=PowerConsumption.L(p2h,z);
+OutputHeat(au,z)=Heat.L(au,z);
+OutputHeatSlack(au,z)=HeatSlack.L(au,z);
 OutputStorageInput(s,z)=StorageInput.L(s,z);
-OutputStorageInput(chp,z)=StorageInput.L(chp,z);
+OutputStorageInput(th,z)=StorageInput.L(th,z);
 OutputStorageLevel(s,z)=StorageLevel.L(s,z);
-OutputStorageLevel(chp,z)=StorageLevel.L(chp,z);
+OutputStorageLevel(th,z)=StorageLevel.L(th,z);
 OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(s,z)  = Spillage.L(s,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
@@ -1007,11 +1039,16 @@ LostLoad_3U(n,z) = LL_3U.L(n,z);
 LostLoad_RampUp(n,z)    = sum(u,LL_RampUp.L(u,z)*Location(u,n));
 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
+HeatShadowPrice(au,z) = EQ_CHP_demand_satisfaction.m(au,z);
+LostLoad_WaterSlack(s) = WaterSlack.L(s);
+StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
+StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
 OutputFlow,
 OutputPower,
+OutputPowerConsumption,
 OutputHeat,
 OutputHeatSlack,
 OutputStorageInput,
@@ -1030,8 +1067,13 @@ LostLoad_3U,
 LostLoad_RampUp,
 LostLoad_RampDown,
 ShadowPrice,
+HeatShadowPrice,
+LostLoad_WaterSlack,
+StorageShadowPrice,
 status
 ;
+
+display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L;
 
 $onorder
 * Exit here if the PrintResult option is set to 0:
@@ -1062,6 +1104,7 @@ EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N var=ShedLoad rng=Sh
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputCommitted rng=Committed!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputFlow rng=Flow!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputPower rng=Power!A5 epsout=0 rdim=1 cdim=1'
+EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputPowerConsumption rng=Power!A5 epsout=0 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputStorageInput rng=StorageInput!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputStorageLevel rng=StorageLevel!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputSystemCost rng=SystemCost!A1 rdim=1 cdim=0'

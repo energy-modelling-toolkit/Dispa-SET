@@ -19,7 +19,7 @@ def config(request):
 
 def test_build(config, tmpdir):
     # Using temp dir to ensure that each time a new directory is used
-    config['SimulationDirectory'] = tmpdir
+    config['SimulationDirectory'] = str(tmpdir)
     SimData = ds.build_simulation(config)
     assert isinstance(SimData, dict) #how to test if sucessful build?
 

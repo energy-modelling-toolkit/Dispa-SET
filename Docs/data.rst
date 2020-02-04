@@ -7,7 +7,7 @@ In this section, "Input Data" refers to the data stored in the Dispa-SET databas
 
 Two important preliminary comments should be formulated:
 
-* All the time series should be registered with their timestamps (e.g. '2013-02-20 02:00:00') relative to the UTC timezone.
+* All the time series should be registered with their timestamps (e.g. '2013-02-20 02:00:00'). Dispa-SET will issue an error if the day is located before the month. It is also advised to remove all time zone information from the time stamps. If the index is an integer, Dispa-SET will only recognize it if contains 8760 elements (one full year) or if it has exactly the same length as the simulation horizon.
 * Although the optimisation model is designed to run with any technology or fuel name, the pre-processing and the post-processing tools of Dispa-SET use some hard-coded values. The Dispa-SET database should also comply with this convention (described in the next sections). Any non-recognized technology or fuel will be discarded in the pre-processing.
 
 Technologies

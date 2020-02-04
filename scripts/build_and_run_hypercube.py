@@ -6,21 +6,18 @@ The input space is defined as a latin hypercube in which all the "corners" are s
 For each simulation, a separate simulation environment folder is created and the simualtion is run in GAMS 
 Finally, all the folders with the result files are read and the results are stored in a dataframe exported to excel
 
-TODO:
-- harmonize reserves and reserve output!
-- get back the solver status
-- Loadshedding not activated although there is lost load
-- bad hatching in dispatch plot and windows
-- no horizontal line in bar plots in windows
+the pyDOE library is required to run this script!
 
 @author: Sylvain Quoilin
 """
 #%%
 # Change directory to the root folder of Dispa-SET:
-import os
 import numpy as np
 import pandas as pd
-os.chdir('..')
+
+# Add the root folder of Dispa-SET to the path so that the library can be loaded:
+import sys,os
+sys.path.append(os.path.abspath('..'))
 
 # Import Dispa-SET
 import dispaset as ds
@@ -34,10 +31,10 @@ share_wind = [0,0.3]       # Yearly wind generation divided by yearly power cons
 share_pv = [0,0.3]         # Yearly PV generation divided by yearly power consumption
 
 # Define the folder in which all simulations should be stored:
-sim_folder = 'Simulations/batch/'
+sim_folder = '../Simulations/batch/'
 
 # Load the configuration file
-config = ds.load_config_excel('ConfigFiles/ConfigBE.xlsx')
+config = ds.load_config_excel('../ConfigFiles/ConfigBE.xlsx')
 
 config['SimulationType'] = 'Integer clustering'
                          # 'Integer clustering'

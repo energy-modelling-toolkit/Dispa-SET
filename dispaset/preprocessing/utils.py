@@ -14,6 +14,35 @@ import pandas as pd
 
 from ..misc.str_handler import clean_strings, shrink_to_64
 
+
+
+def EfficiencyTimeSeries(config,plants,Temperatures):
+    '''
+    Function that calculates an efficiency time series for each unit
+    In case of generation unit, the efficiency is constant in time (for now)
+    In case of of p2h units, the efficicncy is defined as the COP, which can be
+    temperature-dependent or not
+    If it is temperature-dependent, the formula is:
+        COP = COP_nom + coef_a * (T-T_nom) + coef_b * (T-T_nom)^2
+    
+    :param plants:          Pandas dataframe with the original list of units
+    :param Temperatures:    Dataframe with the temperature for all relevant units
+    
+    :returns:               Dataframe with a time series of the efficiency for each unit
+    '''
+    Efficiencies = pd.DataFrame(columns = plants.index,index=config['idx_long'])
+    for u in plants.index:
+        z = plants.loc[u,'Zone']
+        if plants.loc[u,'Technology'] == 'P2HT' and 'Tnominal' in plants:
+            eff = plants.loc[u,'COP'] + plants.loc[u,'coef_COP_a'] * (Temperatures[z] - plants.loc[u,'Tnominal'])
+            + plants.loc[u,'coef_COP_a'] * (Temperatures[z] - plants.loc[u,'Tnominal'])**2
+        elif plants.loc[u,'Technology'] == 'P2HT':
+            eff = plants.loc[u,'COP']
+        else:
+            eff = plants.loc[u,'Efficiency']
+        Efficiencies[u] = eff
+    return Efficiencies
+
 def select_units(units,config):
     '''
     Function returning a new list of units by removing the ones that have unknown
@@ -41,14 +70,18 @@ def incidence_matrix(sets, set_used, parameters, param_used):
     This function generates the incidence matrix of the lines within the nodes
     A particular case is considered for the node "Rest Of the World", which is no explicitely defined in DispaSET
     """
-
-    for i in range(len(sets[set_used])):
-        [from_node, to_node] = sets[set_used][i].split('->')
+    for i,l in enumerate(sets[set_used]):
+        [from_node, to_node] = l.split('->')
         if (from_node.strip() in sets['n']) and (to_node.strip() in sets['n']):
             parameters[param_used]['val'][i, sets['n'].index(to_node.strip())] = 1
             parameters[param_used]['val'][i, sets['n'].index(from_node.strip())] = -1
+        elif (from_node.strip() in sets['n']) and (to_node.strip() == 'RoW'):
+            parameters[param_used]['val'][i, sets['n'].index(from_node.strip())] = -1
+        elif (from_node.strip() == 'RoW') and (to_node.strip() in sets['n']):
+            parameters[param_used]['val'][i, sets['n'].index(to_node.strip())] = 1
         else:
-            logging.warning("The line " + str(sets[set_used][i]) + " contains unrecognized nodes")
+            logging.error("The line " + str(l) + " contains unrecognized nodes (" + from_node.strip() + ' or ' + to_node.strip() + ")")
+
     return parameters[param_used]
 
 
@@ -249,7 +282,8 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
                 P_add = plants['PowerCapacity'][i]  # Additional power to be added
                 for key in plants_merged:
                     if key in ['RampUpRate', 'RampDownRate', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'Efficiency',
-                               'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge','CHPPowerToHeat','CHPPowerLossFactor']:
+                               'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge',
+                               'CHPPowerToHeat','CHPPowerLossFactor','COP','TNominal','coef_COP_a','coef_COP_b']:
                         # Do a weighted average:
                         plants_merged.loc[j, key] = (plants_merged[key][j] * P_old + plants[key][i] * P_add) / (
                         P_add + P_old)

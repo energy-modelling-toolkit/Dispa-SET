@@ -164,22 +164,23 @@ def _insert_symbols(gdxHandle, sets, parameters):
     logging.debug('Set ' + s + ' successfully written')
 
 
-def write_variables(gams_dir, gdx_out, list_vars):
+def write_variables(config, gdx_out, list_vars):
     """
     This function performs the following:
     * Use the gdxcc library to create a gdxHandle instance
     * Check that the gams path is well defined
     * Call the 'insert_symbols' function to write all sets and parameters to gdxHandle
 
-    :param gams_dir:        (Relative) path to the gams directory
+    :param config:          Main config dictionary
     :param gdx_out:         (Relative) path to the gdx file to be written
     :param list_vars:       List with the sets and parameters to be written
     """
-    gams_dir = get_gams_path(gams_dir=gams_dir.encode())
+    gams_dir = get_gams_path(gams_dir=config['GAMS_folder'].encode())
     if not gams_dir:  # couldn't locate
         logging.critical('GDXCC: Could not find the specified gams directory: ' + gams_dir)
         sys.exit(1)
     gams_dir = force_str(gams_dir)
+    config['GAMS_folder'] = gams_dir         # updating the config dictionary
     gdx_out = force_str(gdx_out)
 
     gdxHandle = gdxcc.new_gdxHandle_tp()
@@ -208,12 +209,15 @@ def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
 
 
 
-    from gdxcc import gdxSymbolInfo, gdxCreateD, gdxOpenRead, GMS_SSSIZE, gdxDataReadDone, new_gdxHandle_tp, \
+    from gdxcc import gdxSymbolInfo, gdxCreate, gdxCreateD, gdxOpenRead, GMS_SSSIZE, gdxDataReadDone, new_gdxHandle_tp, \
         gdxDataReadStr, gdxFindSymbol, gdxErrorStr, gdxDataReadStrStart, gdxGetLastError
     out = {}
     tgdx = tm.time()
     gdxHandle = new_gdxHandle_tp()
-    gdxCreateD(gdxHandle, force_str(gams_dir), GMS_SSSIZE)
+    if gams_dir == None:
+        gdxCreate(gdxHandle, GMS_SSSIZE)
+    else:
+        gdxCreateD(gdxHandle, force_str(gams_dir), GMS_SSSIZE)
 
     # make sure the file path is properly formatted:
     filename = filename.replace('/', os.path.sep).replace('\\\\', os.path.sep).replace('\\', os.path.sep)
@@ -337,7 +341,7 @@ def get_gams_path(gams_dir=None):
     """
     Function that attempts to search for the GAMS installation path (required to write the GDX or run gams)
 
-    It returns the path if it has been found, or an empty string otherwise. If a gams_dir argument is passed 
+    It returns the path if it has been found, or an empty string otherwise. If a gams_dir argument is passed
     it tries to validate before searching
 
     Currently works for Windows, Linux and OSX. More searching rules and patterns should be added in the future
@@ -345,10 +349,10 @@ def get_gams_path(gams_dir=None):
     if isinstance(gams_dir, bytes):
         gams_dir = gams_dir.decode()
     if gams_dir is not None:
-        if not os.path.exists(gams_dir):
-            logging.warning('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
+        if os.path.isdir(gams_dir):
+            return gams_dir.encode()
         else:
-            return os.path.dirname(gams_dir).encode()
+            logging.warning('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
 
     import subprocess
     out = None

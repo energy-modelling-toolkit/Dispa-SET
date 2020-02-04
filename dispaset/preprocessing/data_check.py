@@ -10,6 +10,9 @@ import sys
 import numpy as np
 import pandas as pd
 import logging
+from pandas.api.types import is_numeric_dtype
+
+from ..common import commons  # Load fuel types, technologies, timestep, etc
 
 
 def isVRE(tech):
@@ -26,24 +29,31 @@ def isStorage(tech):
 
 
 
-def check_AvailabilityFactors(plants,AF):
+def check_AvailabilityFactors(plants, AF):
     '''
     Function that checks the validity of the provided availability factors and warns
     if a default value of 100% is used.
     '''
-    if (AF.dropna().values < 0).any():
-        logging.error('Some Availaibility factors are negative')
-        sys.exit(1)
-    if (AF.dropna().values > 1).any():
-        logging.warning('Some Availability factors are higher than one. They must be carefully checked')
-    for t in ['WTON', 'WTOF', 'PHOT', 'HROR']:
-        for i in plants[plants['Technology']==t].index:
-            u = plants.loc[i,'Unit']
-            if u in AF:
-                if (AF[u].values == 1).all():
-                    logging.critical('The availability factor of unit ' + str(u) + ' + for technology ' + t + ' is always 100%!')
-            else:
-                logging.critical('Unit ' + str(u) + ' (technology ' + t + ') does not appear in the availbilityFactors table. Its values will be set to 100%!')
+    RES = ['WTON', 'WTOF', 'PHOT', 'HROR']
+    for i,v in plants.iterrows():
+        u = v['Unit']
+        t = v['Technology']
+        if t in RES and u not in AF:
+            logging.error('Unit ' + str(u) + ' (technology ' + t + ') does not appear in the availbilityFactors table. Please provide')
+            raise ValueError('Please provide RES AF timeseries for '+str(u))
+        if u in AF:
+            if pd.isna(AF[u]).any():
+                Nna = pd.isna(AF[u]).count()
+                logging.warning('The Availability factor of unit {} for technology {} contains {} empty values.'.format(str(u),t,Nna))
+            df_af = AF[u].dropna()
+            if (df_af == 1).all(axis=None):
+                logging.debug('The availability factor of unit ' + str(u) + ' + for technology ' + t + ' is always 100%!')
+            if ((df_af < 0) | (df_af > 1)).any(axis=None):
+                Nup = df_af[df_af>1].count()
+                Ndo = df_af[df_af<0].count()
+                logging.error('The Availability factor of unit {} for technology {} should be between 0 and 1. There are {} values above 1.0 and {} below 0.0'.format(str(u),t,Nup,Ndo))
+        else:
+            logging.error('Unit ' + str(u) + ' (technology ' + t + ') does not appear in the availbilityFactors table. Its values will be set to 100%!')
 
 def check_FlexibleDemand(flex):
     '''
@@ -140,6 +150,62 @@ def check_sto(config, plants,raw_data=True):
             if np.isnan(plants.loc[u, key]):
                 logging.critical('The power plants data is missing for unit ' + unitname + ' and parameter "' + key + '"')
                 sys.exit(1)
+
+    return True
+
+
+
+
+
+
+def check_p2h(config, plants):
+    """
+    Function that checks the p2h unit characteristics
+    """   
+    keys = ['COP']
+    NonNaNKeys = ['COP']
+    StrKeys = []
+    
+    if len(plants)==0:  # If there are no P2HT units, exit the check
+        return True
+    
+    for key in keys:
+        if key not in plants:
+            logging.critical('The power plants data does not contain the field "' + key + '", which is mandatory for P2HT units')
+            sys.exit(1)
+
+    for key in NonNaNKeys:
+        for u in plants.index:
+            if 'Unit' in plants:
+                unitname = plants.loc[u,'Unit']
+            else:
+                unitname = str(u)
+            if type(plants.loc[u, key]) == str:
+                logging.critical('A non numeric value was detected in the power plants inputs for parameter "' + key + '"')
+                sys.exit(1)
+            if np.isnan(plants.loc[u, key]):
+                logging.critical('The power plants data is missing for unit number ' + unitname + ' and parameter "' + key + '"')
+                sys.exit(1)
+
+    for key in StrKeys:
+        for u in plants.index:
+            if 'Unit' in plants:
+                unitname = plants.loc[u,'Unit']
+            else:
+                unitname = str(u)
+            if not isinstance(plants.loc[u, key], str):
+                logging.critical(
+                    'A numeric value was detected in the power plants inputs for parameter "' + key + '". This column should contain strings only.')
+                sys.exit(1)
+            elif plants.loc[u, key] == '':
+                logging.critical('An empty value was detected in the power plants inputs for unit "' + unitname + '" and parameter "' + key + '"')
+                sys.exit(1)
+    
+    # Check the COP values:
+    for u in plants.index:
+        if plants.loc[u,'COP'] < 0 or plants.loc[u,'COP'] > 20:
+            logging.critical('The COP value of p2h units must be comprised between 0 and 20. The provided value for unit ' + u + ' is "' + str(plants.loc[u,'COP'] + '"'))
+            sys.exit(1)                               
 
     return True
 
@@ -364,18 +430,20 @@ def check_heat_demand(plants,data):
     :param     plants:  List of CHP plants
     '''
     plants.index = plants['Unit']
+    plants_heating = plants[[str(plants['CHPType'][u]).lower() in commons['types_CHP'] or plants.loc[u,'Technology']=='P2HT' for u in plants.index]]
+    plants_chp = plants[[str(plants['CHPType'][u]).lower() in commons['types_CHP'] for u in plants.index]]
+
     for u in data:
-        if u in plants.index:
-            if 'Nunits' in plants:
+        if u in plants_heating.index:
+            if 'Nunits' in plants_heating:
                 Nunits = plants.loc[u,'Nunits']
             else:
                 Nunits = 1
-            # Check if there is demand data for that unit:
-            if u not in data.columns:
-                logging.error('Heat demand data for CHP unit "' + u + '" could not be found.')
-                sys.exit(1)
-            elif (data[u] == 0).all():
+            if (data[u] == 0).all():
                 logging.critical('Heat demand data for CHP unit "' + u + '" is either no found or always equal to zero')
+        else:
+            logging.warning('The heat demand profile with header "' + str(u) + '" does not correspond to any CHP plant. It will be ignored.')
+        if u in plants_chp.index:
             plant_CHP_type = plants.loc[u,'CHPType'].lower()
             if pd.isnull(plants.loc[u, 'CHPMaxHeat']):
                 plant_Qmax = +np.inf
@@ -399,8 +467,39 @@ def check_heat_demand(plants,data):
                 logging.warning('The maximum thermal demand for unit ' + str(u) + ' (' + str(data[u].max()) + ') is higher than its thermal capacity (' + str(Qmax) + '). Slack heat will be used to cover that.')
             if data[u].min() < Qmin:
                 logging.warning('The minimum thermal demand for unit ' + str(u) + ' (' + str(data[u].min()) + ') is lower than its minimum thermal generation (' + str(Qmin) + ' MWth)')
-        else:
-            logging.warning('The heat demand profile with header "' + str(u) + '" does not correspond to any CHP plant. It will be ignored.')
+
+
+    # check that a heating demand has been provided for all heating technologies
+    for u in plants_heating.index:
+        if u not in data:
+            logging.critical('No heat demand data was found for unit ' + u)
+            sys.exit(1)
+ 
+    return True
+
+
+
+def check_temperatures(plants,Temperatures):
+    '''
+    Function that checks the presence and validity of the temperatures profiles for
+    units with temperature-dependent characteristics
+
+    :param     plants:  List of all units
+    '''
+    
+    plants.index = plants['Unit']
+    if 'Tnominal' in plants and is_numeric_dtype(plants['Tnominal']):
+        plants_T = plants[plants.Tnominal > 0]
+        if 'coef_COP_a' not in plants or 'coef_COP_b' not in plants:
+            logging.critical('Columns coef_COP_a and coef_COP_b must be defined in the units table')
+            sys.exit(1)
+    else:
+        plants_T= pd.DataFrame(columns=plants.columns)
+    for u in plants_T.index:
+        if plants_T.loc[u,'Zone'] not in Temperatures:
+            logging.critical('No temperature data has been found for zone ' + plants_T.loc[u,'Zone'] +", although it is required for temperature-dependent unit " + u)
+            sys.exit(1)
+
     return True
 
 
