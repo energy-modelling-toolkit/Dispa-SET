@@ -97,6 +97,34 @@ def filter_by_zone(PowerOutput, inputs, z):
     return Power
 
 
+def filter_by_tech(PowerOutput, inputs, t):
+    """
+    This function filters the dispaset power output dataframe by technology
+
+    :param PowerOutput:   Dataframe of power generation with units as columns and time as index
+    :param inputs:        Dispaset inputs version 2.1.1
+    :param t:             Selected tech (e.g. 'HDAM')
+    :returns Power:
+    """
+    loc = inputs['units']['Technology']
+    Power = PowerOutput.loc[:, [u for u in PowerOutput.columns if loc[u] == t]]
+    return Power
+
+
+def filter_by_storage(PowerOutput, Inputs, StorageSubset=None):
+    """
+    This function filters the power generation curves of the different storage units by storage type
+
+    :param PowerOutput:     Dataframe of power generationwith units as columns and time as index
+    :param Inputs:          Dispaset inputs version 2.1.1
+    :param SpecifySubset:   If not all EES storages should be considered, list containing the relevant ones
+    :returns PowerByFuel:   Dataframe with power generation by fuel
+    """
+    storages = Inputs['sets'][StorageSubset]
+    Power = PowerOutput.loc[:, PowerOutput.columns.isin(storages)]
+    return Power
+
+
 def get_plot_data(inputs, results, z):
     """
     Function that reads the results dataframe of a DispaSET simulation and extract the dispatch data spedific to one zone
@@ -112,7 +140,15 @@ def get_plot_data(inputs, results, z):
         #onnly take the columns that correspond to storage units (StorageInput is also used for CHP plants):
         cols = [col for col in results['OutputStorageInput'] if inputs['units'].loc[col,'Technology'] in commons['tech_storage']]
         tmp = filter_by_zone(results['OutputStorageInput'][cols], inputs, z)
-        plotdata['Storage'] = -tmp.sum(axis=1)
+        bb = pd.DataFrame()
+        for tech in commons['tech_storage']:
+            aa = filter_by_tech(tmp, inputs, tech)
+            aa = aa.sum(axis=1)
+            aa = pd.DataFrame(aa,columns=[tech])
+            bb = pd.concat([bb,aa],axis=1)
+        bb = -bb
+        plotdata = pd.concat([plotdata,bb], axis=1)
+        # plotdata['Storage'] = -tmp.sum(axis=1)
     else:
         plotdata['Storage'] = 0
     plotdata.fillna(value=0, inplace=True)
