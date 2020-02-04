@@ -19,7 +19,7 @@ except ImportError:
     logging.warning("Couldn't import future package. Numeric operations may differ among different versions due to incompatible variable types")
     pass
 
-from .data_check import check_units, check_chp, check_sto, check_p2h, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering, , check_FlexibleDemand, check_temperatures
+from .data_check import check_units, check_chp, check_sto, check_p2h, check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering, check_FlexibleDemand, check_temperatures
 from .utils import clustering, interconnections, incidence_matrix, select_units, EfficiencyTimeSeries
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, load_time_series
 
@@ -81,7 +81,11 @@ def build_simulation(config, profiles=None):
     idx_long = pd.DatetimeIndex(pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep']))
     Nhours_long = len(idx_long)
     config['idx_long'] = idx_long
-
+    
+    # Indexes of with the specified simulation time step:
+    idx_sim = pd.DatetimeIndex(pd.date_range(start=config['idx'][0], end=enddate_long, freq='1h'))
+    config['idx_sim'] = idx_sim
+    Nsim = len(idx_sim)
     # %%#################################################################################################################
     #####################################   Data Loading    ###########################################################
     ###################################################################################################################
@@ -114,7 +118,7 @@ def build_simulation(config, profiles=None):
     # Load Shedding:
     LoadShedding = NodeBasedTable('LoadShedding',config,default=config['default']['LoadShedding'])
     CostLoadShedding = NodeBasedTable('CostLoadShedding',config,default=config['default']['CostLoadShedding'])
-	ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand',config, default=config['default'].get('ShareOfFlexibleDemand',0))
+    ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand',config,default=config['default'].get('ShareOfFlexibleDemand',0))
     
     # Power plants:
     plants = pd.DataFrame()
@@ -182,7 +186,7 @@ def build_simulation(config, profiles=None):
     check_AvailabilityFactors(plants,AF)
     check_heat_demand(plants,HeatDemand)
     check_temperatures(plants,Temperatures)
-	check_FlexibleDemand(ShareOfFlexibleDemand)
+    check_FlexibleDemand(ShareOfFlexibleDemand)
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
@@ -336,7 +340,7 @@ def build_simulation(config, profiles=None):
              name='LoadShedding')
     check_df(CostLoadShedding, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='CostLoadShedding')
-    check_df(ShareOfFlexibleDemand, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(ShareOfFlexibleDemand, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='ShareOfFlexibleDemand')
 
 #    for key in Renewables:
@@ -641,41 +645,24 @@ def build_simulation(config, profiles=None):
                 parameters['PowerInitial']['val'][i] = (Plants_merged['PartLoadMin'][i] + 1) / 2 * \
                                                        Plants_merged['PowerCapacity'][i]
             # Config variables:
-    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead','ValueOfLostLoad','QuickStartShare','CostOfSpillage','WaterValue','DemandFlexibility']
+    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead','SimulationTimeStep','ValueOfLostLoad','QuickStartShare','CostOfSpillage','WaterValue','DemandFlexibility']
     sets['y_config'] = ['year', 'month', 'day', 'val']
-    dd_begin = idx_long[4]
-    dd_end = idx_long[-2]
+    dd_begin = idx_sim[0]
+    dd_end = idx_sim[-1]
 
-    # Check if values are specified in the config and overwrite the default ones
-    values_lst = ['ValueOfLostLoad','ShareOfQuickStartUnits','PriceOfSpillage','WaterValue']
-    values_val = [1e5,0.5,1,100]
-    values = np.array([[dd_begin.year, dd_begin.month, dd_begin.day, 0],
-        [dd_end.year, dd_end.month, dd_end.day, 0],
-        [0, 0, config['HorizonLength'], 0],
-        [0, 0, config['LookAhead'], 0]])
-    for vl in values_lst:
-        if vl in config['default']:
-            if config['default'][vl] == "":
-                if vl == 'ValueOfLostLoad':
-                    tmp_value = np.array([[0,0,0,values_val[0]]])
-                if vl == 'ShareOfQuickStartUnits':
-                    tmp_value = np.array([[0,0,0,values_val[1]]])
-                if vl == 'PriceOfSpillage':
-                    tmp_value = np.array([[0,0,0,values_val[2]]])
-                if vl == 'WaterValue':
-                    tmp_value = np.array([[0,0,0,values_val[3]]])
-            else:
-                tmp_value = np.array([[0,0,0,config['default'][vl]]])
-        else:
-            if vl == 'ValueOfLostLoad':
-                tmp_value = np.array([[0,0,0,values_val[0]]])
-            if vl == 'ShareOfQuickStartUnits':
-                tmp_value = np.array([[0,0,0,values_val[1]]])
-            if vl == 'PriceOfSpillage':
-                tmp_value = np.array([[0,0,0,values_val[2]]])
-            if vl == 'WaterValue':
-                tmp_value = np.array([[0,0,0,values_val[3]]])
-        values = np.append(values, tmp_value, axis=0)
+    values = np.array(
+            [[dd_begin.year,    dd_begin.month,     dd_begin.day,           0],
+             [dd_end.year,      dd_end.month,       dd_end.day,             0],
+             [0,                0,                  config['HorizonLength'], 0],
+             [0,                0,                  config['LookAhead'],    0],
+             [0,                0,                  0,                      config['SimulationTimeStep']],
+             [0,                0,                  0,                      config['default']['ValueOfLostLoad']],
+             [0,                0,                  0,                      config['default']['ShareOfQuickStartUnits']],
+             [0,                0,                  0,                      config['default']['PriceOfSpillage']],
+             [0,                0,                  0,                      config['default']['WaterValue']],
+             [0,                0,                  0,                      config['default']['DemandFlexibility']]]
+            )
+
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
     # %%#################################################################################################################
