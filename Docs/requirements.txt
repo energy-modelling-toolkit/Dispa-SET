@@ -5,4 +5,3 @@ numpy==1.13.3
 pandas==0.21.0
 Sphinx==1.6.5
 xlrd==0.9.4
-pyomo==5.1

@@ -1,3 +1,4 @@
+import datetime as dt
 import logging
 import os
 import sys
@@ -5,8 +6,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-from six.moves import reload_module
-from ..common import commons 
+from ..common import commons
 try:
     from future.builtins import int
 except ImportError:
@@ -92,7 +92,6 @@ def NodeBasedTable(varname,config,default=None):
             data[z] = tmp.iloc[:,0]
 
     return data
-
 
 
 def UnitBasedTable(plants,varname,config,fallbacks=['Unit'],default=None,RestrictWarning=None):
@@ -191,7 +190,6 @@ def UnitBasedTable(plants,varname,config,fallbacks=['Unit'],default=None,Restric
     return out
 
 
-
 def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
     """
     Function that merges the times series corresponding to the merged units (e.g. outages, inflows, etc.)
@@ -274,36 +272,6 @@ def define_parameter(sets_in, sets, value=0):
     return {'sets': sets_in, 'val': values}
 
 
-def invert_dic_df(dic,tablename=''):
-    """
-    Function that takes as input a dictionary of dataframes, and inverts the key of
-    the dictionary with the columns headers of the dataframes
-
-    :param dic: dictionary of dataframes, with the same columns headers and the same index
-    :param tablename: string with the name of the table being processed (for the error msg)
-    :returns: dictionary of dataframes, with swapped headers
-    """
-    # keys are defined as the keys of the original dictionary, cols are the columns of the original dataframe
-    # items are the keys of the output dictionary, i.e. the columns of the original dataframe
-    dic_out = {}
-    # First, check that all indexes have the same length:
-    index = dic[dic.keys()[0]].index
-    for key in dic:
-        if len(dic[key].index) != len(index):
-            logging.critical('The indexes of the data tables "' + tablename + '" are not equal in all the files')
-            sys.exit(1)
-    # Then put the data in a panda Panel with minor orientation:
-    panel = pd.Panel.fromDict(dic, orient='minor')
-    # Display a warning if some items are missing in the original data:
-    for item in panel.items:
-        for key in dic.keys():
-            if item not in dic[key].columns:
-                logging.warning('The column "' + item + '" is not present in "' + key + '" for the "' + tablename + '" data. Zero will be assumed')
-        dic_out[item] = panel[item].fillna(0)
-    return dic_out
-
-
-
 def load_time_series(config,path,header='infer'):
     """
     Function that loads time series data, checks the compatibility of the indexes
@@ -332,8 +300,8 @@ def load_time_series(config,path,header='infer'):
         elif len(data) == 8760:
             logging.info('A numerical index has been found for file ' + path + 
                          '. Since it contains 8760 elements, it is assumed that it corresponds to a whole year')
-            data.index = pd.DatetimeIndex(start=pd.datetime(*(config['idx'][0].year,1,1,0,0)),
-                                                        end=pd.datetime(*(config['idx'][0].year,12,31,23,59,59)),
+            data.index = pd.date_range(start=dt.datetime(*(config['idx'][0].year,1,1,0,0)),
+                                                        end=dt.datetime(*(config['idx'][0].year,12,31,23,59,59)),
                                                         freq=commons['TimeStep'])
         else:
             logging.critical('A numerical index has been found for file ' + path + 
@@ -349,10 +317,10 @@ def load_time_series(config,path,header='infer'):
             index2 = data.index.shift(8760 * (config['idx'][0].year - data.index[0].year),freq=commons['TimeStep'])
             common2 = index2.intersection(config['idx'])
             if len(common2) == len(config['idx']):
-                logging.warn('File ' + path + ': data for year '+ str(data.index[0].year) + ' is used instead of year ' + str(config['idx'][0].year))
+                logging.warning('File ' + path + ': data for year '+ str(data.index[0].year) + ' is used instead of year ' + str(config['idx'][0].year))
                 data.index=index2
         elif len(common) == len(config['idx'])-1:  # there is only one data point missing. This is deemed acceptable
-            logging.warn('File ' + path + ': there is one data point missing in the time series. It will be filled with the nearest data')
+            logging.warning('File ' + path + ': there is one data point missing in the time series. It will be filled with the nearest data')
         elif len(common) < len(config['idx'])-1:
             logging.critical('File ' + path + ': the index does not contain the necessary time range (from ' + str(config['idx'][0]) + ' to ' + str(config['idx'][-1]) + ')')
             sys.exit(1)
@@ -591,7 +559,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
         logging.critical('The format of the excel config file (defined by its main title) is not recognized')
         sys.exit(1)
 
-def load_config_yaml(filename,AbsPath=True):
+def load_config_yaml(filename, AbsPath=True):
     """ Loads YAML file to dictionary"""
     import yaml
     with open(filename, 'r') as f:
@@ -640,7 +608,7 @@ def load_config_yaml(filename,AbsPath=True):
                     config[param] = os.path.join(basefolder,config[param])
     return config
 
-def export_yaml_config(ExcelFile,YAMLFile):
+def export_yaml_config(ExcelFile, YAMLFile):
     """
     Function that loads the DispaSET excel config file and dumps it as a yaml file.
 

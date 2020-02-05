@@ -30,9 +30,3 @@ def test_solve_gams(config):
     r = ds.solve_GAMS(config['SimulationDirectory'], get_gams_path())
 
     assert r
-
-@pytest.mark.skip(reason="Skipping as pyomo version is not currently up to date")
-def test_solve_pyomo(config):
-    r = ds.solve_pyomo(config['SimulationDirectory'])
-
-    assert r

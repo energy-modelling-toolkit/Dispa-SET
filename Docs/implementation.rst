@@ -50,7 +50,6 @@ Each box in the flow chart corresponds to one data entity. The links between the
 	- Possibility to modify the inputs manually and re-generate a GDX file from the excel files
 4. Simulation:
 	- The GAMS simulation file is run from the simulation environment folder
-	- Alternatively the model is run with the PYOMO solver
 	- All results and inputs are saved within the simulation environment
 5. Post-processing:
 	- Reads the simulation results saved in the simulation environment

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Minimalist example file showing how to access the Dispa-SET api to read a configuration file, 
-create a simulation environment folder and run the simulation in GAMS or PYOMO
+create a simulation environment folder and run the simulation in GAMS
 
 @author: Sylvain Quoilin
 """
@@ -19,6 +19,5 @@ config = ds.load_config('../ConfigFiles/ConfigTest.xlsx')
 # Build the simulation environment:
 SimData = ds.build_simulation(config)
 
-# Solve using PYOMO/GAMS:
-#r = ds.solve_pyomo(config['SimulationDirectory'])
+# Solve using GAMS:
 r = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])

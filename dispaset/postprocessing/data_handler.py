@@ -123,9 +123,9 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     # Set datetime index:
     StartDate = inputs['config']['StartDate']
     StopDate = inputs['config']['StopDate']  # last day of the simulation with look-ahead period
-    StopDate_long = pd.datetime(*StopDate) + dt.timedelta(days=inputs['config']['LookAhead'])
-    index = pd.date_range(start=pd.datetime(*StartDate), end=pd.datetime(*StopDate), freq='h')
-    index_long = pd.date_range(start=pd.datetime(*StartDate), end=StopDate_long, freq='h')
+    StopDate_long = dt.datetime(*StopDate) + dt.timedelta(days=inputs['config']['LookAhead'])
+    index = pd.date_range(start=dt.datetime(*StartDate), end=dt.datetime(*StopDate), freq='h')
+    index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
 
     keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
             'LostLoad_RampDown', 'LostLoad_2D','ShadowPrice', 'StorageShadowPrice'] #'status'
@@ -280,8 +280,8 @@ def ds_to_df(inputs):
     # config = parameters['Config']['val']
     try:
         config = inputs['config']
-        first_day = pd.datetime(config['StartDate'][0], config['StartDate'][1], config['StartDate'][2], 0)
-        last_day = pd.datetime(config['StopDate'][0], config['StopDate'][1], config['StopDate'][2], 23)
+        first_day = dt.datetime(config['StartDate'][0], config['StartDate'][1], config['StartDate'][2], 0)
+        last_day = dt.datetime(config['StopDate'][0], config['StopDate'][1], config['StopDate'][2], 23)
         dates = pd.date_range(start=first_day, end=last_day, freq='1h')
         timeindex = True
     except KeyError:

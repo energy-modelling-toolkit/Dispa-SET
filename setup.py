@@ -40,8 +40,6 @@ setup(
         "gamsxcc",
         "optcc"
     ],
-    extras_require={'pyomo': ['pyomo>=5.2'],
-                    },
     entry_points={
         'console_scripts': [
             'dispaset = dispaset.cli:cli'

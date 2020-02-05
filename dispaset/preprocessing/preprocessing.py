@@ -23,7 +23,7 @@ from .data_check import check_units, check_chp, check_sto, check_p2h, check_heat
 from .utils import clustering, interconnections, incidence_matrix, select_units, EfficiencyTimeSeries
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, load_time_series
 
-from ..solve import solve_GAMS_simple
+from ..solve import solve_GAMS
 
 from ..misc.gdx_handler import write_variables, gdx_to_list, gdx_to_dataframe
 from ..common import commons  # Load fuel types, technologies, timestep, etc:
@@ -65,20 +65,20 @@ def build_simulation(config, profiles=None):
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
     
     # Indexes of the simulation:
-    config['idx'] = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*config['StartDate']),
-                                             end=pd.datetime(*config['StopDate']),
-                                             freq=commons['TimeStep'])).tz_localize(None)
+    config['idx'] = pd.date_range(start=dt.datetime(*config['StartDate']),
+                                  end=dt.datetime(*config['StopDate']),
+                                  freq=commons['TimeStep']).tz_localize(None)
 
 
     # Indexes for the whole year considered in StartDate
-    idx_year = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*(config['StartDate'][0],1,1,0,0)),
-                                                        end=pd.datetime(*(config['StartDate'][0],12,31,23,59,59)),
-                                                        freq=commons['TimeStep'])
-                                          )
+    idx_year = pd.date_range(start=dt.datetime(*(config['StartDate'][0],1,1,0,0)),
+                             end=dt.datetime(*(config['StartDate'][0],12,31,23,59,59)),
+                             freq=commons['TimeStep'])
+
     
     # Indexes including the last look-ahead period
     enddate_long = config['idx'][-1] + dt.timedelta(days=config['LookAhead'])
-    idx_long = pd.DatetimeIndex(pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep']))
+    idx_long = pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep'])
     Nhours_long = len(idx_long)
     config['idx_long'] = idx_long
     
@@ -761,7 +761,7 @@ def adjust_capacity(inputs,tech_fuel,scaling=1,value=None,singleunit=False,write
     '''
     import pickle
 
-    if isinstance(inputs,str) or isinstance(inputs,unicode):
+    if isinstance(inputs, str):
         path = inputs
         inputfile = path + '/Inputs.p'
         if not os.path.exists(path):
@@ -845,7 +845,7 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
     '''
     import pickle
 
-    if isinstance(inputs,str) or isinstance(inputs,unicode):
+    if isinstance(inputs,str):
         path = inputs
         inputfile = path + '/Inputs.p'
         if not os.path.exists(path):
@@ -883,7 +883,7 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
         logging.info('Not writing any input data to the disk')
     else:
         if not os.path.isdir(dest_path):
-            shutil.copytree(path,dest_path)
+            shutil.copytree(path, dest_path)
             logging.info('Created simulation environment directory ' + dest_path)
         logging.info('Writing input files to ' + dest_path)
         import cPickle
@@ -895,7 +895,7 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
             os.remove('Inputs.gdx')
     return SimData
 
-def get_temp_sim_results(config, gams_dir=None, cache=False, temp_path='.pickle'):
+def get_temp_sim_results(config, gams_dir=None):
     """
     This function reads the simulation environment folder once it has been solved and loads
     the input variables together with the results.
@@ -929,8 +929,8 @@ def mid_term_scheduling(config, zones, profiles=None):
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
     
     # Indexes of the simualtion:
-    idx_std = pd.DatetimeIndex(start=pd.datetime(*config['StartDate']), 
-                               end=pd.datetime(*config['StopDate']),
+    idx_std = pd.date_range(start=dt.datetime(*config['StartDate']),
+                               end=dt.datetime(*config['StopDate']),
                                freq=commons['TimeStep'])
     idx_utc_noloc = idx_std - dt.timedelta(hours=1)
     idx = idx_utc_noloc
@@ -948,8 +948,10 @@ def mid_term_scheduling(config, zones, profiles=None):
             temp_config = dict(config)
             temp_config['zones'] = [c]                    # Override zone that needs to be simmulated
             _ = build_simulation(temp_config)       # Create temporary SimData   
-            r = solve_GAMS_simple(temp_config['SimulationDirectory'], 
-                                  temp_config['GAMS_folder'])
+            r = solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
+                           gams_folder=temp_config['GAMS_folder'],
+                           gams_file='UCM_h_simple.gms',
+                           result_file='Results_simple.gdx')
             temp_results[c] = get_temp_sim_results(config)
     #        print('Zones simulated: ' + str(i) + '/' + str(no_of_zones))
         temp = pd.DataFrame()
@@ -974,7 +976,10 @@ def mid_term_scheduling(config, zones, profiles=None):
             temp_config = dict(config)
             temp_config['zones'] = zones               # Override zones that need to be simmulated
         _ = build_simulation(temp_config)        # Create temporary SimData   
-        r = solve_GAMS_simple(temp_config['SimulationDirectory'], temp_config['GAMS_folder'])
+        r = solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
+                       gams_folder=temp_config['GAMS_folder'],
+                       gams_file='UCM_h_simple.gms',
+                       result_file='Results_simple.gdx')
         temp_results = get_temp_sim_results(config)
         if 'OutputStorageLevel' not in temp_results:
             logging.critical('Storage levels in the selected region were not computed, please check that storage units '
@@ -985,15 +990,16 @@ def mid_term_scheduling(config, zones, profiles=None):
             results = dict(temp_results['OutputStorageLevel'])
         temp = pd.DataFrame()
         r = pd.DataFrame.from_dict(results, orient='columns')
-        results_t = pd.concat([temp, r], axis = 1)
+        results_t = pd.concat([temp, r], axis=1)
         temp = results_t
         temp = temp.set_index(idx)
         temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})        
     else:
         logging.info('Mid term scheduling turned off')
     import pickle
-    pickle.dump(temp, open( "temp_profiles.p", "wb" ))
+    pickle.dump(temp, open("temp_profiles.p", "wb"))
     return temp
+
 
 def build_full_simulation(config, mts_plot=None):
     '''
@@ -1026,13 +1032,13 @@ def build_full_simulation(config, mts_plot=None):
         else:
             logging.info('Hydro scheduling is performed between Start and Stop dates!') 
         # Mid term scheduling zone selection and new profile calculation
-        if config['mts_zones'] == None:
+        if config['mts_zones'] is None:
             new_profiles = mid_term_scheduling(config, config['zones'])
             logging.info('Simulation with all zones selected')
         else:
             new_profiles = mid_term_scheduling(config, config['mts_zones'])
         # Plot new profiles
-        if mts_plot == True:
+        if mts_plot:
             new_profiles.plot()
             logging.info('Simulation with specified zones selected')
         else:

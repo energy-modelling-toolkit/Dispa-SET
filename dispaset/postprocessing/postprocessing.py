@@ -7,6 +7,7 @@ Set of functions useful to analyse to DispaSET output data.
 
 from __future__ import division
 
+import datetime as dt
 import logging
 import sys
 
@@ -205,7 +206,7 @@ def get_result_analysis(inputs, results):
 
     StartDate = inputs['config']['StartDate']
     StopDate = inputs['config']['StopDate']
-    index = pd.date_range(start=pd.datetime(*StartDate), end=pd.datetime(*StopDate), freq='h')
+    index = pd.date_range(start=dt.datetime(*StartDate), end=dt.datetime(*StopDate), freq='h')
 
     # Aggregated values:
     demand = {}
