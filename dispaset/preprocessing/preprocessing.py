@@ -65,14 +65,14 @@ def build_simulation(config, profiles=None):
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
     
     # Indexes of the simulation:
-    config['idx'] = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*config['StartDate']),
-                                             end=pd.datetime(*config['StopDate']),
+    config['idx'] = pd.DatetimeIndex(pd.date_range(start=dt.datetime(*config['StartDate']),
+                                             end=dt.datetime(*config['StopDate']),
                                              freq=commons['TimeStep'])).tz_localize(None)
 
 
     # Indexes for the whole year considered in StartDate
-    idx_year = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*(config['StartDate'][0],1,1,0,0)),
-                                                        end=pd.datetime(*(config['StartDate'][0],12,31,23,59,59)),
+    idx_year = pd.DatetimeIndex(pd.date_range(start=dt.datetime(*(config['StartDate'][0],1,1,0,0)),
+                                                        end=dt.datetime(*(config['StartDate'][0],12,31,23,59,59)),
                                                         freq=commons['TimeStep'])
                                           )
     
@@ -943,8 +943,8 @@ def mid_term_scheduling(config, zones, profiles=None):
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
     
     # Indexes of the simualtion:
-    idx_std = pd.DatetimeIndex(start=pd.datetime(*config['StartDate']), 
-                               end=pd.datetime(*config['StopDate']),
+    idx_std = pd.DatetimeIndex(start=dt.datetime(*config['StartDate']), 
+                               end=dt.datetime(*config['StopDate']),
                                freq=commons['TimeStep'])
     idx_utc_noloc = idx_std - dt.timedelta(hours=1)
     idx = idx_utc_noloc
