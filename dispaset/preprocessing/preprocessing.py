@@ -65,20 +65,20 @@ def build_simulation(config, profiles=None):
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
     
     # Indexes of the simulation:
-    config['idx'] = pd.DatetimeIndex(pd.date_range(start=dt.datetime(*config['StartDate']),
-                                             end=dt.datetime(*config['StopDate']),
-                                             freq=commons['TimeStep'])).tz_localize(None)
+    config['idx'] = pd.date_range(start=dt.datetime(*config['StartDate']),
+                                  end=dt.datetime(*config['StopDate']),
+                                  freq=commons['TimeStep']).tz_localize(None)
 
 
     # Indexes for the whole year considered in StartDate
-    idx_year = pd.DatetimeIndex(pd.date_range(start=dt.datetime(*(config['StartDate'][0],1,1,0,0)),
-                                                        end=dt.datetime(*(config['StartDate'][0],12,31,23,59,59)),
-                                                        freq=commons['TimeStep'])
-                                          )
+    idx_year = pd.date_range(start=dt.datetime(*(config['StartDate'][0],1,1,0,0)),
+                             end=dt.datetime(*(config['StartDate'][0],12,31,23,59,59)),
+                             freq=commons['TimeStep'])
+
     
     # Indexes including the last look-ahead period
     enddate_long = config['idx'][-1] + dt.timedelta(days=config['LookAhead'])
-    idx_long = pd.DatetimeIndex(pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep']))
+    idx_long = pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep'])
     Nhours_long = len(idx_long)
     config['idx_long'] = idx_long
 
@@ -775,7 +775,7 @@ def adjust_capacity(inputs,tech_fuel,scaling=1,value=None,singleunit=False,write
     '''
     import pickle
 
-    if isinstance(inputs,str) or isinstance(inputs,unicode):
+    if isinstance(inputs, str):
         path = inputs
         inputfile = path + '/Inputs.p'
         if not os.path.exists(path):
@@ -859,7 +859,7 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
     '''
     import pickle
 
-    if isinstance(inputs,str) or isinstance(inputs,unicode):
+    if isinstance(inputs,str):
         path = inputs
         inputfile = path + '/Inputs.p'
         if not os.path.exists(path):
@@ -897,7 +897,7 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
         logging.info('Not writing any input data to the disk')
     else:
         if not os.path.isdir(dest_path):
-            shutil.copytree(path,dest_path)
+            shutil.copytree(path, dest_path)
             logging.info('Created simulation environment directory ' + dest_path)
         logging.info('Writing input files to ' + dest_path)
         import cPickle
@@ -943,7 +943,7 @@ def mid_term_scheduling(config, zones, profiles=None):
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
     
     # Indexes of the simualtion:
-    idx_std = pd.DatetimeIndex(start=dt.datetime(*config['StartDate']), 
+    idx_std = pd.date_range(start=dt.datetime(*config['StartDate']),
                                end=dt.datetime(*config['StopDate']),
                                freq=commons['TimeStep'])
     idx_utc_noloc = idx_std - dt.timedelta(hours=1)
@@ -999,15 +999,16 @@ def mid_term_scheduling(config, zones, profiles=None):
             results = dict(temp_results['OutputStorageLevel'])
         temp = pd.DataFrame()
         r = pd.DataFrame.from_dict(results, orient='columns')
-        results_t = pd.concat([temp, r], axis = 1)
+        results_t = pd.concat([temp, r], axis=1)
         temp = results_t
         temp = temp.set_index(idx)
         temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})        
     else:
         logging.info('Mid term scheduling turned off')
     import pickle
-    pickle.dump(temp, open( "temp_profiles.p", "wb" ))
+    pickle.dump(temp, open("temp_profiles.p", "wb"))
     return temp
+
 
 def build_full_simulation(config, mts_plot=None):
     '''
@@ -1040,13 +1041,13 @@ def build_full_simulation(config, mts_plot=None):
         else:
             logging.info('Hydro scheduling is performed between Start and Stop dates!') 
         # Mid term scheduling zone selection and new profile calculation
-        if config['mts_zones'] == None:
+        if config['mts_zones'] is None:
             new_profiles = mid_term_scheduling(config, config['zones'])
             logging.info('Simulation with all zones selected')
         else:
             new_profiles = mid_term_scheduling(config, config['mts_zones'])
         # Plot new profiles
-        if mts_plot == True:
+        if mts_plot:
             new_profiles.plot()
             logging.info('Simulation with specified zones selected')
         else:
