@@ -34,6 +34,8 @@ def get_load_data(inputs, z):
     datain = inputs['param_df']
     out = pd.DataFrame(index=datain['Demand'].index)
     out['Load'] = datain['Demand']['DA', z]
+    if ('Flex', z) in datain['Demand']:
+        out['Load'] += datain['Demand'][('Flex', z)] 
     # Listing power plants with non-dispatchable power generation:
     VREunits = []
     VRE = np.zeros(len(out))
@@ -216,8 +218,10 @@ def get_result_analysis(inputs, results):
             demand_p2h = demand_p2h.sum(axis=1)
         else:
             demand_p2h = pd.Series(0, index=results['OutputPower'].index)
+        if ('Flex', z) in inputs['param_df']['Demand']:
+            demand_flex = inputs['param_df']['Demand'][('Flex', z)] 
         demand_da = inputs['param_df']['Demand'][('DA', z)]
-        demand[z] = pd.DataFrame(demand_da + demand_p2h, columns = [('DA', z)])
+        demand[z] = pd.DataFrame(demand_da + demand_p2h + demand_flex, columns = [('DA', z)])
     demand = pd.concat(demand, axis=1)
     demand.columns = demand.columns.droplevel(-1)
 
@@ -267,7 +271,11 @@ def get_result_analysis(inputs, results):
     ZoneData = pd.DataFrame(index=inputs['sets']['n'])
 
     ZoneData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6
-    ZoneData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0)
+    peak_flexible = 0
+    if 'Flex' in dfin['Demand']:
+        ZoneData['Flexible Demand'] = inputs['param_df']['Demand']['Flex'].sum(axis=0) / 1E6
+        peak_flexible = dfin['Demand']['Flex'].max(axis=0)
+    ZoneData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0) + peak_flexible
 
     ZoneData['NetImports'] = 0
     for z in ZoneData.index:
