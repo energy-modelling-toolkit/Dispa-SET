@@ -1,3 +1,4 @@
+import datetime as dt
 import logging
 import os
 import sys
@@ -327,8 +328,8 @@ def load_time_series(config,path,header='infer'):
         elif len(data) == 8760:
             logging.info('A numerical index has been found for file ' + path + 
                          '. Since it contains 8760 elements, it is assumed that it corresponds to a whole year')
-            data.index = pd.DatetimeIndex(start=pd.datetime(*(config['idx'][0].year,1,1,0,0)),
-                                                        end=pd.datetime(*(config['idx'][0].year,12,31,23,59,59)),
+            data.index = pd.DatetimeIndex(start=dt.datetime(*(config['idx'][0].year,1,1,0,0)),
+                                                        end=dt.datetime(*(config['idx'][0].year,12,31,23,59,59)),
                                                         freq=commons['TimeStep'])
         else:
             logging.critical('A numerical index has been found for file ' + path + 

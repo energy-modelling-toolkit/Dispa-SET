@@ -14,6 +14,7 @@ Functions:
 #######################################################################################################################
 
 
+import datetime as dt
 import sys
 import os
 import logging
@@ -691,8 +692,8 @@ def DispaSolve(sets, parameters, LPFormulation=False, path_cplex = ''):
     Nhours = len(sets['h'])
 
     # Build pandas indexes based on the config variables:
-    first = pd.datetime(config['FirstDay', 'year'], config['FirstDay', 'month'], config['FirstDay', 'day'], 0, 0, 0)
-    last = pd.datetime(config['LastDay', 'year'], config['LastDay', 'month'], config['LastDay', 'day'], 23, 59, 59)
+    first = dt.datetime(config['FirstDay', 'year'], config['FirstDay', 'month'], config['FirstDay', 'day'], 0, 0, 0)
+    last = dt.datetime(config['LastDay', 'year'], config['LastDay', 'month'], config['LastDay', 'day'], 23, 59, 59)
 
     # Index corresponding to the data:
     index_all = pd.DatetimeIndex(start=first, end=last, freq='h')
