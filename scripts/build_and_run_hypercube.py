@@ -16,8 +16,7 @@ import numpy as np
 import pandas as pd
 
 # Add the root folder of Dispa-SET to the path so that the library can be loaded:
-import sys,os
-sys.path.append(os.path.abspath('..'))
+import os
 
 # Import Dispa-SET
 import dispaset as ds
