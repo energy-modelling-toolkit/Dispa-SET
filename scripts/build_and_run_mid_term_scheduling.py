@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Minimalist example file showing how to access the Dispa-SET api to read a configuration file, 
-create a simulation environment folder and run the simulation in GAMS or PYOMO
+create a simulation environment folder and run the simulation in GAMS
 
 The script can be run in ipython, but for some reasons, it does not work more than once with the gams API.
 

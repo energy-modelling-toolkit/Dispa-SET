@@ -11,7 +11,7 @@ Overview
 
 The Dispa-SET model is mainly developed within the “Joint Research Centre” of the European Commission and focuses on the balancing and flexibility problems in European grids [1]_.
 
-It is written in GAMS an Python (Pyomo) and uses csv files for input data handling. The optimisation is defined as a Linear Programming (LP) or Mixed-Integer Linear Programming (MILP) problem, depending on the desired level of accuracy and complexity. Continuous variables include the individual unit dispatched power, the shedded load and the curtailed power generation. The binary variables are the commitment status of each unit. The main model features can be summarized as follows:
+It is written in GAMS and uses csv files for input data handling. The optimisation is defined as a Linear Programming (LP) or Mixed-Integer Linear Programming (MILP) problem, depending on the desired level of accuracy and complexity. Continuous variables include the individual unit dispatched power, the shedded load and the curtailed power generation. The binary variables are the commitment status of each unit. The main model features can be summarized as follows:
 
 
 Features
@@ -39,10 +39,11 @@ Libraries used and requirements
 -------------------------------
 
 * `Python 3.7`_
-* `pyomo`_ Optimization object library, interface to LP solver (e.g. CPLEX)
 * `pandas`_ for input and result data handling
 * `matplotlib`_ for plotting
 * `GAMS_api`_ for the communication with GAMS
+
+the above are auto installed in a conda environment if you follow the instructions of the Quick start.
 
 Dispa-SET in the scientific literature
 --------------------------------------
@@ -76,7 +77,7 @@ can be redistributed and/or modified under the terms of this license.
 Main Developers
 ---------------
 - `Sylvain Quoilin`_ (University of Liège, KU Leuven)
-- Konstantinos Kavvadias (European Commission, Institute for Energy and Transport)
+- `Konstantinos Kavvadias`_ (European Commission, Joint Research Centre)
 - Matija Pavičević  (KU Leuven, Belgium)
 
 
@@ -96,10 +97,10 @@ References
 .. _Python 3.7: https://www.anaconda.com/distribution/
 .. _matplotlib: http://matplotlib.org
 .. _pandas: http://pandas.pydata.org
-.. _pyomo: http://www.pyomo.org/
 .. _GAMS_api: http://www.gams.com/help/index.jsp?topic=%2Fgams.doc%2Fapis%2Findex.html
 .. _European Commission: https://ec.europa.eu/
 .. _Joint Research Centre: https://ec.europa.eu/jrc/en
 .. _Sylvain Quoilin: http://squoilin.eu
+.. _Konstantinos Kavvadias: http://kavvadias.eu
 
 

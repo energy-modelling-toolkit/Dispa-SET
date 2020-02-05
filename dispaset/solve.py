@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This worksheet contains the two main functions to solve the DispaSET optimization problem using PYOMO or GAMS.
+This worksheet contains the two main functions to solve the DispaSET optimization problem using  GAMS.
 
 Solve with GAMS and the high level API
 --------------------------------------
@@ -28,9 +28,6 @@ The advantage of the low level API is that it can easily be installed from pip::
     pip install gamsxcc
     pip install optcc
     
-Solve with PYOMO
-----------------
-The Pyomo version of Dispa-SET is currently not up-to-date. Use at your own risk.
 
 """
 
@@ -114,36 +111,3 @@ def solve_GAMS(sim_folder, gams_folder=None, gams_file='UCM_h.gms', result_file=
         return ret
     else:
         return False
-
-
-def solve_pyomo(sim_folder):
-    '''
-    Function used to run the optimization using the PYOMO engine.
-
-    :param sim_folder: path to a valid Dispa-SET simulation folder
-    '''
-    import pickle
-    from .pyomo.model import DispaSolve
-    raise NotImplementedError('Pyomo is currently outdated and does not work with the latest features.'
-                              'Please use an older version of dispaset.')
-    with open(os.path.join(sim_folder, 'Inputs.p'), 'rb') as pyomo_input_file:
-        SimData = pickle.load(pyomo_input_file)
-    if SimData['config']['SimulationType'] == 'MILP':
-        LPFormulation = False
-    else:
-        LPFormulation = True
-
-    if os.path.isfile(SimData['config']['cplex_path']):
-        path_cplex = SimData['config']['cplex_path']
-    else:
-        path_cplex = ''
-        if len(SimData['config']['cplex_path']) > 2:
-            logging.warning('The specified path for cplex (' + SimData['config'][
-                'cplex_path'] + ') is not valid. It will be ignored')
-
-    time0 = time.time()
-    results = DispaSolve(SimData['sets'], SimData['parameters'], LPFormulation=LPFormulation, path_cplex=path_cplex)
-    logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
-    if os.path.isfile(commons['logfile']):
-        shutil.copy(commons['logfile'], os.path.join(sim_folder, 'warn_solve.log'))
-    return results

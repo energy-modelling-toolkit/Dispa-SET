@@ -289,20 +289,3 @@ if success_gdxcc and success_path:
         print('GDX successfully written. Cleaning up')
         os.remove('test.gdx')
 
-
-
-
-print('\n \nCHECK PYOMO')
-try:
-    import pyomo
-    print('Pyomo is available')
-except ImportError as e:
-    print('ERROR: Pyomo could not be load. Erros msg: ' + str(e))
-
-
-print('\n \nCHECK CPLEX')
-if cmd_exists('cplex'):
-    print('cplex is available from the command prompt!')
-else:
-    print('ERROR: the cplex command is not available. It should be in a location referenced in the PATH environment variable')
-
