@@ -23,7 +23,7 @@ from .data_check import check_units, check_chp, check_sto, check_p2h, check_heat
 from .utils import clustering, interconnections, incidence_matrix, select_units, EfficiencyTimeSeries
 from .data_handler import UnitBasedTable,NodeBasedTable,merge_series, define_parameter, load_time_series
 
-from ..solve import solve_GAMS_simple
+from ..solve import solve_GAMS
 
 from ..misc.gdx_handler import write_variables, gdx_to_list, gdx_to_dataframe
 from ..common import commons  # Load fuel types, technologies, timestep, etc:
@@ -909,7 +909,7 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
             os.remove('Inputs.gdx')
     return SimData
 
-def get_temp_sim_results(config, gams_dir=None, cache=False, temp_path='.pickle'):
+def get_temp_sim_results(config, gams_dir=None):
     """
     This function reads the simulation environment folder once it has been solved and loads
     the input variables together with the results.
@@ -962,8 +962,10 @@ def mid_term_scheduling(config, zones, profiles=None):
             temp_config = dict(config)
             temp_config['zones'] = [c]                    # Override zone that needs to be simmulated
             _ = build_simulation(temp_config)       # Create temporary SimData   
-            r = solve_GAMS_simple(temp_config['SimulationDirectory'], 
-                                  temp_config['GAMS_folder'])
+            r = solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
+                           gams_folder=temp_config['GAMS_folder'],
+                           gams_file='UCM_h_simple.gms',
+                           result_file='Results_simple.gdx')
             temp_results[c] = get_temp_sim_results(config)
     #        print('Zones simulated: ' + str(i) + '/' + str(no_of_zones))
         temp = pd.DataFrame()
@@ -988,7 +990,10 @@ def mid_term_scheduling(config, zones, profiles=None):
             temp_config = dict(config)
             temp_config['zones'] = zones               # Override zones that need to be simmulated
         _ = build_simulation(temp_config)        # Create temporary SimData   
-        r = solve_GAMS_simple(temp_config['SimulationDirectory'], temp_config['GAMS_folder'])
+        r = solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
+                       gams_folder=temp_config['GAMS_folder'],
+                       gams_file='UCM_h_simple.gms',
+                       result_file='Results_simple.gdx')
         temp_results = get_temp_sim_results(config)
         if 'OutputStorageLevel' not in temp_results:
             logging.critical('Storage levels in the selected region were not computed, please check that storage units '
