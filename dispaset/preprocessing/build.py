@@ -9,7 +9,8 @@ import pandas as pd
 from future.builtins import int
 
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
-    check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows
+    check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows, \
+    check_FlexibleDemand
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix
 

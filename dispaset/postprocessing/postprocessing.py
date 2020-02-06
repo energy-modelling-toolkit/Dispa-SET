@@ -272,10 +272,14 @@ def get_result_analysis(inputs, results):
     # Zone-specific values:
     ZoneData = pd.DataFrame(index=inputs['sets']['n'])
 
-    ZoneData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6
+    
     if 'Flex' in dfin['Demand']:
         ZoneData['Flexible Demand'] = inputs['param_df']['Demand']['Flex'].sum(axis=0) / 1E6
-    ZoneData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0) 
+        ZoneData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6 + ZoneData['Flexible Demand']
+        ZoneData['PeakLoad'] = (dfin['Demand']['DA']+dfin['Demand']['Flex']).max(axis=0) 
+    else:
+        ZoneData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0) 
+        ZoneData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6
 
     ZoneData['NetImports'] = 0
     for z in ZoneData.index:
