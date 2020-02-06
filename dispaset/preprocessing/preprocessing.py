@@ -6,7 +6,6 @@ This is the main file of the DispaSET pre-processing tool. It comprises a single
 """
 import datetime as dt
 import logging
-import os
 import sys
 
 import pandas as pd
