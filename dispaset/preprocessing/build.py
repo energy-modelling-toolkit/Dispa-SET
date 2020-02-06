@@ -273,26 +273,6 @@ def build_single_run(config, profiles=None):
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
     
-    # Get the hydro time series corresponding to the original plant list: #FIXME Unused variable ?
-    #StorageFormerIndexes = [s for s in plants.index if
-    #                        plants['Technology'][s] in commons['tech_storage']]
-
-    # Same with the CHPs:
-    # Get the heat demand time series corresponding to the original plant list:
-#    CHPFormerIndexes = [s for s in plants.index if
-#                            plants['CHPType'][s] in commons['types_CHP']]
-#    for s in CHPFormerIndexes:  # for all the old plant indexes
-#        # get the old plant name corresponding to s:
-#        oldname = plants['Unit'][s]
-#        # newname = mapping['NewIndex'][s] #FIXME Unused variable ?
-#        if oldname not in HeatDemand:
-#            logging.warning('No heat demand profile found for CHP plant "' + str(oldname) + '". Assuming zero')
-#            HeatDemand[oldname] = 0
-#        if oldname not in CostHeatSlack:
-#            logging.warning('No heat cost profile found for CHP plant "' + str(oldname) + '". Assuming zero')
-#            CostHeatSlack[oldname] = 0
-# 
-
     # merge the outages:
     for i in plants.index:  # for all the old plant indexes
         # get the old plant name corresponding to s:
@@ -643,16 +623,16 @@ def build_single_run(config, profiles=None):
     values = np.array(
             [[dd_begin.year,    dd_begin.month,     dd_begin.day,           0],
              [dd_end.year,      dd_end.month,       dd_end.day,             0],
-             [0,                0,                  config['HorizonLength'], 0],
-             [0,                0,                  config['LookAhead'],    0],
-             [0,                0,                  0,                      config['SimulationTimeStep']],
-             [0,                0,                  0,                      config['default']['ValueOfLostLoad']],
-             [0,                0,                  0,                      config['default']['ShareOfQuickStartUnits']],
-             [0,                0,                  0,                      config['default']['PriceOfSpillage']],
-             [0,                0,                  0,                      config['default']['WaterValue']],
-             [0,                0,                  0,                      config['default']['DemandFlexibility']]]
+             [1e-5,             0,                  config['HorizonLength'], 0],
+             [1e-5,             0,                  config['LookAhead'],    0],
+             [1e-5,             0,                  0,                      config['SimulationTimeStep']],
+             [1e-5,             0,                  0,                      config['default']['ValueOfLostLoad']],
+             [1e-5,             0,                  0,                      config['default']['ShareOfQuickStartUnits']],
+             [1e-5,             0,                  0,                      config['default']['PriceOfSpillage']],
+             [1e-5,             0,                  0,                      config['default']['WaterValue']],
+             [1e-5,             0,                  0,                      config['default']['DemandFlexibility']]]
             )
-
+    # the 1E-5 values are needed to be sure that all sets are written with the config parameter
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
     # %%#################################################################################################################

@@ -520,10 +520,9 @@ def load_config_excel(ConfigFile,AbsPath=True):
         config['default']['ShareOfQuickStartUnits'] = 0.5          # to be added to xlsx file
         
         # Set default values (for backward compatibility):
-        NonEmptyDefaultss = {'ReservoirLevelInitial':0.5,'ReservoirLevelFinal':0.5,'ValueOfLostLoad':1E5,'PriceOfSpillage':1,'WaterValue':100,'ShareOfQuickStartUnits':0.5}
-        for param in NonEmptyDefaultss:
-            if config['default'][param]=='':
-                config['default'][param]=NonEmptyDefaultss[param]
+        for param in DEFAULTS:
+            if config['default'].get(param,'')=='':
+                config['default'][param]=DEFAULTS[param]
     
     #    config['default']['ShareOfFlexibleDemand'] = sheet.cell_value(81, 5)
     #    for def_value in config['default']:
@@ -584,7 +583,10 @@ def load_config_yaml(filename, AbsPath=True):
 
 
     # Define missing parameters if they were not provided in the config file
-    global PARAMS
+    PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
+          'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
+          'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
+          'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand','Temperatures']
     for param in PARAMS:
         if param not in config:
             config[param] = ''    
