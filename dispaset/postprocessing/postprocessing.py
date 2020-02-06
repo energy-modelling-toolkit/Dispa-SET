@@ -220,6 +220,8 @@ def get_result_analysis(inputs, results):
             demand_p2h = pd.Series(0, index=results['OutputPower'].index)
         if ('Flex', z) in inputs['param_df']['Demand']:
             demand_flex = inputs['param_df']['Demand'][('Flex', z)] 
+        else:
+            demand_flex = pd.Series(0, index=results['OutputPower'].index)
         demand_da = inputs['param_df']['Demand'][('DA', z)]
         demand[z] = pd.DataFrame(demand_da + demand_p2h + demand_flex, columns = [('DA', z)])
     demand = pd.concat(demand, axis=1)
@@ -271,11 +273,9 @@ def get_result_analysis(inputs, results):
     ZoneData = pd.DataFrame(index=inputs['sets']['n'])
 
     ZoneData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6
-    peak_flexible = 0
     if 'Flex' in dfin['Demand']:
         ZoneData['Flexible Demand'] = inputs['param_df']['Demand']['Flex'].sum(axis=0) / 1E6
-        peak_flexible = dfin['Demand']['Flex'].max(axis=0)
-    ZoneData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0) + peak_flexible
+    ZoneData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0) 
 
     ZoneData['NetImports'] = 0
     for z in ZoneData.index:

@@ -380,6 +380,8 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
         demand_p2h = pd.Series(0, index=results['OutputPower'].index)
     if ('Flex', z) in inputs['param_df']['Demand']:
         demand_flex = inputs['param_df']['Demand'][('Flex', z)] / 1000
+    else:
+        demand_flex = pd.Series(0, index=results['OutputPower'].index)
 
     
     demand_da = inputs['param_df']['Demand'][('DA', z)] / 1000  # GW
@@ -398,7 +400,7 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
         shifted_load = pd.Series(shed_load, index=demand.index).fillna(0)
     else:
         shifted_load = pd.Series(0, index=demand.index) / 1000  # GW
-    diff = (sum_generation - demand + shifted_load + shed_load).abs()
+    diff = (sum_generation - demand - shifted_load + shed_load).abs()
 
     if diff.max() > 0.01 * demand.max():
         logging.critical('There is up to ' + str(
