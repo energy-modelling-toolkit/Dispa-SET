@@ -84,6 +84,7 @@ def mid_term_scheduling(config, zones, profiles=None):
     # Day/hour corresponding to the first and last days of the simulation:
     # Note that the first available data corresponds to 2015.01.31 (23.00) and the
     # last day with data is 2015.12.31 (22.00)
+    import pickle
     y_end, m_end, d_end, _, _, _ = config['StopDate']
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
 
@@ -154,8 +155,8 @@ def mid_term_scheduling(config, zones, profiles=None):
         temp = temp.set_index(idx)
         temp = temp.rename(columns={col: col.split(' - ')[1] for col in temp.columns})
     else:
-        logging.info('Mid term scheduling turned off')
-    import pickle
+        logging.error('HydroScheduling parameter should be either "Regional" or "Zonal" (case sensitive). ')
+        sys.exit()
     pickle.dump(temp, open("temp_profiles.p", "wb"))
     return temp
 
