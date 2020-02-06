@@ -396,8 +396,8 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
     else:
         shed_load = pd.Series(0, index=demand.index) / 1000  # GW
     if 'OutputDemandModulation' in results and z in results['OutputDemandModulation']:
-        shifted_load = results['OutputDemandModulation'][z] / 1000 # GW
-        shifted_load = pd.Series(shed_load, index=demand.index).fillna(0)
+        shifted_load = -results['OutputDemandModulation'][z] / 1000 # GW
+        shifted_load = pd.Series(shifted_load, index=demand.index).fillna(0)
     else:
         shifted_load = pd.Series(0, index=demand.index) / 1000  # GW
     diff = (sum_generation - demand + shifted_load + shed_load).abs()
@@ -406,17 +406,12 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
         logging.critical('There is up to ' + str(
             diff.max() / demand.max() * 100) + '% difference in the instantaneous energy balance of zone ' + z)
 
-    if 'OutputCurtailedPower' in results and z in results['OutputCurtailedPower'] \
-            and 'OutputShedLoad' in results and z in results['OutputShedLoad']:
+    if 'OutputCurtailedPower' in results and z in results['OutputCurtailedPower']:
         curtailment = results['OutputCurtailedPower'][z] / 1000  # GW
-        plot_dispatch(demand, plotdata, level, curtailment=curtailment, shedload = shed_load, rng=rng, alpha=0.8)
-    elif 'OutputCurtailedPower' in results and z in results['OutputCurtailedPower']:
-        curtailment = results['OutputCurtailedPower'][z] / 1000  # GW
-        plot_dispatch(demand, plotdata, level, curtailment=curtailment, rng=rng, alpha=0.8)
-    elif 'OutputShedLoad' in results and z in results['OutputShedLoad']:
-        plot_dispatch(demand, plotdata, level, shedload = shed_load, rng=rng, alpha=0.8)
     else:
-        plot_dispatch(demand, plotdata, level, rng=rng, alpha=0.8)
+        curtailment = None
+
+    plot_dispatch(demand, plotdata, level, curtailment=curtailment, shedload = shed_load, shiftedload=shifted_load, rng=rng, alpha=0.5)
 
     # Generation plot:
     if rug_plot:

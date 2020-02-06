@@ -108,7 +108,7 @@ def build_single_run(config, profiles=None):
     # Load Shedding:
     LoadShedding = NodeBasedTable('LoadShedding',config,default=config['default']['LoadShedding'])
     CostLoadShedding = NodeBasedTable('CostLoadShedding',config,default=config['default']['CostLoadShedding'])
-    ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand',config,default=config['default'].get('ShareOfFlexibleDemand',0))
+    ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand',config,default=config['default']['ShareOfFlexibleDemand'])
     
     # Power plants:
     plants = pd.DataFrame()
