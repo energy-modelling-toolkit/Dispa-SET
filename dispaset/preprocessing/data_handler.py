@@ -289,7 +289,7 @@ def load_time_series(config,path,header='infer'):
         logging.error('The index of data file ' + path + ' is not monotoneously increasing. Trying to check if it can be parsed with a "day first" format ')
         data = pd.read_csv(path, index_col=0, parse_dates=True, header=header, dayfirst=True)
         if not data.index.is_monotonic_increasing:
-            logging.critical('Couldn't parse index of ' + path + '. To avoid problems make sure that you use the proper american date format (yyyy-mm-dd hh:mm:ss)')
+            logging.critical('Could not parse index of ' + path + '. To avoid problems make sure that you use the proper american date format (yyyy-mm-dd hh:mm:ss)')
             sys.exit(1)
         
     # First convert numerical indexes into datetimeindex:
