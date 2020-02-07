@@ -283,13 +283,14 @@ def load_time_series(config,path,header='infer'):
     
     if not data.index.is_unique:
         logging.critical('The index of data file ' + path + ' is not unique. Please check the data')
-        sys.exit(1)  
-        
+        sys.exit(1)
+
     if not data.index.is_monotonic_increasing:
-        logging.critical('The index of data file ' + path + ' is not monotoneously increasing. Please check that you have used the proper american date format (yyyy-mm-dd hh:mm:ss)')
-        # uncomment this to correct the file:
-        #data = pd.read_csv(path,dayfirst=True,index_col=0,parse_dates=True);data.to_csv(path)
-        sys.exit(1)  
+        logging.error('The index of data file ' + path + ' is not monotoneously increasing. Trying to check if it can be parsed with a "day first" format ')
+        data = pd.read_csv(path, index_col=0, parse_dates=True, header=header, dayfirst=True)
+        if not data.index.is_monotonic_increasing:
+            logging.critical('Couldn't parse index of ' + path + '. To avoid problems make sure that you use the proper american date format (yyyy-mm-dd hh:mm:ss)')
+            sys.exit(1)
         
     # First convert numerical indexes into datetimeindex:
     if data.index.is_numeric():
