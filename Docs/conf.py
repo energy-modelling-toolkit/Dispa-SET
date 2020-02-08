@@ -20,7 +20,7 @@ import os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../dispaset'))
 sys.path.insert(0, os.path.abspath('../'))
-autodoc_mock_imports = ['_tkinter', 'pyomo']
+autodoc_mock_imports = ['_tkinter']
 import matplotlib
 matplotlib.use('agg')
 

@@ -54,6 +54,9 @@ $setglobal MTS 0
 * (1 to retrieve 0 to not)
 $setglobal RetrieveStatus 0
 
+* Activate the flexible demand equations
+$setglobal ActivateFlexibleDemand 1
+
 *===============================================================================
 *Definition of   sets and parameters
 *===============================================================================
@@ -62,7 +65,7 @@ mk               Markets
 n                Nodes
 l                Lines
 au               All Units
-u(au)            Generation units
+u(au)           Generation units
 t                Generation technologies
 tr(t)            Renewable generation technologies
 f                Fuel types
@@ -97,37 +100,37 @@ CHPMaxHeat(chp)                  [MW\u]     Maximum heat capacity of chp plant
 CHPType
 CommittedInitial(u)              [n.a.]   Initial committment status
 Config
-*CostCurtailment(n,h)            [EUR\MW]  Curtailment costs
+*CostCurtailment(n,h)             [EUR\MW]  Curtailment costs
 CostFixed(u)                     [EUR\h]    Fixed costs
 CostRampUp(u)                    [EUR\MW] Ramp-up costs
 CostRampDown(u)                  [EUR\MW] Ramp-down costs
 CostShutDown(u)                  [EUR\u]    Shut-down costs
 CostStartUp(u)                   [EUR\u]    Start-up costs
 CostVariable(u,h)                [EUR\MW]   Variable costs
-CostHeatSlack(th,h)              [EUR\MWh]  Cost of supplying heat via other means
+CostHeatSlack(th,h)             [EUR\MWh]  Cost of supplying heat via other means
 CostLoadShedding(n,h)            [EUR\MWh] Cost of load shedding
 Curtailment(n)                   [n.a]    Curtailment allowed or not {1 0} at node n
 Demand(mk,n,h)                   [MW]     Demand
-Efficiency(p2h,h)                [%]      Efficiency
+Efficiency(p2h,h)                  [%]      Efficiency
 EmissionMaximum(n,p)             [tP]     Emission limit
 EmissionRate(u,p)                [tP\MWh] P emission rate
 FlowMaximum(l,h)                 [MW]     Line limits
 FlowMinimum(l,h)                 [MW]     Minimum flow
 Fuel(u,f)                        [n.a.]   Fuel type {1 0}
-HeatDemand(au,h)                 [MWh\u]  Heat demand profile for chp units
+HeatDemand(au,h)                [MWh\u]  Heat demand profile for chp units
 LineNode(l,n)                    [n.a.]   Incidence matrix {-1 +1}
 LoadShedding(n,h)                [MW]   Load shedding capacity
-Location(au,n)                   [n.a.]   Location {1 0}
+Location(au,n)                    [n.a.]   Location {1 0}
 Markup(u,h)                      [EUR\MW]   Markup
 OutageFactor(u,h)                [%]      Outage Factor (100% = full outage)
-PartLoadMin(au)                  [%]      Minimum part load
-PowerCapacity(au)                [MW\u]     Installed capacity
+PartLoadMin(au)                 [%]      Minimum part load
+PowerCapacity(au)               [MW\u]     Installed capacity
 PowerInitial(u)                  [MW\u]     Power output before initial period
-PowerMinStable(au)               [MW\u]     Minimum power output
+PowerMinStable(au)              [MW\u]     Minimum power output
 PriceTransmission(l,h)           [EUR\MWh]  Transmission price
-StorageChargingCapacity(au)      [MW\u]     Storage capacity
-StorageChargingEfficiency(au)    [%]      Charging efficiency
-StorageSelfDischarge(au)         [%\day]  Self-discharge of the storage units
+StorageChargingCapacity(au)       [MW\u]     Storage capacity
+StorageChargingEfficiency(au)   [%]      Charging efficiency
+StorageSelfDischarge(au)        [%\day]  Self-discharge of the storage units
 RampDownMaximum(u)               [MW\h\u]   Ramp down limit
 RampShutDownMaximum(u)           [MW\h\u]   Shut-down ramp limit
 RampStartUpMaximum(u)            [MW\h\u]   Start-up ramp limit
@@ -135,20 +138,20 @@ RampStartUpMaximumH(u,h)         [MW\h\u]   Start-up ramp limit - Clustered form
 RampShutDownMaximumH(u,h)        [MW\h\u]   Shut-down ramp limit - Clustered formulation
 RampUpMaximum(u)                 [MW\h\u]   Ramp up limit
 Reserve(t)                       [n.a.]   Reserve technology {1 0}
-StorageCapacity(au)              [MWh\u]    Storage capacity
-StorageDischargeEfficiency(au)   [%]      Discharge efficiency
+StorageCapacity(au)             [MWh\u]    Storage capacity
+StorageDischargeEfficiency(au)  [%]      Discharge efficiency
 StorageOutflow(u,h)              [MWh\u]    Storage outflows
 StorageInflow(u,h)               [MWh\u]    Storage inflows (potential energy)
-StorageInitial(au)               [MWh]    Storage level before initial period
+StorageInitial(au)                [MWh]    Storage level before initial period
 StorageProfile(u,h)              [MWh]    Storage level to be resepected at the end of each horizon
-StorageMinimum(au)               [MWh\u]    Storage minimum
+StorageMinimum(au)                [MWh\u]    Storage minimum
 Technology(u,t)                  [n.a.]   Technology type {1 0}
 TimeDownMinimum(u)               [h]      Minimum down time
 TimeUpMinimum(u)                 [h]      Minimum up time
 $If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment status as for the MILP
-Nunits(au)                       [n.a.]   Number of units inside the cluster (upper bound value for integer variables)
+Nunits(au)                      [n.a.]   Number of units inside the cluster (upper bound value for integer variables)
 K_QuickStart(n)                  [n.a.]   Part of the reserve that can be provided by offline quickstart units
-QuickStartPower(u,h)             [MW\h\u]   Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
+QuickStartPower(u,h)            [MW\h\u]   Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
 ;
 
 *Parameters as used within the loop
@@ -157,13 +160,14 @@ CostLoadShedding(n,h)            [EUR\MW]  Value of lost load
 LoadMaximum(u,h)                 [%]     Maximum load given AF and OF
 PowerMustRun(u,h)                [MW\u]    Minimum power output
 StorageFinalMin(s)               [MWh]   Minimum storage level at the end of the optimization horizon
+MaxFlexDemand(n)                 [MW]    Maximum value of the flexible demand parameter
+MaxOverSupply(n,h)               [MWh]   Maximum flexible demand accumultation
+AccumulatedOverSupply_inital(n)  [MWh]   Initial value of the flexible demand accumulation
 ;
-
 
 * Scalar variables necessary to the loop:
 scalar FirstHour,LastHour,LastKeptHour,day,ndays,failed;
 FirstHour = 1;
-Scalar TimeStep;
 
 *===============================================================================
 *Data import
@@ -239,6 +243,7 @@ $LOAD CostRampUp
 $LOAD CostRampDown
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
 ;
+
 
 $If %Verbose% == 0 $goto skipdisplay
 
@@ -322,6 +327,7 @@ $If not %LPFormulation% == 1 INTEGER VARIABLES Committed (u,h), StartUp(u,h), Sh
 $label skipVariables
 
 POSITIVE VARIABLES
+AccumulatedOverSupply(n,h) [MWh]   Accumulated oversupply due to the flexible demand
 CostStartUpH(u,h)          [EUR]   Cost of starting up
 CostShutDownH(u,h)         [EUR]   cost of shutting down
 CostRampUpH(u,h)           [EUR]   Ramping cost
@@ -333,8 +339,8 @@ PowerConsumption(p2h,h)    [MW]    Power consumption by P2H units
 PowerMaximum(u,h)          [MW]    Power output
 PowerMinimum(u,h)          [MW]    Power output
 ShedLoad(n,h)              [MW]    Shed load
-StorageInput(au,h)         [MWh]   Charging input for storage units
-StorageLevel(au,h)         [MWh]   Storage level of charge
+StorageInput(au,h)        [MWh]   Charging input for storage units
+StorageLevel(au,h)        [MWh]   Storage level of charge
 LL_MaxPower(n,h)           [MW]    Deficit in terms of maximum power
 LL_RampUp(u,h)             [MW]    Deficit in terms of ramping up for each plant
 LL_RampDown(u,h)           [MW]    Deficit in terms of ramping down
@@ -347,18 +353,20 @@ SystemCost(h)              [EUR]   Hourly system cost
 Reserve_2U(u,h)            [MW]    Spinning reserve up
 Reserve_2D(u,h)            [MW]    Spinning reserve down
 Reserve_3U(u,h)            [MW]    Non spinning quick start reserve up
-Heat(au,h)                 [MW]    Heat output by chp plant
-HeatSlack(au,h)            [MW]    Heat satisfied by other sources
+Heat(au,h)                [MW]    Heat output by chp plant
+HeatSlack(au,h)           [MW]    Heat satisfied by other sources
 WaterSlack(s)              [MWh]   Unsatisfied water level constraint
 ;
 
 free variable
 SystemCostD                ![EUR]   Total system cost for one optimization period
+DemandModulation(n,h)      [MW] Difference between the flexible demand and the baseline
 ;
 
 *===============================================================================
 *Assignment of initial values
 *===============================================================================
+
 
 *Initial commitment status
 $If %MTS%==0 CommittedInitial(u)=0;
@@ -381,9 +389,17 @@ PowerMustRun(u,h)$(sum(tr,Technology(u,tr))>=1 and smin(n,Location(u,n)*(1-Curta
 * Part of the reserve that can be provided by offline quickstart units:
 K_QuickStart(n) = Config("QuickStartShare","val");
 
+* Flexible Demand
+MaxFlexDemand(n) = smax(h,Demand("Flex",n,h));
+MaxOverSupply(n,h) = Config("DemandFlexibility","val") * Demand("Flex",n,h);
+AccumulatedOverSupply_inital(n) = 0;
+
 * Time step
 TimeStep = Config("SimulationTimeStep","val");
+
+
 $If %Verbose% == 1 Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial;
+
 $offorder
 
 
@@ -434,6 +450,11 @@ EQ_Flow_limits_upper
 EQ_Force_Commitment
 EQ_Force_DeCommitment
 EQ_LoadShedding
+EQ_Flexible_Demand
+EQ_Flexible_Demand_Max
+EQ_Flexible_Demand_Modulation_Min
+EQ_Flexible_Demand_Modulation_Max
+EQ_No_Flexible_Demand
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 ;
 
@@ -452,7 +473,7 @@ $ifthen %MTS% == 1
 EQ_SystemCost(i)..
          SystemCost(i)
          =E=
-         sum(u,CostFixed(u))
+         sum(u,CostFixed(u)*Committed(u,i))
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
@@ -498,6 +519,8 @@ EQ_SystemCost(i)..
 
 $endIf
 ;
+
+
 
 EQ_Objective_function..
          SystemCostD
@@ -588,12 +611,50 @@ EQ_Demand_balance_DA(n,i)..
          sum(u,Power(u,i)*Location(u,n))
           +sum(l,Flow(l,i)*LineNode(l,n))
          =E=
-         Demand("DA",n,i)
+         Demand("DA",n,i) + Demand("Flex",n,i)
+         +DemandModulation(n,i)
          +sum(s,StorageInput(s,i)*Location(s,n))
          -ShedLoad(n,i)
          +sum(p2h,PowerConsumption(p2h,i)*Location(p2h,n))
          -LL_MaxPower(n,i)
          +LL_MinPower(n,i)
+;
+
+* Energy balance at the level of the flexible demand, considered as a storage capacity
+EQ_Flexible_Demand(n,i)..
+         DemandModulation(n,i) * TimeStep
+         =e=
+         AccumulatedOverSupply(n,i)
+         - AccumulatedOverSupply_inital(n)$(ord(i) = 1)
+         - AccumulatedOverSupply(n,i-1)$(ord(i) > 1)
+;
+
+* The accumulated oversupply is limited by size of flexible demand (i.e. storage) capacity
+EQ_Flexible_Demand_max(n,i)..
+         AccumulatedOverSupply(n,i)
+         =l=
+         MaxOverSupply(n,i)
+;
+
+* The maximum downards demand modulation  at each time step is limited by the value of the flexible demand
+EQ_Flexible_Demand_Modulation_Min(n,i)..
+         DemandModulation(n,i)
+         =g=
+         -Demand("Flex",n,i)
+;
+
+* The upwards demand modulation is arbitrarily limited by the maximum recorded value of the flexible demand
+EQ_Flexible_Demand_Modulation_max(n,i)..
+         DemandModulation(n,i)
+         =l=
+         MaxFlexDemand(n) - Demand("flex",n,i)
+;
+
+* If flexible demand is not considered, set the accumulated over supply to zero:
+EQ_No_Flexible_Demand(n,i)..
+         AccumulatedOverSupply(n,i)
+         =e=
+         0
 ;
 
 *Hourly demand balance in the upwards spinning reserve market for each node
@@ -841,6 +902,7 @@ EQ_P2H(p2h,i)..
          PowerConsumption(p2h,i) * Efficiency(p2h,i)
 ;
 
+
 EQ_Max_P2H(p2h,i)..
          PowerConsumption(p2h,i)
          =L=
@@ -927,12 +989,17 @@ EQ_Storage_boundaries,
 EQ_Storage_MaxCharge
 EQ_Storage_MaxDischarge
 EQ_SystemCost
-EQ_Emission_limits,
+*EQ_Emission_limits,
 EQ_Flow_limits_lower,
 EQ_Flow_limits_upper,
 $If not %MTS% == 1 EQ_Force_Commitment,
 $If not %MTS% == 1 EQ_Force_DeCommitment,
 EQ_LoadShedding,
+$If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand,
+$If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand_Max,
+$if not %ActivateFlexibleDemand% == 1 EQ_No_Flexible_Demand,
+EQ_Flexible_Demand_Modulation_Min,
+EQ_Flexible_Demand_Modulation_Max,
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 /
 ;
@@ -1022,6 +1089,7 @@ if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, Commi
          StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
          StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
 
+   
 $else
 if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, PowerInitial_dbg(u) = PowerInitial(u); StorageInitial_dbg(s) = StorageInitial(s);
                                                                            EXECUTE_UNLOAD "debug.gdx" day, status, PowerInitial_dbg, StorageInitial_dbg;
@@ -1031,6 +1099,8 @@ if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, Power
 * Initial storage level
          StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
 $endIf;
+$If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),AccumulatedOverSupply.L(n,i));
+
 
 *Loop variables to display after solving:
 $If %MTS%==1 $goto skipskipdisplay4
@@ -1065,6 +1135,7 @@ OutputSystemCost(h)
 OutputSpillage(s,h)
 OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
+$If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 ShadowPrice(n,h)
 HeatShadowPrice(au,h)
 LostLoad_MaxPower(n,h)
@@ -1095,6 +1166,7 @@ OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(s,z)  = Spillage.L(s,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
+$If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
 LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
 LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
 LostLoad_2D(n,z) = LL_2D.L(n,z);
@@ -1121,6 +1193,7 @@ OutputSystemCost,
 OutputSpillage,
 OutputShedLoad,
 OutputCurtailedPower,
+$If %ActivateFlexibleDemand% == 1 OutputDemandModulation,
 OutputGenMargin,
 LostLoad_MaxPower,
 LostLoad_MinPower,
@@ -1212,15 +1285,3 @@ $If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartU
 display day,FirstHour,LastHour,LastKeptHour;
 Display StorageFinalMin,PowerInitial,CommittedInitial,StorageFinalMin;
 Display Flow.L,Power.L,Committed.L,ShedLoad.L,StorageLevel.L,StorageInput.L,SystemCost.L,Spillage.L,StorageLevel.L,StorageInput.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
-$label skipresults9
-
-$If %MTS%==0 $goto skipresults10
-$If %Verbose% == 1   Display PowerInitial,StorageFinalMin;
-$If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
-$If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Power_available.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
-
-display day,FirstHour,LastHour,LastKeptHour;
-Display StorageFinalMin,PowerInitial,StorageFinalMin;
-Display Flow.L,Power.L,ShedLoad.L,StorageLevel.L,StorageInput.L,SystemCost.L,Spillage.L,StorageLevel.L,StorageInput.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L;
-
-$label skipresults10

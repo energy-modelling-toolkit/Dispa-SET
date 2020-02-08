@@ -20,8 +20,8 @@ Install Python 3.7, with full scientific stack. The Anaconda_ distribution is re
 * pyyaml
 * pytest
 
-Using Dispa-SET with GAMS:
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Using Dispa-SET:
+^^^^^^^^^^^^^^^^
 Dispa-SET is primarily designed to run with GAMS and therefore requires GAMS to be installed with a valid user licence. Currently, only the 64-bit version of GAMS is supported in Dispa-SET!
 
 The GAMS api for python has been pre-compiled in the "Externals" folder and is usable for Windows 64 bit systems. If the pre-compiled binaries are not available or could not be loaded, they must be installed manually using following command in the Anaconda prompt::
@@ -35,17 +35,6 @@ Alternatively, the gams python api can also be compiled from the source provided
 NB: For Windows users, the manual api compilation might require the installation of a C++ compiler for Python. This corresponds to the typical error message: "Unable to find vcvarsall.bat". This can be solved by installing the freely available "Microsoft Visual C++ Compiler for Python".  In some cases the path to the compiler must be added to the PATH windows environment variable (e.g. C:\Program Files\Common Files\Microsoft\Visual C++ for Python\9.0)
 
 The api requires the path to the gams installation folder. The "get_gams_path()" function of dispa-set performs a system search to automatically detect this path. It case it is not successful, the user is prompted for the proper installation path. 
-
-Using Dispa-SET with PYOMO:
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. warning::
-    The PYOMO version of Dispa-SET is currently outdated. The changes implemented in Dispa-SET version 2.2 and 2.3 will not work in the Pyomo solver. It is recommended using the GAMS solver to benefit from the latest improvements of the model.
-
-* Install pyomo ::
-
-	pip install pyomo
-* Install a solver and add it to the PATH environment variable (e.g. if cplex is installed, the "cplex" command should be callable from any command prompt).
 
 
 Step-by-step example of a Dispa-SET run
@@ -91,7 +80,7 @@ Dispa-SET runs are defined in dedicated excel configuration files stored in the 
 
 1.2. Pre-processing
 """""""""""""""""""
-From the command line, specify the configuration file to be used as an argument, the solver (Pyomo or GAMS) and the actions to be performed. Within the "Dispa-SET" folder, run::
+From the command line, specify the configuration file to be used as an argument and the actions to be performed. Within the "Dispa-SET" folder, run::
 
 	dispaset -c ./ConfigFiles/ConfigTest.xlsx build
 
@@ -110,10 +99,6 @@ The simulation can be started directly from the main DispaSet python file after 
 This runs the optimisation, and stores the results in the same folder. Note that this can only work is the simulation has been pre-processed before (step 1.2). It is possible to combine the pre-processing and simulation step in one command::
 
 	dispaset -c ./ConfigFiles/ConfigTest.xlsx build simulate	
-
-The same action can be performed using the PYOMO solver. In that case, the "-g" argument must be changed into "-p"::
-
-	dispaset -p -c ./ConfigFiles/ConfigTest.xlsx build simulate
 
 2. Using the Dispa-SET API.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

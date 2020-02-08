@@ -9,7 +9,8 @@ import pandas as pd
 from future.builtins import int
 
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
-    check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows
+    check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows, \
+    check_FlexibleDemand
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix
 
@@ -25,6 +26,7 @@ def get_git_revision_tag():
         return check_output(["git", "describe", "--tags", "--always"]).strip()
     except:
         return 'NA'
+
 
 def build_single_run(config, profiles=None):
     """
@@ -58,25 +60,25 @@ def build_single_run(config, profiles=None):
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
     
     # Indexes of the simulation:
-    config['idx'] = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*config['StartDate']),
-                                             end=pd.datetime(*config['StopDate']),
-                                             freq=pd_timestep(config['DataTimeStep']))).tz_localize(None)
+    config['idx'] = pd.date_range(start=dt.datetime(*config['StartDate']),
+                                  end=dt.datetime(*config['StopDate']),
+                                  freq=commons['TimeStep']).tz_localize(None)
 
 
     # Indexes for the whole year considered in StartDate
-    idx_year = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*(config['StartDate'][0],1,1,0,0)),
-                                                        end=pd.datetime(*(config['StartDate'][0],12,31,23,59,59)),
-                                                        freq=pd_timestep(config['DataTimeStep']))
-                                          )
+    idx_year = pd.date_range(start=dt.datetime(*(config['StartDate'][0],1,1,0,0)),
+                             end=dt.datetime(*(config['StartDate'][0],12,31,23,59,59)),
+                             freq=commons['TimeStep'])
+
     
     # Indexes including the last look-ahead period
     enddate_long = config['idx'][-1] + dt.timedelta(days=config['LookAhead'])
-    idx_long = pd.DatetimeIndex(pd.date_range(start=config['idx'][0], end=enddate_long, freq=pd_timestep(config['DataTimeStep'])))
+    idx_long = pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep'])
     Nhours_long = len(idx_long)
     config['idx_long'] = idx_long
     
     # Indexes of with the specified simulation time step:
-    idx_sim = pd.DatetimeIndex(pd.date_range(start=config['idx'][0], end=enddate_long, freq=pd_timestep(config['SimulationTimeStep'])))
+    idx_sim = pd.date_range(start=config['idx'][0], end=enddate_long, freq=pd_timestep(config['SimulationTimeStep']))
     config['idx_sim'] = idx_sim
     Nsim = len(idx_sim)
     
@@ -88,12 +90,6 @@ def build_single_run(config, profiles=None):
     delta = config['idx'][-1] - config['idx'][0]
     days_simulation = delta.days + 1
 
-    # Defining missing configuration fields for backwards compatibility:
-    if not isinstance(config['default']['CostLoadShedding'],(float,int)):
-        config['default']['CostLoadShedding'] = 1000
-    if not isinstance(config['default']['CostHeatSlack'],(float,int)):
-        config['default']['CostHeatSlack'] = 50
-    
     # Load :
     Load = NodeBasedTable('Demand',config)
     PeakLoad = Load.max()
@@ -118,7 +114,8 @@ def build_single_run(config, profiles=None):
     # Load Shedding:
     LoadShedding = NodeBasedTable('LoadShedding',config,default=config['default']['LoadShedding'])
     CostLoadShedding = NodeBasedTable('CostLoadShedding',config,default=config['default']['CostLoadShedding'])
-
+    ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand',config,default=config['default']['ShareOfFlexibleDemand'])
+    
     # Power plants:
     plants = pd.DataFrame()
     if os.path.isfile(config['PowerPlantData']):
@@ -127,8 +124,8 @@ def build_single_run(config, profiles=None):
         for z in config['zones']:
             path = config['PowerPlantData'].replace('##', str(z))
             tmp = pd.read_csv(path)
-            plants = plants.append(tmp, ignore_index=True)
-    # reomve invalide power plants:
+            plants = plants.append(tmp, ignore_index=True, sort = False)
+    # remove invalide power plants:
     plants = select_units(plants,config)
 
     # Some columns can be in two format (absolute or per unit). If not specified, they are set to zero:
@@ -185,6 +182,7 @@ def build_single_run(config, profiles=None):
     check_AvailabilityFactors(plants,AF)
     check_heat_demand(plants,HeatDemand)
     check_temperatures(plants,Temperatures)
+    check_FlexibleDemand(ShareOfFlexibleDemand)
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
@@ -280,7 +278,7 @@ def build_single_run(config, profiles=None):
     
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
-
+    
     # merge the outages:
     for i in plants.index:  # for all the old plant indexes
         # get the old plant name corresponding to s:
@@ -298,7 +296,7 @@ def build_single_run(config, profiles=None):
     # %% Store all times series and format
 
     # Formatting all time series (merging, resempling) and store in the FinalTS dict
-    finalTS = {'Load':Load,'Reserve2D':reserve_2D_tot,'Reserve2U':reserve_2U_tot,'Efficiencies':Efficiencies,'NTCs':NTCs,'Inter_RoW':Inter_RoW,'LoadShedding':LoadShedding,'CostLoadShedding':CostLoadShedding,'ScaledInflows':ReservoirScaledInflows,'ReservoirLevels':ReservoirLevels,'Outages':Outages,'AvailabilityFactors':AF,'CostHeatSlack':CostHeatSlack,'HeatDemand':HeatDemand}
+    finalTS = {'Load':Load,'Reserve2D':reserve_2D_tot,'Reserve2U':reserve_2U_tot,'Efficiencies':Efficiencies,'NTCs':NTCs,'Inter_RoW':Inter_RoW,'LoadShedding':LoadShedding,'CostLoadShedding':CostLoadShedding,'ScaledInflows':ReservoirScaledInflows,'ReservoirLevels':ReservoirLevels,'Outages':Outages,'AvailabilityFactors':AF,'CostHeatSlack':CostHeatSlack,'HeatDemand':HeatDemand,'ShareOfFlexibleDemand':ShareOfFlexibleDemand}
     
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows','ReservoirLevels','Outages','AvailabilityFactors','CostHeatSlack']:
@@ -333,7 +331,7 @@ def build_single_run(config, profiles=None):
     sets = {}
     sets['h'] = [str(x + 1) for x in range(Nsim)]
     sets['z'] = [str(x + 1) for x in range(Nsim - config['LookAhead'] * config['SimulationTimeStep'])]
-    sets['mk'] = ['DA', '2U', '2D']
+    sets['mk'] = ['DA', '2U', '2D','Flex']
     sets['n'] = config['zones']
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
@@ -434,6 +432,7 @@ def build_single_run(config, profiles=None):
     for var in ['Nunits']:
         if var in Plants_merged:
             parameters[var]['val'] = Plants_merged[var].values
+
 
     # List of parameters whose value is known, and provided in the dataframe Plants_sto.
     for var in ['StorageChargingCapacity', 'StorageChargingEfficiency']:
@@ -615,7 +614,7 @@ def build_single_run(config, profiles=None):
                 parameters['PowerInitial']['val'][i] = (Plants_merged['PartLoadMin'][i] + 1) / 2 * \
                                                        Plants_merged['PowerCapacity'][i]
             # Config variables:
-    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead','SimulationTimeStep','ValueOfLostLoad','QuickStartShare','CostOfSpillage','WaterValue']
+    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead','SimulationTimeStep','ValueOfLostLoad','QuickStartShare','CostOfSpillage','WaterValue','DemandFlexibility']
     sets['y_config'] = ['year', 'month', 'day', 'val']
     dd_begin = idx_sim[0]
     dd_end = idx_sim[-1]
@@ -623,15 +622,16 @@ def build_single_run(config, profiles=None):
     values = np.array(
             [[dd_begin.year,    dd_begin.month,     dd_begin.day,           0],
              [dd_end.year,      dd_end.month,       dd_end.day,             0],
-             [0,                0,                  config['HorizonLength'], 0],
-             [0,                0,                  config['LookAhead'],    0],
-             [0,                0,                  0,                      config['SimulationTimeStep']],
-             [0,                0,                  0,                      config['default']['ValueOfLostLoad']],
-             [0,                0,                  0,                      config['default']['ShareOfQuickStartUnits']],
-             [0,                0,                  0,                      config['default']['PriceOfSpillage']],
-             [0,                0,                  0,                      config['default']['WaterValue']]]
+             [1e-5,             0,                  config['HorizonLength'], 0],
+             [1e-5,             0,                  config['LookAhead'],    0],
+             [1e-5,             0,                  0,                      config['SimulationTimeStep']],
+             [1e-5,             0,                  0,                      config['default']['ValueOfLostLoad']],
+             [1e-5,             0,                  0,                      config['default']['ShareOfQuickStartUnits']],
+             [1e-5,             0,                  0,                      config['default']['PriceOfSpillage']],
+             [1e-5,             0,                  0,                      config['default']['WaterValue']],
+             [1e-5,             0,                  0,                      config['default']['DemandFlexibility']]]
             )
-
+    # the 1E-5 values are needed to be sure that all sets are written with the config parameter
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
     # %%#################################################################################################################

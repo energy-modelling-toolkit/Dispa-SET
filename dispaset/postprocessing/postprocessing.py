@@ -7,6 +7,7 @@ Set of functions useful to analyse to DispaSET output data.
 
 from __future__ import division
 
+import datetime as dt
 import logging
 import sys
 
@@ -33,6 +34,8 @@ def get_load_data(inputs, z):
     datain = inputs['param_df']
     out = pd.DataFrame(index=datain['Demand'].index)
     out['Load'] = datain['Demand']['DA', z]
+    if ('Flex', z) in datain['Demand']:
+        out['Load'] += datain['Demand'][('Flex', z)] 
     # Listing power plants with non-dispatchable power generation:
     VREunits = []
     VRE = np.zeros(len(out))
@@ -97,6 +100,34 @@ def filter_by_zone(PowerOutput, inputs, z):
     return Power
 
 
+def filter_by_tech(PowerOutput, inputs, t):
+    """
+    This function filters the dispaset power output dataframe by technology
+
+    :param PowerOutput:   Dataframe of power generation with units as columns and time as index
+    :param inputs:        Dispaset inputs version 2.1.1
+    :param t:             Selected tech (e.g. 'HDAM')
+    :returns Power:
+    """
+    loc = inputs['units']['Technology']
+    Power = PowerOutput.loc[:, [u for u in PowerOutput.columns if loc[u] == t]]
+    return Power
+
+
+def filter_by_storage(PowerOutput, Inputs, StorageSubset=None):
+    """
+    This function filters the power generation curves of the different storage units by storage type
+
+    :param PowerOutput:     Dataframe of power generationwith units as columns and time as index
+    :param Inputs:          Dispaset inputs version 2.1.1
+    :param SpecifySubset:   If not all EES storages should be considered, list containing the relevant ones
+    :returns PowerByFuel:   Dataframe with power generation by fuel
+    """
+    storages = Inputs['sets'][StorageSubset]
+    Power = PowerOutput.loc[:, PowerOutput.columns.isin(storages)]
+    return Power
+
+
 def get_plot_data(inputs, results, z):
     """
     Function that reads the results dataframe of a DispaSET simulation and extract the dispatch data spedific to one zone
@@ -112,7 +143,15 @@ def get_plot_data(inputs, results, z):
         #onnly take the columns that correspond to storage units (StorageInput is also used for CHP plants):
         cols = [col for col in results['OutputStorageInput'] if inputs['units'].loc[col,'Technology'] in commons['tech_storage']]
         tmp = filter_by_zone(results['OutputStorageInput'][cols], inputs, z)
-        plotdata['Storage'] = -tmp.sum(axis=1)
+        bb = pd.DataFrame()
+        for tech in commons['tech_storage']:
+            aa = filter_by_tech(tmp, inputs, tech)
+            aa = aa.sum(axis=1)
+            aa = pd.DataFrame(aa,columns=[tech])
+            bb = pd.concat([bb,aa],axis=1)
+        bb = -bb
+        plotdata = pd.concat([plotdata,bb], axis=1)
+        # plotdata['Storage'] = -tmp.sum(axis=1)
     else:
         plotdata['Storage'] = 0
     plotdata.fillna(value=0, inplace=True)
@@ -169,7 +208,7 @@ def get_result_analysis(inputs, results):
 
     StartDate = inputs['config']['StartDate']
     StopDate = inputs['config']['StopDate']
-    index = pd.date_range(start=pd.datetime(*StartDate), end=pd.datetime(*StopDate), freq='h')
+    index = pd.date_range(start=dt.datetime(*StartDate), end=dt.datetime(*StopDate), freq='h')
 
     # Aggregated values:
     demand = {}
@@ -179,8 +218,12 @@ def get_result_analysis(inputs, results):
             demand_p2h = demand_p2h.sum(axis=1)
         else:
             demand_p2h = pd.Series(0, index=results['OutputPower'].index)
+        if ('Flex', z) in inputs['param_df']['Demand']:
+            demand_flex = inputs['param_df']['Demand'][('Flex', z)] 
+        else:
+            demand_flex = pd.Series(0, index=results['OutputPower'].index)
         demand_da = inputs['param_df']['Demand'][('DA', z)]
-        demand[z] = pd.DataFrame(demand_da + demand_p2h, columns = [('DA', z)])
+        demand[z] = pd.DataFrame(demand_da + demand_p2h + demand_flex, columns = [('DA', z)])
     demand = pd.concat(demand, axis=1)
     demand.columns = demand.columns.droplevel(-1)
 
@@ -190,6 +233,15 @@ def get_result_analysis(inputs, results):
     Curtailment = results['OutputCurtailedPower'].sum().sum()
     MaxCurtailemnt = results['OutputCurtailedPower'].sum(axis=1).max() / 1e6
     MaxLoadShedding = results['OutputShedLoad'].sum(axis=1).max()
+    
+    if 'OutputDemandModulation' in results:
+        ShiftedLoad_net = results['OutputDemandModulation'].sum().sum() / 1E6
+        ShiftedLoad_tot = results['OutputDemandModulation'].abs().sum().sum()/2 /1E6
+        if ShiftedLoad_net > 0.1 * ShiftedLoad_tot:
+            logging.error('The net shifted load is higher than 10% of the total shifted load, although it should be zero')
+    else:
+        ShiftedLoad_tot = 0
+    
 
     # TotalLoad = dfin['Demand']['DA'].loc[index, :].sum().sum()
     # # PeakLoad = inputs['parameters']['Demand']['val'][0,:,idx].sum(axis=0).max()
@@ -222,6 +274,7 @@ def get_result_analysis(inputs, results):
     print ('Peak Load:' + str(PeakLoad) + ' MW')
     print ('Net Importations:' + str(NetImports / 1E6) + ' TWh')
     print ('Total Load Shedding:' + str(LoadShedding) + ' TWh')
+    print ('Total shifted load:' + str(ShiftedLoad_tot) + ' TWh')
     print ('Maximum Load Shedding:' + str(MaxLoadShedding) + ' MW')
     print ('Total Curtailed RES:' + str(Curtailment) + ' TWh')
     print ('Maximum Curtailed RES:' + str(MaxCurtailemnt) + ' MW')
@@ -229,8 +282,14 @@ def get_result_analysis(inputs, results):
     # Zone-specific values:
     ZoneData = pd.DataFrame(index=inputs['sets']['n'])
 
-    ZoneData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6
-    ZoneData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0)
+    
+    if 'Flex' in dfin['Demand']:
+        ZoneData['Flexible Demand'] = inputs['param_df']['Demand']['Flex'].sum(axis=0) / 1E6
+        ZoneData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6 + ZoneData['Flexible Demand']
+        ZoneData['PeakLoad'] = (dfin['Demand']['DA']+dfin['Demand']['Flex']).max(axis=0) 
+    else:
+        ZoneData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0) 
+        ZoneData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6
 
     ZoneData['NetImports'] = 0
     for z in ZoneData.index:
@@ -238,6 +297,8 @@ def get_result_analysis(inputs, results):
 
     ZoneData['LoadShedding'] = results['OutputShedLoad'].sum(axis=0) / 1E6
     ZoneData['MaxLoadShedding'] = results['OutputShedLoad'].max()
+    if 'OutputDemandModulation' in results:
+        ZoneData['ShiftedLoad'] = results['OutputDemandModulation'].abs().sum() / 1E6
     ZoneData['Curtailment'] = results['OutputCurtailedPower'].sum(axis=0) / 1E6
     ZoneData['MaxCurtailment'] = results['OutputCurtailedPower'].max()
 
@@ -307,7 +368,7 @@ def get_result_analysis(inputs, results):
                                                             (tmp_data['Technology'] == t)][l].sum()
 
     return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-            'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt, 'ShedLoad': LoadShedding,
+            'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt, 'ShedLoad': LoadShedding,'ShiftedLoad':ShiftedLoad_tot,
             'MaxShedLoad': MaxLoadShedding, 'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
             'UnitData': UnitData, 'FuelData': FuelData}
 
@@ -378,7 +439,7 @@ def CostExPost(inputs,results):
     costs['FixedCosts'] = 0
     for u in results['OutputCommitted']:
         if u in dfin['CostFixed'].index:
-            costs['FixedCosts'] =+ dfin['CostFixed'].loc[u,'CostFixed'] * results['OutputCommitted'][u]
+            costs['FixedCosts'] =+ dfin.loc[u,'CostFixed'] * results['OutputCommitted'][u]
     
             
     #%% Ramping and startup costs:

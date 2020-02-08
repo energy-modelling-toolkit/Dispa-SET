@@ -5,8 +5,8 @@
 ### Description
 The Dispa-SET model is a unit commitment and dispatch model developed within the “Joint Research Centre” and focused on the balancing and flexibility problems focusing on the European context. It is written in GAMS with advanced input/output data handling and visualization routines in Python.
 
-Three different formulations are available offering a trade-off between accuracy and computational complexity ( Linear Programming (LP), Mixed-Integer Linear Programming (MILP)). This allows 
- to model a power system at any level of detail e.g. micro-grid, region, country, continent and any time step. A Pan-European scenario is included with the model as of version 2.3.
+Three different formulations are available offering a trade-off between accuracy and computational complexity ( Linear Programming (LP), Mixed-Integer Linear Programming (MILP)). This allows
+ to model a power system at any level of detail e.g. micro-grid, region, country, continent. A Pan-European scenario is included with the model as of version 2.3.
  
 ### Features
 The model is expressed as an optimization problem. 

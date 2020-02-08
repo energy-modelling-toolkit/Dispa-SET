@@ -8,7 +8,6 @@ Subpackages
 
     dispaset.preprocessing
     dispaset.postprocessing
-    dispaset.pyomo
     dispaset.misc
 
 
