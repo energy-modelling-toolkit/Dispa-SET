@@ -34,6 +34,8 @@ def get_load_data(inputs, z):
     datain = inputs['param_df']
     out = pd.DataFrame(index=datain['Demand'].index)
     out['Load'] = datain['Demand']['DA', z]
+    if ('Flex', z) in datain['Demand']:
+        out['Load'] += datain['Demand'][('Flex', z)] 
     # Listing power plants with non-dispatchable power generation:
     VREunits = []
     VRE = np.zeros(len(out))
@@ -216,8 +218,12 @@ def get_result_analysis(inputs, results):
             demand_p2h = demand_p2h.sum(axis=1)
         else:
             demand_p2h = pd.Series(0, index=results['OutputPower'].index)
+        if ('Flex', z) in inputs['param_df']['Demand']:
+            demand_flex = inputs['param_df']['Demand'][('Flex', z)] 
+        else:
+            demand_flex = pd.Series(0, index=results['OutputPower'].index)
         demand_da = inputs['param_df']['Demand'][('DA', z)]
-        demand[z] = pd.DataFrame(demand_da + demand_p2h, columns = [('DA', z)])
+        demand[z] = pd.DataFrame(demand_da + demand_p2h + demand_flex, columns = [('DA', z)])
     demand = pd.concat(demand, axis=1)
     demand.columns = demand.columns.droplevel(-1)
 
@@ -227,6 +233,15 @@ def get_result_analysis(inputs, results):
     Curtailment = results['OutputCurtailedPower'].sum().sum()
     MaxCurtailemnt = results['OutputCurtailedPower'].sum(axis=1).max() / 1e6
     MaxLoadShedding = results['OutputShedLoad'].sum(axis=1).max()
+    
+    if 'OutputDemandModulation' in results:
+        ShiftedLoad_net = results['OutputDemandModulation'].sum().sum() / 1E6
+        ShiftedLoad_tot = results['OutputDemandModulation'].abs().sum().sum()/2 /1E6
+        if ShiftedLoad_net > 0.1 * ShiftedLoad_tot:
+            logging.error('The net shifted load is higher than 10% of the total shifted load, although it should be zero')
+    else:
+        ShiftedLoad_tot = 0
+    
 
     # TotalLoad = dfin['Demand']['DA'].loc[index, :].sum().sum()
     # # PeakLoad = inputs['parameters']['Demand']['val'][0,:,idx].sum(axis=0).max()
@@ -259,6 +274,7 @@ def get_result_analysis(inputs, results):
     print ('Peak Load:' + str(PeakLoad) + ' MW')
     print ('Net Importations:' + str(NetImports / 1E6) + ' TWh')
     print ('Total Load Shedding:' + str(LoadShedding) + ' TWh')
+    print ('Total shifted load:' + str(ShiftedLoad_tot) + ' TWh')
     print ('Maximum Load Shedding:' + str(MaxLoadShedding) + ' MW')
     print ('Total Curtailed RES:' + str(Curtailment) + ' TWh')
     print ('Maximum Curtailed RES:' + str(MaxCurtailemnt) + ' MW')
@@ -266,8 +282,14 @@ def get_result_analysis(inputs, results):
     # Zone-specific values:
     ZoneData = pd.DataFrame(index=inputs['sets']['n'])
 
-    ZoneData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6
-    ZoneData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0)
+    
+    if 'Flex' in dfin['Demand']:
+        ZoneData['Flexible Demand'] = inputs['param_df']['Demand']['Flex'].sum(axis=0) / 1E6
+        ZoneData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6 + ZoneData['Flexible Demand']
+        ZoneData['PeakLoad'] = (dfin['Demand']['DA']+dfin['Demand']['Flex']).max(axis=0) 
+    else:
+        ZoneData['PeakLoad'] = dfin['Demand']['DA'].max(axis=0) 
+        ZoneData['Demand'] = dfin['Demand']['DA'].sum(axis=0) / 1E6
 
     ZoneData['NetImports'] = 0
     for z in ZoneData.index:
@@ -275,6 +297,8 @@ def get_result_analysis(inputs, results):
 
     ZoneData['LoadShedding'] = results['OutputShedLoad'].sum(axis=0) / 1E6
     ZoneData['MaxLoadShedding'] = results['OutputShedLoad'].max()
+    if 'OutputDemandModulation' in results:
+        ZoneData['ShiftedLoad'] = results['OutputDemandModulation'].abs().sum() / 1E6
     ZoneData['Curtailment'] = results['OutputCurtailedPower'].sum(axis=0) / 1E6
     ZoneData['MaxCurtailment'] = results['OutputCurtailedPower'].max()
 
@@ -344,7 +368,7 @@ def get_result_analysis(inputs, results):
                                                             (tmp_data['Technology'] == t)][l].sum()
 
     return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-            'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt, 'ShedLoad': LoadShedding,
+            'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt, 'ShedLoad': LoadShedding,'ShiftedLoad':ShiftedLoad_tot,
             'MaxShedLoad': MaxLoadShedding, 'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
             'UnitData': UnitData, 'FuelData': FuelData}
 
@@ -415,7 +439,7 @@ def CostExPost(inputs,results):
     costs['FixedCosts'] = 0
     for u in results['OutputCommitted']:
         if u in dfin['CostFixed'].index:
-            costs['FixedCosts'] =+ dfin['CostFixed'].loc[u,'CostFixed'] * results['OutputCommitted'][u]
+            costs['FixedCosts'] =+ dfin.loc[u,'CostFixed'] * results['OutputCommitted'][u]
     
             
     #%% Ramping and startup costs:

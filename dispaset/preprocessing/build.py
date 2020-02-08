@@ -9,7 +9,8 @@ import pandas as pd
 from future.builtins import int
 
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
-    check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows
+    check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows, \
+    check_FlexibleDemand
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix
 
@@ -43,7 +44,7 @@ def build_single_run(config, profiles=None):
     #####################################   Main Inputs    ############################################################
     ###################################################################################################################
 
-    # Boolean variable to check wether it is milp or lp:
+    # Boolean variable to check whether it is milp or lp:
     LP = config['SimulationType'] == 'LP' or config['SimulationType'] == 'LP clustered'
 
     # Day/hour corresponding to the first and last days of the simulation:
@@ -52,7 +53,7 @@ def build_single_run(config, profiles=None):
     __, m_start, d_start, __, __, __ = config['StartDate']
     y_end, m_end, d_end, _, _, _ = config['StopDate']
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
-
+    
     # Indexes of the simulation:
     config['idx'] = pd.date_range(start=dt.datetime(*config['StartDate']),
                                   end=dt.datetime(*config['StopDate']),
@@ -64,13 +65,17 @@ def build_single_run(config, profiles=None):
                              end=dt.datetime(*(config['StartDate'][0],12,31,23,59,59)),
                              freq=commons['TimeStep'])
 
-
+    
     # Indexes including the last look-ahead period
     enddate_long = config['idx'][-1] + dt.timedelta(days=config['LookAhead'])
     idx_long = pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep'])
     Nhours_long = len(idx_long)
     config['idx_long'] = idx_long
-
+    
+    # Indexes of with the specified simulation time step:
+    idx_sim = pd.DatetimeIndex(pd.date_range(start=config['idx'][0], end=enddate_long, freq='1h'))
+    config['idx_sim'] = idx_sim
+    Nsim = len(idx_sim)
     # %%#################################################################################################################
     #####################################   Data Loading    ###########################################################
     ###################################################################################################################
@@ -78,12 +83,6 @@ def build_single_run(config, profiles=None):
     # Start and end of the simulation:
     delta = config['idx'][-1] - config['idx'][0]
     days_simulation = delta.days + 1
-
-    # Defining missing configuration fields for backwards compatibility:
-    if not isinstance(config['default']['CostLoadShedding'],(float,int)):
-        config['default']['CostLoadShedding'] = 1000
-    if not isinstance(config['default']['CostHeatSlack'],(float,int)):
-        config['default']['CostHeatSlack'] = 50
 
     # Load :
     Load = NodeBasedTable('Demand',config)
@@ -109,7 +108,8 @@ def build_single_run(config, profiles=None):
     # Load Shedding:
     LoadShedding = NodeBasedTable('LoadShedding',config,default=config['default']['LoadShedding'])
     CostLoadShedding = NodeBasedTable('CostLoadShedding',config,default=config['default']['CostLoadShedding'])
-
+    ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand',config,default=config['default']['ShareOfFlexibleDemand'])
+    
     # Power plants:
     plants = pd.DataFrame()
     if os.path.isfile(config['PowerPlantData']):
@@ -118,8 +118,8 @@ def build_single_run(config, profiles=None):
         for z in config['zones']:
             path = config['PowerPlantData'].replace('##', str(z))
             tmp = pd.read_csv(path)
-            plants = plants.append(tmp, ignore_index=True)
-    # reomve invalide power plants:
+            plants = plants.append(tmp, ignore_index=True, sort = False)
+    # remove invalide power plants:
     plants = select_units(plants,config)
 
     # Some columns can be in two format (absolute or per unit). If not specified, they are set to zero:
@@ -142,13 +142,13 @@ def build_single_run(config, profiles=None):
     plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
     # check storage plants:
     check_sto(config, plants_sto)
-
+    
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
 
     # Defining the P2H units:
     plants_p2h = plants[plants['Technology']=='P2HT']
-
+    
     # All heating units:
     plants_heat = plants_chp.append(plants_p2h)
 
@@ -176,6 +176,7 @@ def build_single_run(config, profiles=None):
     check_AvailabilityFactors(plants,AF)
     check_heat_demand(plants,HeatDemand)
     check_temperatures(plants,Temperatures)
+    check_FlexibleDemand(ShareOfFlexibleDemand)
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
@@ -209,7 +210,7 @@ def build_single_run(config, profiles=None):
                                   'STOChargingEfficiency': 'StorageChargingEfficiency',
                                   'STOSelfDischarge': 'StorageSelfDischarge',
                                   'CO2Intensity': 'EmissionRate'}, inplace=True)
-
+    
     for key in ['TimeUpMinimum','TimeDownMinimum']:
         if any([not x.is_integer() for x in Plants_merged[key].fillna(0).values.astype('float')]):
             logging.warning(key + ' in the power plant data has been rounded to the nearest integer value')
@@ -262,36 +263,16 @@ def build_single_run(config, profiles=None):
             PurePowerCapacity = PowerCapacity + Plants_chp.loc[u,'CHPPowerLossFactor'] * MaxHeat
         Plants_merged.loc[u,'PartLoadMin'] = Plants_merged.loc[u,'PartLoadMin'] * PowerCapacity / PurePowerCapacity  # FIXME: Is this correct?
         Plants_merged.loc[u,'PowerCapacity'] = PurePowerCapacity
-
+    
     Plants_p2h = Plants_merged[Plants_merged['Technology']=='P2HT'].copy()
     # check chp plants:
     check_p2h(config, Plants_p2h)
     # All heating plants:
     Plants_heat = Plants_chp.append(Plants_p2h)
-
+    
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
-
-    # Get the hydro time series corresponding to the original plant list: #FIXME Unused variable ?
-    #StorageFormerIndexes = [s for s in plants.index if
-    #                        plants['Technology'][s] in commons['tech_storage']]
-
-    # Same with the CHPs:
-    # Get the heat demand time series corresponding to the original plant list:
-#    CHPFormerIndexes = [s for s in plants.index if
-#                            plants['CHPType'][s] in commons['types_CHP']]
-#    for s in CHPFormerIndexes:  # for all the old plant indexes
-#        # get the old plant name corresponding to s:
-#        oldname = plants['Unit'][s]
-#        # newname = mapping['NewIndex'][s] #FIXME Unused variable ?
-#        if oldname not in HeatDemand:
-#            logging.warning('No heat demand profile found for CHP plant "' + str(oldname) + '". Assuming zero')
-#            HeatDemand[oldname] = 0
-#        if oldname not in CostHeatSlack:
-#            logging.warning('No heat cost profile found for CHP plant "' + str(oldname) + '". Assuming zero')
-#            CostHeatSlack[oldname] = 0
-#
-
+    
     # merge the outages:
     for i in plants.index:  # for all the old plant indexes
         # get the old plant name corresponding to s:
@@ -305,7 +286,7 @@ def build_single_run(config, profiles=None):
     HeatDemand_merged = merge_series(plants, HeatDemand, mapping, tablename='HeatDemand',method='Sum')
     AF_merged = merge_series(plants, AF, mapping, tablename='AvailabilityFactors')
     CostHeatSlack_merged = merge_series(plants, CostHeatSlack, mapping, tablename='CostHeatSlack')
-
+    
 
     # %%
     # checking data
@@ -329,6 +310,8 @@ def build_single_run(config, profiles=None):
              name='LoadShedding')
     check_df(CostLoadShedding, StartDate=config['idx'][0], StopDate=config['idx'][-1],
              name='CostLoadShedding')
+    check_df(ShareOfFlexibleDemand, StartDate=config['idx'][0], StopDate=config['idx'][-1],
+             name='ShareOfFlexibleDemand')
 
 #    for key in Renewables:
 #        check_df(Renewables[key], StartDate=config['idx'][0], StopDate=config['idx'][-1],
@@ -343,7 +326,7 @@ def build_single_run(config, profiles=None):
     sets = {}
     sets['h'] = [str(x + 1) for x in range(Nhours_long)]
     sets['z'] = [str(x + 1) for x in range(Nhours_long - config['LookAhead'] * 24)]
-    sets['mk'] = ['DA', '2U', '2D']
+    sets['mk'] = ['DA', '2U', '2D','Flex']
     sets['n'] = config['zones']
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
@@ -452,7 +435,7 @@ def build_single_run(config, profiles=None):
 
     # The storage discharge efficiency is actually given by the unit efficiency:
     parameters['StorageDischargeEfficiency']['val'] = Plants_sto['Efficiency'].values
-
+    
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
     for var in ['CHPPowerToHeat','CHPPowerLossFactor', 'CHPMaxHeat']:
         parameters[var]['val'] = Plants_chp[var].values
@@ -532,9 +515,10 @@ def build_single_run(config, profiles=None):
 
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])
     for i in range(len(sets['n'])):
-        values[0, i, :] = Load[sets['n'][i]]
+        values[0, i, :] = Load[sets['n'][i]] * (1 - ShareOfFlexibleDemand[sets['n'][i]])
         values[1, i, :] = reserve_2U_tot[sets['n'][i]]
         values[2, i, :] = reserve_2D_tot[sets['n'][i]]
+        values[3, i, :] = Load[sets['n'][i]] * ShareOfFlexibleDemand[sets['n'][i]]
     parameters['Demand'] = {'sets': sets_param['Demand'], 'val': values}
 
     # Emission Rate:
@@ -577,7 +561,7 @@ def build_single_run(config, profiles=None):
             parameters['FlowMinimum']['val'][i, :] = Inter_RoW[l]
     # Check values:
     check_MinMaxFlows(parameters['FlowMinimum']['val'],parameters['FlowMaximum']['val'])
-
+    
     parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
 
     # Outage Factors
@@ -631,41 +615,24 @@ def build_single_run(config, profiles=None):
                 parameters['PowerInitial']['val'][i] = (Plants_merged['PartLoadMin'][i] + 1) / 2 * \
                                                        Plants_merged['PowerCapacity'][i]
             # Config variables:
-    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead','ValueOfLostLoad','QuickStartShare','CostOfSpillage','WaterValue']
+    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead','SimulationTimeStep','ValueOfLostLoad','QuickStartShare','CostOfSpillage','WaterValue','DemandFlexibility']
     sets['y_config'] = ['year', 'month', 'day', 'val']
-    dd_begin = idx_long[4]
-    dd_end = idx_long[-2]
+    dd_begin = idx_sim[0]
+    dd_end = idx_sim[-1]
 
-    # Check if values are specified in the config and overwrite the default ones
-    values_lst = ['ValueOfLostLoad','ShareOfQuickStartUnits','PriceOfSpillage','WaterValue']
-    values_val = [1e5,0.5,1,100]
-    values = np.array([[dd_begin.year, dd_begin.month, dd_begin.day, 0],
-        [dd_end.year, dd_end.month, dd_end.day, 0],
-        [0, 0, config['HorizonLength'], 0],
-        [0, 0, config['LookAhead'], 0]])
-    for vl in values_lst:
-        if vl in config['default']:
-            if config['default'][vl] == "":
-                if vl == 'ValueOfLostLoad':
-                    tmp_value = np.array([[0,0,0,values_val[0]]])
-                if vl == 'ShareOfQuickStartUnits':
-                    tmp_value = np.array([[0,0,0,values_val[1]]])
-                if vl == 'PriceOfSpillage':
-                    tmp_value = np.array([[0,0,0,values_val[2]]])
-                if vl == 'WaterValue':
-                    tmp_value = np.array([[0,0,0,values_val[3]]])
-            else:
-                tmp_value = np.array([[0,0,0,config['default'][vl]]])
-        else:
-            if vl == 'ValueOfLostLoad':
-                tmp_value = np.array([[0,0,0,values_val[0]]])
-            if vl == 'ShareOfQuickStartUnits':
-                tmp_value = np.array([[0,0,0,values_val[1]]])
-            if vl == 'PriceOfSpillage':
-                tmp_value = np.array([[0,0,0,values_val[2]]])
-            if vl == 'WaterValue':
-                tmp_value = np.array([[0,0,0,values_val[3]]])
-        values = np.append(values, tmp_value, axis=0)
+    values = np.array(
+            [[dd_begin.year,    dd_begin.month,     dd_begin.day,           0],
+             [dd_end.year,      dd_end.month,       dd_end.day,             0],
+             [1e-5,             0,                  config['HorizonLength'], 0],
+             [1e-5,             0,                  config['LookAhead'],    0],
+             [1e-5,             0,                  0,                      config['SimulationTimeStep']],
+             [1e-5,             0,                  0,                      config['default']['ValueOfLostLoad']],
+             [1e-5,             0,                  0,                      config['default']['ShareOfQuickStartUnits']],
+             [1e-5,             0,                  0,                      config['default']['PriceOfSpillage']],
+             [1e-5,             0,                  0,                      config['default']['WaterValue']],
+             [1e-5,             0,                  0,                      config['default']['DemandFlexibility']]]
+            )
+    # the 1E-5 values are needed to be sure that all sets are written with the config parameter
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
     # %%#################################################################################################################
@@ -742,7 +709,7 @@ def build_single_run(config, profiles=None):
         with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
             pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
     logging.info('Build finished')
-
+    
     if os.path.isfile(commons['logfile']):
         shutil.copy(commons['logfile'], os.path.join(sim, 'warn_preprocessing.log'))
 

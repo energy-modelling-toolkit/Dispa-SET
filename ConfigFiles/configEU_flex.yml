@@ -33,6 +33,7 @@ RenewablesAF:  'Database/AvailabilityFactors/##/1h/2016.csv'
 
 ReservoirLevels:  'Database/HydroData/ScaledLevels/##/1h/2016.csv'
 ReservoirScaledInflows:  'Database/HydroData/ScaledInflows/##/1h/2016_profile_from_2012.csv'
+ShareOfFlexibleDemand: 'Database/TotalLoadValue/ShareFlexibleDemandEU.csv'
 
 #---------------- Prices
 PriceOfBiomass:  ''
@@ -47,7 +48,7 @@ CostHeatSlack:  ''
 CostLoadShedding:  ''
 
 #---------------- Countries
-zones: ['AT', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES',
+countries: ['AT', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES',
    'FI', 'FR', 'HR','HU', 'IE', 'IT', 'LT', 'LV', 'NL', 'NO', 'PL',
    'PT', 'RO', 'SE', 'SI', 'SK', 'UK']
 

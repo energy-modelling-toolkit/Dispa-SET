@@ -12,6 +12,11 @@ try:
 except ImportError:
     pass
 
+DEFAULTS = {'ReservoirLevelInitial':0.5,'ReservoirLevelFinal':0.5,'ValueOfLostLoad':1E5,
+                'PriceOfSpillage':1,'WaterValue':100,'ShareOfQuickStartUnits':0.5,
+                'PriceOfNuclear':0,'PriceOfBlackCoal':0,'PriceOfGas':0,'PriceOfFuelOil':0,'PriceOfBiomass':0,
+                'PriceOfCO2':0,'PriceOfLignite':0,'PriceOfPeat':0,'LoadShedding':0,'CostHeatSlack':0,
+                'CostLoadShedding':100,'ShareOfFlexibleDemand':0,'DemandFlexibility':0}
 
 def NodeBasedTable(varname,config,default=None):
     '''
@@ -278,13 +283,14 @@ def load_time_series(config,path,header='infer'):
     
     if not data.index.is_unique:
         logging.critical('The index of data file ' + path + ' is not unique. Please check the data')
-        sys.exit(1)  
-        
+        sys.exit(1)
+
     if not data.index.is_monotonic_increasing:
-        logging.critical('The index of data file ' + path + ' is not monotoneously increasing. Please check that you have used the proper american date format (yyyy-mm-dd hh:mm:ss)')
-        # uncomment this to correct the file:
-        #data = pd.read_csv(path,dayfirst=True,index_col=0,parse_dates=True);data.to_csv(path)
-        sys.exit(1)  
+        logging.error('The index of data file ' + path + ' is not monotoneously increasing. Trying to check if it can be parsed with a "day first" format ')
+        data = pd.read_csv(path, index_col=0, parse_dates=True, header=header, dayfirst=True)
+        if not data.index.is_monotonic_increasing:
+            logging.critical('Could not parse index of ' + path + '. To avoid problems make sure that you use the proper american date format (yyyy-mm-dd hh:mm:ss)')
+            sys.exit(1)
         
     # First convert numerical indexes into datetimeindex:
     if data.index.is_numeric():
@@ -340,6 +346,18 @@ def load_config(ConfigFile,AbsPath=True):
         sys.exit(1)
     return config
 
+def read_truefalse(sheet, rowstart, colstart, rowstop, colstop, colapart=1):
+    """
+    Function that reads a two column format with a list of strings in the first
+    columns and a list of true false in the second column
+    The list of strings associated with a True value is returned
+    """
+    out = []
+    for i in range(rowstart, rowstop):
+        if sheet.cell_value(i, colstart + colapart) == 1:
+            out.append(sheet.cell_value(i, colstart))
+    return out
+
 def load_config_excel(ConfigFile,AbsPath=True):
     """
     Function that loads the DispaSET excel config file and returns a dictionary
@@ -351,110 +369,195 @@ def load_config_excel(ConfigFile,AbsPath=True):
     import xlrd
     wb = xlrd.open_workbook(filename=ConfigFile)  # Option for csv to be added later
     sheet = wb.sheet_by_name('main')
-
     config = {}
-    config['Description'] = sheet.cell_value(5, 1)
-    config['SimulationDirectory'] = sheet.cell_value(17, 2)
-    config['WriteExcel'] = sheet.cell_value(18, 2)
-    config['WriteGDX'] = sheet.cell_value(19, 2)
-    config['WritePickle'] = sheet.cell_value(20, 2)
-    config['GAMS_folder'] = sheet.cell_value(21, 2)
-    config['cplex_path'] = sheet.cell_value(22, 2)
-
-    config['StartDate'] = xlrd.xldate_as_tuple(sheet.cell_value(30, 2), wb.datemode)
-    config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(31, 2), wb.datemode)
-    config['HorizonLength'] = int(sheet.cell_value(32, 2))
-    config['LookAhead'] = int(sheet.cell_value(33, 2))
-
-    config['SimulationType'] = sheet.cell_value(46, 2)
-    config['ReserveCalculation'] = sheet.cell_value(47, 2)
-    config['AllowCurtailment'] = sheet.cell_value(48, 2)
-
-    config['HydroScheduling'] = sheet.cell_value(53, 2)
-    config['HydroSchedulingHorizon'] = sheet.cell_value(54, 2)
-    config['InitialFinalReservoirLevel'] = sheet.cell_value(55, 2)
-
-    # List of parameters for which an external file path must be specified:
-    params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
-              'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
-              'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
-              'CostHeatSlack','CostLoadShedding']
-    for i, param in enumerate(params):
-        config[param] = sheet.cell_value(61 + i, 2)
-
-    # List of new parameters for which an external file path must be specified:
-    params2 = ['Temperatures']
-    if sheet.nrows>150:                 # for backward compatibility (old excel sheets had less than 150 rows)
-        for i, param in enumerate(params2):
-            config[param] = sheet.cell_value(156 + i, 2)
-    else:
-        for param in params2:
-            config[param] = ''
-
-    if AbsPath:
-    # Changing all relative paths to absolute paths. Relative paths must be defined 
-    # relative to the parent folder of the config file.
-        abspath = os.path.abspath(ConfigFile)
-        basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath),os.pardir))
-        if not os.path.isabs(config['SimulationDirectory']):
-            config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
-        for param in params+params2:
-            if config[param] == '' or config[param].isspace():
-                config[param] = ''
-            elif not os.path.isabs(config[param]):
-                config[param] = os.path.join(basefolder,config[param])
-
-    config['default'] = {}
-    config['default']['ReservoirLevelInitial'] = sheet.cell_value(56, 5)
-    config['default']['ReservoirLevelFinal'] = sheet.cell_value(57, 5)
-    config['default']['PriceOfNuclear'] = sheet.cell_value(69, 5)
-    config['default']['PriceOfBlackCoal'] = sheet.cell_value(70, 5)
-    config['default']['PriceOfGas'] = sheet.cell_value(71, 5)
-    config['default']['PriceOfFuelOil'] = sheet.cell_value(72, 5)
-    config['default']['PriceOfBiomass'] = sheet.cell_value(73, 5)
-    config['default']['PriceOfCO2'] = sheet.cell_value(74, 5)
-    config['default']['PriceOfLignite'] = sheet.cell_value(76, 5)
-    config['default']['PriceOfPeat'] = sheet.cell_value(77, 5)
-    config['default']['LoadShedding'] = sheet.cell_value(65, 5)
-    config['default']['CostHeatSlack'] = sheet.cell_value(79, 5)
-    config['default']['CostLoadShedding'] = sheet.cell_value(80, 5)
-    config['default']['ValueOfLostLoad'] = sheet.cell_value(81, 5)
-    config['default']['PriceOfSpillage'] = sheet.cell_value(82, 5)
-    config['default']['WaterValue'] = sheet.cell_value(83, 5)
-
-    # read the list of zones to consider:
-    def read_truefalse(sheet, rowstart, colstart, rowstop, colstop, colapart=1):
-        """
-        Function that reads a two column format with a list of strings in the first
-        columns and a list of true false in the second column
-        The list of strings associated with a True value is returned
-        """
-        out = []
-        for i in range(rowstart, rowstop):
-            if sheet.cell_value(i, colstart + colapart) == 1:
-                out.append(sheet.cell_value(i, colstart))
-        return out
-
-    config['zones'] = read_truefalse(sheet, 86, 1, 109, 3)
-    config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 109, 6)
-
-    config['mts_zones'] = read_truefalse(sheet, 86, 1, 109, 3, 2)
-    config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 86, 4, 109, 6, 2)
-
-    config['modifiers'] = {}
-    config['modifiers']['Demand'] = sheet.cell_value(111, 2)
-    config['modifiers']['Wind'] = sheet.cell_value(112, 2)
-    config['modifiers']['Solar'] = sheet.cell_value(113, 2)
-    config['modifiers']['Storage'] = sheet.cell_value(114, 2)
-
-    # Read the technologies participating to reserve markets:
-    config['ReserveParticipation'] = read_truefalse(sheet, 131, 1, 145, 3)
-
-    logging.info("Using config file " + ConfigFile + " to build the simulation environment")
-    logging.info("Using " + config['SimulationDirectory'] + " as simulation folder")
-    logging.info("Description of the simulation: "+ config['Description'])
     
-    return config
+    if sheet.cell_value(0,0) == 'Dispa-SET Configuration File (v20.01)':
+        config['Description'] = sheet.cell_value(5, 1)
+        config['StartDate'] = xlrd.xldate_as_tuple(sheet.cell_value(56, 2), wb.datemode)
+        config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(57, 2), wb.datemode)
+        config['HorizonLength'] = int(sheet.cell_value(58, 2))
+        config['LookAhead'] = int(sheet.cell_value(59, 2))
+        
+        # Defning the input locations in the config file:
+        StdParameters={'SimulationDirectory':33,'WriteGDX':34,'WritePickle':35,'GAMS_folder':36,
+                          'cplex_path':37,'DataTimeStep':60,'SimulationTimeStep':61,
+                          'SimulationType':76,'ReserveCalculation':77,'AllowCurtailment':78,
+                          'HydroScheduling':98,'HydroSchedulingHorizon':99,'InitialFinalReservoirLevel':100}
+        PathParameters={'Demand':124, 'Outages':126, 'PowerPlantData':127, 'RenewablesAF':128, 
+                          'LoadShedding':129, 'NTC':130, 'Interconnections':131, 'ReservoirScaledInflows':132, 
+                          'PriceOfNuclear':180, 'PriceOfBlackCoal':181, 'PriceOfGas':182, 
+                          'PriceOfFuelOil':183,'PriceOfBiomass':184, 'PriceOfCO2':166, 
+                          'ReservoirLevels':133, 'PriceOfLignite':185, 'PriceOfPeat':186,
+                          'HeatDemand':135,'CostHeatSlack':165,'CostLoadShedding':168,'ShareOfFlexibleDemand':125,
+                          'Temperatures':135}
+        modifiers= {'Demand':274,'Wind':275,'Solar':276,'Storage':277}
+        default = {'ReservoirLevelInitial':101,'ReservoirLevelFinal':102,'PriceOfNuclear':180,'PriceOfBlackCoal':181,
+                    'PriceOfGas':182,'PriceOfFuelOil':183,'PriceOfBiomass':184,'PriceOfCO2':166,'PriceOfLignite':185,
+                    'PriceOfPeat':186,'LoadShedding':129,'CostHeatSlack':167,'CostLoadShedding':168,'ValueOfLostLoad':204,
+                    'PriceOfSpillage':205,'WaterValue':206,'ShareOfQuickStartUnits':163,'ShareOfFlexibleDemand':125,
+                    'DemandFlexibility':162}
+        for p in StdParameters:
+            config[p] = sheet.cell_value(StdParameters[p], 2)
+        for p in PathParameters:
+            config[p] = sheet.cell_value(PathParameters[p], 2)
+        config['modifiers'] = {}
+        for p in modifiers:
+            config['modifiers'][p] = sheet.cell_value(modifiers[p], 2)
+        config['default'] = {}
+        for p in default:
+            config['default'][p] = sheet.cell_value(default[p], 5)
+            
+        #True/Falst values:
+        config['zones'] = read_truefalse(sheet, 225, 1, 246, 3)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 246, 6)
+        config['mts_zones'] = read_truefalse(sheet, 225, 1, 246, 3, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 246, 6, 2)
+        config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 319, 3)
+
+        # Set default values (for backward compatibility):
+        for param in DEFAULTS:
+            if config['default'][param]=='':
+                config['default'][param]=DEFAULTS[param]
+                logging.warning('No value was provided in config file for {}. Will use {}'.format(param, DEFAULTS[param]))
+                config['default'][param] = DEFAULTS[param]
+
+        if AbsPath:
+        # Changing all relative paths to absolute paths. Relative paths must be defined 
+        # relative to the parent folder of the config file.
+            abspath = os.path.abspath(ConfigFile)
+            basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath),os.pardir))
+            if not os.path.isabs(config['SimulationDirectory']):
+                config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
+            for param in PathParameters:
+                if config[param] == '' or config[param].isspace():
+                    config[param] = ''
+                elif not os.path.isabs(config[param]):
+                    config[param] = os.path.join(basefolder,config[param])
+
+        logging.info("Using config file (v20.01) " + ConfigFile + " to build the simulation environment")
+        logging.info("Using " + config['SimulationDirectory'] + " as simulation folder")
+        logging.info("Description of the simulation: "+ config['Description'])
+        
+        return config        
+        
+
+    elif sheet.cell_value(0,0) == 'Dispa-SET Configuration File':
+        config['Description'] = sheet.cell_value(5, 1)
+        config['SimulationDirectory'] = sheet.cell_value(17, 2)
+        config['WriteExcel'] = sheet.cell_value(18, 2)
+        config['WriteGDX'] = sheet.cell_value(19, 2)
+        config['WritePickle'] = sheet.cell_value(20, 2)
+        config['GAMS_folder'] = sheet.cell_value(21, 2)
+        config['cplex_path'] = sheet.cell_value(22, 2)
+    
+        config['StartDate'] = xlrd.xldate_as_tuple(sheet.cell_value(30, 2), wb.datemode)
+        config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(31, 2), wb.datemode)
+        config['HorizonLength'] = int(sheet.cell_value(32, 2))
+        config['LookAhead'] = int(sheet.cell_value(33, 2))
+        config['DataTimeStep'] = sheet.cell_value(34, 2)
+        config['SimulationTimeStep'] = sheet.cell_value(35, 2)
+    
+        config['SimulationType'] = sheet.cell_value(46, 2)
+        config['ReserveCalculation'] = sheet.cell_value(47, 2)
+        config['AllowCurtailment'] = sheet.cell_value(48, 2)
+    
+        config['HydroScheduling'] = sheet.cell_value(53, 2)
+        config['HydroSchedulingHorizon'] = sheet.cell_value(54, 2)
+        config['InitialFinalReservoirLevel'] = sheet.cell_value(55, 2)
+    
+        # Set default values (for backward compatibility):
+        NonEmptyarameters = {'DataTimeStep':1,'SimulationTimeStep':1,'HydroScheduling':'Off','HydroSchedulingHorizon':'Annual','InitialFinalReservoirLevel':True}
+        for param in NonEmptyarameters:
+            if config[param]=='':
+                config[param]=NonEmptyarameters[param]   
+    
+        # List of parameters for which an external file path must be specified:
+        PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
+          'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
+          'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
+          'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand']
+        for i, param in enumerate(PARAMS):
+            config[param] = sheet.cell_value(61 + i, 2)
+    
+        # List of new parameters for which an external file path must be specified:
+        params2 = ['Temperatures']
+        if sheet.nrows>150:                 # for backward compatibility (old excel sheets had less than 150 rows)
+            for i, param in enumerate(params2):
+                config[param] = sheet.cell_value(156 + i, 2)
+        else:
+            for param in params2:
+                config[param] = ''
+    
+        if AbsPath:
+        # Changing all relative paths to absolute paths. Relative paths must be defined 
+        # relative to the parent folder of the config file.
+            abspath = os.path.abspath(ConfigFile)
+            basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath),os.pardir))
+            if not os.path.isabs(config['SimulationDirectory']):
+                config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
+            for param in PARAMS+params2:
+                if config[param] == '' or config[param].isspace():
+                    config[param] = ''
+                elif not os.path.isabs(config[param]):
+                    config[param] = os.path.join(basefolder,config[param])
+    
+        config['default'] = {}
+        config['default']['ReservoirLevelInitial'] = sheet.cell_value(56, 5)
+        config['default']['ReservoirLevelFinal'] = sheet.cell_value(57, 5)
+        config['default']['PriceOfNuclear'] = sheet.cell_value(69, 5)
+        config['default']['PriceOfBlackCoal'] = sheet.cell_value(70, 5)
+        config['default']['PriceOfGas'] = sheet.cell_value(71, 5)
+        config['default']['PriceOfFuelOil'] = sheet.cell_value(72, 5)
+        config['default']['PriceOfBiomass'] = sheet.cell_value(73, 5)
+        config['default']['PriceOfCO2'] = sheet.cell_value(74, 5)
+        config['default']['PriceOfLignite'] = sheet.cell_value(76, 5)
+        config['default']['PriceOfPeat'] = sheet.cell_value(77, 5)
+        config['default']['LoadShedding'] = sheet.cell_value(65, 5)
+        config['default']['CostHeatSlack'] = sheet.cell_value(79, 5)
+        config['default']['CostLoadShedding'] = sheet.cell_value(80, 5)
+        config['default']['ValueOfLostLoad'] = sheet.cell_value(81, 5)
+        config['default']['PriceOfSpillage'] = sheet.cell_value(82, 5)
+        config['default']['WaterValue'] = sheet.cell_value(83, 5)
+        config['default']['ShareOfQuickStartUnits'] = 0.5          # to be added to xlsx file
+        
+        # Set default values (for backward compatibility):
+        for param in DEFAULTS:
+            if config['default'].get(param,'')=='':
+                config['default'][param]=DEFAULTS[param]
+    
+    #    config['default']['ShareOfFlexibleDemand'] = sheet.cell_value(81, 5)
+    #    for def_value in config['default']:
+    #        if config['default'][def_value] =='':
+    #            logging.warning('No value was provided in config file for {}. Will use {}'.format(def_value, DEFAULTS[def_value]))
+    #            config['default'][def_value] = DEFAULTS[def_value]
+    
+        
+    
+    
+        config['zones'] = read_truefalse(sheet, 86, 1, 109, 3)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 109, 6)
+    
+        config['mts_zones'] = read_truefalse(sheet, 86, 1, 109, 3, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 86, 4, 109, 6, 2)
+    
+        config['modifiers'] = {}
+        config['modifiers']['Demand'] = sheet.cell_value(111, 2)
+        config['modifiers']['Wind'] = sheet.cell_value(112, 2)
+        config['modifiers']['Solar'] = sheet.cell_value(113, 2)
+        config['modifiers']['Storage'] = sheet.cell_value(114, 2)
+    
+        # Read the technologies participating to reserve markets:
+        config['ReserveParticipation'] = read_truefalse(sheet, 131, 1, 145, 3)
+    
+        logging.info("Using config file " + ConfigFile + " to build the simulation environment")
+        logging.info("Using " + config['SimulationDirectory'] + " as simulation folder")
+        logging.info("Description of the simulation: "+ config['Description'])
+        
+        return config
+    
+    else:
+        logging.critical('The format of the excel config file (defined by its main title) is not recognized')
+        sys.exit(1)
 
 def load_config_yaml(filename, AbsPath=True):
     """ Loads YAML file to dictionary"""
@@ -466,17 +569,32 @@ def load_config_yaml(filename, AbsPath=True):
             logging.error('Cannot parse config file: {}'.format(filename))
             raise exc
             
-    # List of parameters to be added if not present (for backward compatibility):
-    params_to_be_added = ['Temperatures']
+    # List of parameters to be added with a default value if not present (for backward compatibility):
+    
+    params_to_be_added = {'Temperatures':'','DataTimeStep':1,'SimulationTimeStep':1,'HydroScheduling':'Off','HydroSchedulingHorizon':'Annual','InitialFinalReservoirLevel':True}
     for param in params_to_be_added:
         if param not in config:
-            config[param] = ''
+            config[param] = params_to_be_added[param]
+                        
+    # Set default values (for backward compatibility):
+    NonEmptyDefaultss = {'ReservoirLevelInitial':0.5,'ReservoirLevelFinal':0.5,'ValueOfLostLoad':1E5,'PriceOfSpillage':1,'WaterValue':100,'ShareOfQuickStartUnits':0.5}
+    for param in NonEmptyDefaultss:
+        if param not in config['default']:
+            config['default'][param]=NonEmptyDefaultss[param]
 
-    # List of parameters for which an external file path must be specified:
-    params = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
-              'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
-              'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
-              'CostHeatSlack','CostLoadShedding','Temperatures']
+
+    # Define missing parameters if they were not provided in the config file
+    PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
+          'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
+          'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
+          'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand','Temperatures']
+    for param in PARAMS:
+        if param not in config:
+            config[param] = ''    
+    global DEFAULTS
+    for key in DEFAULTS:
+        if key not in config['default']:
+            config['default'][key]=DEFAULTS[key]
 
     if AbsPath:
     # Changing all relative paths to absolute paths. Relative paths must be defined 
@@ -485,7 +603,7 @@ def load_config_yaml(filename, AbsPath=True):
         basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath),os.pardir))
         if not os.path.isabs(config['SimulationDirectory']):
             config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
-        for param in params:
+        for param in PARAMS:
             if not os.path.isabs(config[param]):
                 if config[param] == '' or config[param].isspace():
                     config[param] = ''
