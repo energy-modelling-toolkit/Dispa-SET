@@ -12,7 +12,7 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, check
     check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows, \
     check_FlexibleDemand
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
-from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix
+from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
 
 from ..common import commons
 from ..misc.gdx_handler import write_variables
@@ -330,7 +330,7 @@ def build_single_run(config, profiles=None):
     # The sets are defined within a dictionary:
     sets = {}
     sets['h'] = [str(x + 1) for x in range(Nsim)]
-    sets['z'] = [str(x + 1) for x in range(Nsim - config['LookAhead'] * config['SimulationTimeStep'])]
+    sets['z'] = [str(x + 1) for x in range(int(Nsim - config['LookAhead'] * config['SimulationTimeStep'])) ]
     sets['mk'] = ['DA', '2U', '2D','Flex']
     sets['n'] = config['zones']
     sets['au'] = Plants_merged.index.tolist()

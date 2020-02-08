@@ -15,6 +15,7 @@ import dispaset as ds
 
 # Load the configuration file
 config = ds.load_config('../ConfigFiles/ConfigTest.xlsx')
+config['SimulationTimeStep'] = 24
 
 # Build the simulation environment:
 SimData = ds.build_simulation(config)
