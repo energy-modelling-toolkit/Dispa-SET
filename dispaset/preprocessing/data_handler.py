@@ -388,7 +388,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
                           'PriceOfNuclear':180, 'PriceOfBlackCoal':181, 'PriceOfGas':182, 
                           'PriceOfFuelOil':183,'PriceOfBiomass':184, 'PriceOfCO2':166, 
                           'ReservoirLevels':133, 'PriceOfLignite':185, 'PriceOfPeat':186,
-                          'HeatDemand':135,'CostHeatSlack':165,'CostLoadShedding':168,'ShareOfFlexibleDemand':125,
+                          'HeatDemand':134,'CostHeatSlack':165,'CostLoadShedding':168,'ShareOfFlexibleDemand':125,
                           'Temperatures':135}
         modifiers= {'Demand':274,'Wind':275,'Solar':276,'Storage':277}
         default = {'ReservoirLevelInitial':101,'ReservoirLevelFinal':102,'PriceOfNuclear':180,'PriceOfBlackCoal':181,
