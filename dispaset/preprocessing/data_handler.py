@@ -337,9 +337,9 @@ def load_config(ConfigFile,AbsPath=True):
     """
     Wrapper function around load_config_excel and load_config_yaml
     """
-    if ConfigFile[-5:] == '.xlsx':
+    if ConfigFile.endswith(('.xlsx','.xls')):
         config = load_config_excel(ConfigFile,AbsPath=True)
-    elif ConfigFile[-4:] == '.yml':
+    elif ConfigFile.endswith(('.yml','.yaml')):
         config = load_config_yaml(ConfigFile,AbsPath=True)
     else:
         logging.critical('The extension of the config file should be .xlsx or .yml')
@@ -388,7 +388,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
                           'PriceOfNuclear':180, 'PriceOfBlackCoal':181, 'PriceOfGas':182, 
                           'PriceOfFuelOil':183,'PriceOfBiomass':184, 'PriceOfCO2':166, 
                           'ReservoirLevels':133, 'PriceOfLignite':185, 'PriceOfPeat':186,
-                          'HeatDemand':135,'CostHeatSlack':165,'CostLoadShedding':168,'ShareOfFlexibleDemand':125,
+                          'HeatDemand':134,'CostHeatSlack':165,'CostLoadShedding':168,'ShareOfFlexibleDemand':125,
                           'Temperatures':135}
         modifiers= {'Demand':274,'Wind':275,'Solar':276,'Storage':277}
         default = {'ReservoirLevelInitial':101,'ReservoirLevelFinal':102,'PriceOfNuclear':180,'PriceOfBlackCoal':181,
@@ -524,15 +524,6 @@ def load_config_excel(ConfigFile,AbsPath=True):
         for param in DEFAULTS:
             if config['default'].get(param,'')=='':
                 config['default'][param]=DEFAULTS[param]
-    
-    #    config['default']['ShareOfFlexibleDemand'] = sheet.cell_value(81, 5)
-    #    for def_value in config['default']:
-    #        if config['default'][def_value] =='':
-    #            logging.warning('No value was provided in config file for {}. Will use {}'.format(def_value, DEFAULTS[def_value]))
-    #            config['default'][def_value] = DEFAULTS[def_value]
-    
-        
-    
     
         config['zones'] = read_truefalse(sheet, 86, 1, 109, 3)
         config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 109, 6)

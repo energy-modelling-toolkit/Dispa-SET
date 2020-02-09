@@ -399,7 +399,7 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
                 mapping['NewIndex'][oldplant] = NewName
 
     # Transforming the start-up cost into ramping for the plants that did not go through any clustering:
-    if method == 'LP clustered':
+    if method in ('LP', 'LP clustered'):
         for i in range(Nunits_merged):
             if plants_merged['RampingCost'][i] == 0:
                 Power = plants_merged['PowerCapacity'][i]
