@@ -525,15 +525,6 @@ def load_config_excel(ConfigFile,AbsPath=True):
             if config['default'].get(param,'')=='':
                 config['default'][param]=DEFAULTS[param]
     
-    #    config['default']['ShareOfFlexibleDemand'] = sheet.cell_value(81, 5)
-    #    for def_value in config['default']:
-    #        if config['default'][def_value] =='':
-    #            logging.warning('No value was provided in config file for {}. Will use {}'.format(def_value, DEFAULTS[def_value]))
-    #            config['default'][def_value] = DEFAULTS[def_value]
-    
-        
-    
-    
         config['zones'] = read_truefalse(sheet, 86, 1, 109, 3)
         config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 109, 6)
     

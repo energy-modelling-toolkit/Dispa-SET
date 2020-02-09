@@ -419,7 +419,14 @@ def check_units(config, plants):
             logging.critical('The value of ' + key + ' should be lower than the horizon length (' + str(
                 config['HorizonLength'] * 24) + ' hours). A higher value has been found for units ' + str(plantlist))
             sys.exit(1)
-            
+    
+    # Checking che compatibility between the selected simulation time and the power plant constraints:
+    if config['SimulationType'] in ('LP','LP clustered') :
+        for key in ['NoLoadCost', 'PartLoadMin', 'MinEfficiency', 'StartUpTime']:
+            if (plants[key] > 0).any():
+                logging.error('Non-null value(s) have been found for key ' + key + ' in the power plant list. \
+                              This cannot be modelled with the ' + config['SimulationType'] + ' formulation and \
+                              will therefore not be considered.')            
     return True
 
 
