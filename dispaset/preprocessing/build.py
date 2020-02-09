@@ -203,7 +203,7 @@ def build_single_run(config, profiles=None):
         NTCs = pd.DataFrame(index=config['idx_long'])
     Inter_RoW = Interconnections_RoW.reindex(config['idx_long'])
     PriceTransmission = pd.DataFrame(index=NTCs.index,columns=NTCs.columns)
-    for l in NTCs.columns.to_list()+Inter_RoW.columns.to_list():
+    for l in (NTCs.columns.to_list()+Inter_RoW.columns.to_list()):
         if l in PriceTransmission_raw:
             PriceTransmission[l] = PriceTransmission_raw[l].reindex(PriceTransmission.index)
         else:
@@ -576,7 +576,7 @@ def build_single_run(config, profiles=None):
         if l in Inter_RoW.columns:
             parameters['FlowMaximum']['val'][i, :] = finalTS['Inter_RoW'][l]
             parameters['FlowMinimum']['val'][i, :] = finalTS['Inter_RoW'][l]
-            parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
+        parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
             
     # Check values:
     check_MinMaxFlows(parameters['FlowMinimum']['val'],parameters['FlowMaximum']['val'])
