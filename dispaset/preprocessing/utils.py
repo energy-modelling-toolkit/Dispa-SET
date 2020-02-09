@@ -271,7 +271,7 @@ def _clean_df(df_merged, df_, string_keys):
     # if merged unit, create name -> else take old name for unit
     keys = ['FormerIndexes'] + string_keys
     create_unit_name = lambda x: str(x.FormerIndexes) + " - " + df_.iloc[x.FormerIndexes[0]]['Unit'] if len(x.FormerIndexes) == 1 else shrink_to_64(clean_strings(_split_list(list(x[keys].values))))
-    df_merged['Unit'] = df_merged['Unit'].apply(create_unit_name, axis=1)
+    df_merged['Unit'] = df_merged.apply(create_unit_name, axis=1)
     return df_merged.set_index('Unit', drop=False)
     
     
