@@ -337,9 +337,9 @@ def load_config(ConfigFile,AbsPath=True):
     """
     Wrapper function around load_config_excel and load_config_yaml
     """
-    if ConfigFile[-5:] == '.xlsx':
+    if ConfigFile.endswith(('.xlsx','.xls')):
         config = load_config_excel(ConfigFile,AbsPath=True)
-    elif ConfigFile[-4:] == '.yml':
+    elif ConfigFile.endswith(('.yml','.yaml')):
         config = load_config_yaml(ConfigFile,AbsPath=True)
     else:
         logging.critical('The extension of the config file should be .xlsx or .yml')
