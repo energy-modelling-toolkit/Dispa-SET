@@ -567,6 +567,45 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
         )
         plants_merged["RampingCost"] = plants_merged.apply(ramping_lbd, axis=1)
 
+
+    elif method == "LP":
+        if not OnlyOnes:
+            logging.warn(
+                "The LP method aggregates all identical units by multiplying by the Nunits variable"
+            )
+            # Modifying the table to remove multiple-units plants:
+            plants[
+                [
+                    "PowerCapacity",
+                    "STOCapacity",
+                    "STOMaxChargingPower",
+                    "InitialPower",
+                    "CHPMaxHeat",
+                ]
+            ] = plants[
+                [
+                    "PowerCapacity",
+                    "STOCapacity",
+                    "STOMaxChargingPower",
+                    "InitialPower",
+                    "CHPMaxHeat",
+                ]
+            ].multiply(
+                plants["Nunits"], axis="index"
+            )
+            plants["Nunits"] = 1
+            OnlyOnes = True
+        
+        
+        plants_merged = plants
+        # Transforming the start-up cost into ramping for the plants that did not go through any clustering:
+        ramping_lbd = (
+            lambda row: row["StartUpCost"] / row["PowerCapacity"]
+            if row.RampingCost == 0
+            else row.RampingCost
+        )
+        plants_merged["RampingCost"] = plants_merged.apply(ramping_lbd, axis=1)
+
     elif method == "Integer clustering":
         plants_merged = group_plants(plants, method="Integer clustering")
         # Correcting the Nunits field of the clustered plants (must be integer):
