@@ -585,6 +585,7 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
             else row.RampingCost
         )
         plants_merged["RampingCost"] = plants_merged.apply(ramping_lbd, axis=1)
+        plants_merged["FormerIndexes"] = plants["index"].apply(lambda x: [x])
 
     elif method == "Integer clustering":
         plants_merged = group_plants(plants, method="Integer clustering")

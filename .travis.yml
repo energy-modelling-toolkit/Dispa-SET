@@ -24,14 +24,14 @@ before_install:
 - sed -i -E 's/(python=)(.*)/\1'$TRAVIS_PYTHON_VERSION'/' ./environment.yml
 
 # Install GAMS
-- wget -N $GAMS_URL -O gams.zip
-- unzip -qu gams.zip -d $HOME
-- ln -s $HOME/gams${GAMS}_linux_x64_64_sfx $HOME/gams
-- export GAMSPATH="$HOME/gams"
-- export PATH="$GAMSPATH:$PATH"
-- cd $HOME/gams
-- gamsinst -a
-- cd -
+#- wget -N $GAMS_URL -O gams.zip
+#- unzip -qu gams.zip -d $HOME
+#- ln -s $HOME/gams${GAMS}_linux_x64_64_sfx $HOME/gams
+#- export GAMSPATH="$HOME/gams"
+#- export PATH="$GAMSPATH:$PATH"
+#- cd $HOME/gams
+#- gamsinst -a
+#- cd -
 
 install:
 - conda env create -q -f environment.yml
