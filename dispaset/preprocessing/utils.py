@@ -303,7 +303,7 @@ def update_unclustered_col(row, df):
     Important when column not in grouping, but old values need to be retained
     """
     if len(row['FormerIndexes']) == 1:
-        return df.ix[row['FormerIndexes'][0]]
+        return df.iloc[row['FormerIndexes'][0]]
     else:
         return row
 
