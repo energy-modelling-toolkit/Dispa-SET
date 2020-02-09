@@ -271,7 +271,7 @@ def _clean_df(df_merged, df_, string_keys):
     # if merged unit, create name -> else take old name for unit
     keys = ['FormerIndexes'] + string_keys
     create_unit_name = lambda x: str(x.FormerIndexes) + " - " + df_.iloc[x.FormerIndexes[0]]['Unit'] if len(x.FormerIndexes) == 1 else shrink_to_64(clean_strings(_split_list(list(x[keys].values))))
-    df_merged['Unit'] = df_merged.apply(create_unit_name, axis=1)
+    df_merged['Unit'] = df_merged['Unit'].apply(create_unit_name, axis=1)
     return df_merged.set_index('Unit', drop=False)
     
     
@@ -525,6 +525,8 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
             logging.warn(
                 "The standard (or MILP) clustering method is only applicable if all values of the Nunits column in the power plant data are set to one. At least one different value has been encountered. No clustering will be applied"
             )
+            plants_merged = plants.copy()
+            plants_merged["FormerIndexes"] = plants["index"].apply(lambda x: [x])
         
 
     elif method == "LP clustered":
