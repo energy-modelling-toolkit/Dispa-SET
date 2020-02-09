@@ -534,29 +534,19 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
             logging.warn(
                 "The LP clustering method aggregates all the units of the same type. Individual units are not considered"
             )
+            list_mult = [ 
+                    "PowerCapacity",
+                    "STOCapacity",
+                    "STOMaxChargingPower",
+                    "InitialPower",
+                    "CHPMaxHeat",
+                        ]
+            # Restricting the list of values to multiply to those who are present in the plants table:
+            list_mult = [x for x in list_mult if x in plants]
             # Modifying the table to remove multiple-units plants:
-            plants[
-                [
-                    "PowerCapacity",
-                    "STOCapacity",
-                    "STOMaxChargingPower",
-                    "InitialPower",
-                    "CHPMaxHeat",
-                ]
-            ] = plants[
-                [
-                    "PowerCapacity",
-                    "STOCapacity",
-                    "STOMaxChargingPower",
-                    "InitialPower",
-                    "CHPMaxHeat",
-                ]
-            ].multiply(
-                plants["Nunits"], axis="index"
-            )
+            plants[list_mult] = plants[list_mult].multiply(plants["Nunits"], axis="index")
             plants["Nunits"] = 1
             OnlyOnes = True
-        
         
         plants_merged = group_plants(plants, method="LP clustered")
         # Transforming the start-up cost into ramping for the plants that did not go through any clustering:
@@ -573,29 +563,19 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
             logging.warn(
                 "The LP method aggregates all identical units by multiplying by the Nunits variable"
             )
+            list_mult = [ 
+                    "PowerCapacity",
+                    "STOCapacity",
+                    "STOMaxChargingPower",
+                    "InitialPower",
+                    "CHPMaxHeat",
+                        ]
+            # Restricting the list of values to multiply to those who are present in the plants table:
+            list_mult = [x for x in list_mult if x in plants]
             # Modifying the table to remove multiple-units plants:
-            plants[
-                [
-                    "PowerCapacity",
-                    "STOCapacity",
-                    "STOMaxChargingPower",
-                    "InitialPower",
-                    "CHPMaxHeat",
-                ]
-            ] = plants[
-                [
-                    "PowerCapacity",
-                    "STOCapacity",
-                    "STOMaxChargingPower",
-                    "InitialPower",
-                    "CHPMaxHeat",
-                ]
-            ].multiply(
-                plants["Nunits"], axis="index"
-            )
+            plants[list_mult] = plants[list_mult].multiply(plants["Nunits"], axis="index")
             plants["Nunits"] = 1
             OnlyOnes = True
-        
         
         plants_merged = plants
         # Transforming the start-up cost into ramping for the plants that did not go through any clustering:
