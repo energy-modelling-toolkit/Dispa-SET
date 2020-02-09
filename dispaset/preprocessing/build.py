@@ -110,6 +110,10 @@ def build_single_run(config, profiles=None):
     else:
         logging.warning('No NTC values will be considered (no valid file provided)')
         NTC = pd.DataFrame(index=config['idx_long'])
+    if os.path.isfile(config['PriceTransmission']):
+        PriceTransmission_raw = load_time_series(config,config['PriceTransmission'])
+    else:
+        PriceTransmission_raw = pd.DataFrame(index=config['idx_long'])    
 
     # Load Shedding:
     LoadShedding = NodeBasedTable('LoadShedding',config,default=config['default']['LoadShedding'])
@@ -198,6 +202,14 @@ def build_single_run(config, profiles=None):
     else:
         NTCs = pd.DataFrame(index=config['idx_long'])
     Inter_RoW = Interconnections_RoW.reindex(config['idx_long'])
+    PriceTransmission = pd.DataFrame(index=NTCs.index,columns=NTCs.columns)
+    for l in NTCs.columns.to_list()+Inter_RoW.columns.to_list():
+        if l in PriceTransmission_raw:
+            PriceTransmission[l] = PriceTransmission_raw[l].reindex(PriceTransmission.index)
+        else:
+            PriceTransmission[l] = config['default']['PriceTransmission']
+            if config['default']['PriceTransmission'] > 0:
+                logging.warning('No detailed values were found the transmission prices of line ' + l + '. Using default value ' + str(config['default']['PriceTransmission']))
 
     # Clustering of the plants:
     Plants_merged, mapping = clustering(plants, method=config['SimulationType'])
@@ -296,7 +308,13 @@ def build_single_run(config, profiles=None):
     # %% Store all times series and format
 
     # Formatting all time series (merging, resempling) and store in the FinalTS dict
-    finalTS = {'Load':Load,'Reserve2D':reserve_2D_tot,'Reserve2U':reserve_2U_tot,'Efficiencies':Efficiencies,'NTCs':NTCs,'Inter_RoW':Inter_RoW,'LoadShedding':LoadShedding,'CostLoadShedding':CostLoadShedding,'ScaledInflows':ReservoirScaledInflows,'ReservoirLevels':ReservoirLevels,'Outages':Outages,'AvailabilityFactors':AF,'CostHeatSlack':CostHeatSlack,'HeatDemand':HeatDemand,'ShareOfFlexibleDemand':ShareOfFlexibleDemand}
+    finalTS = {'Load':Load,'Reserve2D':reserve_2D_tot,'Reserve2U':reserve_2U_tot,
+               'Efficiencies':Efficiencies,'NTCs':NTCs,'Inter_RoW':Inter_RoW,
+               'LoadShedding':LoadShedding,'CostLoadShedding':CostLoadShedding,
+               'ScaledInflows':ReservoirScaledInflows,'ReservoirLevels':ReservoirLevels,
+               'Outages':Outages,'AvailabilityFactors':AF,'CostHeatSlack':CostHeatSlack,
+               'HeatDemand':HeatDemand,'ShareOfFlexibleDemand':ShareOfFlexibleDemand,
+               'PriceTransmission':PriceTransmission}
     
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows','ReservoirLevels','Outages','AvailabilityFactors','CostHeatSlack']:
@@ -558,6 +576,8 @@ def build_single_run(config, profiles=None):
         if l in Inter_RoW.columns:
             parameters['FlowMaximum']['val'][i, :] = finalTS['Inter_RoW'][l]
             parameters['FlowMinimum']['val'][i, :] = finalTS['Inter_RoW'][l]
+            parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
+            
     # Check values:
     check_MinMaxFlows(parameters['FlowMinimum']['val'],parameters['FlowMaximum']['val'])
     

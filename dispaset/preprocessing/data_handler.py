@@ -16,7 +16,7 @@ DEFAULTS = {'ReservoirLevelInitial':0.5,'ReservoirLevelFinal':0.5,'ValueOfLostLo
                 'PriceOfSpillage':1,'WaterValue':100,'ShareOfQuickStartUnits':0.5,
                 'PriceOfNuclear':0,'PriceOfBlackCoal':0,'PriceOfGas':0,'PriceOfFuelOil':0,'PriceOfBiomass':0,
                 'PriceOfCO2':0,'PriceOfLignite':0,'PriceOfPeat':0,'LoadShedding':0,'CostHeatSlack':0,
-                'CostLoadShedding':100,'ShareOfFlexibleDemand':0,'DemandFlexibility':0}
+                'CostLoadShedding':100,'ShareOfFlexibleDemand':0,'DemandFlexibility':0,'PriceTransmission':0}
 
 def NodeBasedTable(varname,config,default=None):
     '''
@@ -389,13 +389,13 @@ def load_config_excel(ConfigFile,AbsPath=True):
                           'PriceOfFuelOil':183,'PriceOfBiomass':184, 'PriceOfCO2':166, 
                           'ReservoirLevels':133, 'PriceOfLignite':185, 'PriceOfPeat':186,
                           'HeatDemand':134,'CostHeatSlack':165,'CostLoadShedding':168,'ShareOfFlexibleDemand':125,
-                          'Temperatures':135}
+                          'Temperatures':135,'PriceTransmission':169}
         modifiers= {'Demand':274,'Wind':275,'Solar':276,'Storage':277}
         default = {'ReservoirLevelInitial':101,'ReservoirLevelFinal':102,'PriceOfNuclear':180,'PriceOfBlackCoal':181,
                     'PriceOfGas':182,'PriceOfFuelOil':183,'PriceOfBiomass':184,'PriceOfCO2':166,'PriceOfLignite':185,
                     'PriceOfPeat':186,'LoadShedding':129,'CostHeatSlack':167,'CostLoadShedding':168,'ValueOfLostLoad':204,
                     'PriceOfSpillage':205,'WaterValue':206,'ShareOfQuickStartUnits':163,'ShareOfFlexibleDemand':125,
-                    'DemandFlexibility':162}
+                    'DemandFlexibility':162,'PriceTransmission':169}
         for p in StdParameters:
             config[p] = sheet.cell_value(StdParameters[p], 2)
         for p in PathParameters:
@@ -480,7 +480,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
             config[param] = sheet.cell_value(61 + i, 2)
     
         # List of new parameters for which an external file path must be specified:
-        params2 = ['Temperatures']
+        params2 = ['Temperatures','PriceTransmission']
         if sheet.nrows>150:                 # for backward compatibility (old excel sheets had less than 150 rows)
             for i, param in enumerate(params2):
                 config[param] = sheet.cell_value(156 + i, 2)
@@ -578,7 +578,7 @@ def load_config_yaml(filename, AbsPath=True):
     PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
           'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
           'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
-          'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand','Temperatures']
+          'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand','Temperatures','PriceTransmission']
     for param in PARAMS:
         if param not in config:
             config[param] = ''    
