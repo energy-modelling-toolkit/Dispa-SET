@@ -10,6 +10,42 @@ Two important preliminary comments should be formulated:
 * All the time series should be registered with their timestamps (e.g. '2013-02-20 02:00:00') or with a numerical index. Dispa-SET will issue an error if the day is located before the month. It is also advised to remove all time zone information from the time stamps. If the index is an integer, Dispa-SET will only recognize it if contains 8760 elements (one full year) or if it has exactly the same length as the simulation horizon.
 * Although the optimisation model is designed to run with any technology or fuel name, the pre-processing and the post-processing tools of Dispa-SET use some hard-coded values. The Dispa-SET database should also comply with this convention (described in the next sections). Any non-recognized technology or fuel will be discarded in the pre-processing.
 
+General simulation parameters
+-----------------------------
+A number of simulation options and parameters need to be defined in the configuration file. In order to obtain default values and a complete description of the options, it is commended to open the ConfigTest.xlsx configuration file, which is always kept up-to-date.
+
+The options to be filled are summarized  hereunder.
+
+.. table:: Dispa-SET Simulation Options
+
+	=============================== ================================================== 
+	General Options			Description				
+	=============================== ================================================== 
+	SimulationDirectory		Folder with all simulation files and input data
+	WriteGDX			Write the inputs in a GDX file (required for gams)
+	WritePickle			Write the inputs to a pickle file
+	GAMS_folder			Path the GAMS installation folder
+	cplex_path			Path to the cplex folder
+	**Horizon Settings**	
+	StartDate			Start date of the simulation 
+	StopDate			End data of the simulation
+	HorizonLength			Simulation horizon length in days
+	Look ahead			Overlap period in days
+	DataTimeStep			Time step of the date in the csv files
+	SimulationTimeStep		Time step for the simulation
+	**Simulation Options**
+	SimulationType			Stanard/LP/LP clustered/Integer clustering
+	ReserveCalculation		Generic (only available option for now)
+	AllowCurtailment		True/False
+	**Mid-term scheduling**
+	HydroScheduling			Off/Zonal/Regional
+	HydroSchedulingHorizon		"Annual"/"Stop-date driven"
+	InitialFinalReservoirLevel	True/False (if False, use StorageProfile)
+	ReservoirLevelInitial		Initial res. level if the above option is true
+	ReservoirLevelFinal		Fainl reservoir level if the above option is true
+	=============================== ================================================== 
+
+
 Technologies
 ------------
 

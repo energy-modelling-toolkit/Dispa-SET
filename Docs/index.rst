@@ -59,7 +59,6 @@ Contents
    implementation
    data
    cases
-   developers
    dispaset
 
 
