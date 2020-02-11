@@ -7,7 +7,7 @@ In this section, "Input Data" refers to the data stored in the Dispa-SET databas
 
 Two important preliminary comments should be formulated:
 
-* All the time series should be registered with their timestamps (e.g. '2013-02-20 02:00:00'). Dispa-SET will issue an error if the day is located before the month. It is also advised to remove all time zone information from the time stamps. If the index is an integer, Dispa-SET will only recognize it if contains 8760 elements (one full year) or if it has exactly the same length as the simulation horizon.
+* All the time series should be registered with their timestamps (e.g. '2013-02-20 02:00:00') or with a numerical index. Dispa-SET will issue an error if the day is located before the month. It is also advised to remove all time zone information from the time stamps. If the index is an integer, Dispa-SET will only recognize it if contains 8760 elements (one full year) or if it has exactly the same length as the simulation horizon.
 * Although the optimisation model is designed to run with any technology or fuel name, the pre-processing and the post-processing tools of Dispa-SET use some hard-coded values. The Dispa-SET database should also comply with this convention (described in the next sections). Any non-recognized technology or fuel will be discarded in the pre-processing.
 
 Technologies
@@ -35,6 +35,7 @@ The Dispa-SET input distinguishes between the technologies defined in the table 
 	BEVS		Battery-powered electric vehicles	N	Y
 	THMS		Thermal storage				N	Y
 	P2GS		Power-to-gas storage			N	Y
+	P2HT		Power-to-heat				N	Y
 	=============== ======================================= ======= ========
 
 Fuels
@@ -88,14 +89,16 @@ Total	496	290	33	23	21	73	20	1181	9	27	2173
 Unit-specific or technology-specific inputs
 -------------------------------------------
 
-Some parameters, such as the availability factor, the outage factor or the inflows may be defined at the unit level or at the technology level. For that reason, the pre-processing tool first lookups the unit name in the database to assign it a value, and then lookups the technology if no unit-specific information has been found.
+Some parameters, such as the availability factor, the outage factor or the inflows may be defined at the unit level or at the technology level. For that reason, the pre-processing tool first lookups the unit name in the database to assign it a value, and then lookups the technology or the fuel if no unit-specific information has been found.
 
 Demand
 ------
 
-Electricity demand is given per zone/country and the first row of each column shoud reflect that name.
+Electricity demand is given per zone and the first row of each column with the time series should be the zone name.
 
-Heat demand timeseries is needed where CHP plants are used. In the current formulation, each CHP plant is covering a heat load. In other words, one power plant is connected to a single district heating network. Therefore, in the heat demand input file, the first column has to be a time index and the following columns the heat demand in MW. The first row should contain the exact name of the power plant that will cover this demand.
+Heat demand timeseries is needed where CHP or P2HT plants are used. In the current formulation, each CHP/P2HT unit is covering a heat load. In other words, one power plant is connected to a single district heating network. Therefore, in the heat demand input file, the first column has to be a time index and the following columns the heat demand in MW. The first row should contain the exact name of the power plant that will cover this demand.
+
+It si possible to assume that a share of the demand is flexible (see model formulation for more information). In that case, this flexible share is provided as times series for each zone (see for example the tests/dummy_data/ShareFlexible.csv file), referencend in the "FlexibleDemand" field of the config file. It is also necessary to specify the number of hours of equivalent demand shifting capacity. This is achieved through the "DemandFlexibility" field of the config file and is expressed in hours (i.e. the number of hours during which the maximum flexible demand can be stored for shifting). An example of such configuration is proivded in the ConfigTest
 
 Countries
 ---------
@@ -152,11 +155,11 @@ The following fields must be defined for all units:
 	Description			Field name	Units
 	=============================== =============== ===========
 	Unit name			Unit
-	Commissioning year		Year		
+	Power Capacity (for one unit) 	PowerCapacity	MW		
+	Number of units			Nunits	
 	Technology			Technology	
 	Primary fuel			Fuel		
 	Zone				Zone		
-	Capacity 			PowerCapacity	MW	
 	Efficiency 			Efficiency	%
 	Efficiency at minimum load 	MinEfficiency	%
 	CO2 intensity 			CO2Intensity	TCO2/MWh
@@ -169,7 +172,6 @@ The following fields must be defined for all units:
 	No load cost 			NoLoadCost	EUR/h
 	Start-up cost 			StartUpCost	EUR
 	Ramping cost			RampingCost	EUR/MW
-	Presence of CHP			CHP		y/n
 	=============================== =============== ===========
 
 
@@ -216,7 +218,7 @@ In the current version of DispaSet three type of combined heat and power units a
 
 * Extraction/condensing units
 * Backpressure units
-* Power to heat
+* Power to heat 
 
 For each of the above configurations the following fields must be filled:
 
@@ -237,6 +239,39 @@ There are numerous data checking routines to ensure that all data provided is co
 
 .. warning::
     For extraction/condensing CHP plants, the power plant capacity (*PowerCapacity*) must correspont to the nameplate capacity in the maximum heat and power mode. Internal Dispaset calculations will use the equivalent stand-alone plants capacity based on the parameters provided.
+
+
+P2HT units
+^^^^^^^^^^
+
+Some parameters must only be defined for the power-to-heat units (heat pumps, electrical heaters). They can be left blank for all other units.
+
+.. table:: Specific fields for P2HT units
+
+    ========================================= ================== ===========
+    Description                               Field name         Units
+    ========================================= ================== ===========
+    Nominal coefficient of performance	      COP                -
+    Nominal temperature                       Tnominal           °C
+    First coefficient                         coef_COP_a         -
+    Second coefficient	                      coef_COP_b         - 
+    Capacity of heat Storage                  STOCapacity        MWh(th)
+    % of storage heat losses per timestep     STOSelfDischarge   %
+    ========================================= ================== ===========
+
+NB:
+
+* Electrical heaters can be simulated by setting the nominal COP to 1 and the temperature coefficients to 0
+* The two coefficients a and b aim at correcting the COP for the ambient temperatures. They are calculated as follows:
+
+.. math::
+
+	 \mathit{COP} = \mathit{COP}_{nom} + \mathit{coef}_{a} \cdot (T - T_{nom}) + \mathit{coef}_{b} \cdot (T - T_{nom})^2
+
+where T is the atmospheric temperature which needs to be provided as a times sereis for each zone in a csv file. The first row of the csv file is the zone name and a proper time index is required. The csv file path must be provided in the "Temperatures" field of the configuration file (see ConfigTest.xlsx for an example)
+
+.. warning::
+    For power-to-heat units, the power plant capacity (*PowerCapacity*) must correspont to the nameplate nominal ELECTRICAL consumption, thus given by the thermal capacity divided by the nominal COP.
 
 
 Renewable generation
