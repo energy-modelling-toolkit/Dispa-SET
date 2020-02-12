@@ -1,7 +1,7 @@
 .. _formulations:
 
-Model Formulations and clustering
-=================================
+Model Formulations
+==================
 
 Because of the constraints linked to computational efficiency and to data availability, it is not necessarily desirable to accurately model each individual unit in the power system. For that reason, Dispa-SET can operate under different modelling hypotheses and levels of complexity. In terms of formulation of the optimization problem, these include for example:
 - A linear programming formulation, in which all units are clustered by technology 
