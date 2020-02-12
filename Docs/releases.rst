@@ -42,6 +42,8 @@ Version 2.4
 
 * Transmission prices have been added to the pre-processing and can now be fully parametrized
 
+* Fuel Prices can now be country-specific
+
 * Input data in the csv files can now be defined with time stamps from any year or with a numerical index
 
 * Post-processing:
@@ -56,6 +58,7 @@ Version 2.4
 	- The end-of horizon reservoir level is no longer a firm constraint. A water value can be defined to impose a price on the unmet level requirements.
 	- Excel configuration files are now subject to versioning, which ensures backward compatibility with older configuration files.
 	- Countries are now renamed into "zones" in all API functions.
+	- The option to cache csv file data when loading has been removed
 	
 
 Version 2.3
