@@ -11,7 +11,7 @@ dependencies:
   - xlrd >= 0.9
   - xarray >= 0.11
   - netcdf4
-  - pyyaml
+  - pyyaml >= 5.1
   - pytest
   - pip
   - pip:
