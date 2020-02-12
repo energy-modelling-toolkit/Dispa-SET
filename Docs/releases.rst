@@ -21,8 +21,9 @@ Changelog
 Version 2.4
 ^^^^^^^^^^^
 * Flexible Demand:
-	- It is now possible to make a share of the demand flexible
-	- The flexibility is characterized by the equivalent number of storage hours for the shifted load
+	- To model demand-side management, it is now possible to define a share of the demand curve as "flexible"
+	- In this flexible demand, the load can be shifted from one hour to the other
+	- The maximum flexibility is characterized by the equivalent number of storage hours for the shifted load, which is defined as parameter in the configuration file.
 
 * Power-to-heat units
 	- P2HT units (heat pumps, electrical heater) have now been added
