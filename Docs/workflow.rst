@@ -17,7 +17,7 @@ Install Python 3.7, with full scientific stack. The Anaconda_ distribution is re
 * pandas>= 0.19
 * xlrd >= 0.9
 * pickle
-* pyyaml
+* pyyaml >= 5.1
 * pytest
 
 Using Dispa-SET:

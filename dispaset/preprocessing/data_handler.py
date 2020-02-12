@@ -555,7 +555,7 @@ def load_config_yaml(filename, AbsPath=True):
     import yaml
     with open(filename, 'r') as f:
         try:
-            config = yaml.load(f)
+            config = yaml.full_load(f)
         except yaml.YAMLError as exc:
             logging.error('Cannot parse config file: {}'.format(filename))
             raise exc
