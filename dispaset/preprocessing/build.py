@@ -119,6 +119,8 @@ def build_single_run(config, profiles=None):
     LoadShedding = NodeBasedTable('LoadShedding',config,default=config['default']['LoadShedding'])
     CostLoadShedding = NodeBasedTable('CostLoadShedding',config,default=config['default']['CostLoadShedding'])
     ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand',config,default=config['default']['ShareOfFlexibleDemand'])
+    Reserve2D = NodeBasedTable('Reserve2D',config,default=None)
+    Reserve2U = NodeBasedTable('Reserve2U',config,default=None)
     
     # Power plants:
     plants = pd.DataFrame()
@@ -301,8 +303,16 @@ def build_single_run(config, profiles=None):
     reserve_2U_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
     reserve_2D_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
     for z in Load.columns:
-        reserve_2U_tot[z] = np.sqrt(10 * PeakLoad[z] + 150 ** 2) - 150
-        reserve_2D_tot[z] = 0.5 * reserve_2U_tot[z]
+        if z in Reserve2U:
+            reserve_2U_tot[z] = Reserve2U[z]
+        else:
+            reserve_2U_tot[z] = np.sqrt(10 * PeakLoad[z] + 150 ** 2) - 150
+            logging.warning('No 2U reserve requirement data has been found for zone ' + z + '. Using the standard formula')
+        if z in Reserve2D:
+            reserve_2D_tot[z] = Reserve2D[z]
+        else:
+            reserve_2D_tot[z] = 0.5 * reserve_2U_tot[z]
+            logging.warning('No 2D reserve requirement data has been found for zone ' + z + '. Using the standard formula')
 
 
     # %% Store all times series and format
