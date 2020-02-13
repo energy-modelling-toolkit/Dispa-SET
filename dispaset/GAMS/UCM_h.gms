@@ -474,7 +474,7 @@ $ifthen %MTS% == 1
 EQ_SystemCost(i)..
          SystemCost(i)
          =E=
-         sum(u,CostFixed(u)*Committed(u,i))
+         sum(u,CostFixed(u)*TimeStep)
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
