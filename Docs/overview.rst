@@ -18,19 +18,20 @@ Features
 --------
 
 - Minimum and maximum power for each unit
-- Power plant ramping limits
-- Reserves up and down
-- Minimum up/down times
+- Power plant constraints: minimum power, ramping limits, Minimum up/down times, start-up, no-load costs
+- Outages (forced and planned) for each units
+- Reserves (spinning & non-spinning) up and down
 - Load Shedding
 - Curtailment
 - Pumped-hydro storage
 - Non-dispatchable units (e.g. wind turbines, run-of-river, etc.)
-- Start-up, ramping and no-load costs
 - Multi-nodes with capacity constraints on the lines (congestion)
 - Constraints on the targets for renewables and/or CO2 emissions
-- Yearly schedules for the outages (forced and planned) of each units
 - CHP power plants and thermal storage
-- Different clustering methods
+- Power-to-heat (heat pump, electrical heater) and thermal storage
+- DSM-ready demand
+- Integrated mid-term scheduling and short-term optimal dispatch
+- Different model formulations and levels of clustering complexity generated from the same dataset.
 
 The demand is assumed to be inelastic to the price signal. The MILP objective function is therefore the total generation cost over the optimization period. 
 
@@ -50,12 +51,18 @@ Dispa-SET in the scientific literature
 
 In the past years, Dispa-SET has been used in various scientific works covering different geographical areas and with different focus points. The works for which scientific articles have been published are summarized hereunder:
 
-* Contribution of hydropower for flexibility services in the European power system [2]_.
-* Ongoing work aiming at coupling the JRC-EU-TIMES model with Dispa-SET by generating simplified variable RES flexibility constraints [3]_ [4]_.
+
+* Hydropower for flexibility services in the European power system [2]_.
+* Generating stylized flexibility constraints for the JRC-EU-TIMES model [3]_ [4]_.
 * Impact of Electric Vehicle deployment in The Netherlands [5]_.
 * Open-source model of the Balkans area, with some simulations involving high shares of renewables [6]_ [7]_.
-* Available technical flexibility to balance variable RES generation in Belgium [8]_
-* Comparison of clustering formulations [9]_ [10]_
+* Specific country studies for RES integration (Belgium, Greece) [3]_ [9]_
+* Comparison between model formulations and levels of clustering [10]_ [11]_ [20]_
+* Benders decomposition for capacity expansion [14]_
+* The water-energy nexus in Greece and in Africa [8]_ [9]_ [15]_
+* Soft-linking between JRC-EU-TIMES and Dispa-SET at the EU level [17]_
+* Quantifying the flexibility provided by coupling the heating and power sectors [12]_ [13]_ [18]_ [19]_ [16]_ 
+* Power systems adequacy and flexibility assessments in developing countrie (Africa, Bolivia) [15]_ [21]_ 
 
 
 
@@ -90,9 +97,22 @@ References
 .. [5] Beltramo, A., Julea, A., Refa, N., Drossinos, Y., Thiel, C. and Quoilin, S. (2017),`Using electric vehicles as flexible resource in power systems: A case study in the Netherlands, In 14th International Conference on the European Energy Market (EEM).
 .. [6] Pavičević, M., Tomić, I., Quoilin, S., Zucker, A. and Pukšec, T. and Krajačić, G. (2017), Applying the Dispa-SET model on the Western Balkans power systems, In Proceedings of the 2017 SDEWES Conference
 .. [7] Tomić, I., Pavičević, M., Quoilin, S., Zucker, A., Krajačić, G., Pukšec, T. and Duić, N. (2017), Applying the Dispa-SET model on the seven countries from the South East Europe, In 8th Energy Planning and Modeling of Energy Systems-Meeting, Belgrade
-.. [8] Quoilin, S., Gonzalez Vazquez, I., Zucker, A., and Thiel, C. (2014). Available technical flexibility for balancing variable renewable energy sources: case study in Belgium. Proceedings of the 9th Conference on Sustainable Development of Energy, Water and Environment Systems.
-.. [9] Pavičević, M., Quoilin, S. and Pukšec, T., (2018). Comparison of Different Power Plant Clustering Approaches for Modeling Future Power Systems, Proceedings of the 3rd SEE SDEWES Conference, Novi Sad.
-.. [10] Pavičević, M., Kavvadias, K. and Quoilin, S. (2018). Impact of model formulation on power system simulations - Example with the Dispa-SET Balkans model, EMP-E conference 2018: Modelling Clean Energy Pathways, Brussels.
+.. [8] Ricardo Fernandez Blanco Carramolino, Konstantinos Kavvadias, Ignacio Hidalgo Gonzalez (2017). Water-related modelling in electric power systems: WATERFLEX Exploratory Research Project.
+.. [9] Ricardo Fernandez Blanco Carramolino, Konstantinos Kavvadias, I Hidalgo Gonzalez (2017). Quantifying the water-power linkage on hydrothermal power systems: A Greek case study. Applied Energy.
+.. [10] Pavičević, M., Quoilin, S. and Pukšec, T., (2018). Comparison of Different Power Plant Clustering Approaches for Modeling Future Power Systems, Proceedings of the 3rd SEE SDEWES Conference, Novi Sad.
+.. [11] Pavičević, M., Kavvadias, K. and Quoilin, S. (2018). Impact of model formulation on power system simulations - Example with the Dispa-SET Balkans model, EMP-E conference 2018: Modelling Clean Energy Pathways, Brussels.
+.. [12] Juan Pablo Jiménez Navarro, Konstantinos Kavvadias, Sylvain Quoilin, Zucker Andreas (2018). The joint effect of centralised cogeneration plants and thermal storage on the efficiency and cost of the power system. Energy.
+.. [13] Kavvadias, K., Jimenez Navarro, J.-P., Zucker, A., & Quoilin, S. (2018). Case study on the impact of cogeneration and thermal storage on the flexibility of the power system (KJ-NA-29082-EN-N). Netherlands: Publication Office of the European Commission.
+.. [14] Matthias Zech, Acceleration strategies of the Generation Expansion Planning problem using Benders Decomposition, Master Thesis, Dresden University of Technology, 2018
+.. [15] Matteo De Felice, Iratxe Gonzalez-Aparicio, Thomas Huld, Sebastian Busch, Ignacio Hidalgo-Gonzalez . Analysis of the water-power nexus in the West African power pool. JRC Technical Report, 2019.
+.. [16] Matija Pavičević, Juan-Pablo Jimenez, Konstantinos Kavvadias, Sylvain Quoilin (2019). Modeling the flexibility offered by coupling the heating sector and the power sector: an assessment at the EU level. 5th International Conference On Smart Energy Systems.
+.. [17] Matija Pavičević, Wouter Nijs, Konstantinos Kavvadias, Sylvain Quoilin (2019). Modelling flexible power demand and supply in the EU power system: soft-linking between JRC-EU-TIMES and the open-source Dispa-SET model. Proceedings of the 32nd International Conference on Efficiency, Cost, Optimization, Simulation and Environmental Impact of Energy Systems.
+.. [18] Konstantinos Kavvadias, Georg Thomassen, Matija Pavičević, Sylvain Quoilin (2019). Electrifying the heating sector in Europe: The impact on the power sector. Proceedings of the 32nd International Conference on Efficiency, Cost, Optimization, Simulation and Environmental Impact of Energy Systems.
+.. [19] Konstantinos Kavvadias, Juan Pablo Jimenez Navarro, Georg Thomassen (2019). Decarbonising the EU heating sector: Integration of the power and heating sector.
+.. [20] Pavičević, M., Kavvadias, K., Pukšec, T., & Quoilin, S. (2019, June). Comparison of different model formulations for modelling future power systems with high shares of renewables – The Dispa-SET Balkans model. Applied Energy.
+.. [21] Rojas Candia, R., Balderrama Subieta, S. L., Adhemar Araoz Ramos, J., Vicente Senosiain, M., Peña Balderrama, G., Jaldín Florero, H., & Quoilin, S. (2019). Techno-economic assessment of high variable renewable energy penetration in the Bolivian interconnected electric system. International Journal of Sustainable Energy Planning and Management, 22.
+
+
 
 .. _Python 3.7: https://www.anaconda.com/distribution/
 .. _matplotlib: http://matplotlib.org

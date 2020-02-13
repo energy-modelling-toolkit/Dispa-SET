@@ -5,6 +5,8 @@ Releases
 
 Major stable releases:
 
+* Dispa-SET v2.4
+
 * `Dispa-SET v2.3`_ 
 
 * `Dispa-SET v2.2`_
@@ -15,6 +17,49 @@ Major stable releases:
 
 Changelog
 ---------
+
+Version 2.4
+^^^^^^^^^^^
+* Flexible Demand:
+	- To model demand-side management, it is now possible to define a share of the demand curve as "flexible"
+	- In this flexible demand, the load can be shifted from one hour to the other
+	- The maximum flexibility is characterized by the equivalent number of storage hours for the shifted load, which is defined as parameter in the configuration file.
+
+* Power-to-heat units
+	- P2HT units (heat pumps, electrical heater) have now been added
+	- They are coupled to a heat demand and possibly to a thermal storage capacity
+	- COP can be defined as temperature-dependent. An additional input with temperature times for each zone has been defined.
+
+* Variable time step
+	- The pre-processing and the GAMS file have been update to handle different time steps (not only one hour)
+	- This is currently restricted to three time steps: 15min, 1h, 24h
+	- The input data whose time step is lower than the desired one is averaged
+
+* Mid-term scheduling
+	- The yearly storage level profiles can now be calculated internally (i.e. without providing exogenous profiles).
+	- A first, simplified version of dispa-set is run over a whole year to generate these profiles during the pre-processing phase
+	- This option is activated in the config file and is transparent for the user.
+
+* Transmission prices have been added to the pre-processing and can now be fully parametrized
+
+* Fuel Prices can now be country-specific
+
+* Input data in the csv files can now be defined with time stamps from any year or with a numerical index
+
+* Post-processing:
+	- Improved dispatch plot with shifted, shed loads and electricity consumption from P2HT units
+	- Storage levels are now differentiated by technology
+
+* Miscellaneous:
+	- Multiple bug fixes, code improvement and usability improvement.
+	- All config files and the example scripts have been checked and cleaned
+	- New formulation of the clustering function with significant simulation time improvements
+	- The Pyomo version of Dispa-SET has now been removed since it was no longer up-to-date
+	- The end-of horizon reservoir level is no longer a firm constraint. A water value can be defined to impose a price on the unmet level requirements.
+	- Excel configuration files are now subject to versioning, which ensures backward compatibility with older configuration files.
+	- Countries are now renamed into "zones" in all API functions.
+	- The option to cache csv file data when loading has been removed
+	
 
 Version 2.3
 ^^^^^^^^^^^

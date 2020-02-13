@@ -6,7 +6,7 @@
 The Dispa-SET model
 ===================
 
-The Dispa-SET model is an open-source unit commitment and optimal dispatch model focused on the balancing and flexibility problems in European grids. Its pre and post-processing tools are written in Python and the main solver can be called via GAMS. The selected Mixed-Integer Linear Programming (MILP) solver is CPLEX.
+The Dispa-SET model is an open-source unit commitment and optimal dispatch model focused on the balancing and flexibility problems in European grids. Its pre and post-processing tools are written in Python and the main solver can be called via GAMS. 
  
 Dispa-SET is mainly developed within the Joint Research Centre of the EU Commission, in close collaboration with the University of Liège and the KU Leuven (Belgium).
  
@@ -54,12 +54,11 @@ Contents
    overview
    releases
    workflow
+   data
    model
    formulations
    implementation
-   data
    cases
-   developers
    dispaset
 
 
