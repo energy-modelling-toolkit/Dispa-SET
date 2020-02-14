@@ -10,7 +10,7 @@ from future.builtins import int
 
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
     check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows, \
-    check_FlexibleDemand
+    check_FlexibleDemand, check_reserves
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
 
@@ -189,6 +189,7 @@ def build_single_run(config, profiles=None):
     check_heat_demand(plants,HeatDemand)
     check_temperatures(plants,Temperatures)
     check_FlexibleDemand(ShareOfFlexibleDemand)
+    check_reserves(Reserve2D,Reserve2U,Load)
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
@@ -307,12 +308,10 @@ def build_single_run(config, profiles=None):
             reserve_2U_tot[z] = Reserve2U[z]
         else:
             reserve_2U_tot[z] = np.sqrt(10 * PeakLoad[z] + 150 ** 2) - 150
-            logging.warning('No 2U reserve requirement data has been found for zone ' + z + '. Using the standard formula')
         if z in Reserve2D:
             reserve_2D_tot[z] = Reserve2D[z]
         else:
             reserve_2D_tot[z] = 0.5 * reserve_2U_tot[z]
-            logging.warning('No 2D reserve requirement data has been found for zone ' + z + '. Using the standard formula')
 
 
     # %% Store all times series and format

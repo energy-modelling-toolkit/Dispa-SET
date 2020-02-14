@@ -485,6 +485,30 @@ def check_heat_demand(plants,data):
     return True
 
 
+def check_reserves(Reserve2D,Reserve2U,Load):
+    '''
+    Function that checks the validity of the reserve requirement time series
+    '''
+    for z in Load.columns:
+        if z in Reserve2U:
+            if (Reserve2U[z] < 0).any():
+                logging.critical('The reserve 2U table contains negative values for zone ' + z)
+                sys.exit(1)
+            if (Load[z] - Reserve2U[z] < 0).any():
+                logging.critical('The reserve 2U table contains negative values higher than demand for zone ' + z)
+                sys.exit(1)
+        else:
+            logging.warning('No 2U reserve requirement data has been found for zone ' + z + '. Using the standard formula')
+        if z in Reserve2D:
+            if (Reserve2D[z] < 0).any():
+                logging.critical('The reserve 2D table contains negative values for zone ' + z)
+                sys.exit(1)
+            if (Load[z] - Reserve2D[z] < 0).any():
+                logging.critical('The reserve 2D table contains negative values higher than demand for zone ' + z)
+                sys.exit(1)
+        else:
+            logging.warning('No 2D reserve requirement data has been found for zone ' + z + '. Using the standard formula')
+
 
 def check_temperatures(plants,Temperatures):
     '''
