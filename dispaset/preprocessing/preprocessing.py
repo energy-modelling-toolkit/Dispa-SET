@@ -170,7 +170,7 @@ def mid_term_scheduling(config,TimeStep=None):
         sys.exit()
     #Remove the unit number (e.g. [1] - xxxxx)
     profiles = profiles.rename(columns={col: col.split(' - ')[1] for col in profiles.columns})
-    profiles.plot()
+
     #Re-index to the main simulation time step:
     if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
         profiles = profiles.reindex(idx_orig,method=('nearest'))
