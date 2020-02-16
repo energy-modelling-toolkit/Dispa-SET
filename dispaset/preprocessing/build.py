@@ -341,13 +341,11 @@ def build_single_run(config, profiles=None):
 # Resemple to the required time step
     if config['DataTimeStep'] != config['SimulationTimeStep']:
         for key in FuelPrices:
-            FuelPrices[key] = FuelPrices[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
-#        for key in ['Load','Inter_RoW','ScaledInflows','HeatDemand']:
-#            finalTS[key] = finalTS[key].resample(pd_timestep(config['SimulationTimeStep'])).sum()
-#        for key in ['NTCs','LoadShedding','CostLoadShedding','ScaledInflows','ReservoirLevels','Outages','AvailabilityFactors','CostHeatSlack']:
-#            finalTS[key] = finalTS[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
+            if len(FuelPrices[key].columns)>0:
+                FuelPrices[key] = FuelPrices[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
         for key in finalTS:
-            finalTS[key] = finalTS[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
+            if len(finalTS[key].columns)>0:
+                finalTS[key] = finalTS[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
 
               
     # %%################################################################################################################
