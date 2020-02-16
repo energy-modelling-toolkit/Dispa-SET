@@ -142,10 +142,13 @@ def mid_term_scheduling(config,TimeStep=None):
                                 'are present in the ' + c + ' power plant database! If not, unselect ' + c + ' form the '
                                 'zones in the MTS module')
                 sys.exit(0)
-            elif len(temp_results[c]['OutputStorageLevel']) != len(idx):
+            elif len(temp_results[c]['OutputStorageLevel']) > len(idx):
                 logging.critical('The number of time steps in the mid-term simulation results (' + str(len(temp_results[c]['OutputStorageLevel'])) \
                                  + ') does not match the length of the index ('+ str(len(idx)) + ')')
                 sys.exit(0)
+            elif len(temp_results[c]['OutputStorageLevel']) < len(idx):
+                for u in temp_results[c]['OutputStorageLevel']:
+                    profiles[u] = temp_results[c]['OutputStorageLevel'].reindex(range(1,len(idx)+1)).fillna(0).values                
             else:
                 for u in temp_results[c]['OutputStorageLevel']:
                     profiles[u] = temp_results[c]['OutputStorageLevel'].values
@@ -164,7 +167,10 @@ def mid_term_scheduling(config,TimeStep=None):
                              'are present in the power plant database! If not, unselect zones with no storage units form '
                              'the zones in the MTS module')
             sys.exit(0)
-        profiles = temp_results['OutputStorageLevel'].set_index(idx)
+        elif len(temp_results['OutputStorageLevel']) < len(idx):   
+            profiles = temp_results['OutputStorageLevel'].reindex(range(1,len(idx)+1)).fillna(0).set_index(idx)
+        else:
+            profiles = temp_results['OutputStorageLevel'].set_index(idx)
     else:
         logging.error('HydroScheduling parameter should be either "Regional" or "Zonal" (case sensitive). ')
         sys.exit()
