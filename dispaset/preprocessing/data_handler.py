@@ -578,7 +578,7 @@ def load_config_yaml(filename, AbsPath=True):
     PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
           'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
           'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
-          'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand','Temperatures','PriceTransmission'
+          'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand','Temperatures','PriceTransmission',
           'Reserve2D','Reserve2U']
     for param in PARAMS:
         if param not in config:
