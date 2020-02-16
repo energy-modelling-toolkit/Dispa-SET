@@ -206,7 +206,7 @@ def build_single_run(config, profiles=None):
         NTCs = pd.DataFrame(index=config['idx_long'])
     Inter_RoW = Interconnections_RoW.reindex(config['idx_long'])
     PriceTransmission = pd.DataFrame(index=NTCs.index,columns=NTCs.columns)
-    for l in (NTCs.columns.to_list()+Inter_RoW.columns.to_list()):
+    for l in (NTCs.columns.tolist()+Inter_RoW.columns.tolist()):
         if l in PriceTransmission_raw:
             PriceTransmission[l] = PriceTransmission_raw[l].reindex(PriceTransmission.index)
         else:
