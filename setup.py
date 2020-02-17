@@ -13,13 +13,14 @@ def read(*parts):
     with codecs.open(os.path.join(HERE, *parts), "rb", "utf-8") as f:
         return f.read()
 
-# Sets the __version__ variable
-__version__ = None
-exec(open('dispaset/_version.py').read())
+# Retrieve the version tag as fallback tag
+exec(open(os.path.join(HERE, 'dispaset/_version_tag.py')).read().strip())
+
+def local_version(version):
+    return version.format_choice("+{node}", "+dirty")
 
 setup(
     name='dispaset',
-    version=__version__,
     author='Sylvain Quoilin, Konstantinos Kavvadias',
     author_email='squoilin@uliege.be',
     description='An open-source unit commitment and optimal dispatch model ',
@@ -29,6 +30,12 @@ setup(
     packages=find_packages(),
     long_description=read('README.md'),
     include_package_data=True,
+    use_scm_version={
+        'local_scheme': local_version,
+        'write_to': os.path.join(HERE, 'dispaset/_version.py'),
+        'fallback_version': version_tag,
+    },
+    setup_requires=["setuptools_scm"],
     install_requires=[
         "future >= 0.15",
         "click >= 3.3",
