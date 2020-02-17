@@ -19,7 +19,7 @@ import dispaset as ds
 config = ds.load_config('../ConfigFiles/Config_Mid_Term_Scheduling.xlsx')
 
 ## Build simulation data with new profiles
-SimData = ds.build_simulation(config,mts_plot=True)
+SimData = ds.build_simulation(config,mts_plot=True,MTSTimeStep=24)
 
 #Solve using GAMS:
 r = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])

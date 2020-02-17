@@ -13,7 +13,6 @@ import pandas as pd
 from .build import build_single_run
 
 from ..solve import solve_GAMS
-from ..common import commons
 from ..misc.gdx_handler import gdx_to_dataframe, gdx_to_list
 from .utils import pd_timestep
 
@@ -24,7 +23,7 @@ except ImportError:
     pass
 
 
-def build_simulation(config, mts_plot=None):
+def build_simulation(config, mts_plot=None, MTSTimeStep=None):
     '''
     Dispa-SET function that builds different simulation environments based on the hydro scheduling option in the config file
     Hydro scheduling options:
@@ -35,34 +34,22 @@ def build_simulation(config, mts_plot=None):
                     (e.a. zones = ['AT','DE']), hydro scheduling is imposed on all active zones from the Config file simultaneously
 
     :config:                    Read config file
-    :zones_mts:                 List of zones where new reservoir levels should be calculated eg. ['AT','BE',...'UK']
     :mts_plot:                  If ms_plot = True indicative plot with temporary computed reservoir levels is displayed
+    :MTSTimeStep                Run the mid-term schefuling with a different (to speed up thing). If unspecified, the old MTS formulation is used
     '''
-    y_start, m_start, d_start, __, __, __ = config['StartDate']
-    y_stop, m_stop, d_stop, __, __, __ = config['StopDate']
     # Check existance of hydro scheduling module in the config file
-    # Hydro scheduling turned off, build_simulation performed without temporary computed reservoir levels
     hydro_flag = config.get('HydroScheduling', "")  # If key does not exist it returns ""
     if (hydro_flag == "") or (hydro_flag == "Off"):
         logging.info('Simulation without mid therm scheduling')
         SimData = build_single_run(config)
-    # Hydro scheduling per Zone
     else:
-        new_profiles = mid_term_scheduling(config)
-        # Plot new profiles
-        if mts_plot:
-            new_profiles.plot()
-            logging.info('Simulation with specified zones selected')
-        else:
-            logging.info('No temporary profiles selected for display')
+        new_profiles = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
         # Build simulation data with new profiles
-        config['StartDate'] = (y_start, m_start, d_start, 00, 00, 00)  # updating start date to the beginning of the year
-        config['StopDate'] = (y_stop, m_stop, d_stop, 23, 59, 00)  # updating stopdate to the end of the year
         SimData = build_single_run(config, new_profiles)
     return SimData
 
 
-def mid_term_scheduling(config,TimeStep=None):
+def mid_term_scheduling(config,TimeStep=None, mts_plot=None):
     """
     This function reads the DispaSET config file, searches for active zones,
     loads data for each zone individually and solves model using UCM_h_simple.gms
@@ -176,7 +163,10 @@ def mid_term_scheduling(config,TimeStep=None):
         sys.exit()
     #Remove the unit number (e.g. [1] - xxxxx)
     profiles = profiles.rename(columns={col: col.split(' - ')[1] for col in profiles.columns})
-
+    
+    if mts_plot:
+        profiles.plot()
+        
     #Re-index to the main simulation time step:
     if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
         profiles = profiles.reindex(idx_orig,method=('nearest'))
