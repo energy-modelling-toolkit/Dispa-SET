@@ -1,9 +1,3 @@
-"""
-This file gathers different functions used in the DispaSET pre-processing tools
-
-@author: Sylvain Quoilin (sylvain.quoilin@ec.europa.eu)
-"""
-
 from __future__ import division
 
 import logging
@@ -23,9 +17,8 @@ def EfficiencyTimeSeries(config,plants,Temperatures):
     Function that calculates an efficiency time series for each unit
     In case of generation unit, the efficiency is constant in time (for now)
     In case of of p2h units, the efficicncy is defined as the COP, which can be
-    temperature-dependent or not
-    If it is temperature-dependent, the formula is:
-        COP = COP_nom + coef_a * (T-T_nom) + coef_b * (T-T_nom)^2
+    temperature-dependent or not. If it is temperature-dependent, the formula is:
+    :math:`COP = COP_{nom} + coef_a (T-T_{nom}) + coef_b (T-T_{nom})^2`
     
     :param plants:          Pandas dataframe with the original list of units
     :param Temperatures:    Dataframe with the temperature for all relevant units

@@ -24,19 +24,18 @@ except ImportError:
 
 
 def build_simulation(config, mts_plot=None):
-    '''
+    """
     Dispa-SET function that builds different simulation environments based on the hydro scheduling option in the config file
     Hydro scheduling options:
-        Off      -  Hydro scheduling turned off, normal call of BuildSimulation function
-        Zonal    -  Zonal variation of hydro scheduling, if zones are not individually specified in a list (e.a. zones = ['AT','DE'])
-                    hydro scheduling is imposed on all active zones from the Config file
-        Regional -  Regional variation of hydro scheduling, if zones from a specific region are not individually specified in a list
-                    (e.a. zones = ['AT','DE']), hydro scheduling is imposed on all active zones from the Config file simultaneously
+
+    * Off      -  Hydro scheduling turned off, normal call of BuildSimulation function
+    * Zonal    -  Zonal variation of hydro scheduling, if zones are not individually specified in a list (e.a. zones = ['AT','DE']) hydro scheduling is imposed on all active zones from the Config file
+    * Regional -  Regional variation of hydro scheduling, if zones from a specific region are not individually specified in a list (e.a. zones = ['AT','DE']), hydro scheduling is imposed on all active zones from the Config file simultaneously
 
     :config:                    Read config file
     :zones_mts:                 List of zones where new reservoir levels should be calculated eg. ['AT','BE',...'UK']
     :mts_plot:                  If ms_plot = True indicative plot with temporary computed reservoir levels is displayed
-    '''
+    """
     y_start, m_start, d_start, __, __, __ = config['StartDate']
     y_stop, m_stop, d_stop, __, __, __ = config['StopDate']
     # Check existance of hydro scheduling module in the config file
