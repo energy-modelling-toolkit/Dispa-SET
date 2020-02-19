@@ -48,6 +48,9 @@ setup(
         "gamsxcc",
         "optcc"
     ],
+    extras_require={
+        "dev": ["setuptools_scm"],
+    },
     entry_points={
         'console_scripts': [
             'dispaset = dispaset.cli:cli'
