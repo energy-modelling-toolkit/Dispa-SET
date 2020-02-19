@@ -7,7 +7,7 @@ from .common import commons
 try:
     from ._version import version
 except ImportError:
-    from ._version_tag import version_tag as version
+    from ._release import release as version
 __version__ = version
 
 # Logging: # TODO: Parametrize in dispacli or external config

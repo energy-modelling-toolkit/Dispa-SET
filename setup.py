@@ -13,8 +13,8 @@ def read(*parts):
     with codecs.open(os.path.join(HERE, *parts), "rb", "utf-8") as f:
         return f.read()
 
-# Retrieve the version tag as fallback tag
-exec(open(os.path.join(HERE, 'dispaset/_version_tag.py')).read().strip())
+# Retrieve the release tag as fallback version
+exec(open(os.path.join(HERE, 'dispaset/_release.py')).read().strip())
 
 def local_version(version):
     return version.format_choice("+{node}", "+dirty")
@@ -31,9 +31,10 @@ setup(
     long_description=read('README.md'),
     include_package_data=True,
     use_scm_version={
+        'version_scheme': 'post-release',
         'local_scheme': local_version,
         'write_to': os.path.join(HERE, 'dispaset/_version.py'),
-        'fallback_version': version_tag,
+        'fallback_version': release,
     },
     setup_requires=["setuptools_scm"],
     install_requires=[
