@@ -926,7 +926,7 @@ set days /1,'ndays'/;
 display days;
 PARAMETER elapsed(days);
 
-* Capacity expansion for a rolling horizon does not make sense without further methods
+* Rolling Horizon approach for Capacity expansion not applicable
 $If %CEPFormulation% == 1 Config("RollingHorizon Length","day") = ndays;
 
 FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("RollingHorizon Length","day"),

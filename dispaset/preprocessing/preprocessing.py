@@ -42,6 +42,7 @@ def build_simulation(config):
     idx_utc, idx_utc_noloc, idx_utc_year_noloc = get_indices(config)
     enddate_long = idx_utc_noloc[-1] + dt.timedelta(days=config['LookAhead'])
     idx_long = pd.DatetimeIndex(pd.date_range(start=idx_utc_noloc[0], end=enddate_long, freq=commons['TimeStep']))
+
     sets = load_sets(
         Nhours_long = len(idx_long),
         look_ahead = data.config['LookAhead'],
@@ -113,7 +114,7 @@ def build_model_parameters(config, sets, sets_param, data, idx_long):
     
     for var in ["Investment", "EconomicLifetime"]:
         parameters[var] = define_parameter(sets_param[var], sets, value=0)
-        expanded_plants = data.plants_expanded.index
+        expanded_plants = data.plants_expanded.index.tolist()
         parameters[var]["val"] =  Plants_merged.loc[expanded_plants, var].values
         
         # Plants_merged['FixedCost'] = pd.merge(Plants_merged, self.data.all_cost, how='left', on=['Fuel', 'Technology'])['FixedCost'].values

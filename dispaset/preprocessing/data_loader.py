@@ -153,15 +153,22 @@ def _fill_missing_cols_by_mean(df, df_mean, on_cols, merge_cols):
 
 
 def load_cep_parameters(config, Plants_merged):
+    cap_cols = ["Investment", "EconomicLifetime", "FixedCost"]
+    for col in cap_cols:
+        if col not in Plants_merged:
+            Plants_merged[col] = np.nan
     df_cap = Plants_merged[Plants_merged['Extendable'].astype(str) == "x"]
     
     if df_cap.shape[0] > 0: #any extendable power plant technology
         logging.info("Capacity Expansion used!")
-        if df_cap[["Investment", "EconomicLifetime", "FixedCost"]].isnull().values.any():
+        
+
+
+        if df_cap[cap_cols].isnull().values.any():
             logging.warning("Merging missing values in the columns: %s" % ", ".join(["Investment", "EconomicLifetime", "FixedCost"]))
             
             ## Cost of new technologies
-            all_cost = load_csv('Database/CapacityExpansion/TechsCost.csv') #basic cost data
+            all_cost = load_csv('Database/CapacityExpansion/techs_cost.csv') #basic cost data
             df_cap = _fill_missing_cols_by_mean(df_cap, all_cost, ["Technology", "Fuel"], ["Investment", "EconomicLifetime", "FixedCost"])
         plant_new = df_cap[:]
         plant_new = plant_new.set_index('Unit', drop=False)
@@ -420,8 +427,10 @@ class DataLoader(object):
                     logging.warning('No heat cost profile found for CHP plant "' + str(oldname) + '". Assuming zero')
                     self.CostHeatSlack[oldname] = 0
 
-            # merge the outages:
-            for i in plants.index:  # for all the old plant indexes
-                # get the old plant name corresponding to s:
-                oldname = plants['Unit'][i]
-                newname = self.mapping['NewIndex'][i]
+            # # merge the outages:
+            # for i in plants.index:  # for all the old plant indexes
+            #     # get the old plant name corresponding to s:
+            #     print(i)
+            #     print(self.mapping['NewIndex'])
+            #     oldname = plants['Unit'][i]
+            #     newname = self.mapping['NewIndex'][i]

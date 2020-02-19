@@ -3,6 +3,10 @@ import os
 import pytest
 
 conf_file = os.path.abspath('./tests/conf.yml')
+SIMULATION_TYPES = ['MILP', 'LP']
+CEP = [0, 1]
+
+
 @pytest.fixture(scope='module',
                 params=SIMULATION_TYPES,
                 )

@@ -320,6 +320,7 @@ def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
     #    mapping['OldIdx'] = map_old_new
     # Modify the Unit names with the original index number. In case of merged plants, indicate all indexes + the plant type and fuel
     for j in range(Nunits_merged):
+        print("nanu")
         if len(map_plant_orig[j]) == 1:  # The plant has not been merged
             NewName = str(map_plant_orig[j]) + ' - ' + plants_merged['Unit'][j]
             NewName = shrink_to_64(clean_strings(NewName))
