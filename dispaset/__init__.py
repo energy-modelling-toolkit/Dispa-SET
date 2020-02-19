@@ -2,11 +2,11 @@ import logging.config
 import os
 
 # Sets the __version__ variable
-from .common import commons
-
 from ._version import get_versions
 __version__ = get_versions()['version']
 del get_versions
+
+from .common import commons
 
 # Logging: # TODO: Parametrize in dispacli or external config
 _LOGCONFIG = {
