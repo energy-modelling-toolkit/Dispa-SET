@@ -1,3 +1,5 @@
 include *.md LICENSE
 graft dispaset
 global-exclude *.py[co]
+include versioneer.py
+include dispaset/_version.py
