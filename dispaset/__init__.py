@@ -2,11 +2,19 @@ import logging.config
 import os
 
 # Sets the __version__ variable
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions
-
 from .common import commons
+
+try:
+    from setuptools_scm import get_version
+    version = get_version(version_scheme='post-release',
+                          local_scheme='dirty-tag',
+                          root='..', relative_to=__file__)
+except (ImportError, LookupError):
+    try:
+        from ._version import version
+    except ImportError:
+        from ._release import release as version
+__version__ = version
 
 # Logging: # TODO: Parametrize in dispacli or external config
 _LOGCONFIG = {

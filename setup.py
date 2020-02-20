@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
-import versioneer
 import codecs
 import os
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -14,9 +13,14 @@ def read(*parts):
     with codecs.open(os.path.join(HERE, *parts), "rb", "utf-8") as f:
         return f.read()
 
+# Retrieve the release tag as fallback version
+exec(open(os.path.join(HERE, 'dispaset/_release.py')).read().strip())
+
+def local_version(version):
+    return version.format_choice("+{node}", "+dirty")
+
 setup(
     name='dispaset',
-    version=versioneer.get_version(),
     author='Sylvain Quoilin, Konstantinos Kavvadias',
     author_email='squoilin@uliege.be',
     description='An open-source unit commitment and optimal dispatch model ',
@@ -26,6 +30,13 @@ setup(
     packages=find_packages(),
     long_description=read('README.md'),
     include_package_data=True,
+    use_scm_version={
+        'version_scheme': 'post-release',
+        'local_scheme': local_version,
+        'write_to': os.path.join(HERE, 'dispaset/_version.py'),
+        'fallback_version': release,
+    },
+    setup_requires=["setuptools_scm"],
     install_requires=[
         "future >= 0.15",
         "click >= 3.3",
@@ -37,6 +48,9 @@ setup(
         "gamsxcc",
         "optcc"
     ],
+    extras_require={
+        "dev": ["setuptools_scm"],
+    },
     entry_points={
         'console_scripts': [
             'dispaset = dispaset.cli:cli'
@@ -46,6 +60,5 @@ setup(
         'License :: OSI Approved :: EUPL Software License',
         'Programming Language :: Python'
     ],
-    keywords=['energy systems', 'optimization', 'mathematical programming'],
-    cmdclass=versioneer.get_cmdclass(),
+    keywords=['energy systems', 'optimization', 'mathematical programming']
 )
