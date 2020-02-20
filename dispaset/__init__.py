@@ -7,7 +7,7 @@ from .common import commons
 try:
     from setuptools_scm import get_version
     version = get_version(version_scheme='post-release',
-                          local_scheme='dirty-tag',
+                          local_scheme=lambda version: version.format_choice("" if version.exact else "+{node}", "+dirty"),
                           root='..', relative_to=__file__)
 except (ImportError, LookupError):
     import pkg_resources
