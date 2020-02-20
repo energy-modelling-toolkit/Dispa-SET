@@ -10,10 +10,8 @@ try:
                           local_scheme='dirty-tag',
                           root='..', relative_to=__file__)
 except (ImportError, LookupError):
-    try:
-        from ._version import version
-    except ImportError:
-        from ._release import release as version
+    import pkg_resources
+    version = pkg_resources.get_distribution(__package__).version
 __version__ = version
 
 # Logging: # TODO: Parametrize in dispacli or external config
