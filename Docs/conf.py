@@ -24,15 +24,10 @@ autodoc_mock_imports = ['_tkinter']
 import matplotlib
 matplotlib.use('agg')
 
-__version__ = None
 # Sets the __version__ variable
-exec(open('../dispaset/_version.py').read())
-
-from subprocess import check_output
-try:
-    __release__ = check_output(["git", "describe"]).strip().decode()
-except:
-    __release__ = ''
+from pkg_resources import get_distribution
+__release__ = get_distribution('dispaset').version
+__version__ = '.'.join(__release__.split('.')[:2])
 
 # -- General configuration ------------------------------------------------
 

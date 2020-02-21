@@ -14,19 +14,11 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, check
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix
 
+from .. import __version__
 from ..common import commons
 from ..misc.gdx_handler import write_variables
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
-
-def get_git_revision_tag():
-    """Get version of DispaSET used for this run. tag + commit hash"""
-    from subprocess import check_output
-    try:
-        return check_output(["git", "describe", "--tags", "--always"]).strip()
-    except:
-        return 'NA'
-
 
 def build_single_run(config, profiles=None):
     """
@@ -38,7 +30,7 @@ def build_single_run(config, profiles=None):
     :param plot_load:     Boolean used to display a plot of the demand curves in the different zones
     :param profiles:      Profiles from mid term scheduling simulations
     """
-    dispa_version = str(get_git_revision_tag())
+    dispa_version = __version__
     logging.info('New build started. DispaSET version: ' + dispa_version)
     # %%################################################################################################################
     #####################################   Main Inputs    ############################################################

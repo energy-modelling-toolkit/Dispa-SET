@@ -5,7 +5,7 @@ import click
 from .preprocessing.data_handler import load_config
 from .preprocessing.preprocessing import build_simulation
 from .solve import solve_GAMS
-from ._version import __version__
+from . import __version__
 
 @click.group(chain=True)
 @click.option('-c','--config', prompt='Specify the path to the config file', type=click.Path(exists=True),

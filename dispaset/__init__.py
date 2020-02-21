@@ -2,11 +2,17 @@ import logging.config
 import os
 
 # Sets the __version__ variable
-from ._version import __version__
 from .common import commons
 
-from .preprocessing.build import get_git_revision_tag
-__gitversion__ = get_git_revision_tag()
+try:
+    from setuptools_scm import get_version
+    version = get_version(version_scheme='post-release',
+                          local_scheme=lambda version: version.format_choice("" if version.exact else "+{node}", "+dirty"),
+                          root='..', relative_to=__file__)
+except (ImportError, LookupError):
+    import pkg_resources
+    version = pkg_resources.get_distribution(__package__).version
+__version__ = version
 
 # Logging: # TODO: Parametrize in dispacli or external config
 _LOGCONFIG = {
