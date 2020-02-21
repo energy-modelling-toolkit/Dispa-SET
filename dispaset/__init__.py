@@ -56,9 +56,12 @@ except Exception:
 # Sets the __version__ variable
 try:
     from setuptools_scm import get_version
-    version = get_version(version_scheme='post-release',
-                          local_scheme=lambda version: version.format_choice("" if version.exact else "+{node}", "+dirty"),
-                          root='..', relative_to=__file__)
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        version = get_version(version_scheme='post-release',
+                              local_scheme=lambda version: version.format_choice("" if version.exact else "+{node}", "+dirty"),
+                              root='..', relative_to=__file__)
 except (ImportError, LookupError):
     try:
         from pkg_resources import get_distribution, DistributionNotFound
