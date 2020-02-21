@@ -10,8 +10,13 @@ try:
                           local_scheme=lambda version: version.format_choice("" if version.exact else "+{node}", "+dirty"),
                           root='..', relative_to=__file__)
 except (ImportError, LookupError):
-    import pkg_resources
-    version = pkg_resources.get_distribution(__package__).version
+    try:
+        from pkg_resources import get_distribution, DistributionNotFound
+        version = get_distribution(__package__).version
+    except DistributionNotFound:
+        import warnings
+        warnings.warn("Dispa-SET was unable to detect version.", RuntimeWarning)
+        version = 'n/a'
 __version__ = version
 
 # Logging: # TODO: Parametrize in dispacli or external config
