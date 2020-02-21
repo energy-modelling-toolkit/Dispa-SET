@@ -67,8 +67,8 @@ except (ImportError, LookupError):
         from pkg_resources import get_distribution, DistributionNotFound
         version = get_distribution(__package__).version
     except DistributionNotFound:
-        logging.warning("Dispa-SET was unable to detect version.")
-        version = 'n/a'
+        logging.warning("Unable to detect version, most probably because you did not install it properly. To avoid further errors, please install it by running 'pip install -e .'.")
+        version = 'N/A'
 __version__ = version
 
 # Importing the main Dispa-SET functions so that they can be called with "ds.function"
