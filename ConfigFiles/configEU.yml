@@ -18,6 +18,7 @@ Clustering: 1.0
 SimulationType:  'Integer clustering'  #LP, LP clustered
 ReserveCalculation:  'Generic'
 AllowCurtailment: 1.0
+CEP: True
 
 #------------------- Timeseries
 Demand:  'Database/TotalLoadValue/##/1h/2016.csv'

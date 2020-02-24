@@ -385,6 +385,7 @@ K_QuickStart(n) = Config("QuickStartShare","val");
 
 
 Expanded.up(uc) = 1;
+EconomicLifetime("[40] - DE_STUR_BIO") = 20;
 
 * Investment unit: EUR/kW, model unit MW -> 1/1/1000=01
 C_inv(uc) = ((intrate_investment*(1+intrate_investment)**EconomicLifetime(uc))
@@ -490,27 +491,26 @@ EQ_SystemCost(i)..
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
          +Config("CostOfSpillage","val")*sum(s,spillage(s,i))
-         
          ;
 
 $endIf
 ;
 
 
-$ifthen [%CEPFormulation% == 1]
+$ifthen %CEPFormulation% == 1
 
 EQ_Objective_function..
-         SystemCostD 
+         SystemCostD
          =E=
          (sum(i,SystemCost(i))
          +Config("WaterValue","val")*sum(s,WaterSlack(s))
-         + sum(uc, Expanded(uc) * C_inv(uc)*PowerCapacity(uc)* 1/card(h)))/1E6;
+         + sum(uc, Expanded(uc) * C_inv(uc)*PowerCapacity(uc)* 1/card(h)))/1E12;
 $else
 EQ_Objective_function..
-         SystemCostD 
+         SystemCostD
          =E=
          (sum(i,SystemCost(i))
-         +Config("WaterValue","val")*sum(s,WaterSlack(s)))/1E6 
+         +Config("WaterValue","val")*sum(s,WaterSlack(s)))/1E9
          ;
 
 
@@ -706,7 +706,8 @@ EQ_Storage_balance(s,i)..
 EQ_Storage_boundaries(s,i)$(ord(i) = card(i))..
          StorageFinalMin(s)
          =L=
-         StorageLevel(s,i) + WaterSlack(s)
+         StorageLevel(s,i)
+*         + WaterSlack(s)
 ;
 
 *Total emissions are capped

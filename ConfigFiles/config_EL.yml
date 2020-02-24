@@ -1,4 +1,5 @@
 AllowCurtailment: 1
+CEP: True
 Clustering: 1
 CostHeatSlack: ''
 CostLoadShedding: ''

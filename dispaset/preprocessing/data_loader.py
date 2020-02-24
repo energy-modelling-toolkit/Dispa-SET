@@ -174,7 +174,6 @@ def load_cep_parameters(config, Plants_merged):
         plant_new = plant_new.set_index('Unit', drop=False)
     else:
         plant_new = pd.DataFrame() # empty dataframe -> empty set in optimization model
-        
     return plant_new
 
 def cluster_plants(config, plants):

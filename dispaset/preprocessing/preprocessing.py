@@ -107,7 +107,6 @@ def build_model_parameters(config, sets, sets_param, data, idx_long):
     Plants_sto = data.plants_sto
     Plants_chp = data.plants_chp
     ReservoirLevels = data.ReservoirLevels
-
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
         parameters[var] = define_parameter(sets_param[var], sets, value=0)
@@ -116,8 +115,7 @@ def build_model_parameters(config, sets, sets_param, data, idx_long):
         parameters[var] = define_parameter(sets_param[var], sets, value=0)
         expanded_plants = data.plants_expanded.index.tolist()
         parameters[var]["val"] =  Plants_merged.loc[expanded_plants, var].values
-        
-        # Plants_merged['FixedCost'] = pd.merge(Plants_merged, self.data.all_cost, how='left', on=['Fuel', 'Technology'])['FixedCost'].values
+        Plants_merged['FixedCost'] = pd.merge(Plants_merged, self.data.all_cost, how='left', on=['Fuel', 'Technology'])['FixedCost'].values
     for var in ["CostFixed"]:
         sets_param[var] = ['u']
         parameters[var] = define_parameter(sets_param[var], sets, value=0)

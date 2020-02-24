@@ -589,7 +589,7 @@ def load_config_yaml(filename,AbsPath=True):
         for param in params:
             if not os.path.isabs(config[param]):
                 config[param] = os.path.join(basefolder,config[param])
-                
+    config["CEP"] = config.get("CEP", None)
     return config
 
 def export_yaml_config(ExcelFile,YAMLFile):
