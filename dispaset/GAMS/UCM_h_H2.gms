@@ -71,13 +71,13 @@ tr(t)            Renewable generation technologies
 f                Fuel types
 p                Pollutants
 s(u)             Storage Units (with reservoir)
-sto(u)           Storage units p2g + s
 chp(u)           CHP units
-p2g(u)           P2G units
 p2h(au)          Power to heat units
+p2h2(u)          power to hydrogen storage technologies
 th(au)           Units with thermal storage
 h                Hours
 i(h)             Subset of simulated hours for one iteration
+wat(s)           hydro technologies
 z(h)             Subset of every simulated hour
 ;
 
@@ -110,7 +110,7 @@ CostShutDown(u)                  [EUR\u]    Shut-down costs
 CostStartUp(u)                   [EUR\u]    Start-up costs
 CostVariable(u,h)                [EUR\MW]   Variable costs
 CostHeatSlack(th,h)             [EUR\MWh]  Cost of supplying heat via other means
-CostH2Slack(p2g,h)               [EUR\MWh] Cost of buying H2 via other means than H2 storage
+CostH2Slack(p2h2,h)              [EUR\MWh] Cost of supplying H2 by other means
 CostLoadShedding(n,h)            [EUR\MWh] Cost of load shedding
 Curtailment(n)                   [n.a]    Curtailment allowed or not {1 0} at node n
 Demand(mk,n,h)                   [MW]     Demand
@@ -121,7 +121,6 @@ FlowMaximum(l,h)                 [MW]     Line limits
 FlowMinimum(l,h)                 [MW]     Minimum flow
 Fuel(u,f)                        [n.a.]   Fuel type {1 0}
 HeatDemand(au,h)                [MWh\u]  Heat demand profile for chp units
-H2Demand(au,h)                   [MWh\u] H2 demand for p2g units
 LineNode(l,n)                    [n.a.]   Incidence matrix {-1 +1}
 LoadShedding(n,h)                [MW]   Load shedding capacity
 Location(au,n)                    [n.a.]   Location {1 0}
@@ -133,7 +132,6 @@ PowerInitial(u)                  [MW\u]     Power output before initial period
 PowerMinStable(au)              [MW\u]     Minimum power output
 PriceTransmission(l,h)           [EUR\MWh]  Transmission price
 StorageChargingCapacity(au)       [MW\u]     Storage capacity
-StorageDischargingCapacity(au)  [MW\u]  Installed capacity of fuel cells
 StorageChargingEfficiency(au)   [%]      Charging efficiency
 StorageSelfDischarge(au)        [%\day]  Self-discharge of the storage units
 RampDownMaximum(u)               [MW\h\u]   Ramp down limit
@@ -191,6 +189,8 @@ $LOAD tr
 $LOAD f
 $LOAD p
 $LOAD s
+$LOAD wat
+$LOAD p2h2
 $LOAD chp
 $LOAD p2h
 $LOAD th
@@ -219,7 +219,6 @@ $LOAD FlowMaximum
 $LOAD FlowMinimum
 $LOAD Fuel
 $LOAD HeatDemand
-$LOAD H2Demand
 $LOAD LineNode
 $LOAD LoadShedding
 $LOAD Location
@@ -231,7 +230,6 @@ $LOAD PowerInitial
 $LOAD PartLoadMin
 $LOAD PriceTransmission
 $LOAD StorageChargingCapacity
-$LOAD StorageDischargingCapacity
 $LOAD StorageChargingEfficiency
 $LOAD StorageSelfDischarge
 $LOAD RampDownMaximum
@@ -266,6 +264,8 @@ tr,
 f,
 p,
 s,
+p2h2,
+wat,
 chp,
 p2h,
 h,
@@ -289,7 +289,6 @@ FlowMaximum,
 FlowMinimum,
 Fuel,
 HeatDemand,
-H2Demad,
 LineNode,
 Location,
 LoadShedding
@@ -349,8 +348,8 @@ PowerConsumption(p2h,h)    [MW]    Power consumption by P2H units
 PowerMaximum(u,h)          [MW]    Power output
 PowerMinimum(u,h)          [MW]    Power output
 ShedLoad(n,h)              [MW]    Shed load
-StorageInput(au,h)         [MW]    Charging input for storage units
-StorageLevel(au,h)         [MWh]   Storage level of charge
+StorageInput(au,h)        [MWh]   Charging input for storage units
+StorageLevel(au,h)        [MWh]   Storage level of charge
 LL_MaxPower(n,h)           [MW]    Deficit in terms of maximum power
 LL_RampUp(u,h)             [MW]    Deficit in terms of ramping up for each plant
 LL_RampDown(u,h)           [MW]    Deficit in terms of ramping down
@@ -364,10 +363,9 @@ Reserve_2U(u,h)            [MW]    Spinning reserve up
 Reserve_2D(u,h)            [MW]    Spinning reserve down
 Reserve_3U(u,h)            [MW]    Non spinning quick start reserve up
 Heat(au,h)                [MW]    Heat output by chp plant
-H2(au,h)                  [MW]   Part of H2 demand that is provided by H2 storage
 HeatSlack(au,h)           [MW]    Heat satisfied by other sources
-H2Slack(au,h)             [MW]    H2 satisfied by other sources than H2 storage
-WaterSlack(s)              [MWh]   Unsatisfied water level constraint
+WaterSlack(s)             [MWh]   Unsatisfied water level constraint at end of optimization period
+StorageSlack(s,i)         [MWh]   Unsatisfied storage level constraint at end of simulation timestep
 ;
 
 free variable
@@ -451,13 +449,9 @@ EQ_Reserve_3U_capability
 EQ_Storage_minimum
 EQ_Storage_level
 EQ_Storage_input
-EQ_Storage_H2_output
-EQ_Storage_Hydro_MaxDischarge
-EQ_Storage_H2_MaxDischarge
-EQ_Storage_Hydro_MaxCharge
-EQ_Storage_H2_MaxCharge
-EQ_Storage_Hydro_balance
-EQ_Storage_H2_balance
+EQ_Storage_MaxDischarge
+EQ_Storage_MaxCharge
+EQ_Storage_balance
 EQ_Storage_boundaries
 EQ_SystemCost
 EQ_Emission_limits
@@ -495,11 +489,11 @@ EQ_SystemCost(i)..
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(th,CostHeatSlack(th,i)*HeatSlack(th,i)*TimeStep)
-         +sum(p2g,CostH2Slack(p2g,i)*H2Slack(p2g,i)*TimeStep)
+         +sum(p2h2,CostH2Slack(p2h2,i)*StorageSlack(p2h2,i)*TimeStep)
          +sum(chp,CostVariable(chp,i)*CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep)
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep)
-         +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
+         +Config("CostOfSpillage","val")*sum(wat,spillage(wat,i));
 
 $elseIf %LPFormulation% == 1
 EQ_SystemCost(i)..
@@ -511,12 +505,12 @@ EQ_SystemCost(i)..
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(th, CostHeatSlack(th,i) * HeatSlack(th,i)*TimeStep)
-         +sum(p2g,CostH2Slack(p2g,i)*H2Slack(p2g,i)*TimeStep)
+         +sum(p2h2, CostH2Slack(p2h2,i)*StorageSlack(p2h2,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
-         +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
+         +Config("CostOfSpillage","val")*sum(wat,spillage(wat,i));
 $else
 
 EQ_SystemCost(i)..
@@ -529,12 +523,12 @@ EQ_SystemCost(i)..
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(th, CostHeatSlack(th,i) * HeatSlack(th,i)*TimeStep)
-         +sum(p2g,CostH2Slack(p2g,i)*H2Slack(p2g,i)*TimeStep)
+         +sum(p2h2, CostH2Slack(p2h2,i)*StorageSlack(p2h2,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
-         +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
+         +Config("CostOfSpillage","val")*sum(wat,spillage(wat,i));
 
 $endIf
 ;
@@ -545,7 +539,7 @@ EQ_Objective_function..
          SystemCostD
          =E=
          sum(i,SystemCost(i))
-         +Config("WaterValue","val")*sum(s,WaterSlack(s))
+         +Config("WaterValue","val")*sum(wat,WaterSlack(wat))
 ;
 
 * 3 binary commitment status
@@ -632,7 +626,7 @@ EQ_Demand_balance_DA(n,i)..
          =E=
          Demand("DA",n,i) + Demand("Flex",n,i)
          +DemandModulation(n,i)
-         +sum(sto,StorageInput(sto,i)*Location(sto,n))
+         +sum(s,StorageInput(s,i)*Location(s,n))
          -ShedLoad(n,i)
          +sum(p2h,PowerConsumption(p2h,i)*Location(p2h,n))
          -LL_MaxPower(n,i)
@@ -718,13 +712,13 @@ $Ifthen %MTS% == 0
 EQ_Reserve_2D_capability(u,i)..
          Reserve_2D(u,i)
          =L=
-         (Power(u,i) - PowerMustRun(u,i) * Committed(u,i)) + (StorageChargingCapacity(u)*Nunits(u)-StorageInput(u,i))$(sto(u))
+         (Power(u,i) - PowerMustRun(u,i) * Committed(u,i)) + (StorageChargingCapacity(u)*Nunits(u)-StorageInput(u,i))$(s(u))
 ;
 $else
 EQ_Reserve_2D_capability(u,i)..
          Reserve_2D(u,i)
          =L=
-         Power(u,i) + (StorageChargingCapacity(u)*Nunits(u)-StorageInput(u,i))$(sto(u))
+         Power(u,i) + (StorageChargingCapacity(u)*Nunits(u)-StorageInput(u,i))$(s(u))
 ;
 $endIf;
 
@@ -776,102 +770,71 @@ EQ_Power_available(u,i)..
 $endIf;
 
 *Storage level must be above a minimum
-EQ_Storage_minimum(sto,i)..
-         StorageMinimum(sto)* Nunits(sto)
-         =L=
-         StorageLevel(sto,i)
-;
-
-*Storage level must be below storage capacity
-EQ_Storage_level(sto,i)..
-         StorageLevel(sto,i)
-         =L=
-         StorageCapacity(sto)*AvailabilityFactor(sto,i)*Nunits(sto)
-;
-
-* Storage charging is bounded by the maximum capacity
-$Ifthen %MTS% == 0
-EQ_Storage_input(sto,i)..
-         StorageInput(sto,i)
-         =L=
-         StorageChargingCapacity(sto)*(Nunits(sto)-Committed(sto,i))
-;
-$else
-EQ_Storage_input(sto,i)..
-         StorageInput(sto,i)
-         =L=
-         StorageChargingCapacity(sto)*Nunits(sto)
-;
-$endif;
-* The system could curtail by pumping and turbining at the same time if Nunits>1. This should be included into the curtailment equation!
-
-* Discharging is bounded by the installed capacity of fuel cells for p2g storage
-EQ_Storage_H2_output(p2g,i)..
-         Power(p2g,i)
-         =L=
-         StorageDischargingCapacity(p2g)*Nunits(p2g)
-
-*Discharge is limited by the storage level
-EQ_Storage_Hydro_MaxDischarge(s,i)..
-         Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
-         +StorageOutflow(s,i)*Nunits(s)*TimeStep +Spillage(s,i) - StorageInflow(s,i)*Nunits(s)*TimeStep
+EQ_Storage_minimum(s,i)..
+         StorageMinimum(s)* Nunits(s)
          =L=
          StorageLevel(s,i)
 ;
 
-EQ_Storage_H2_MaxDischarge(p2g,i)..
-         Power(p2g,i)*TimeStep/(max(StorageDischargeEfficiency(p2g),0.0001))
-         + H2(p2g,i)*TimeStep
+*Storage level must be below storage capacity
+EQ_Storage_level(s,i)..
+         StorageLevel(s,i)
          =L=
-         StorageLevel(p2g,i)
+         StorageCapacity(s)*AvailabilityFactor(s,i)*Nunits(s)
 ;
 
+* Storage charging is bounded by the maximum capacity
+$Ifthen %MTS% == 0
+EQ_Storage_input(s,i)..
+         StorageInput(s,i)
+         =L=
+         StorageChargingCapacity(s)*(Nunits(s)-Committed(s,i))
+;
+$else
+EQ_Storage_input(s,i)..
+         StorageInput(s,i)
+         =L=
+         StorageChargingCapacity(s)*Nunits(s)
+;
+$endif;
+* The system could curtail by pumping and turbining at the same time if Nunits>1. This should be included into the curtailment equation!
+
+*Discharge is limited by the storage level
+EQ_Storage_MaxDischarge(s,i)..
+         Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
+         +StorageOutflow(s,i)*Nunits(s)*TimeStep +spillage(s,i)$(wat(s)) - StorageInflow(s,i)*Nunits(s)*TimeStep - StorageSlack(s,i)$(p2h2(s))
+         =L=
+         StorageLevel(s,i)
+;
 
 *Charging is limited by the remaining storage capacity
-EQ_Storage_Hydro_MaxCharge(s,i)..
+EQ_Storage_MaxCharge(s,i)..
          StorageInput(s,i)*StorageChargingEfficiency(s)*TimeStep
-         -StorageOutflow(s,i)*Nunits(s)*TimeStep -spillage(s,i) + StorageInflow(s,i)*Nunits(s)*TimeStep
+         -StorageOutflow(s,i)*Nunits(s)*TimeStep -spillage(s,i)$(wat(s)) + StorageInflow(s,i)*Nunits(s)*TimeStep + StorageSlack(s,i)$(p2h2(s))
          =L=
          StorageCapacity(s)*AvailabilityFactor(s,i)*Nunits(s) - StorageLevel(s,i)
 ;
 
-*Charging is limited by the remaining storage capacity
-EQ_Storage_H2_MaxCharge(p2g,i)..
-         StorageInput(p2g,i)*StorageChargingEfficiency(p2g)*TimeStep
-         -H2(p2g,i) * TimeStep
-         =L=
-         StorageCapacity(p2g)*AvailabilityFactor(p2g,i)*Nunits(p2g) - StorageLevel(p2g,i)
-;
-
 *Storage balance
-EQ_Storage_Hydro_balance(s,i)..
+EQ_Storage_balance(s,i)..
          StorageInitial(s)$(ord(i) = 1)
          +StorageLevel(s,i-1)$(ord(i) > 1)
 *         +StorageLevelH(h--1,s)
          +StorageInflow(s,i)*Nunits(s)*TimeStep
          +StorageInput(s,i)*StorageChargingEfficiency(s)*TimeStep
+         +StorageSlack(s,i)$(p2h2(s))
          =E=
          StorageLevel(s,i)
          +StorageOutflow(s,i)*Nunits(s)*TimeStep
-         +spillage(s,i)
+         +spillage(s,i)$(wat(s))
          +Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
 ;
 
-EQ_Storage_H2_balance(p2g,i)..
-         StorageInitial(p2g)$(ord(i) = 1)
-         +StorageLevel(p2g,i-1)$(ord(i) > 1)
-         +StorageInput(p2g,i)*StorageChargingEfficiency(p2g)*TimeStep
-         =E=
-         StorageLevel(p2g,i)
-         +Power(p2g,i)*TimeStep/(max(StorageDischargeEfficiency(p2g),0.0001))
-         + H2(p2g,i) * TimeStep
-;
-
 * Minimum level at the end of the optimization horizon:
-EQ_Storage_boundaries(sto,i)$(ord(i) = card(i))..
-         StorageFinalMin(sto)
+EQ_Storage_boundaries(s,i)$(ord(i) = card(i))..
+         StorageFinalMin(s)
          =L=
-         StorageLevel(sto,i) + WaterSlack(sto)$(s)
+         StorageLevel(s,i) + WaterSlack(s)$(wat(s))
 ;
 
 *Total emissions are capped
@@ -1035,15 +998,11 @@ EQ_Reserve_3U_capability,
 EQ_Storage_minimum,
 EQ_Storage_level,
 EQ_Storage_input,
-EQ_Storage_H2_output,
-EQ_Storage_Hydro_balance,
-EQ_Storage_H2_balance,
+EQ_Storage_balance,
 EQ_Storage_boundaries,
-EQ_Storage_Hydro_MaxCharge,
-EQ_Storage_H2_MaxCharge,
-EQ_Storage_Hydro_MaxDischarge,
-EQ_Storage_H2_MaxDischarge,
-EQ_SystemCost,
+EQ_Storage_MaxCharge
+EQ_Storage_MaxDischarge
+EQ_SystemCost
 *EQ_Emission_limits,
 EQ_Flow_limits_lower,
 EQ_Flow_limits_upper,
