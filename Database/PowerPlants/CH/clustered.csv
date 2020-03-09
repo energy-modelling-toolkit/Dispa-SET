@@ -1,4 +1,0 @@
-,PowerCapacity,Unit,Zone,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost_pu,NoLoadCost_pu,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency,Nunits
-CH_STUR_NUC,843.7500000000001,CH_STUR_NUC,CH,STUR,NUC,1.0,24,24,0.00333333333333333,0.00333333333333333,300,0.0,0,0.5,1.0,12.0,0.0,,,,,,,4.0
-CH_PHOT_SUN,1394.0,CH_PHOT_SUN,CH,PHOT,SUN,1.0,0,0,0.02,0.02,0,0.0,0,0.0,1.0,0.0,0.0,,,,,,,1
-CH_HPHS_WAT,8979.8,CH_HPHS_WAT,CH,HPHS,WAT,0.8,0,0,0.0666666666666667,0.0666666666666667,0,0.0,0,0.0,1.0,0.0,0.0,,,5732197.1,0.0,4178.0,0.8,1

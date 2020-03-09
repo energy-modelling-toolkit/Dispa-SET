@@ -1,0 +1,7 @@
+,Unit,PowerCapacity,Nunits,Zone,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost_pu,NoLoadCost_pu,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,CHPPowerLossFactor,COP,Tnominal,coef_COP_a,coef_COP_b,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency,CHPMaxHeat
+MT_COMC_GAS,MT_COMC_GAS,231.5,2.0,MT,COMC,GAS,0.51,3,3,0.07,0.07,55,2.9,0.25,0.062171053,0.57,1.0,0.3569,,,,,,,,,,,,
+MT_WTOF_WIN,MT_WTOF_WIN,11.000000000000002,1,MT,WTOF,WIN,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,,
+MT_WTON_WIN,MT_WTON_WIN,238.00000000000003,1,MT,WTON,WIN,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,,
+MT_PHOT_SUN,MT_PHOT_SUN,1350.0,1,MT,PHOT,SUN,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,,
+MT_BATS_OTH,MT_BATS_OTH,27777.77777777778,1,MT,BATS,OTH,0.9,0,0,1.0,1.0,0,0.0,0.0,0.0,0.9,0.0,0.0,,,,,,,,111111.11111111112,0.0,0.0,0.9,
+MT_BEVS_OTH,MT_BEVS_OTH,695.0,1,MT,BEVS,OTH,0.7,0,0,1.0,1.0,0,0.0,0.0,0.0,0.7,0.0,0.0,,,,,,,,2849.4999999999995,0.0,695.0,0.88,
