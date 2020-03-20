@@ -314,12 +314,31 @@ def load_time_series(config,path,header='infer'):
         # Checking if the required index entries are in the data:
         common = data.index.tz_localize(None).intersection(config['idx'])
         if len(common) == 0:
-            # try to see if it is just a year-mismatch
-            index2 = data.index.shift(8760 * (config['idx'][0].year - data.index[0].year),freq=commons['TimeStep'])
-            common2 = index2.intersection(config['idx'])
-            if len(common2) == len(config['idx']):
-                logging.warning('File ' + path + ': data for year '+ str(data.index[0].year) + ' is used instead of year ' + str(config['idx'][0].year))
-                data.index=index2
+            # check if original year is leap year and destination year is not (remove leap date)
+            if (data.index[0].is_leap_year is True) and (config['idx'][0].is_leap_year is False):
+                data = data[~((data.index.month == 2) & (data.index.day == 29))]
+                logging.warning('File ' + path + ': data for year ' + str(data.index[0].year) +
+                                ' is used instead of year ' + str(config['idx'][0].year))
+                data.index = data.index.map(lambda t: t.replace(year=config['idx'][0].year))
+            # check if both years are either leap or non leap
+            elif (data.index[0].is_leap_year is True) and (config['idx'][0].is_leap_year is True) or \
+                    (data.index[0].is_leap_year is False) and (config['idx'][0].is_leap_year is False):
+                logging.warning('File ' + path + ': data for year ' + str(data.index[0].year) +
+                                ' is used instead of year ' + str(config['idx'][0].year) +
+                                '. Leap year date is removed from the original DataFrame.')
+                data.index = data.index.map(lambda t: t.replace(year=config['idx'][0].year))
+            # check if original year is not a leap year and destination year is a leap year (add leap date and take average hourly values between 28.02. and 1.3.
+            elif (data.index[0].is_leap_year is False) and (config['idx'][0].is_leap_year is True):
+                logging.warning('File ' + path + ': data for year ' + str(data.index[0].year) +
+                                ' is used instead of year ' + str(config['idx'][0].year) +
+                                '. Leap year date is interpolated between the two neighbouring days.')
+                data.index = data.index.map(lambda t: t.replace(year=config['idx'][0].year))
+                mask = data.loc[str(config['idx'][0].year)+'-2-28': str(config['idx'][0].year)+'-3-1']
+                mask = mask.groupby(mask.index.hour).mean()
+                time = pd.date_range(str(config['idx'][0].year)+'-2-29', periods=24, freq='H')
+                mask = mask.set_index(time)
+                data = data.reindex(config['idx'])
+                data.update(mask)
         elif len(common) == len(config['idx'])-1:  # there is only one data point missing. This is deemed acceptable
             logging.warning('File ' + path + ': there is one data point missing in the time series. It will be filled with the nearest data')
         elif len(common) < len(config['idx'])-1:
