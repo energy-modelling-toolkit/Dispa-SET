@@ -40,7 +40,13 @@ def clean_strings(x, exclude_digits=False, exclude_punctuation=False):
 
     """
     if sys.version_info >= (3,0): # Skip this funcion if python version is >3. Have to test better TODO
-        return x
+        if isinstance(x, str):
+            return x.strip()
+        elif isinstance(x, list):
+            return [xx.strip() for xx in x]
+        else:
+            logging.error('Argument type not supported')
+            sys.exit(1)
     import unicodedata
     import string
     def clean_singlestring(x):
@@ -65,6 +71,7 @@ def clean_strings(x, exclude_digits=False, exclude_punctuation=False):
 
         # x = x.upper() #to UPPERCASE
         x = ''.join(ch for ch in x if ch not in exclude)  # remove numbers and punctuation
+        x = x.strip()    # remove trailing space
         return x
     if isinstance(x, str):
         return clean_singlestring(x)
