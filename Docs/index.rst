@@ -58,6 +58,7 @@ Contents
    model
    formulations
    implementation
+   mid_term
    cases
    dispaset
 

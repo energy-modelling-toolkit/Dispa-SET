@@ -4,9 +4,10 @@ Model Formulations
 ==================
 
 Because of the constraints linked to computational efficiency and to data availability, it is not necessarily desirable to accurately model each individual unit in the power system. For that reason, Dispa-SET can operate under different modelling hypotheses and levels of complexity. In terms of formulation of the optimization problem, these include for example:
-- A linear programming formulation, in which all units are clustered by technology 
-- An integer formulation in which a typical unit is considered for each technology and multiplied N times. The formulation allows taking into account constraints such as minimum up/down times, minimum load, etc. 
-- A binary formulation in which each power plant in the system is considered individually
+
+* A linear programming formulation, in which all units are clustered by technology
+* An integer formulation in which a typical unit is considered for each technology and multiplied N times. The formulation allows taking into account constraints such as minimum up/down times, minimum load, etc.
+* A binary formulation in which each power plant in the system is considered individually
 
 The section describes the various clustering options and modeling formulations available in Dispa-SET. It is worthwhile to note that each clustering method and/or modelling formulation can be applied to the same reference dataset. This allows comparing the various methods in terms of computational efficiency, but also in terms of accuracy.
 
@@ -117,6 +118,7 @@ Dispa-SET provides the possibility to generate the optimisation model as an LP p
 * Minimum stable load
 
 Since the start-up of individual units is not considered anymore, it is not useful to disaggrate them in the optimisation. All units of a similar technology, fuel and zone are merged into a single unit using the equations proposed in the previous sections.
+This formulation is used in the :ref:`mid_term` .
 
 .. [1] Incorporating Operational Flexibility Into Electric Generation Planning: Impacts and Methods for System Design and Policy Analysis, Palmintier, B.S. (2012). Ph.D. Thesis, Engineering Systems Division, MIT
 

@@ -18,8 +18,20 @@ Major stable releases:
 Changelog
 ---------
 
+Version 2.x
+^^^^^^^^^^^
+* Variable time step
+	- The pre-processing and the GAMS file have been update to handle different time steps (not only one hour)
+	- This is currently restricted to three time steps: 15min, 1h, 24h
+	- The input data whose time step is lower than the desired one is averaged
+
 Version 2.4
 ^^^^^^^^^^^
+* Mid-term scheduling
+	- The yearly storage level profiles can now be calculated internally (i.e. without providing exogenous profiles).
+	- A first, simplified version of dispa-set is run over a whole year to generate these profiles during the pre-processing phase
+	- This option is activated in the config file and is transparent for the user.
+
 * Flexible Demand:
 	- To model demand-side management, it is now possible to define a share of the demand curve as "flexible"
 	- In this flexible demand, the load can be shifted from one hour to the other
@@ -29,16 +41,6 @@ Version 2.4
 	- P2HT units (heat pumps, electrical heater) have now been added
 	- They are coupled to a heat demand and possibly to a thermal storage capacity
 	- COP can be defined as temperature-dependent. An additional input with temperature times for each zone has been defined.
-
-* Variable time step
-	- The pre-processing and the GAMS file have been update to handle different time steps (not only one hour)
-	- This is currently restricted to three time steps: 15min, 1h, 24h
-	- The input data whose time step is lower than the desired one is averaged
-
-* Mid-term scheduling
-	- The yearly storage level profiles can now be calculated internally (i.e. without providing exogenous profiles).
-	- A first, simplified version of dispa-set is run over a whole year to generate these profiles during the pre-processing phase
-	- This option is activated in the config file and is transparent for the user.
 
 * Transmission prices have been added to the pre-processing and can now be fully parametrized
 
@@ -59,7 +61,7 @@ Version 2.4
 	- Excel configuration files are now subject to versioning, which ensures backward compatibility with older configuration files.
 	- Countries are now renamed into "zones" in all API functions.
 	- The option to cache csv file data when loading has been removed
-	
+	- Implemented a more robust versioning system
 
 Version 2.3
 ^^^^^^^^^^^
