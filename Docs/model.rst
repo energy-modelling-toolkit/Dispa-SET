@@ -17,18 +17,22 @@ Sets
 	======= =================================================================================
 	Name	Description
 	======= =================================================================================
+	au	All units
 	f       Fuel types
 	h       Hours
-	i       Time step in the current optimization horizon
+	i(h)    Time step in the current optimization horizon
 	l       Transmission lines between nodes
 	mk      {DA: Day-Ahead, 2U: Reserve up, 2D: Reserve Down}
 	n       Zones within each country (currently one zone, or node, per country)
 	p       Pollutants
+	p2h(au) Power to heat units
 	t       Power generation technologies
-	tr      Renewable power generation technologies
-	u       Units
+	th(au)  Units with thermal storage
+	tr(t)   Renewable power generation technologies
+	u(au)   Generation units (all units minus P2HT units)
 	s(u)    Storage units (including hydro reservoirs)
 	chp(u)  CHP units
+	z(h)	Subset of every simulated hour
 	======= =================================================================================
 
 Parameters
@@ -39,7 +43,7 @@ Parameters
 	======================================= ======= =============================================================
 	Name                                    Units   Description
 	======================================= ======= =============================================================
-	AvailabilityFactor(u,i)                 %       Percentage of nominal capacity available
+	AvailabilityFactor(u,h)                 %       Percentage of nominal capacity available
 	CHPPowerLossFactor(u)                   %       Power loss when generating heat
 	CHPPowerToHeat(u)                       %       Nominal power-to-heat factor
 	CHPMaxHeat(chp)                         MW      Maximum heat capacity of chp plant
@@ -51,44 +55,51 @@ Parameters
 	CostRampUp(u)                           EUR/MW  Ramp-up costs
 	CostShutDown(u)                         EUR/u   Shut-down costs for one unit
 	CostStartUp(u)                          EUR/u   Start-up costs for one unit
-	CostVariableH(u,i)                      EUR/MWh Variable costs
-	CostHeatSlack(chp,h)              	EUR/MWh Cost of supplying heat via other means
+	CostVariable(u,h)                       EUR/MWh Variable costs
+	CostHeatSlack(th,h)              	EUR/MWh Cost of supplying heat via other means
 	Curtailment(n)                          n.a.    Curtailment {binary: 1 allowed}
-	Demand(mk,n,i)                          MW      Hourly demand in each zone
-	Efficiency(u)                           %       Power plant efficiency
-	EmissionMaximum(n,p)                    EUR/tP  Emission limit per zone for pollutant p
-	EmissionRate(u,p)                       tP/MW   Emission rate of pollutant p from unit u
+	Demand(mk,n,h)                          MW      Hourly demand in each zone
+	Efficiency(p2h,h)                       %       Power plant efficiency
+	EmissionMaximum(n,p)                    tP      Emission limit per zone for pollutant p
+	EmissionRate(u,p)                       tP/MWh  Emission rate of pollutant p from unit u
+	FlowMaximum(l,h)			MW	Maximum flow in line
+	FlowMinimum(l,h)			MW	Minimum flow in line
 	Fuel(u,f)                               n.a.    Fuel type used by unit u {binary: 1 u uses f}
-	HeatDemand(chp,h)                	MWh/u   Heat demand profile for chp units
+	HeatDemand(au,h)                	MWh/u   Heat demand profile for chp units
 	K_QuickStart(n)                      	n.a.	Part of the reserve that can be provided by offline quickstart units
 	LineNode(l,n)                           n.a.    Line-zone incidence matrix {-1,+1}
 	LoadShedding(n,h)                       MW      Load that may be shed per zone in 1 hour
-	Location(u,n)                           n.a.    Location {binary: 1 u located in n}
+	Location(au,n)                          n.a.    Location {binary: 1 u located in n}
+	LPFormulation				n.a.	Defines the equation that will be present: 1 for LP and 0 for MIP
+	Markup					EUR/MW	Markup
+	MTS					n.a.	Defines the equation that will be present: 1 for MidTermScheduling, 0 for normal optimization
 	Nunits(u)                        	n.a.    Number of units inside the cluster
 	OutageFactor(u,h)                       %       Outage factor (100 % = full outage) per hour
 	PartLoadMin(u)                          %       Percentage of minimum nominal capacity
-	PowerCapacity(u)                        MW/u    Installed capacity
+	PowerCapacity(au)                       MW/u    Installed capacity
 	PowerInitial(u)                         MW/u    Power output before initial period
-	PowerMinStable(u)                       MW/u    Minimum power for stable generation
+	PowerMinStable(au)                      MW/u    Minimum power for stable generation
 	PowerMustRun(u)                         MW      Minimum power output
 	PriceTransmission(l,h)                  EUR/MWh	Price of transmission between zones
 	QuickStartPower(u,h)            	MW/h/u  Available max capacity for tertiary reserve
 	RampDownMaximum(u)                      MW/h/u  Ramp down limit
-	RampShutDownMaximum(u)                  MW/h/u  Shut-down ramp limit
-	RampStartUpMaximum(u)                   MW/h/u  Start-up ramp limit
+	RampShutDownMaximum(u,h)                MW/h/u  Shut-down ramp limit
+	RampStartUpMaximum(u,h)                 MW/h/u  Start-up ramp limit
 	RampUpMaximum(u)                        MW/h/u  Ramp up limit
 	Reserve(t)                              n.a.    Reserve provider {binary}
-	StorageCapacity(s)                      MWh/u   Storage capacity (reservoirs)
-	StorageChargingCapacity(s)              MW/u    Maximum charging capacity
-	StorageChargingEfficiency(s)            %       Charging efficiency
-	StorageDischargeEfficiency(s)           %       Discharge efficiency
-	StorageInflow(s,h)                      MWh/u   Storage inflows
-	StorageInitial(s)                       MWh     Storage level before initial period
-	StorageMinimum(s)                       MWh/u   Minimum storage level
-	StorageOutflow(s,h)                     MWh/u   Storage outflows (spills)
+	StorageCapacity(au)                     MWh/u   Storage capacity (reservoirs)
+	StorageChargingCapacity(au)             MW/u    Maximum charging capacity
+	StorageChargingEfficiency(au)           %       Charging efficiency
+	StorageDischargeEfficiency(au)          %       Discharge efficiency
+	StorageInflow(u,h)                      MWh/u   Storage inflows
+	StorageInitial(au)                      MWh     Storage level before initial period
+	StorageMinimum(au)                      MWh/u   Minimum storage level
+	StorageOutflow(u,h)                     MWh/u   Storage outflows (spills)
 	StorageProfile(u,h)                     MWh     Storage long-term level profile
+	StorageSelfDischarge(au)		%/day	Self discharge of the storage units
 	Technology(u,t)                         n.a.    Technology type {binary: 1: u belongs to t}
 	TimeDownMinimum(u)                      h       Minimum down time
+	TimeStep				h	Duration of a timestep of optimization
 	TimeUpMinimum(u)                        h       Minimum up time
 	VOLL()                                  EUR/MWh	Value of lost load
 	======================================= ======= =============================================================
@@ -110,17 +121,18 @@ Optimization Variables
     CostRampDownH(u,h)	    EUR     Ramping cost
     CurtailedPower(n,h)	    MW	    Curtailed power at node n
     Flow(l,h)               MW      Flow through lines
-    Heat(chp,h)             MW      Heat output by chp plant
-    HeatSlack(chp,h)        MW      Heat satisfied by other sources
+    Heat(au,h)              MW      Heat output by chp plant
+    HeatSlack(au,h)         MW      Heat satisfied by other sources
     Power(u,h)              MW      Power output
+    PowerConsumption(p2h,h) MW	    Power consumption by P2H
     PowerMaximum(u,h)       MW      Power output
     PowerMinimum(u,h)       MW      Power output
     Reserve_2U(u,h)         MW      Spinning reserve up
     Reserve_2D(u,h)         MW      Spinning reserve down
     Reserve_3U(u,h)         MW      Non spinning quick start reserve up
     ShedLoad(n,h)           MW      Shed load
-    StorageInput(s,h)       MWh     Charging input for storage units
-    StorageLevel(s,h)       MWh     Storage level of charge
+    StorageInput(au,h)      MWh     Charging input for storage units
+    StorageLevel(au,h)      MWh     Storage level of charge
     Spillage(s,h)           MWh     Spillage from water reservoirs
     SystemCost(h)           EUR     Total system cost
     LL_MaxPower(n,h)        MW      Deficit in terms of maximum power
@@ -152,7 +164,9 @@ The aim of this model is to represent with a high level of detail the short-term
 
 The unit commitment problem considered in this report is a simplified instance of the problem faced by the operator in charge of clearing the competitive bids of the participants into a wholesale day-ahead power market. In the present formulation the demand side is an aggregated input for each node, while the transmission network is modelled as a transport problem between the nodes (that is, the problem is network-constrained but the model does not include the calculation of the optimal power flows).
 
-The unit commitment problem consists of two parts: i) scheduling the start-up, operation, and shut down of the available generation units, and ii) allocating (for each period of the simulation horizon of the model) the total power demand among the available generation units in such a way that the overall power system costs is minimized. The first part of the problem, the unit scheduling during several periods of time, requires the use of binary variables in order to represent the start-up and shut down decisions, as well as the consideration of constraints linking the commitment status of the units in different periods. The second part of the problem is the so-called economic dispatch problem, which determines the continuous output of each and every generation unit in the system. Therefore, given all the features of the problem mentioned above, it can be naturally formulated as a mixed-integer linear program (MILP). 
+The unit commitment problem consists of two parts: i) scheduling the start-up, operation, and shut down of the available generation units, and ii) allocating (for each period of the simulation horizon of the model) the total power demand among the available generation units in such a way that the overall power system costs is minimized. The first part of the problem, the unit scheduling during several periods of time, requires the use of binary variables in order to represent the start-up and shut down decisions, as well as the consideration of constraints linking the commitment status of the units in different periods. The second part of the problem is the so-called economic dispatch problem, which determines the continuous output of each and every generation unit in the system. Therefore, given all the features of the problem mentioned above, it can be naturally formulated as a mixed-integer linear program (MILP). However, the problem can also be relaxed to a linear program (LP). 
+
+There is a possibility of Mid Term scheduling. It allows to optimize the level of energy in the storage reservoirs over a year and use it as endogeneous input in the optimization of interest. In that case, the equations linked to unit commitment are ignored.   
 
 Since our goal is to model a large European interconnected power system, we have implemented a so-called tight and compact formulation, in order to simultaneously reduce the region where the solver searches for the solution and increase the speed at which the solver carries out that search. Tightness refers to the distance between the relaxed and integer solutions of the MILP and therefore defines the search space to be explored by the solver, while compactness is related to the amount of data to be processed by the solver and thus determines the speed at which the solver searches for the optimum. Usually tightness is increased by adding new constraints, but that also increases the size of the problem (decreases compactness), so both goals contradict each other and a trade-off must be found.
 
@@ -163,15 +177,19 @@ The goal of the unit commitment problem is to minimize the total power system co
 
 .. math::
 	\begin{split}
-	& min \sum _{u,n,i} \\
-	& \Big[ CostStartUp_{u,i} + CostShutDown_{u,i} + CostFixed_{u} \cdot Committed_{u,i}  \\
-	& + CostVariable_{u,i} \cdot Power_{u,i} + CostRampUp_{u,i} + CostRampDown_{u,i}   \\
-	& + PriceTransimission_{i,l} \cdot Flow_{i,l} + \left( CostLoadShedding_{i,n} \cdot ShedLoad_{i,n} \right)  \\
-	& + \sum _{chp} CostHeatSlack_{chp,i} \cdot  HeatSlack_{chp,i}) \\
-	& + \sum _{chp} CostVariable_{chp,i} \cdot CHPPowerLossFactor_{chp} \cdot Heat_{chp,i}) \\
-	& + VOLL_{Power} \cdot \left( \mathit{LL}_{MaxPower,i,n} + \mathit{LL}_{MinPower,i,n} \right) \\
-	& + VOLL_{Reserve} \cdot \left( LL_{2U,i,n} + LL_{2D,i,n}+ LL_{3U,i,n} \right) \\
-	& + VOLL_{Ramp} \cdot \left( LL_{RampUp,u,i} + LL_{RampDown,u,i} \right) \Big]
+	min & \Big[ \sum_{u,i} CostFixed_{u} \cdot Committed_{u,i} \cdot TimeStep \\
+	& + \sum_{u,i} ( CostStartUpH_{u,i} + CostShutDownH_{u,i})   \\
+	& + \sum_{u,i} (CostRampUpH_{u,i} + CostRampDownH_{u,i})  \\
+	& + \sum_{u,i} CostVariable_{u,i} \cdot Power_{u,i} \cdot TimeStep    \\
+	& + \sum_{l,i} PriceTransimission_{l,i} \cdot Flow_{l,i} \cdot TimeStep \\ 
+	& + \sum_{n,i} CostLoadShedding_{i,n} \cdot ShedLoad_{i,n} \cdot TimeStep  \\
+	& + \sum _{th,i} CostHeatSlack_{th,i} \cdot  HeatSlack_{th,i} \cdot TimeStep) \\
+	& + \sum _{chp,i} CostVariable_{chp,i} \cdot CHPPowerLossFactor_{chp} \cdot Heat_{chp,i} \cdot TimeStep) \\
+	& + \sum_{i,n} VOLL_{Power} \cdot \left( \mathit{LL}_{MaxPower,i,n} + \mathit{LL}_{MinPower,i,n} \right) \cdot TimeStep \\
+	& + \sum_{i,n} 0.8 \cdot VOLL_{Reserve} \cdot \left( LL_{2U,i,n} + LL_{2D,i,n}+ LL_{3U,i,n} \right) \cdot TimeStep \\
+	& + \sum_{u,i} 0.7 \cdot VOLL_{Ramp} \cdot \left( LL_{RampUp,u,i} + LL_{RampDown,u,i} \right)\cdot TimeStep \\
+	& + \sum_{s,i} CostOfSpillage \cdot spillage_{s,i} \\
+	& + \sum_{s,i} WaterValue\cdot WaterSlack_s \Big]
 	\end{split}
 
 The costs can be broken down as:  
@@ -185,15 +203,16 @@ The costs can be broken down as:
 * Load shed: due to necessary load shedding.
 * Transmission: depending of the flow transmitted through the lines.
 * Loss of load: power exceeding the demand or not matching it, ramping and reserve.
+* spillage: due to spillage in storage.
+* Water : cost of water coming from unsatisfied water level at the end of the optimization period.
 
 The variable production costs (in EUR/MWh), are determined by fuel and emission prices corrected by the efficiency (which is considered to be constant for all levels of output in this version of the model) and the emission rate of the unit (equation ):
 
 .. math::
-	 \mathit{CostVariable}_{u,h}=
-
-	 \mathit{Markup}_{u,h} + \sum _{n,f}\left(\frac{\mathit{Fuel}_{u,f} \cdot \mathit{FuelPrice}_{n,f,h} \cdot \mathit{Location}_{u,n}}{\mathit{Efficiency}_u}\right)
-
-	  + \sum _p\left(\mathit{EmissionRate}_{u,p} \cdot \mathit{PermitPrice}_p\right)
+	\begin{align}
+	 \mathit{CostVariable}_{u,h}= &\mathit{Markup}_{u,h} + \sum _{n,f}\left(\frac{\mathit{Fuel}_{u,f} \cdot \mathit{FuelPrice}_{n,f,h} \cdot \mathit{Location}_{u,n}}{\mathit{Efficiency}_u}\right)\\
+				      & + \sum _p\left(\mathit{EmissionRate}_{u,p} \cdot \mathit{PermitPrice}_p\right)
+	\end{align}
 
 The variable cost includes an additional mark-up parameter that can be used for calibration and validation purposes.
 
@@ -206,20 +225,20 @@ From version 2.3, Dispa-SET uses a 3 integers formulations of the up/down status
 The start-up and shut-down costs are positive variables, calculated from the number of startups/shutdowns at each time step:
 
 .. math::
+	\begin{align}
+		\mathit{CostStartUp}_{u,i} &= \mathit{CostStartUp}_u \cdot \mathit{StartUp}_{u,i}\\
+		\mathit{CostShutDown}_{u,i} &= \mathit{CostShutDown}_u \cdot \mathit{ShutDown}_{u,i}
+	\end{align}
 
-	 \mathit{CostStartUp}_{u,i} = \mathit{CostStartUp}_u \cdot \mathit{StartUp}_{u,i}
-
-	 \mathit{CostShutDown}_{u,i} = \mathit{CostShutDown}_u \cdot \mathit{ShutDown}_{u,i}
-	 
-
+Renewable units are enforced commited when the availability factor is non null and the outage factor is not 1 and decommited in the other case.
+	
 Ramping costs are defined as positive variables (i.e. negative costs are not allowed) and are computed with the following equations:
 
 .. math:: 
-
-	 \mathit{CostRampUp}_{u,i} \geq \mathit{CostRampUp}_u \cdot \left(\mathit{Power}_{u,i}-\mathit{Power}_{u,i-1}\right)
-
-	 \mathit{CostRampDown}_{u,i} \geq \mathit{CostRampDown}_u \cdot (\mathit{Power}_{u,i-1}-\mathit{Power}_{u,i})
-
+	\begin{align}
+		\mathit{CostRampUp}_{u,i} &\geq \mathit{CostRampUp}_u \cdot \left(\mathit{Power}_{u,i}-\mathit{Power}_{u,i-1}\right)\\
+		\mathit{CostRampDown}_{u,i} &\geq \mathit{CostRampDown}_u \cdot (\mathit{Power}_{u,i-1}-\mathit{Power}_{u,i})
+	\end{align}
 
 It should be noted that in case of start-up and shut-down, the ramping costs are added to the objective function. Using start-up, shut-down and ramping costs at the same time should therefore be performed with care.
 
@@ -233,15 +252,11 @@ Day-ahead energy balance
 The main constraint to be met is the supply-demand balance, for each period and each zone, in the day-ahead market (equation ). According to this restriction, the sum of all the power produced by all the units present in the node (including the power generated by the storage units), the power injected from neighbouring nodes, and the curtailed power from intermittent sources is equal to the load in that node, plus the power consumed for energy storage, minus the load interrupted and the load shed.
 
 .. math::
-	 \sum _u\left(\mathit{Power}_{u,i} \cdot \mathit{Location}_{u,n}\right)
-
-	  + \sum _l\left(\mathit{Flow}_{l,i} \cdot \mathit{LineNode}_{l,n}\right)
-
-	 =\mathit{Demand}_{\mathit{DA},n,h} + \sum _r\left(\mathit{StorageInput}_{s,h} \cdot \mathit{Location}_{s,n}\right)
-	
-	  -\mathit{ShedLoad}_{n,i} 
-
-	  - \mathit{LL_{MaxPower}}_{n,i} + \mathit{LL_{MinPower}}_{n,i}
+	\begin{align}
+	 \sum _u\left(\mathit{Power}_{u,i} \cdot \mathit{Location}_{u,n}\right) + \sum _l\left(\mathit{Flow}_{l,i} \cdot \mathit{LineNode}_{l,n}\right)\\
+ 	 = \mathit{Demand}_{\mathit{DA},n,h} + \sum _r\left(\mathit{StorageInput}_{s,h} \cdot \mathit{Location}_{s,n}\right) -\mathit{ShedLoad}_{n,i} \\
+	   + \sum_{p2h} \mathit{PowerConsumption}_{p2h,i} \cdot \mathit{Location}_{p2h,n}  - \mathit{LL_{MaxPower}}_{n,i} + \mathit{LL_{MinPower}}_{n,i} 
+	\end{align}
 
 Reserve constraints
 -------------------
@@ -255,58 +270,43 @@ Besides the production/demand balance, the reserve requirements (upwards and dow
 The secondary reserve capability of committed units is limited by the capacity margin between current and maximum power output:
 
 .. math::
-
-	\mathit{Reserve_{2U}}_{u,i} 
-
-	\leq \mathit{PowerCapacity}_u \cdot \mathit{AvailabilityFactor}_{u,i}
-
-	\cdot (1-\mathit{OutageFactor}_{u,i})  \cdot  \mathit{Committed}_{u,i} 
-
-	- \mathit{Power}_{u,i}
-
+	\begin{align}
+		\mathit{Reserve_{2U}}_{u,i} \leq& \mathit{PowerCapacity}_u \cdot \mathit{AvailabilityFactor}_{u,i} \cdot (1-\mathit{OutageFactor}_{u,i})  \cdot  \mathit{Committed}_{u,i}\\	 
+		& - \mathit{Power}_{u,i}
+	\end{align}
 
 The same applies to the downwards secondary reserve capability, with an additional term to take into account the downard reserve capability of pumping storage units:
 
 .. math::
-
-	\mathit{Reserve_{2D}}_{u,i} 
-	
-	 \leq \mathit{Power}_{u,i} - \mathit{PowerMustRun}_{u,i} \cdot  \mathit{Committed}_{u,i} 
-
-	+ (\mathit{StorageChargingCapacity}_u \cdot \mathit{Nunits}_u - \mathit{StorageInput}_{u,i})
+	\begin{align}
+		\mathit{Reserve_{2D}}_{u,i} \leq &\; \mathit{Power}_{u,i} - \mathit{PowerMustRun}_{u,i} \cdot  \mathit{Committed}_{u,i} \\
+		&+ (\mathit{StorageChargingCapacity}_u \cdot \mathit{Nunits}_u - \mathit{StorageInput}_{u,i})
+	\end{align}
 
 The quick start (non-spining) reserve capability is given by:
 
 .. math::
 
-	\mathit{Reserve_{3U}}_{u,i} 
-
-	\leq (\mathit{Nunits}_u - \mathit{Committed}_{u,i}) \cdot  \mathit{QuickStartPower}_{u,i}
+	\mathit{Reserve_{3U}}_{u,i} \leq (\mathit{Nunits}_u - \mathit{Committed}_{u,i}) \cdot  \mathit{QuickStartPower}_{u,i} \cdot \mathit{TimeStep}
 
 
 The secondary reserve demand should be fulfilled at all times by all the plants allowed to participate in the reserve market:
 
 .. math::
-
-	\mathit{Demand}_{2U,n,h}
-	
-	 \leq \sum _{u,t}\left(\mathit{Reserve_{2U}}_{u,i} \cdot \mathit{Technology}_{u,t} \cdot \mathit{Reserve}_t \cdot \mathit{Locatio}n_{u,n}\right)
-
-	+ \mathit{LL_{2U}}_{n,i}
+	\begin{align}
+		\mathit{Demand}_{2U,n,h} \leq & \sum _{u,t}\left(\mathit{Reserve_{2U}}_{u,i} \cdot \mathit{Technology}_{u,t} \cdot \mathit{Reserve}_t \cdot \mathit{Locatio}n_{u,n}\right)\\
+		& + \mathit{LL_{2U}}_{n,i}
+	\end{align}
 
 The same equation applies to downward reserve requirements (2D).
 
 The tertiary reserve can also be provided by non-spinning units. The inequality is thus transformed into:
 
 .. math::
-
-	\mathit{Demand}_{3U,n,h}
-	
-	 \leq \sum _{u,t}[(\mathit{Reserve_{2U}}_{u,i} + \mathit{Reserve_{3U}}_{u,i} )
-
-	 \cdot \mathit{Technology}_{u,t} \cdot \mathit{Reserve}_t \cdot \mathit{Locatio}n_{u,n} ]
-
-	+ \mathit{LL_{3U}}_{n,i}
+	\begin{align}
+		\mathit{Demand}_{3U,n,h} \leq & \sum _{u,t}[(\mathit{Reserve_{2U}}_{u,i} + \mathit{Reserve_{3U}}_{u,i} ) \cdot \mathit{Technology}_{u,t} \cdot \mathit{Reserve}_t \cdot \mathit{Locatio}n_{u,n} ]\\
+		&+ \mathit{LL_{3U}}_{n,i}
+	\end{align}
 
 The reserve requirements are defined by the users. In case no input is provided a default formula is used to evaluate the needs for secondary reserves as a function of the maximum expected load for each day. The default formula is described by:
 
@@ -327,10 +327,7 @@ Power output bounds
 The minimum power output is determined by the must-run or stable generation level of the unit if it is committed:
 
 .. math::
-
-	\mathit{Power}\mathit{MustRun}_{u,i} \cdot \mathit{Committed}_{u,i}
-
-	 \leq \mathit{Power}_{u,i}
+	\mathit{Power}\mathit{MustRun}_{u,i} \cdot \mathit{Committed}_{u,i}  \leq \mathit{Power}_{u,i} 
 
 In the particular case of CHP unit (extration type or power-to-heat type), the minimum power is defined for for a heat demand equal to zero. If the unit produces heat, the minimum power must be reduced according to the power loss factor and the previous equation is replaced by:
 
@@ -362,9 +359,9 @@ Each unit is characterized by a maximum ramp up and ramp down capability. This i
 
 	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq 
 
-	(\mathit{Committed}_{u,i} - \mathit{StartUp}_{u,i}) \cdot \mathit{RampUpMaximum}_{u}
+	(\mathit{Committed}_{u,i} - \mathit{StartUp}_{u,i}) \cdot \mathit{RampUpMaximum}_{u} \cdot \mathit{TimeStep}
 
-	+ \mathit{StartUp}_{u,i} \cdot \mathit{RampStartUpMaximum}_{u}
+	+ \mathit{StartUp}_{u,i} \cdot \mathit{RampStartUpMaximum}_{u} \cdot \mathit{TimeStep}
 
 	- \mathit{ShutDown}_{u,i} \cdot \mathit{PowerMustRun}_{u,i}
 
@@ -376,9 +373,9 @@ and for the case of ramping down:
 
 	\mathit{Power}_{u,i-1} - \mathit{Power}_{u,i} \leq 
 
-	(\mathit{Committed}_{u,i} - \mathit{ShutDown}_{u,i}) \cdot \mathit{RampDownMaximum}_{u}
+	(\mathit{Committed}_{u,i} - \mathit{ShutDown}_{u,i}) \cdot \mathit{RampDownMaximum}_{u} \cdot \mathit{TimeStep}
 
-	+ \mathit{ShutDown}_{u,i} \cdot \mathit{RampShutDownMaximum}_{u}
+	+ \mathit{ShutDown}_{u,i} \cdot \mathit{RampShutDownMaximum}_{u} \cdot \mathit{TimeStep}
 
 	- \mathit{StartUp}_{u,i} \cdot \mathit{PowerMustRun}_{u,i}
 
@@ -390,7 +387,7 @@ Note that this formulation is valid for both the clustered formulation and the b
 
 	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq 
 
-	\mathit{RampUpMaximum}_{u} + \mathit{LL_{RampUp}}_{u,i}
+	\mathit{RampUpMaximum}_{u} \cdot \mathit{TimeStep} + \mathit{LL_{RampUp}}_{u,i}
 
 If the unit has just been committed, the inequality becomes:
 
@@ -398,7 +395,7 @@ If the unit has just been committed, the inequality becomes:
 
 	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq 
 
-	\mathit{RampStartUpMaximum}_{u} + \mathit{LL_{RampUp}}_{u,i}
+	\mathit{RampStartUpMaximum}_{u} \cdot \mathit{TimeStep} + \mathit{LL_{RampUp}}_{u,i}
 
 And if the unit has just been stopped:
 
@@ -418,15 +415,15 @@ To model this in MILP, the number of startups/shutdowns in the last N hours must
 
 .. math::
 
-	\sum _{ii=i-\mathit{TimeUpMinimum}_u}^{i} \mathit{StartUp}_{u,ii} \leq \mathit{Committed}_{u,i}
+	\sum _{ii=i-\frac{\mathit{TimeUpMinimum}_u}{\mathit{TimeStep}}}^{i} \mathit{StartUp}_{u,ii} \leq \mathit{Committed}_{u,i}
 
-i.e. the currently committed units are not allowed to have performed multiple on/off cycles during the last TimeUpMinimum periods. In case of a binary formulation (Nunits=1), if the unit is ON at time i, only one startup is allowed in the last TimeUpMinimum periods. If the unit is OFF at time i, no startup is allowed.
+i.e. the currently committed units are not allowed to have performed multiple on/off cycles between the optimization time minus TimeUpMinimum and the optimization time. The implied number of periods is computed by the ratio of TimeUpMinimum and TimeStep. If TimeUpMinimum is not a multiple of TimeStep, their fraction is rounded upwards. In case of a binary formulation (Nunits=1), if the unit is ON at time i, only one startup is allowed in the last TimeUpMinimum periods. If the unit is OFF at time i, no startup is allowed.
 
 A similar inequality can be written for the ninimum down time:
 
 .. math::
 
-	\sum _{ii=i-\mathit{TimeDownMinimum}_u}^{i} \mathit{ShutDown}_{u,ii} \leq \mathit{Nunits}_u - \mathit{Committed}_{u,i}
+	\sum _{ii=i-\frac{\mathit{TimeDownMinimum}_u}{\mathit{TimeStep}}}^{i} \mathit{ShutDown}_{u,ii} \leq \mathit{Nunits}_u - \mathit{Committed}_{u,i}
 
 
 Storage-related constraints
@@ -458,9 +455,9 @@ Discharge is limited by the level of charge of the storage unit:
 
 .. math::
 
-	\frac{\mathit{Power}_{i,s}}{\mathit{StorageDischargeEfficienc}y_s} + \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s
+	\frac{\mathit{Power}_{i,s}\cdot \mathit{TimeStep}}{\mathit{StorageDischargeEfficienc}y_s} + \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}
 
-	+ \mathit{Spillage}_{s,i} -\mathit{StorageInflow}_{s,i} \cdot \mathit{Nunits}_s 
+	+ \mathit{Spillage}_{s,i} -\mathit{StorageInflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}
 
 	\leq \mathit{StorageLevel}_{s,i}
 
@@ -470,11 +467,11 @@ Charge is limited by the level of charge of the storage unit:
 
 .. math::
 
-	\mathit{StorageInput}_{s,i} \cdot \mathit{StorageChargingEfficiency}_s
+	\mathit{StorageInput}_{s,i} \cdot \mathit{StorageChargingEfficiency}_s \cdot \mathit{TimeStep}
 
-	- \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s -  \mathit{Spillage}_{s,i}
+	- \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}-  \mathit{Spillage}_{s,i}
 	
-	+ \mathit{StorageInflow}_{s,i} \cdot \mathit{Nunits}_s 
+	+ \mathit{StorageInflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}
 
 	\leq \mathit{StorageCapacity}_s \cdot \mathit{AvailabilityFactor}_{s,i} 
 
@@ -484,25 +481,21 @@ Besides, the energy stored in a given period is given by the energy stored in th
 
 .. math::
 	
-	\mathit{StorageLevel}_{s,i-1} + \mathit{StorageInflow}_{s,i}  \cdot \mathit{Nunits}_s 
+	\mathit{StorageLevel}_{s,i-1} + \mathit{StorageInflow}_{s,i}  \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}
 
-	+ \mathit{StorageInput}_{s,i} \cdot \mathit{StorageChargingEfficiency}_s
+	+ \mathit{StorageInput}_{s,i} \cdot \mathit{StorageChargingEfficiency}_s \cdot \mathit{TimeStep}
 
-	= \mathit{StorageLevel}_{s,i} + \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s  
+	= \mathit{StorageLevel}_{s,i} + \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep} 
 
-	+ \frac{\mathit{Power}_{s,i}}{\mathit{StorageDischargeEfficienc}y_s}
+	+ \frac{\mathit{Power}_{s,i}\cdot \mathit{TimeStep}}{\mathit{StorageDischargeEfficienc}y_s}
 
-Some storage units are equiped with large reservoirs, whose capacity at full load might be longer than the optimisation horizon. Therefore, a minimum level constraint is required for the last hour of the optimisation, which otherwise wouls systematically tend to empty the reservoir as much a possible. An exogenous minimum profile is thus provided and the following constraint is applied:
+Some storage units are equiped with large reservoirs, whose capacity at full load might be longer than the optimisation horizon. Therefore, a minimum level constraint is required for the last hour of the optimisation, which otherwise would systematically tend to empty the reservoir as much a possible. An exogenous minimum profile is thus provided and the following constraint is applied:
 
 .. math::
 
-	\mathit{StorageLevel}_{s,N} \geq min( \mathit{StorageProfile}_{s,N} 
+	\mathit{StorageLevel}_{s,N} \geq StorageFinalMin_{s} + WaterSlack_s
 
-	\cdot \mathit{AvailabilityFactor}_{s,N} \cdot \mathit{StorageCapacity}_{s} \cdot \mathit{Nunits}_s , 
-
-	\mathit{StorageLevel}_{s,0} + (\sum\limits_{i=1}^N InFlows_{s,i} - \sum\limits_{i=1}^N OutFlows_{s,i}) \cdot \mathit{Nunits}_s)
-
-where N is the last period of the optimization horizon and StorageProfile is a non-dimensional minimum storage level provided as an exogenous input. The minimum is taken to avoid unfeasibilities in case the provided inflows are not sufficient to comply with the imposed storage level at the end of the horizon.
+where N is the last period of the optimization horizon, StorageProfile is a non-dimensional minimum storage level provided as an exogenous input and WaterSlack is a variable defining the unsatified water level. The price associated to that water is very high.
 
 Heat production constraints (CHP plants only)
 ---------------------------------------------
@@ -511,12 +504,12 @@ In DispaSET Power plants can be indicated as CHP satisfying one heat demand.  He
 
 .. image:: figures/CHP_flows.png
 
-The following two heat balance constraints are used for any CHP plant type.
+The following two heat balance constraints are used for any CHP and P2H plant types.
 
 .. math::
 
-    Heat(chp,i) + HeatSlack(chp,i)
-    = HeatDemand(chp,i)
+    Heat(th,i) + HeatSlack(th,i)
+    = HeatDemand(th,i)
 
 .. math::
 
@@ -558,14 +551,14 @@ The vertical dotted line BC corresponds to the minimum condensation line (as def
 .. math::
     Power_{chp,i}
     \leq
-    PowerCapacity_{chp} -
+    PowerCapacity_{chp} \cdot \mathit{Nunits} -
 
     StorageInput_{chp,i} \cdot CHPPowerLossFactor_{chp}
 
 .. math::
     Power_{chp,i}
     \geq
-    PowerMustRun_{chp,i} - StorageInput_{chp,i} * CHPPowerLossFactor_{chp}
+    PowerMustRun_{chp,i} - StorageInput_{chp,i} \cdot CHPPowerLossFactor_{chp}
 
 
 Power plant coupled with any power to heat option
@@ -588,7 +581,7 @@ The vertical dotted line corresponds to the heat pump (or resistance heater) the
 .. math::
     Power_{chp,i}
     \geq
-    PowerMustRun_{chp,i} - StorageInput_{chp,i} * CHPPowerLossFactor_{chp}
+    PowerMustRun_{chp,i} - StorageInput_{chp,i} \cdot CHPPowerLossFactor_{chp}
 
 Heat Storage
 ~~~~~~~~~~~~
@@ -599,23 +592,25 @@ Heat Storage balance:
 
 .. math::
 
-    +StorageLevel_{chp,i-1}
-    +StorageInput_{chp,i}
+    StorageLevel_{th,i-1}
+    +StorageInput_{th,i} \cdot TimeStep
     =
 
-    StorageLevel_{chp,i}
-    +Heat_{chp,i} + StorageSelfDischarge_{chp} \cdot StorageLevel_{chp,i}/24
+    StorageLevel_{th,i}
+    +Heat_{th,i} \cdot TimeStep
+
+	+ StorageSelfDischarge_{th} \cdot StorageLevel_{th,i}\cdot TimeStep/24
 
 
 Storage level must be above a minimum and below storage capacity:
 
 .. math::
 
-    StorageMinimum_{chp}
+    StorageMinimum_{th} \cdot Nunits_{th}
     \leq
     StorageLevel_{chp,i}
     \leq
-    StorageCapacity_{chp} \cdot \mathit{Nunits}_{chp}
+    StorageCapacity_{th} \cdot \mathit{Nunits}_{th}
 
 
 
@@ -626,7 +621,7 @@ The operating schedule also needs to take into account any cap on the emissions 
 
 .. math::
 
-	\sum _u\left(\mathit{Power}_{u,i} \cdot \mathit{EmisionRate}_{u,p} \cdot \mathit{Location}_{u,n}\right)
+	\sum _u\left(\mathit{Power}_{u,i} \cdot \mathit{EmisionRate}_{u,p} \cdot TimeStep \cdot \mathit{Location}_{u,n}\right)
 
 	\leq \mathit{EmisionMaximum}_{n,p}
 
@@ -646,17 +641,6 @@ The flow of power between nodes is limited by the capacities of the transmission
 
 In this model a simple Net Transfer Capacity (NTC) between countries approach is followed. No DC power flow or Locational Marginal Pricing (LMP) model is implemented.
 
-Curtailment
------------
-
-If curtailment of intermittent generation sources is allowed in one node, the amount of curtailed power is bounded by the output of the renewable (tr) units present in that node: 
-
-.. math::
-
-	\mathit{CurtailedPower}_{n,i}
-
-	\leq \sum _{u,\mathit{tr}}\left(\mathit{Power}_{u,i} \cdot \mathit{Technology}_{u,\mathit{tr}} \cdot \mathit{Location}_{u,n}\right) \cdot \mathit{Curtailment}_n
-
 
 Load shedding
 -------------
@@ -665,18 +649,92 @@ If load shedding is allowed in a node, the amount of shed load is limited by the
 
 .. math::
 
-	\mathit{ShedLoad}_{n,i} \leq \mathit{LoadShedding}_n	
+	\mathit{ShedLoad}_{n,i} \leq \mathit{LoadShedding}_{n,i}
 
+Linear Program (LP) optimization
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+A possible simplification of the model is to run it as a LP instead of MILP. In that case, the LPFormulation parameter needs to be set to 1 (and to 0 otherwise). 
+
+In that case, the commitment status variables Commited, StartUp and ShutDown are not defined as binary and Commited is set smaller than 1. The equations describing the cost of starting up and shutting down are ignored, as well as the ones enforcing minimum up and down times.   	
+
+Mid Term Scheduling (MTS)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+In some cases, collecting accurate and reliable historical storage levels and profiles in form of hourly timeseries might be a difficult or close to impossible task. In future scenarios storage levels are usually forecasted based on the historical data. The lack of such data also impacts the accurate modelling of such scenarios. In systems with high shares of hydro dams (HDAM) and pumped hydro storage (HPHS) units, such as Norway and Albania, this might have a huge impact on the overall results of the simulation. In order to avoid this, Dispa-SET’s Midterm Hydro-Thermal Scheduling (MTS) module represents a simplified version of the original MILP unit commitment and power dispatch model. This version is a simplified version of the linear programming formulation which allows perfect foresight and allocation of water resources for the whole optimization period and not only for the tactical horizon of each optimization step. This module enables quick calculation (later also referring as allocation) of reservoir levels which are then used as guidance curves (minimum level constraints) in one of the four main Dispa-SET formulations. The main options are:
+
+* No-MTS, in which historical curves are used,
+* Zonal-MTS, in which MTS is run for each Zone individually, 
+* Regional-MTS, in which MTS is run for two or more Zones from the selected region simultaneously.
+
+It is worthwhile to note that each MTS method and/or modelling formulation can be applied to the same input dataset. This allows comparing the various methods in terms of computational efficiency, but also in terms of accuracy. Graphical summary of MTS options are the following:
+
+.. image:: figures/Graphical_MTS.png 
+
+Important note
+--------------
+The MTS optimization (process) is being executed in the preprocessing phase. Here the simplified LP optimization estimates the reservoir levels for the entire year. These newly computed reservoir levels are then imposed as minimum level constraint used in the last time interval of the rolling horizon. As preprocessing includes LP optimization, it might take a while to complete and will be highly dependent on the number of selected zones (the more zones are selected the longer it will take to build the model). Depending on the operating system, command prompt may pop-up and interrupt other processes several times. 
+
+Model in MTS mode
+-----------------
+When MTS is activated, some equations are dropped/modified. MTS mode is activated by setting parameter MTS to 1. In this configuration, all equations concerning unit commitment are not considered and the binary variables Commited, StartUp and ShutDown are not defined. The following constraints are therefore ignored:
  
+* The commitment equations
+* The minimum Up and Down times equations
+* The Ramp up and Ramp down limitation equations
+
+Also, due to the absence of the variable Commitment, some equations are modified.
+Firstly, the cost equation is modified as follow:
+
+.. math::
+	\begin{split}
+	min & \Big[ \sum_{u,i} CostFixed_{u}  \cdot TimeStep \\
+	& + \sum_{u,i} ( CostStartUpH_{u,i} + CostShutDownH_{u,i})   \\
+	& + \sum_{u,i} (CostRampUpH_{u,i} + CostRampDownH_{u,i})  \\
+	& + \sum_{u,i} CostVariable_{u,i} \cdot Power_{u,i} \cdot TimeStep    \\
+	& + \sum_{l,i} PriceTransimission_{l,i} \cdot Flow_{l,i} \cdot TimeStep \\ 
+	& + \sum_{n,i} CostLoadShedding_{i,n} \cdot ShedLoad_{i,n} \cdot TimeStep  \\
+	& + \sum _{th,i} CostHeatSlack_{th,i} \cdot  HeatSlack_{th,i} \cdot TimeStep) \\
+	& + \sum _{chp,i} CostVariable_{chp,i} \cdot CHPPowerLossFactor_{chp} \cdot Heat_{chp,i} \cdot TimeStep) \\
+	& + \sum_{i,n} VOLL_{Power} \cdot \left( \mathit{LL}_{MaxPower,i,n} + \mathit{LL}_{MinPower,i,n} \right) \cdot TimeStep \\
+	& + \sum_{i,n} 0.8 \cdot VOLL_{Reserve} \cdot \left( LL_{2U,i,n} + LL_{2D,i,n}+ LL_{3U,i,n} \right) \cdot TimeStep \\
+	& + \sum_{s,i} CostOfSpillage \cdot spillage_{s,i} \\
+	& + \sum_{s,i} WaterValue\cdot WaterSlack_s \Big]
+	\end{split}
+
+The upwards and downwards secondary reserve capabilities of units becomes:
+
+.. math::
+	\begin{align}
+		\mathit{Reserve_{2U}}_{u,i} \leq& \mathit{PowerCapacity}_u \cdot \mathit{AvailabilityFactor}_{u,i} \cdot (1-\mathit{OutageFactor}_{u,i}) \\	 
+		& - \mathit{Power}_{u,i} \\
+		\mathit{Reserve_{2D}}_{u,i} \leq &\; \mathit{Power}_{u,i} + (\mathit{StorageChargingCapacity}_u \cdot \mathit{Nunits}_u - \mathit{StorageInput}_{u,i})
+	\end{align}
+
+Also the non spinning reserve is modified:
+
+.. math::
+
+	\mathit{Reserve_{3U}}_{u,i} \leq \mathit{Nunits}_u \cdot  \mathit{QuickStartPower}_{u,i} \cdot \mathit{TimeStep}
+
+The output power available for each unit is now expressed as:
+
+.. math::
+	\mathit{Power}_{u,i} \leq \mathit{PowerCapacity} \cdot \mathit{AvailibilityFactor} \cdot (1- \mathit{OutageFactor}) 
+
+Finally, the maximum capacity of storage charging is:
+
+.. math::
+	\mathit{StorageInput}_{s,i} \leq \mathit{StorageChargingCapacity}_s \cdot \mathit{Nunits}_s
+
+
 Rolling Horizon
 ^^^^^^^^^^^^^^^
-The mathematical problem described in the previous sections could in principle be solved for a whole year split into time steps of one hour, but with all likelihood the problem would become extremely demanding in computational terms when attempting to solve the model with a realistically sized dataset. Therefore, the problem is split into smaller optimization problems that are run recursively throughout the year. 
+The mathematical problem described in the previous sections could in principle be solved for a whole year split into time steps, but with all likelihood the problem would become extremely demanding in computational terms when attempting to solve the model with a realistically sized dataset. Therefore, the problem is split into smaller optimization problems that are run recursively throughout the year. 
 
 The following figure shows an example of such approach, in which the optimization horizon is one day, with a look-ahead (or overlap) period of one day. The initial values of the optimization for day j are the final values of the optimization of the previous day. The look-ahead period is modelled to avoid issues related to the end of the optimization period such as emptying the hydro reservoirs, or starting low-cost but non-flexible power plants. In this case, the optimization is performed over 48 hours, but only the first 24 hours are conserved.
 
 .. image:: figures/rolling_horizon.png
 
-Although the previous example corresponds to an optimization horizon and an overlap of one day, these two values can be adjusted by the user in the Dispa-SET configuration file. As a rule of thumb, the optimization horizon plus the overlap period should as least twice the maximum duration of the time-dependent constraints (e.g. the minimum up and down times). In terms of computational efficiency, small power systems can be simulated with longer optimization horizons, while larger systems should reduce this horizon, the minimum being one day.
+Although the previous example corresponds to an optimization horizon and an overlap of one day, these two values can be adjusted by the user in the Dispa-SET configuration file. As a rule of thumb, the optimization horizon plus the overlap period should at least be twice the maximum duration of the time-dependent constraints (e.g. the minimum up and down times). In terms of computational efficiency, small power systems can be simulated with longer optimization horizons, while larger systems should reduce this horizon, the minimum being one day.
 
 
 References

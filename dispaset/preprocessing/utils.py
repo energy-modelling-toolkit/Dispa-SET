@@ -1,3 +1,9 @@
+"""
+This file gathers different functions used in the DispaSET pre-processing tools
+
+@author: Sylvain Quoilin (sylvain.quoilin@ec.europa.eu)
+"""
+
 from __future__ import division
 
 import logging
@@ -12,13 +18,31 @@ from ..misc.gdx_handler import write_variables
 from ..misc.str_handler import clean_strings, shrink_to_64
 
 
+def pd_timestep(hours):
+    '''
+    Function that converts time steps in hours into pandas frequencies (e.g '1h', '15min', ...)
+    '''
+    if not isinstance(hours,(int,float)):
+        logging.critical('Time steps must be provided in hours (integer or float number')
+        sys.exit(1)
+    if hours==1:
+        return '1h'
+    elif hours==0.25:
+        return '15min'
+    elif hours==24:
+        return '24h'
+    else:
+        return ''
+
+
 def EfficiencyTimeSeries(config,plants,Temperatures):
     '''
     Function that calculates an efficiency time series for each unit
     In case of generation unit, the efficiency is constant in time (for now)
     In case of of p2h units, the efficicncy is defined as the COP, which can be
-    temperature-dependent or not. If it is temperature-dependent, the formula is:
-    :math:`COP = COP_{nom} + coef_a (T-T_{nom}) + coef_b (T-T_{nom})^2`
+    temperature-dependent or not
+    If it is temperature-dependent, the formula is:
+        COP = COP_nom + coef_a * (T-T_nom) + coef_b * (T-T_nom)^2
     
     :param plants:          Pandas dataframe with the original list of units
     :param Temperatures:    Dataframe with the temperature for all relevant units
@@ -170,236 +194,6 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
     inter = list(interconnections1) + list(interconnections2)
     return (df_zones_simulated, df_zones_RoW, inter)
 
-
-
-def clustering(plants, method='Standard', Nslices=20, PartLoadMax=0.1, Pmax=30):
-    """
-    Merge excessively disaggregated power Units.
-
-    :param plants:          Pandas dataframe with each power plant and their characteristics (following the DispaSET format)
-    :param method:          Select clustering method ('Standard'/'LP'/None)
-    :param Nslices:         Number of slices used to fingerprint each power plant characteristics. slices in the power plant data to categorize them  (fewer slices involves that the plants will be aggregated more easily)
-    :param PartLoadMax:     Maximum part-load capability for the unit to be clustered
-    :param Pmax:            Maximum power for the unit to be clustered
-    :return:                A list with the merged plants and the mapping between the original and merged units
-    """
-
-    # Checking the the required columns are present in the input pandas dataframe:
-    required_inputs = ['Unit', 'PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate', 'StartUpTime',
-                       'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost', 'Efficiency']
-    for input_value in required_inputs:
-        if input_value not in plants.columns:
-            logging.error("The plants dataframe requires a '" + input_value + "' column for clustering")
-            sys.exit(1)
-    if not "Nunits" in plants:
-        plants['Nunits'] = 1
-
-    # Checking the validity of the selected clustering method
-    OnlyOnes = (plants['Nunits'] == 1).all()
-    if method in ['Standard','MILP']:
-        if not OnlyOnes:
-            logging.warning("The standard (or MILP) clustering method is only applicable if all values of the Nunits column in the power plant data are set to one. At least one different value has been encountered. No clustering will be applied")
-    elif method == 'LP clustered':
-        if not OnlyOnes:
-            logging.warning("The LP clustering method aggregates all the units of the same type. Individual units are not considered")
-            # Modifying the table to remove multiple-units plants:
-            for key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower','CHPMaxHeat']:
-                if key in plants:
-                    plants.loc[:,key] = plants.loc[:,'Nunits'] * plants.loc[:,key]
-            plants['Nunits'] = 1
-            OnlyOnes = True
-    elif method == 'LP':
-        pass
-    elif method == 'Integer clustering':
-        pass
-    elif method == 'No clustering':
-        pass
-    else:
-        logging.error('Method argument ("' + str(method) + '") not recognized in the clustering function')
-        sys.exit(1)
-
-    # Number of units:
-    Nunits = len(plants)
-    plants.index = range(Nunits)
-
-    # Definition of the mapping variable, from the old power plant list the new (merged) one:
-    map_old_new = np.zeros(Nunits)
-    map_plant_orig = []
-
-    # Slicing:
-    bounds = {'PartLoadMin': np.linspace(0, 1, Nslices), 'RampUpRate': np.linspace(0, 1, Nslices),
-              'RampDownRate': np.linspace(0, 1, Nslices), 'StartUpTime': _mylogspace(0, 36, Nslices),
-              'MinUpTime': _mylogspace(0, 168, Nslices), 'MinDownTime': _mylogspace(0, 168, Nslices),
-              'NoLoadCost': np.linspace(0, 50, Nslices), 'StartUpCost': np.linspace(0, 500, Nslices),
-              'Efficiency': np.linspace(0, 1, Nslices)}
-
-    # Definition of the fingerprint value of each power plant, i.e. the pattern of the slices number in which each of
-    # its characteristics falls:
-    fingerprints = []
-    fingerprints_merged = []
-    for i in plants.index:
-        fingerprints.append([_find_nearest(bounds['PartLoadMin'], plants['PartLoadMin'][i]),
-                             _find_nearest(bounds['RampUpRate'], plants['RampUpRate'][i]),
-                             _find_nearest(bounds['RampDownRate'], plants['RampDownRate'][i]),
-                             _find_nearest(bounds['StartUpTime'], plants['StartUpTime'][i]),
-                             _find_nearest(bounds['MinUpTime'], plants['MinUpTime'][i]),
-                             _find_nearest(bounds['MinDownTime'], plants['MinDownTime'][i]),
-                             _find_nearest(bounds['NoLoadCost'], plants['NoLoadCost'][i]),
-                             _find_nearest(bounds['StartUpCost'], plants['StartUpCost'][i]),
-                             _find_nearest(bounds['Efficiency'], plants['Efficiency'][i])])
-
-    # Definition of the merged power plants dataframe:
-    plants_merged = pd.DataFrame(columns=plants.columns)
-
-    # Find the columns containing string values (in addition to "Unit")
-    #    string_keys = []
-    #    for i in range(len(plants.columns)):
-    #        if plants.columns[i] != 'Unit' and plants.dtypes[i] == np.dtype('O'):
-    #            string_keys.append(plants.columns[i])
-    string_keys = ['Zone', 'Technology', 'Fuel','CHPType']
-    # First, fill nan values:
-    for key in string_keys:
-        plants[key].fillna('',inplace=True)
-
-    for i in plants.index:  # i is the plant to be added to the new list
-        merged = False
-        plants_string = plants[string_keys].iloc[i].fillna('')
-        for j in plants_merged.index:  # j corresponds to the clustered plants
-            same_type = all(plants_string == plants_merged[string_keys].iloc[j].fillna(''))
-            same_fingerprint = (fingerprints[i] == fingerprints_merged[j])
-            low_pmin = (plants['PartLoadMin'][i] <= PartLoadMax)
-            low_pmax = (plants['PowerCapacity'][i] <= Pmax)
-            highly_flexible = plants['RampUpRate'][i] > 1 / 60 and (plants['RampDownRate'][i] > 1 / 60) and (
-            plants['StartUpTime'][i] < 1) and (plants['MinDownTime'][i] <= 1) and (plants['MinUpTime'][i] <= 1)
-            cluster = OnlyOnes and same_type and ((same_fingerprint and low_pmin) or highly_flexible or low_pmax)
-            if method in ('Standard','MILP') and cluster:  # merge the two plants in plants_merged:
-                P_old = plants_merged['PowerCapacity'][j]  # Old power in plants_merged
-                P_add = plants['PowerCapacity'][i]  # Additional power to be added
-                for key in plants_merged:
-                    if key in ['RampUpRate', 'RampDownRate', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'Efficiency',
-                               'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge',
-                               'CHPPowerToHeat','CHPPowerLossFactor','COP','TNominal','coef_COP_a','coef_COP_b']:
-                        # Do a weighted average:
-                        plants_merged.loc[j, key] = (plants_merged[key][j] * P_old + plants[key][i] * P_add) / (
-                        P_add + P_old)
-                    elif key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower','CHPMaxHeat']:
-                        # Do a sum:
-                        plants_merged.loc[j, key] = plants_merged[key][j] + plants[key][i]
-                    elif key in ['PartLoadMin', 'StartUpTime']:
-                        # Take the minimum
-                        plants_merged.loc[j, key] = np.minimum(plants_merged[key][j] * P_old,
-                                                               plants[key][i] * P_add) / (P_add + P_old)
-                    elif key == 'RampingCost':
-                        # The starting cost must be added to the ramping cost
-                        Cost_to_fullload = P_add * (1 - plants['PartLoadMin'][i]) * plants['RampingCost'][i] + \
-                                           plants['StartUpCost'][i]
-                        plants_merged.loc[j, key] = (P_old * plants_merged[key][j] + Cost_to_fullload) / (P_old + P_add)
-                    elif key == 'Nunits':
-                        plants_merged.loc[j, key] = 1
-                map_old_new[i] = j
-                map_plant_orig[j].append(i)
-                merged = True
-                break
-            elif method == 'LP clustered' and same_type and OnlyOnes:
-                P_old = plants_merged['PowerCapacity'][j]  # Old power in plants_merged
-                P_add = plants['PowerCapacity'][i]  # Additional power to be added
-                for key in plants_merged:
-                    if key in ['RampUpRate', 'RampDownRate', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'Efficiency',
-                               'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge']:
-                        # Do a weighted average:
-                        plants_merged.loc[j, key] = (plants_merged[key][j] * P_old + plants[key][i] * P_add) / (
-                        P_add + P_old)
-                    elif key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower','CHPMaxHeat']:
-                        # Do a sum:
-                        plants_merged.loc[j, key] = plants_merged[key][j] + plants[key][i]
-                    elif key in ['PartLoadMin', 'StartUpTime']:
-                        # impose 0
-                        plants_merged.loc[j, key] = 0
-                    elif key == 'RampingCost':
-                        # The starting cost must be added to the ramping cost
-                        Cost_to_fullload = P_add * (1 - plants['PartLoadMin'][i]) * plants['RampingCost'][i] + \
-                                           plants['StartUpCost'][i]
-                        plants_merged.loc[j, key] = (P_old * plants_merged[key][j] + Cost_to_fullload) / (P_old + P_add)
-                    elif key == 'Nunits':
-                        plants_merged.loc[j, key] = 1
-                map_old_new[i] = j
-                map_plant_orig[j].append(i)
-                merged = True
-                break
-            elif method == 'Integer clustering' and same_type:
-                for key in plants_merged:
-                    if key in ['PowerCapacity','RampUpRate', 'RampDownRate', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'Efficiency',
-                               'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge',
-                               'STOCapacity', 'STOMaxChargingPower','InitialPower','PartLoadMin', 'StartUpTime','RampingCost',
-                               'CHPPowerToHeat','CHPPowerLossFactor','CHPMaxHeat']:
-                        # Do a weighted average:
-                        plants_merged.loc[j, key] = (plants_merged.loc[j,key] * plants_merged.loc[j,'Nunits'] + plants.loc[i,key] * plants.loc[i,'Nunits']) / (plants_merged.loc[j,'Nunits'] + plants.loc[i,'Nunits'])
-                plants_merged.loc[j, 'Nunits'] = plants_merged.loc[j,'Nunits'] + plants.loc[i,'Nunits']
-                        
-                map_old_new[i] = j
-                map_plant_orig[j].append(i)
-                merged = True
-                break
-
-        if not merged:  # Add a new plant in plants_merged:
-            plants_merged = plants_merged.append(plants.loc[i], ignore_index=True)
-            plants_merged = plants_merged.copy()
-            map_plant_orig.append([i])
-            map_old_new[i] = len(map_plant_orig) - 1
-            fingerprints_merged.append(fingerprints[i])
-
-    Nunits_merged = len(plants_merged)
-    mapping = {'NewIndex': {}, 'FormerIndexes': {}}
-    #    mapping['NewIdx'] = map_plant_orig
-    #    mapping['OldIdx'] = map_old_new
-    # Modify the Unit names with the original index number. In case of merged plants, indicate all indexes + the plant type and fuel
-    for j in range(Nunits_merged):
-        if len(map_plant_orig[j]) == 1:  # The plant has not been merged
-            NewName = str(map_plant_orig[j]) + ' - ' + plants_merged['Unit'][j]
-            NewName = shrink_to_64(clean_strings(NewName))
-            NewName = NewName.rstrip()                          # remove space at the end because it is not considered by gams
-            plants_merged.loc[j, 'Unit'] = NewName
-            mapping['FormerIndexes'][NewName] = [map_plant_orig[j][0]]
-            mapping['NewIndex'][map_plant_orig[j][0]] = NewName
-        else:
-            all_stringkeys = ''
-            for key in string_keys:
-                all_stringkeys = all_stringkeys + ' - ' + plants_merged[key][j]
-            NewName = str(map_plant_orig[j]) + all_stringkeys
-            NewName = shrink_to_64(clean_strings(NewName))
-            NewName = NewName.rstrip()                          # remove space at the end because it is not considered by gams
-            plants_merged.loc[j, 'Unit'] = NewName
-            list_oldplants = [x for x in map_plant_orig[j]]
-            mapping['FormerIndexes'][NewName] = list_oldplants
-            for oldplant in list_oldplants:
-                mapping['NewIndex'][oldplant] = NewName
-
-    # Transforming the start-up cost into ramping for the plants that did not go through any clustering:
-    if method in ('LP', 'LP clustered'):
-        for i in range(Nunits_merged):
-            if plants_merged['RampingCost'][i] == 0:
-                Power = plants_merged['PowerCapacity'][i]
-                Start_up = plants_merged['StartUpCost'][i]
-                plants_merged.loc[i, 'RampingCost'] = Start_up / Power
-                
-    # Correcting the Nunits field of the clustered plants (must be integer):
-    elif method == 'Integer clustering':
-        for idx in plants_merged.index:
-            N = np.round(plants_merged.loc[idx,'Nunits'])
-        for key in ['PowerCapacity', 'STOCapacity', 'STOMaxChargingPower','InitialPower','NoLoadCost']:
-            if key in plants_merged.columns:
-                plants_merged.loc[idx,key] = plants_merged.loc[idx,key] * N / plants_merged.loc[idx,'Nunits']
-        plants_merged.loc[idx,'Nunits'] = N
-                
-    # Updating the index of the merged plants dataframe with the new unit names, after some cleaning:
-    plants_merged.index = plants_merged['Unit']
-
-    if Nunits != len(plants_merged):
-        logging.info('Clustered ' + str(Nunits) + ' original units into ' + str(len(plants_merged)) + ' new units')
-    else:
-        logging.warning('Did not cluster any unit')
-    return plants_merged, mapping
-
 ## Helpers
 
 def _mylogspace(low, high, N):
@@ -417,6 +211,414 @@ def _find_nearest(array, value):
     """
     idx = (np.abs(array - value)).argmin()
     return idx
+
+def _reverse_dict(dict_):
+    """
+    Reverse Dictionary (Key, Value) to (Value, Key)
+    :param dict_:     Dictionary to reverse
+
+    """
+    new_dic = {}
+    for k, v in dict_.items():
+        for x in v:
+            new_dic[x] = k
+    return new_dic
+
+def _split_list(list_):
+    """
+    Split list elements into string with " - " seperator 
+    :param list_:     List to split
+
+    """
+    res = str()
+    for l in list_:
+        if str(l) != 'nan':
+            if l != list_[-1]:
+                res += str(l) + " - "
+            else:
+                res += str(l)
+    return res
+
+def _list2dict(list_, agg): return {key: agg for key in list_} 
+
+def _flatten_list(l):
+    flat_list = []
+    for sublist in l:
+        for item in sublist:
+            flat_list.append(item)
+    return flat_list
+
+def _merge_two_dicts(x, y):
+    """Given two dicts, merge them into a new dict as a shallow copy.
+    Used for compatibility Python 2 and 3
+    inspired by: https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression 
+    """
+    z = x.copy()
+    z.update(y)
+    return z
+
+def _get_index(df_, idx):
+    res = [_flatten_list(list(df_.loc[i]['FormerIndexes'].values)) for i in idx]
+    return res
+
+def _create_mapping(merged_df):
+    mapping = {"NewIndex": {}, "FormerIndexes": {}}
+    mapping['FormerIndexes'] = merged_df['FormerIndexes'].to_dict()
+    mapping['NewIndex'] = _reverse_dict(mapping['FormerIndexes'])
+    return mapping
+
+def _clean_df(df_merged, df_, string_keys):
+    # if merged unit, create name -> else take old name for unit
+    keys = ['FormerIndexes'] + string_keys
+    create_unit_name = lambda x: str(x.FormerIndexes) + " - " + df_.iloc[x.FormerIndexes[0]]['Unit'] if len(x.FormerIndexes) == 1 else shrink_to_64(clean_strings(_split_list(list(x[keys].values))))
+    df_merged['Unit'] = df_merged.apply(create_unit_name, axis=1)
+    return df_merged.set_index('Unit', drop=False)
+    
+    
+def group_plants(plants, method, df_grouped=False, group_list = ['Zone', 'Technology', 'Fuel']):
+    '''
+    This function returns the final dataframe with the merged units and their characteristics
+    '''
+    # Definition of the merged power plants dataframe:
+    plants_merged = pd.DataFrame(columns=plants.columns)
+    grouped = plants.groupby(group_list, as_index=False)
+    agg_dict = create_agg_dict(plants, method=method)
+    plants_merged = plants_merged.append(grouped.agg(agg_dict))
+    idx = [list(i.values) for i in list(grouped.groups.values())]
+
+    if df_grouped == False:
+        idx = [list(plants.loc[i]['index'].values) for i in idx]
+        plants_merged['FormerIndexes'] = idx
+        
+    else:
+         # this must be second dataframe != index
+        former_indexes = list(_get_index(plants, idx))
+        plants_merged['FormerIndexes'] = former_indexes
+
+    return plants_merged
+
+def update_unclustered_col(row, df):
+    """ 
+    Updates those rows which were not merged with old values
+    Important when column not in grouping, but old values need to be retained
+    """
+    if len(row['FormerIndexes']) == 1:
+        return df.iloc[row['FormerIndexes'][0]]
+    else:
+        return row
+
+
+
+def create_agg_dict(df_, method="Standard"):
+    '''
+    This function returns a dictionnary with the proper aggregation method
+    for each columns of the units table, depending on the clustering method
+    
+    Author: Matthias Zech
+    '''
+    
+    # lambda functions for other aggregations than standard aggregators like min/max,...
+    wm_pcap = lambda x: np.average(x.astype(float), weights=df_.loc[x.index, "PowerCapacity"]) # weighted mean with wight=PowerCapacity
+    wm_nunit = lambda x: np.average(x.astype(float), weights=df_.loc[x.index, "Nunits"]) # weighted mean with wight=NUnits
+    get_ramping_cost = lambda x: wm_pcap((1 - df_.loc[x.index, "PartLoadMin"]) * x  + df_.loc[x.index, "StartUpCost"]/df_.loc[x.index, "PowerCapacity"])
+    
+    if method in ("Standard", "MILP"):
+        sum_cols = ["PowerCapacity", "STOCapacity", "STOMaxChargingPower", "InitialPower", "CHPMaxHeat"]
+        weighted_avg_cols = [
+                        "RampUpRate",
+                        "RampDownRate",
+                        "MinUpTime",
+                        "MinDownTime",
+                        "NoLoadCost",
+                        "Efficiency",
+                        "MinEfficiency",
+                        "STOChargingEfficiency",
+                        "CO2Intensity",
+                        "STOSelfDischarge",
+                        "CHPPowerToHeat",
+                        "CHPPowerLossFactor",
+                        'COP',
+                        'TNominal',
+                        'coef_COP_a',
+                        'coef_COP_b'  
+                    ]
+        min_cols = ["PartLoadMin", "StartUpTime"]
+        ramping_cost = ["RampingCost"]
+        nunits = ["Nunits"]
+
+        # Define aggregators
+        agg_dict = _list2dict(sum_cols, 'sum')
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(weighted_avg_cols, wm_pcap))
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(min_cols, 'min'))
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(ramping_cost, get_ramping_cost))
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(nunits, lambda x: 1))
+        agg_dict = dict((k,v) for k,v in agg_dict.items() if k in df_.columns) # remove unnecesary columns
+        return agg_dict
+    
+    elif method == "LP clustered":
+        sum_cols = ["PowerCapacity", "STOCapacity", "STOMaxChargingPower", "InitialPower", "CHPMaxHeat"]
+        weighted_avg_cols = [
+                                "RampUpRate",
+                                "RampDownRate",
+                                "MinUpTime",
+                                "MinDownTime",
+                                "NoLoadCost",
+                                "Efficiency",
+                                "MinEfficiency",
+                                "STOChargingEfficiency",
+                                "CO2Intensity",
+                                "STOSelfDischarge",
+                                "CHPPowerToHeat",
+                                "CHPPowerLossFactor",
+                                'COP',
+                                'TNominal',
+                                'coef_COP_a',
+                                'coef_COP_b'  
+                            ]
+        min_cols = ["PartLoadMin", "StartUpTime"]
+        ramping_cost = ["RampingCost"]
+        nunits = ["Nunits"]
+
+        # Define aggregators
+        agg_dict = _list2dict(sum_cols, 'sum')
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(weighted_avg_cols, wm_pcap))
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(min_cols, 'min'))
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(ramping_cost, get_ramping_cost))
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(nunits, lambda x: 1))
+        agg_dict = dict((k,v) for k,v in agg_dict.items() if k in df_.columns) # remove unnecesary columns
+        return agg_dict
+    
+    elif method == "Integer clustering":
+        sum_cols = ["Nunits"]
+
+        weighted_avg_cols = ['PowerCapacity','RampUpRate', 'RampDownRate', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'Efficiency',
+                               'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge', 
+                               'STOCapacity', 'STOMaxChargingPower','PartLoadMin', 'StartUpTime','RampingCost',
+                               'CHPPowerToHeat','CHPPowerLossFactor','CHPMaxHeat', 'COP', 'TNominal', 'coef_COP_a', 'coef_COP_b'  ]
+    
+        # Define aggregators
+
+        agg_dict = _list2dict(sum_cols, 'sum')
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(weighted_avg_cols, wm_nunit))
+        agg_dict = dict((k,v) for k,v in agg_dict.items() if k in df_.columns) # remove unnecesary columns
+        
+        return agg_dict
+
+def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
+    """
+    Merge excessively disaggregated power Units.
+
+    :param plants:          Pandas dataframe with each power plant and their characteristics (following the DispaSET format)
+    :param method:          Select clustering method ('Standard'/'LP'/None)
+    :param Nslices:         Number of slices used to fingerprint each power plant characteristics. slices in the power plant data to categorize them  (fewer slices involves that the plants will be aggregated more easily)
+    :param PartLoadMax:     Maximum part-load capability for the unit to be clustered
+    :param Pmax:            Maximum power for the unit to be clustered
+    :return:                A list with the merged plants and the mapping between the original and merged units
+
+    @author: Matthias Zech
+    """
+
+    # Checking the the required columns are present in the input pandas dataframe:
+    required_inputs = ['Unit', 'PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate', 'StartUpTime',
+                       'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost', 'Efficiency']
+    for input_value in required_inputs:
+        if input_value not in plants.columns:
+            logging.error("The plants dataframe requires a '" + input_value + "' column for clustering")
+            sys.exit(1)
+    if not "Nunits" in plants:
+        plants["Nunits"] = 1
+
+    Nunits = len(plants)
+    plants.index = range(Nunits)
+    plants_merged = pd.DataFrame(columns=plants.columns)
+
+    # Fill nan values:
+    string_keys = ["Zone", "Technology", "Fuel", "CHPType"]
+    for key in string_keys:
+        plants[key].fillna("", inplace=True)
+
+    # Checking the validity of the selected clustering method
+    plants["index"] = plants.index
+
+    OnlyOnes = (plants["Nunits"] == 1).all()
+    if method in ["Standard", "MILP"]:
+        if OnlyOnes:
+            ####### Three cluster groups in the standard MILP formulation
+            ###### 1) Highly flexible
+            ###### 2) Low Pmin
+            ###### 3) Similar characteristics --> similarity expressed via fingerprints
+            # First, cluster by same string keys and flexible and low_pmin
+            # Join grouped data with inflexible and no low_pmin data
+            # Group joined dataframe by string keys including same technical characteristics using fingerprints
+            #  The more Nslices, the more heterogenity between data, the less is merged
+            # Definition of the fingerprint value of each power plant, i.e. the pattern of the slices number in which each of
+            # its characteristics falls:
+
+            # helper_cols = ['flex', 'low_pmin', 'low_pmax', 'fingerprints']
+            highly_flexible = (
+                (plants["RampUpRate"] > 1 / 60)
+                & (plants["RampDownRate"] > 1 / 60)
+                & (plants["StartUpTime"] < 1)
+                & (plants["MinDownTime"] <= 1)
+                & (plants["MinUpTime"] <= 1)
+            )
+
+            low_pmin = plants["PartLoadMin"] <= PartLoadMax
+            plants["flex"] = highly_flexible
+            plants["low_pmin"] = low_pmin
+            plants["FormerIndexes"] = pd.Series(plants.index.values).apply(lambda x: [x])
+
+            condition = (plants["low_pmin"] == True) | (plants["flex"] == True)
+            first_cluster = plants[condition]  # all data without other clustering
+            first_cluster = group_plants(first_cluster, method, False, string_keys)
+
+            first_cluster = first_cluster.append(plants[~condition], ignore_index=True)
+            # Slicing:
+            bounds = {
+                "PartLoadMin": np.linspace(0, 1, Nslices),
+                "RampUpRate": np.linspace(0, 1, Nslices),
+                "RampDownRate": np.linspace(0, 1, Nslices),
+                "StartUpTime": _mylogspace(0, 36, Nslices),
+                "MinUpTime": _mylogspace(0, 168, Nslices),
+                "MinDownTime": _mylogspace(0, 168, Nslices),
+                "NoLoadCost": np.linspace(0, 50, Nslices),
+                "StartUpCost": np.linspace(0, 500, Nslices),
+                "Efficiency": np.linspace(0, 1, Nslices),
+            }
+
+            fingerprints = []
+            for i in first_cluster.index:
+                fingerprints.append(
+                    [
+                        _find_nearest(bounds["PartLoadMin"], first_cluster["PartLoadMin"][i]),
+                        _find_nearest(bounds["RampUpRate"], first_cluster["RampUpRate"][i]),
+                        _find_nearest(bounds["RampDownRate"], first_cluster["RampDownRate"][i]),
+                        _find_nearest(bounds["StartUpTime"], first_cluster["StartUpTime"][i]),
+                        _find_nearest(bounds["MinUpTime"], first_cluster["MinUpTime"][i]),
+                        _find_nearest(bounds["MinDownTime"], first_cluster["MinDownTime"][i]),
+                        _find_nearest(bounds["NoLoadCost"], first_cluster["NoLoadCost"][i]),
+                        _find_nearest(bounds["StartUpCost"], first_cluster["StartUpCost"][i]),
+                        _find_nearest(bounds["Efficiency"], first_cluster["Efficiency"][i]),
+                    ]
+                )
+
+            first_cluster["fingerprints"] = fingerprints
+
+            # the elements of the list are irrelevant for the clustering
+            first_cluster["fingerprints"] = first_cluster["fingerprints"].astype(str)
+            low_pmax = first_cluster["PowerCapacity"] <= Pmax
+            if first_cluster[low_pmax].empty == False:
+                grouped_ = group_plants(
+                    first_cluster[low_pmax], method, True, string_keys + ["fingerprints"]
+                )
+                plants_merged = grouped_.append(first_cluster[~low_pmax], ignore_index=True)
+            else:
+                plants_merged = first_cluster[:]
+
+            plants = plants.drop(
+                ["flex", "low_pmin"], axis=1
+            )
+            plants_merged = plants_merged.drop(
+                ["index","fingerprints", "flex", "low_pmin"], axis=1
+            )
+        else:  # not all only ones
+            logging.warn(
+                "The standard (or MILP) clustering method is only applicable if all values of the Nunits column in the power plant data are set to one. At least one different value has been encountered. No clustering will be applied"
+            )
+            plants_merged = plants.copy()
+            plants_merged["FormerIndexes"] = plants["index"].apply(lambda x: [x])
+        
+
+    elif method == "LP clustered":
+        if not OnlyOnes:
+            logging.warn(
+                "The LP clustering method aggregates all the units of the same type. Individual units are not considered"
+            )
+            list_mult = [ 
+                    "PowerCapacity",
+                    "STOCapacity",
+                    "STOMaxChargingPower",
+                    "InitialPower",
+                    "CHPMaxHeat",
+                        ]
+            # Restricting the list of values to multiply to those who are present in the plants table:
+            list_mult = [x for x in list_mult if x in plants]
+            # Modifying the table to remove multiple-units plants:
+            plants[list_mult] = plants[list_mult].multiply(plants["Nunits"], axis="index")
+            plants["Nunits"] = 1
+            OnlyOnes = True
+        
+        plants_merged = group_plants(plants, method="LP clustered")
+        # Transforming the start-up cost into ramping for the plants that did not go through any clustering:
+        ramping_lbd = (
+            lambda row: row["StartUpCost"] / row["PowerCapacity"]
+            if row.RampingCost == 0
+            else row.RampingCost
+        )
+        plants_merged["RampingCost"] = plants_merged.apply(ramping_lbd, axis=1)
+
+
+    elif method == "LP":
+        if not OnlyOnes:
+            logging.warn(
+                "The LP method aggregates all identical units by multiplying by the Nunits variable"
+            )
+            list_mult = [ 
+                    "PowerCapacity",
+                    "STOCapacity",
+                    "STOMaxChargingPower",
+                    "InitialPower",
+                    "CHPMaxHeat",
+                        ]
+            # Restricting the list of values to multiply to those who are present in the plants table:
+            list_mult = [x for x in list_mult if x in plants]
+            # Modifying the table to remove multiple-units plants:
+            plants[list_mult] = plants[list_mult].multiply(plants["Nunits"], axis="index")
+            plants["Nunits"] = 1
+            OnlyOnes = True
+        
+        plants_merged = plants
+        # Transforming the start-up cost into ramping for the plants that did not go through any clustering:
+        ramping_lbd = (
+            lambda row: row["StartUpCost"] / row["PowerCapacity"]
+            if row.RampingCost == 0
+            else row.RampingCost
+        )
+        plants_merged["RampingCost"] = plants_merged.apply(ramping_lbd, axis=1)
+        plants_merged["FormerIndexes"] = plants["index"].apply(lambda x: [x])
+
+    elif method == "Integer clustering":
+        plants_merged = group_plants(plants, method="Integer clustering")
+        # Correcting the Nunits field of the clustered plants (must be integer):
+
+    elif method == "No clustering":
+        plants_merged = plants.copy()
+        plants_merged["FormerIndexes"] = plants["index"].apply(lambda x: [x])
+
+    else:
+        logging.error(
+            'Method argument ("' + str(method) + '") not recognized in the clustering function'
+        )
+        sys.exit(1)
+
+    # clean df_
+    plants_merged = _clean_df(plants_merged, plants, string_keys)
+
+    # Modify the Unit names with the original index number. In case of merged plants, indicate all indexes + the plant type and fuel
+    mapping = _create_mapping(plants_merged)
+    if Nunits != len(plants_merged):
+        logging.info(
+            "Clustered "
+            + str(Nunits)
+            + " original units into "
+            + str(len(plants_merged))
+            + " new units"
+        )
+    else:
+        logging.warn("Did not cluster any unit")
+        
+    plants_merged = plants_merged.apply(lambda x: update_unclustered_col(x, plants), axis=1) # use old values for plants which were not merged
+    return plants_merged, mapping
 
 
 def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_path=''):

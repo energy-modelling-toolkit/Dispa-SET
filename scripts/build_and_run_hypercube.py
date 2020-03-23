@@ -15,7 +15,7 @@ the pyDOE library is required to run this script!
 import numpy as np
 import pandas as pd
 
-# Change directory to the root folder of Dispa-SET:
+# Add the root folder of Dispa-SET to the path so that the library can be loaded:
 import sys,os
 sys.path.append(os.path.abspath('..'))
 

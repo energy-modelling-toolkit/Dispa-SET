@@ -1,20 +1,26 @@
-import dispaset as ds
+import itertools
 import os
+
 import pytest
+
+import dispaset as ds
 
 conf_file = os.path.abspath('./tests/conf.yml')
 
 SIMULATION_TYPES = ['MILP', 'LP']
+SIMULATION_TIMESTEPS = [24, 1]
 
+cartesian = [elem for elem in itertools.product(*[SIMULATION_TYPES, SIMULATION_TIMESTEPS])]
 
 @pytest.fixture(scope='module',
-                params=SIMULATION_TYPES,
+                params=cartesian,
                 )
 def config(request):
     """Generate some data for testing"""
     config = ds.load_config_yaml(conf_file)
     assert isinstance(config, dict)
-    config['SimulationType'] = request.param
+    config['SimulationType'] = request.param[0]
+    config['SimulationTimeStep'] = request.param[1]
     return config
 
 def test_build(config, tmpdir):

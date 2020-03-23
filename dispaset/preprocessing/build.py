@@ -10,9 +10,9 @@ from future.builtins import int
 
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
     check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows, \
-    check_FlexibleDemand
+    check_FlexibleDemand, check_reserves
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
-from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix
+from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
 
 from .. import __version__
 from ..common import commons
@@ -36,12 +36,17 @@ def build_single_run(config, profiles=None):
     #####################################   Main Inputs    ############################################################
     ###################################################################################################################
 
-    # Boolean variable to check whether it is milp or lp:
+    # Boolean variable to check wether it is milp or lp:
     LP = config['SimulationType'] == 'LP' or config['SimulationType'] == 'LP clustered'
 
+    # check time steps:
+    if config['DataTimeStep'] != 1:
+        logging.critical('The data time step can only be 1 hour in this version of Dispa-SET. A value of ' + str(config['DataTimeStep'])  + ' hours was provided')
+        sys.exit(1)
+    if config['SimulationTimeStep'] not in (1,24):
+        logging.critical('The simulation time step can only be 1 or 24 hour in this version of Dispa-SET. A value of ' + str(config['DataTimeStep'])  + ' hours was provided')
+        sys.exit(1)
     # Day/hour corresponding to the first and last days of the simulation:
-    # Note that the first available data corresponds to 2015.01.31 (23.00) and the
-    # last day with data is 2015.12.31 (22.00)
     __, m_start, d_start, __, __, __ = config['StartDate']
     y_end, m_end, d_end, _, _, _ = config['StopDate']
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
@@ -65,9 +70,10 @@ def build_single_run(config, profiles=None):
     config['idx_long'] = idx_long
     
     # Indexes of with the specified simulation time step:
-    idx_sim = pd.DatetimeIndex(pd.date_range(start=config['idx'][0], end=enddate_long, freq='1h'))
+    idx_sim = pd.date_range(start=config['idx'][0], end=enddate_long, freq=pd_timestep(config['SimulationTimeStep']))
     config['idx_sim'] = idx_sim
     Nsim = len(idx_sim)
+    
     # %%#################################################################################################################
     #####################################   Data Loading    ###########################################################
     ###################################################################################################################
@@ -96,11 +102,17 @@ def build_single_run(config, profiles=None):
     else:
         logging.warning('No NTC values will be considered (no valid file provided)')
         NTC = pd.DataFrame(index=config['idx_long'])
+    if os.path.isfile(config['PriceTransmission']):
+        PriceTransmission_raw = load_time_series(config,config['PriceTransmission'])
+    else:
+        PriceTransmission_raw = pd.DataFrame(index=config['idx_long'])    
 
     # Load Shedding:
     LoadShedding = NodeBasedTable('LoadShedding',config,default=config['default']['LoadShedding'])
     CostLoadShedding = NodeBasedTable('CostLoadShedding',config,default=config['default']['CostLoadShedding'])
     ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand',config,default=config['default']['ShareOfFlexibleDemand'])
+    Reserve2D = NodeBasedTable('Reserve2D',config,default=None)
+    Reserve2U = NodeBasedTable('Reserve2U',config,default=None)
     
     # Power plants:
     plants = pd.DataFrame()
@@ -169,6 +181,7 @@ def build_single_run(config, profiles=None):
     check_heat_demand(plants,HeatDemand)
     check_temperatures(plants,Temperatures)
     check_FlexibleDemand(ShareOfFlexibleDemand)
+    check_reserves(Reserve2D,Reserve2U,Load)
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
@@ -184,6 +197,14 @@ def build_single_run(config, profiles=None):
     else:
         NTCs = pd.DataFrame(index=config['idx_long'])
     Inter_RoW = Interconnections_RoW.reindex(config['idx_long'])
+    PriceTransmission = pd.DataFrame(index=NTCs.index,columns=NTCs.columns)
+    for l in (NTCs.columns.tolist()+Inter_RoW.columns.tolist()):
+        if l in PriceTransmission_raw:
+            PriceTransmission[l] = PriceTransmission_raw[l].reindex(PriceTransmission.index)
+        else:
+            PriceTransmission[l] = config['default']['PriceTransmission']
+            if config['default']['PriceTransmission'] > 0:
+                logging.warning('No detailed values were found the transmission prices of line ' + l + '. Using default value ' + str(config['default']['PriceTransmission']))
 
     # Clustering of the plants:
     Plants_merged, mapping = clustering(plants, method=config['SimulationType'])
@@ -271,53 +292,62 @@ def build_single_run(config, profiles=None):
         oldname = plants['Unit'][i]
         newname = mapping['NewIndex'][i]
 
-    # Merging the time series relative to the clustered power plants:
-    ReservoirScaledInflows_merged = merge_series(plants, ReservoirScaledInflows, mapping, method='WeightedAverage', tablename='ScaledInflows')
-    ReservoirLevels_merged = merge_series(plants, ReservoirLevels, mapping, tablename='ReservoirLevels')
-    Outages_merged = merge_series(plants, Outages, mapping, tablename='Outages')
-    HeatDemand_merged = merge_series(plants, HeatDemand, mapping, tablename='HeatDemand',method='Sum')
-    AF_merged = merge_series(plants, AF, mapping, tablename='AvailabilityFactors')
-    CostHeatSlack_merged = merge_series(plants, CostHeatSlack, mapping, tablename='CostHeatSlack')
-    
+    # Reserve calculation
+    reserve_2U_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
+    reserve_2D_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
+    for z in Load.columns:
+        if z in Reserve2U:
+            reserve_2U_tot[z] = Reserve2U[z]
+        else:
+            reserve_2U_tot[z] = np.sqrt(10 * PeakLoad[z] + 150 ** 2) - 150
+        if z in Reserve2D:
+            reserve_2D_tot[z] = Reserve2D[z]
+        else:
+            reserve_2D_tot[z] = 0.5 * reserve_2U_tot[z]
 
-    # %%
-    # checking data
-    check_df(Load, StartDate=config['idx'][0], StopDate=config['idx'][-1], name='Load')
-    check_df(AF_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
-             name='AF_merged')
-    check_df(Outages_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1], name='Outages_merged')
-    check_df(Inter_RoW, StartDate=config['idx'][0], StopDate=config['idx'][-1], name='Inter_RoW')
+
+    # %% Store all times series and format
+
+    # Formatting all time series (merging, resempling) and store in the FinalTS dict
+    finalTS = {'Load':Load,'Reserve2D':reserve_2D_tot,'Reserve2U':reserve_2U_tot,
+               'Efficiencies':Efficiencies,'NTCs':NTCs,'Inter_RoW':Inter_RoW,
+               'LoadShedding':LoadShedding,'CostLoadShedding':CostLoadShedding,
+               'ScaledInflows':ReservoirScaledInflows,'ReservoirLevels':ReservoirLevels,
+               'Outages':Outages,'AvailabilityFactors':AF,'CostHeatSlack':CostHeatSlack,
+               'HeatDemand':HeatDemand,'ShareOfFlexibleDemand':ShareOfFlexibleDemand,
+               'PriceTransmission':PriceTransmission}
+    
+    # Merge the following time series with weighted averages
+    for key in ['ScaledInflows','ReservoirLevels','Outages','AvailabilityFactors','CostHeatSlack']:
+        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key)
+    # Merge the following time series by summing
+    for key in ['HeatDemand']:
+        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
+
+# Check that all times series data is available with the specified data time step:
     for key in FuelPrices:
         check_df(FuelPrices[key], StartDate=config['idx'][0], StopDate=config['idx'][-1], name=key)
-    check_df(NTCs, StartDate=config['idx'][0], StopDate=config['idx'][-1], name='NTCs')
-    check_df(ReservoirLevels_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
-             name='ReservoirLevels_merged')
-    check_df(ReservoirScaledInflows_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
-             name='ReservoirScaledInflows_merged')
-    check_df(HeatDemand_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
-             name='HeatDemand_merged')
-    check_df(CostHeatSlack_merged, StartDate=config['idx'][0], StopDate=config['idx'][-1],
-             name='CostHeatSlack_merged')
-    check_df(LoadShedding, StartDate=config['idx'][0], StopDate=config['idx'][-1],
-             name='LoadShedding')
-    check_df(CostLoadShedding, StartDate=config['idx'][0], StopDate=config['idx'][-1],
-             name='CostLoadShedding')
-    check_df(ShareOfFlexibleDemand, StartDate=config['idx'][0], StopDate=config['idx'][-1],
-             name='ShareOfFlexibleDemand')
+    for key in finalTS:
+        check_df(finalTS[key], StartDate=config['idx'][0], StopDate=config['idx'][-1], name=key)
+        
+# Resemple to the required time step
+    if config['DataTimeStep'] != config['SimulationTimeStep']:
+        for key in FuelPrices:
+            if len(FuelPrices[key].columns)>0:
+                FuelPrices[key] = FuelPrices[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
+        for key in finalTS:
+            if len(finalTS[key].columns)>0:
+                finalTS[key] = finalTS[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
 
-#    for key in Renewables:
-#        check_df(Renewables[key], StartDate=config['idx'][0], StopDate=config['idx'][-1],
-#                 name='Renewables["' + key + '"]')
-
-
+              
     # %%################################################################################################################
     ############################################   Sets    ############################################################
     ###################################################################################################################
 
     # The sets are defined within a dictionary:
     sets = {}
-    sets['h'] = [str(x + 1) for x in range(Nhours_long)]
-    sets['z'] = [str(x + 1) for x in range(Nhours_long - config['LookAhead'] * 24)]
+    sets['h'] = [str(x + 1) for x in range(Nsim)]
+    sets['z'] = [str(x + 1) for x in range(int(Nsim - config['LookAhead'] * config['SimulationTimeStep'])) ]
     sets['mk'] = ['DA', '2U', '2D','Flex']
     sets['n'] = config['zones']
     sets['au'] = Plants_merged.index.tolist()
@@ -436,12 +466,12 @@ def build_single_run(config, profiles=None):
     for i, s in enumerate(sets['s']):
         if profiles is not None:
             if (config['InitialFinalReservoirLevel'] == 0) or (config['InitialFinalReservoirLevel'] == ""):
-                if s in ReservoirLevels_merged:
+                if s in finalTS['ReservoirLevels']:
                     # get the time
-                    parameters['StorageInitial']['val'][i] = ReservoirLevels_merged[s][idx_long[0]] * \
+                    parameters['StorageInitial']['val'][i] = finalTS['ReservoirLevels'][s][idx_sim[0]] * \
                                                              Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
-                    parameters['StorageProfile']['val'][i, :] = ReservoirLevels_merged[s][idx_long].values
-                    if any(ReservoirLevels_merged[s] > 1):
+                    parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
+                    if any(finalTS['ReservoirLevels'][s] > 1):
                         logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
                 else:
                     logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
@@ -453,12 +483,12 @@ def build_single_run(config, profiles=None):
                 parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * Plants_sto['StorageCapacity'][s]
                 parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
         else:
-            if s in ReservoirLevels_merged:
+            if s in finalTS['ReservoirLevels']:
                 # get the time
-                parameters['StorageInitial']['val'][i] = ReservoirLevels_merged[s][idx_long[0]] * \
+                parameters['StorageInitial']['val'][i] = finalTS['ReservoirLevels'][s][idx_sim[0]] * \
                                                          Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
-                parameters['StorageProfile']['val'][i, :] = ReservoirLevels_merged[s][idx_long].values
-                if any(ReservoirLevels_merged[s] > 1):
+                parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
+                if any(finalTS['ReservoirLevels'][s] > 1):
                     logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
             else:
                 logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
@@ -467,14 +497,14 @@ def build_single_run(config, profiles=None):
 
     # Storage Inflows:
     for i, s in enumerate(sets['s']):
-        if s in ReservoirScaledInflows_merged:
-            parameters['StorageInflow']['val'][i, :] = ReservoirScaledInflows_merged[s][idx_long].values * \
+        if s in finalTS['ScaledInflows']:
+            parameters['StorageInflow']['val'][i, :] = finalTS['ScaledInflows'][s][idx_sim].values * \
                                                        Plants_sto['PowerCapacity'][s]
     # CHP time series:
     for i, u in enumerate(sets['th']):
-        if u in HeatDemand_merged:
-            parameters['HeatDemand']['val'][i, :] = HeatDemand_merged[u][idx_long].values
-            parameters['CostHeatSlack']['val'][i, :] = CostHeatSlack_merged[u][idx_long].values
+        if u in finalTS['HeatDemand']:
+            parameters['HeatDemand']['val'][i, :] = finalTS['HeatDemand'][u][idx_sim].values
+            parameters['CostHeatSlack']['val'][i, :] = finalTS['CostHeatSlack'][u][idx_sim].values
 
     # Ramping rates are reconstructed for the non dimensional value provided (start-up and normal ramping are not differentiated)
     parameters['RampUpMaximum']['val'] = Plants_merged['RampUpRate'].values * Plants_merged['PowerCapacity'].values * 60
@@ -490,27 +520,21 @@ def build_single_run(config, profiles=None):
         parameters['Curtailment'] = define_parameter(sets_param['Curtailment'], sets, value=0)
 
     # Availability Factors
-    if len(AF_merged.columns) != 0:
+    if len(finalTS['AvailabilityFactors'].columns) != 0:
         for i, u in enumerate(sets['au']):
-            if u in AF_merged.columns:
-                parameters['AvailabilityFactor']['val'][i, :] = AF_merged[u].values
+            if u in finalTS['AvailabilityFactors'].columns:
+                parameters['AvailabilityFactor']['val'][i, :] = finalTS['AvailabilityFactors'][u].values
 
     # Efficiencies (currently limited to p2h units, but can be extended to all units):
-    if len(Efficiencies) != 0:
+    if len(finalTS['Efficiencies']) != 0:
         for i, u in enumerate(sets['p2h']):
-            parameters['Efficiency']['val'][i, :] = Efficiencies[u].values
-
-    # Demand
-    # Dayahead['NL'][1800:1896] = Dayahead['NL'][1632:1728]
-    reserve_2U_tot = {i: (np.sqrt(10 * PeakLoad[i] + 150 ** 2) - 150) for i in Load.columns}
-    reserve_2D_tot = {i: (0.5 * reserve_2U_tot[i]) for i in Load.columns}
+            parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
 
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])
     for i in range(len(sets['n'])):
-        values[0, i, :] = Load[sets['n'][i]] * (1 - ShareOfFlexibleDemand[sets['n'][i]])
-        values[1, i, :] = reserve_2U_tot[sets['n'][i]]
-        values[2, i, :] = reserve_2D_tot[sets['n'][i]]
-        values[3, i, :] = Load[sets['n'][i]] * ShareOfFlexibleDemand[sets['n'][i]]
+        values[0, i, :] = finalTS['Load'][sets['n'][i]]
+        values[1, i, :] = finalTS['Reserve2U'][sets['n'][i]]
+        values[2, i, :] = finalTS['Reserve2D'][sets['n'][i]]
     parameters['Demand'] = {'sets': sets_param['Demand'], 'val': values}
 
     # Emission Rate:
@@ -518,8 +542,8 @@ def build_single_run(config, profiles=None):
 
     # Load Shedding:
     for i, c in enumerate(sets['n']):
-        parameters['LoadShedding']['val'][i] = LoadShedding[c] * PeakLoad[c]
-        parameters['CostLoadShedding']['val'][i] = CostLoadShedding[c]
+        parameters['LoadShedding']['val'][i] = finalTS['LoadShedding'][c] * PeakLoad[c]
+        parameters['CostLoadShedding']['val'][i] = finalTS['CostLoadShedding'][c]
 
     # %%#################################################################################################################################################################################################
     # Variable Cost
@@ -547,20 +571,22 @@ def build_single_run(config, profiles=None):
     # Maximum Line Capacity
     for i, l in enumerate(sets['l']):
         if l in NTCs.columns:
-            parameters['FlowMaximum']['val'][i, :] = NTCs[l]
+            parameters['FlowMaximum']['val'][i, :] = finalTS['NTCs'][l]
         if l in Inter_RoW.columns:
-            parameters['FlowMaximum']['val'][i, :] = Inter_RoW[l]
-            parameters['FlowMinimum']['val'][i, :] = Inter_RoW[l]
+            parameters['FlowMaximum']['val'][i, :] = finalTS['Inter_RoW'][l]
+            parameters['FlowMinimum']['val'][i, :] = finalTS['Inter_RoW'][l]
+        parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
+            
     # Check values:
     check_MinMaxFlows(parameters['FlowMinimum']['val'],parameters['FlowMaximum']['val'])
     
     parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
 
     # Outage Factors
-    if len(Outages_merged.columns) != 0:
+    if len(finalTS['Outages'].columns) != 0:
         for i, u in enumerate(sets['au']):
-            if u in Outages_merged.columns:
-                parameters['OutageFactor']['val'][i, :] = Outages_merged[u].values
+            if u in finalTS['Outages'].columns:
+                parameters['OutageFactor']['val'][i, :] = finalTS['Outages'][u].values
             else:
                 logging.warning('Outages factors not found for unit ' + u + '. Assuming no outages')
 

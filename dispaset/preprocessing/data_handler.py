@@ -16,7 +16,7 @@ DEFAULTS = {'ReservoirLevelInitial':0.5,'ReservoirLevelFinal':0.5,'ValueOfLostLo
                 'PriceOfSpillage':1,'WaterValue':100,'ShareOfQuickStartUnits':0.5,
                 'PriceOfNuclear':0,'PriceOfBlackCoal':0,'PriceOfGas':0,'PriceOfFuelOil':0,'PriceOfBiomass':0,
                 'PriceOfCO2':0,'PriceOfLignite':0,'PriceOfPeat':0,'LoadShedding':0,'CostHeatSlack':0,
-                'CostLoadShedding':100,'ShareOfFlexibleDemand':0,'DemandFlexibility':0}
+                'CostLoadShedding':100,'ShareOfFlexibleDemand':0,'DemandFlexibility':0,'PriceTransmission':0}
 
 def NodeBasedTable(varname,config,default=None):
     '''
@@ -312,19 +312,42 @@ def load_time_series(config,path,header='infer'):
     if data.index.is_all_dates:   
         data.index = data.index.tz_localize(None)   # removing locational data
         # Checking if the required index entries are in the data:
-        common = data.index.tz_localize(None).intersection(config['idx'])
+        common = data.index.intersection(config['idx'])
         if len(common) == 0:
-            # try to see if it is just a year-mismatch
-            index2 = data.index.shift(8760 * (config['idx'][0].year - data.index[0].year),freq=commons['TimeStep'])
-            common2 = index2.intersection(config['idx'])
-            if len(common2) == len(config['idx']):
-                logging.warning('File ' + path + ': data for year '+ str(data.index[0].year) + ' is used instead of year ' + str(config['idx'][0].year))
-                data.index=index2
-        elif len(common) == len(config['idx'])-1:  # there is only one data point missing. This is deemed acceptable
-            logging.warning('File ' + path + ': there is one data point missing in the time series. It will be filled with the nearest data')
-        elif len(common) < len(config['idx'])-1:
+            # check if original year is leap year and destination year is not (remove leap date)
+            if (data.index[0].is_leap_year is True) and (config['idx'][0].is_leap_year is False):
+                data = data[~((data.index.month == 2) & (data.index.day == 29))]
+                logging.warning('File ' + path + ': data for year ' + str(data.index[0].year) +
+                                ' is used instead of year ' + str(config['idx'][0].year))
+                data.index = data.index.map(lambda t: t.replace(year=config['idx'][0].year))
+            # check if both years are either leap or non leap
+            elif (data.index[0].is_leap_year is True) and (config['idx'][0].is_leap_year is True) or \
+                    (data.index[0].is_leap_year is False) and (config['idx'][0].is_leap_year is False):
+                logging.warning('File ' + path + ': data for year ' + str(data.index[0].year) +
+                                ' is used instead of year ' + str(config['idx'][0].year) +
+                                '. Leap year date is removed from the original DataFrame.')
+                data.index = data.index.map(lambda t: t.replace(year=config['idx'][0].year))
+            # check if original year is not a leap year and destination year is a leap year (add leap date and take average hourly values between 28.02. and 1.3.
+            elif (data.index[0].is_leap_year is False) and (config['idx'][0].is_leap_year is True):
+                logging.warning('File ' + path + ': data for year ' + str(data.index[0].year) +
+                                ' is used instead of year ' + str(config['idx'][0].year) +
+                                '. Leap year date is interpolated between the two neighbouring days.')
+                data.index = data.index.map(lambda t: t.replace(year=config['idx'][0].year))
+                mask = data.loc[str(config['idx'][0].year)+'-2-28': str(config['idx'][0].year)+'-3-1']
+                mask = mask.groupby(mask.index.hour).mean()
+                time = pd.date_range(str(config['idx'][0].year)+'-2-29', periods=24, freq='H')
+                mask = mask.set_index(time)
+                data = data.reindex(config['idx'])
+                data.update(mask)
+        # recompute common index entries, and check again:
+        common = data.index.intersection(config['idx'])
+        if len(common) < len(config['idx'])-1:
             logging.critical('File ' + path + ': the index does not contain the necessary time range (from ' + str(config['idx'][0]) + ' to ' + str(config['idx'][-1]) + ')')
             sys.exit(1)
+        elif len(common) == len(config['idx'])-1:  # there is only one data point missing. This is deemed acceptable
+            logging.warning('File ' + path + ': there is one data point missing in the time series. It will be filled with the nearest data')
+        else:
+            pass              # the defined simulation index is found within the data. No action required
     else:
         logging.critical('Index for file ' + path + ' is not valid')
         sys.exit(1)
@@ -389,13 +412,13 @@ def load_config_excel(ConfigFile,AbsPath=True):
                           'PriceOfFuelOil':183,'PriceOfBiomass':184, 'PriceOfCO2':166, 
                           'ReservoirLevels':133, 'PriceOfLignite':185, 'PriceOfPeat':186,
                           'HeatDemand':134,'CostHeatSlack':165,'CostLoadShedding':168,'ShareOfFlexibleDemand':125,
-                          'Temperatures':135}
+                          'Temperatures':135,'PriceTransmission':169,'Reserve2U':160,'Reserve2D':161}
         modifiers= {'Demand':274,'Wind':275,'Solar':276,'Storage':277}
         default = {'ReservoirLevelInitial':101,'ReservoirLevelFinal':102,'PriceOfNuclear':180,'PriceOfBlackCoal':181,
                     'PriceOfGas':182,'PriceOfFuelOil':183,'PriceOfBiomass':184,'PriceOfCO2':166,'PriceOfLignite':185,
                     'PriceOfPeat':186,'LoadShedding':129,'CostHeatSlack':167,'CostLoadShedding':168,'ValueOfLostLoad':204,
                     'PriceOfSpillage':205,'WaterValue':206,'ShareOfQuickStartUnits':163,'ShareOfFlexibleDemand':125,
-                    'DemandFlexibility':162}
+                    'DemandFlexibility':162,'PriceTransmission':169}
         for p in StdParameters:
             config[p] = sheet.cell_value(StdParameters[p], 2)
         for p in PathParameters:
@@ -480,7 +503,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
             config[param] = sheet.cell_value(61 + i, 2)
     
         # List of new parameters for which an external file path must be specified:
-        params2 = ['Temperatures']
+        params2 = ['Temperatures','PriceTransmission','Reserve2D','Reserve2U']
         if sheet.nrows>150:                 # for backward compatibility (old excel sheets had less than 150 rows)
             for i, param in enumerate(params2):
                 config[param] = sheet.cell_value(156 + i, 2)
@@ -578,7 +601,8 @@ def load_config_yaml(filename, AbsPath=True):
     PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
           'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
           'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
-          'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand','Temperatures']
+          'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand','Temperatures','PriceTransmission',
+          'Reserve2D','Reserve2U']
     for param in PARAMS:
         if param not in config:
             config[param] = ''    

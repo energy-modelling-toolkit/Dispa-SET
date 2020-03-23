@@ -73,7 +73,7 @@ __version__ = version
 
 # Importing the main Dispa-SET functions so that they can be called with "ds.function"
 from .preprocessing.data_handler import load_config_excel, load_config_yaml, load_config, export_yaml_config
-from .preprocessing.preprocessing import build_simulation
+from .preprocessing.preprocessing import build_simulation, mid_term_scheduling
 from .preprocessing.utils import adjust_storage, adjust_capacity
 
 from .solve import solve_GAMS
