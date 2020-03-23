@@ -73,9 +73,11 @@ p                Pollutants
 s(u)             Storage Units (with reservoir)
 chp(u)           CHP units
 p2h(au)          Power to heat units
+p2h2(u)          power to hydrogen storage technologies
 th(au)           Units with thermal storage
 h                Hours
 i(h)             Subset of simulated hours for one iteration
+wat(s)           hydro technologies
 z(h)             Subset of every simulated hour
 ;
 
@@ -108,6 +110,7 @@ CostShutDown(u)                  [EUR\u]    Shut-down costs
 CostStartUp(u)                   [EUR\u]    Start-up costs
 CostVariable(u,h)                [EUR\MW]   Variable costs
 CostHeatSlack(th,h)             [EUR\MWh]  Cost of supplying heat via other means
+CostH2Slack(p2h2,h)              [EUR\MWh] Cost of supplying H2 by other means
 CostLoadShedding(n,h)            [EUR\MWh] Cost of load shedding
 Curtailment(n)                   [n.a]    Curtailment allowed or not {1 0} at node n
 Demand(mk,n,h)                   [MW]     Demand
@@ -186,6 +189,8 @@ $LOAD tr
 $LOAD f
 $LOAD p
 $LOAD s
+$LOAD wat
+$LOAD p2h2
 $LOAD chp
 $LOAD p2h
 $LOAD th
@@ -199,6 +204,7 @@ $LOAD CHPType
 $LOAD Config
 $LOAD CostFixed
 $LOAD CostHeatSlack
+$LOAD CostH2Slack
 $LOAD CostLoadShedding
 $LOAD CostShutDown
 $LOAD CostStartUp
@@ -258,6 +264,8 @@ tr,
 f,
 p,
 s,
+p2h2,
+wat,
 chp,
 p2h,
 h,
@@ -356,7 +364,8 @@ Reserve_2D(u,h)            [MW]    Spinning reserve down
 Reserve_3U(u,h)            [MW]    Non spinning quick start reserve up
 Heat(au,h)                [MW]    Heat output by chp plant
 HeatSlack(au,h)           [MW]    Heat satisfied by other sources
-WaterSlack(s)              [MWh]   Unsatisfied water level constraint
+WaterSlack(s)             [MWh]   Unsatisfied water level constraint at end of optimization period
+StorageSlack(s,i)         [MWh]   Unsatisfied storage level constraint at end of simulation timestep
 ;
 
 free variable
@@ -480,10 +489,11 @@ EQ_SystemCost(i)..
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(th,CostHeatSlack(th,i)*HeatSlack(th,i)*TimeStep)
+         +sum(p2h2,CostH2Slack(p2h2,i)*StorageSlack(p2h2,i)*TimeStep)
          +sum(chp,CostVariable(chp,i)*CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep)
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep)
-         +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
+         +Config("CostOfSpillage","val")*sum(wat,spillage(wat,i));
 
 $elseIf %LPFormulation% == 1
 EQ_SystemCost(i)..
@@ -495,11 +505,12 @@ EQ_SystemCost(i)..
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(th, CostHeatSlack(th,i) * HeatSlack(th,i)*TimeStep)
+         +sum(p2h2, CostH2Slack(p2h2,i)*StorageSlack(p2h2,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
-         +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
+         +Config("CostOfSpillage","val")*sum(wat,spillage(wat,i));
 $else
 
 EQ_SystemCost(i)..
@@ -512,11 +523,12 @@ EQ_SystemCost(i)..
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(th, CostHeatSlack(th,i) * HeatSlack(th,i)*TimeStep)
+         +sum(p2h2, CostH2Slack(p2h2,i)*StorageSlack(p2h2,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
-         +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
+         +Config("CostOfSpillage","val")*sum(wat,spillage(wat,i));
 
 $endIf
 ;
@@ -527,7 +539,7 @@ EQ_Objective_function..
          SystemCostD
          =E=
          sum(i,SystemCost(i))
-         +Config("WaterValue","val")*sum(s,WaterSlack(s))
+         +Config("WaterValue","val")*sum(wat,WaterSlack(wat))
 ;
 
 * 3 binary commitment status
@@ -790,7 +802,7 @@ $endif;
 *Discharge is limited by the storage level
 EQ_Storage_MaxDischarge(s,i)..
          Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
-         +StorageOutflow(s,i)*Nunits(s)*TimeStep +Spillage(s,i) - StorageInflow(s,i)*Nunits(s)*TimeStep
+         +StorageOutflow(s,i)*Nunits(s)*TimeStep +spillage(s,i)$(wat(s)) - StorageInflow(s,i)*Nunits(s)*TimeStep - StorageSlack(s,i)$(p2h2(s))
          =L=
          StorageLevel(s,i)
 ;
@@ -798,7 +810,7 @@ EQ_Storage_MaxDischarge(s,i)..
 *Charging is limited by the remaining storage capacity
 EQ_Storage_MaxCharge(s,i)..
          StorageInput(s,i)*StorageChargingEfficiency(s)*TimeStep
-         -StorageOutflow(s,i)*Nunits(s)*TimeStep -spillage(s,i) + StorageInflow(s,i)*Nunits(s)*TimeStep
+         -StorageOutflow(s,i)*Nunits(s)*TimeStep -spillage(s,i)$(wat(s)) + StorageInflow(s,i)*Nunits(s)*TimeStep + StorageSlack(s,i)$(p2h2(s))
          =L=
          StorageCapacity(s)*AvailabilityFactor(s,i)*Nunits(s) - StorageLevel(s,i)
 ;
@@ -810,10 +822,11 @@ EQ_Storage_balance(s,i)..
 *         +StorageLevelH(h--1,s)
          +StorageInflow(s,i)*Nunits(s)*TimeStep
          +StorageInput(s,i)*StorageChargingEfficiency(s)*TimeStep
+         +StorageSlack(s,i)$(p2h2(s))
          =E=
          StorageLevel(s,i)
          +StorageOutflow(s,i)*Nunits(s)*TimeStep
-         +spillage(s,i)
+         +spillage(s,i)$(wat(s))
          +Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
 ;
 
@@ -821,7 +834,7 @@ EQ_Storage_balance(s,i)..
 EQ_Storage_boundaries(s,i)$(ord(i) = card(i))..
          StorageFinalMin(s)
          =L=
-         StorageLevel(s,i) + WaterSlack(s)
+         StorageLevel(s,i) + WaterSlack(s)$(wat(s))
 ;
 
 *Total emissions are capped
