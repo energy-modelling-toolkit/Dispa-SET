@@ -312,7 +312,7 @@ def load_time_series(config,path,header='infer'):
     if data.index.is_all_dates:   
         data.index = data.index.tz_localize(None)   # removing locational data
         # Checking if the required index entries are in the data:
-        common = data.index.tz_localize(None).intersection(config['idx'])
+        common = data.index.intersection(config['idx'])
         if len(common) == 0:
             # check if original year is leap year and destination year is not (remove leap date)
             if (data.index[0].is_leap_year is True) and (config['idx'][0].is_leap_year is False):
@@ -339,11 +339,15 @@ def load_time_series(config,path,header='infer'):
                 mask = mask.set_index(time)
                 data = data.reindex(config['idx'])
                 data.update(mask)
-        elif len(common) == len(config['idx'])-1:  # there is only one data point missing. This is deemed acceptable
-            logging.warning('File ' + path + ': there is one data point missing in the time series. It will be filled with the nearest data')
-        elif len(common) < len(config['idx'])-1:
+        # recompute common index entries, and check again:
+        common = data.index.intersection(config['idx'])
+        if len(common) < len(config['idx'])-1:
             logging.critical('File ' + path + ': the index does not contain the necessary time range (from ' + str(config['idx'][0]) + ' to ' + str(config['idx'][-1]) + ')')
             sys.exit(1)
+        elif len(common) == len(config['idx'])-1:  # there is only one data point missing. This is deemed acceptable
+            logging.warning('File ' + path + ': there is one data point missing in the time series. It will be filled with the nearest data')
+        else:
+            pass              # the defined simulation index is found within the data. No action required
     else:
         logging.critical('Index for file ' + path + ' is not valid')
         sys.exit(1)
