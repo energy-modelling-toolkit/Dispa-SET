@@ -9,7 +9,7 @@ import pandas as pd
 from future.builtins import int
 
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
-    check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows, \
+    check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_h2, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
@@ -163,6 +163,9 @@ def build_single_run(config, profiles=None):
     
     # All heating units:
     plants_heat = plants_chp.append(plants_p2h)
+    
+    # Defining the P2H units:
+    plants_h2 = plants[plants['Technology']=='P2GS']    
 
     Outages = UnitBasedTable(plants,'Outages',config,fallbacks=['Unit','Technology'])
     AF = UnitBasedTable(plants,'RenewablesAF',config,fallbacks=['Unit','Technology'],default=1,RestrictWarning=commons['tech_renewables'])
@@ -183,6 +186,9 @@ def build_single_run(config, profiles=None):
     HeatDemand = UnitBasedTable(plants_heat,'HeatDemand',config,fallbacks=['Unit'],default=0)
     CostHeatSlack = UnitBasedTable(plants_heat,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
     Temperatures = NodeBasedTable('Temperatures',config)
+    
+    H2Demand = UnitBasedTable(plants_h2,'H2Demand',config,fallbacks=['Unit'],default=0)
+    CostH2Slack = UnitBasedTable(plants_h2,'CostH2Slack',config,fallbacks=['Unit','Zone'],default=config['default']['CostH2Slack'])
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
@@ -291,6 +297,10 @@ def build_single_run(config, profiles=None):
     # All heating plants:
     Plants_heat = Plants_chp.append(Plants_p2h)
     
+    Plants_h2 = Plants_merged[Plants_merged['Technology']=='P2GS'].copy()
+    # check chp plants:
+    check_h2(config, Plants_h2)
+    
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
     
@@ -323,15 +333,18 @@ def build_single_run(config, profiles=None):
                'ScaledInflows':ReservoirScaledInflows,'ReservoirLevels':ReservoirLevels,
                'Outages':Outages,'AvailabilityFactors':AF,'CostHeatSlack':CostHeatSlack,
                'HeatDemand':HeatDemand,'ShareOfFlexibleDemand':ShareOfFlexibleDemand,
-               'PriceTransmission':PriceTransmission}
+               'PriceTransmission':PriceTransmission,'CostH2Slack':CostH2Slack,
+               'H2Demand':H2Demand}
     
     # Merge the following time series with weighted averages
-    for key in ['ScaledInflows','ReservoirLevels','Outages','AvailabilityFactors','CostHeatSlack']:
+    for key in ['ScaledInflows','ReservoirLevels','Outages','AvailabilityFactors','CostHeatSlack','CostH2Slack']:
         finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key)
     # Merge the following time series by summing
     for key in ['HeatDemand']:
         finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
-
+    for key in ['H2Demand']:
+        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
+        
 # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:
         check_df(FuelPrices[key], StartDate=config['idx'][0], StopDate=config['idx'][-1], name=key)
@@ -366,6 +379,7 @@ def build_single_run(config, profiles=None):
     sets['u'] = Plants_merged[Plants_merged['Technology']!='P2HT'].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
     sets['p2h'] = Plants_p2h.index.tolist()
+    sets['p2g'] = Plants_h2.index.tolist()
     sets['th'] = Plants_heat.index.tolist()
     sets['t'] = commons['Technologies']
     sets['tr'] = commons['tech_renewables']
@@ -385,6 +399,7 @@ def build_single_run(config, profiles=None):
     sets_param['CHPMaxHeat'] = ['chp']
     sets_param['CostFixed'] = ['au']
     sets_param['CostHeatSlack'] = ['th','h']
+    sets_param['CostH2Slack'] = ['p2g','h']
     sets_param['CostLoadShedding'] = ['n','h']
     sets_param['CostRampUp'] = ['au']
     sets_param['CostRampDown'] = ['au']
@@ -400,6 +415,7 @@ def build_single_run(config, profiles=None):
     sets_param['FlowMinimum'] = ['l', 'h']
     sets_param['Fuel'] = ['au', 'f']
     sets_param['HeatDemand'] = ['th','h']
+    sets_param['H2Demand'] = ['p2g','h']
     sets_param['LineNode'] = ['l', 'n']
     sets_param['LoadShedding'] = ['n','h']
     sets_param['Location'] = ['au', 'n']
@@ -513,6 +529,12 @@ def build_single_run(config, profiles=None):
         if u in finalTS['HeatDemand']:
             parameters['HeatDemand']['val'][i, :] = finalTS['HeatDemand'][u][idx_sim].values
             parameters['CostHeatSlack']['val'][i, :] = finalTS['CostHeatSlack'][u][idx_sim].values
+            
+    # H2 time series:
+    for i, u in enumerate(sets['p2g']):
+        if u in finalTS['H2Demand']:
+            parameters['H2Demand']['val'][i, :] = finalTS['H2Demand'][u][idx_sim].values
+            parameters['CostH2Slack']['val'][i, :] = finalTS['CostH2Slack'][u][idx_sim].values
 
     # Ramping rates are reconstructed for the non dimensional value provided (start-up and normal ramping are not differentiated)
     parameters['RampUpMaximum']['val'] = Plants_merged['RampUpRate'].values * Plants_merged['PowerCapacity'].values * 60
