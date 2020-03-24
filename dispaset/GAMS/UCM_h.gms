@@ -1138,6 +1138,8 @@ OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 ShadowPrice(n,h)
+ReserveUpShadowPrice(n,h)
+ReserveDownShadowPrice(n,h)
 HeatShadowPrice(au,h)
 LostLoad_MaxPower(n,h)
 LostLoad_MinPower(n,h)
@@ -1176,6 +1178,8 @@ LostLoad_3U(n,z) = LL_3U.L(n,z);
 $If %MTS%==0 LostLoad_RampUp(n,z)    = sum(u,LL_RampUp.L(u,z)*Location(u,n));
 $If %MTS%==0 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
+ReserveUpShadowPrice = EQ_Demand_balance_2U.m(n,z);
+ReserveDownShadowPrice = EQ_Demand_balance_2D.m(n,z);
 HeatShadowPrice(au,z) = EQ_CHP_demand_satisfaction.m(au,z);
 LostLoad_WaterSlack(s) = WaterSlack.L(s);
 StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
@@ -1204,6 +1208,8 @@ LostLoad_3U,
 $If %MTS%==0 LostLoad_RampUp,
 $If %MTS%==0 LostLoad_RampDown,
 ShadowPrice,
+ReserveUpShadowPrice,
+ReserveDownShadowPrice,
 HeatShadowPrice,
 LostLoad_WaterSlack,
 StorageShadowPrice,
