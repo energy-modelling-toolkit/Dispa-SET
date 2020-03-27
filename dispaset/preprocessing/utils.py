@@ -285,11 +285,17 @@ def group_plants(plants, method, df_grouped=False, group_list = ['Zone', 'Techno
     agg_dict = create_agg_dict(plants, method=method)
     plants_merged = plants_merged.append(grouped.agg(agg_dict))
     idx = [list(i.values) for i in list(grouped.groups.values())]
+    index_counter = 0
+    for i in idx:
+        tmp_plants = plants.loc[i, :]
+        pmin = tmp_plants['PowerCapacity'].min() * tmp_plants['PartLoadMin'].mean() / tmp_plants['PowerCapacity'].sum()
+        plants_merged['PartLoadMin'].loc[index_counter] = pmin
+        index_counter += 1
 
     if df_grouped == False:
         idx = [list(plants.loc[i]['index'].values) for i in idx]
         plants_merged['FormerIndexes'] = idx
-        
+
     else:
          # this must be second dataframe != index
         former_indexes = list(_get_index(plants, idx))
