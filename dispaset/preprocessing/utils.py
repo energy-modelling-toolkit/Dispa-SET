@@ -278,6 +278,13 @@ def _clean_df(df_merged, df_, string_keys):
 def group_plants(plants, method, df_grouped=False, group_list = ['Zone', 'Technology', 'Fuel']):
     '''
     This function returns the final dataframe with the merged units and their characteristics
+    
+    :param plants:          Pandas dataframe with each power plant and their characteristics (following the DispaSET format)
+    :param method:          Select clustering method ('Standard'/'LP'/None)
+    :param df_grouped:      Set to True if this plants dataframe has already been grouped and contains the column "FormerIndexes"
+    :param group_list:      List of columns whose values must be identical in order to group two units
+    :return:                A list with the merged plants and the mapping between the original and merged units
+    
     '''
     # Definition of the merged power plants dataframe:
     plants_merged = pd.DataFrame(columns=plants.columns)
@@ -285,12 +292,6 @@ def group_plants(plants, method, df_grouped=False, group_list = ['Zone', 'Techno
     agg_dict = create_agg_dict(plants, method=method)
     plants_merged = plants_merged.append(grouped.agg(agg_dict))
     idx = [list(i.values) for i in list(grouped.groups.values())]
-    index_counter = 0
-    for i in idx:
-        tmp_plants = plants.loc[i, :]
-        pmin = tmp_plants['PowerCapacity'].min() * tmp_plants['PartLoadMin'].mean() / tmp_plants['PowerCapacity'].sum()
-        plants_merged['PartLoadMin'].loc[index_counter] = pmin
-        index_counter += 1
 
     if df_grouped == False:
         idx = [list(plants.loc[i]['index'].values) for i in idx]
@@ -324,9 +325,10 @@ def create_agg_dict(df_, method="Standard"):
     '''
     
     # lambda functions for other aggregations than standard aggregators like min/max,...
-    wm_pcap = lambda x: np.average(x.astype(float), weights=df_.loc[x.index, "PowerCapacity"]) # weighted mean with wight=PowerCapacity
-    wm_nunit = lambda x: np.average(x.astype(float), weights=df_.loc[x.index, "Nunits"]) # weighted mean with wight=NUnits
+    wm_pcap = lambda x: np.average(x.astype(float), weights=df_.loc[x.index, "PowerCapacity"]) # weighted mean with weight=PowerCapacity
+    wm_nunit = lambda x: np.average(x.astype(float), weights=df_.loc[x.index, "Nunits"]) # weighted mean with weight=NUnits
     get_ramping_cost = lambda x: wm_pcap((1 - df_.loc[x.index, "PartLoadMin"]) * x  + df_.loc[x.index, "StartUpCost"]/df_.loc[x.index, "PowerCapacity"])
+    min_load = lambda x: np.min(x * df_.loc[x.index, "PowerCapacity"])/df_.loc[x.index, "PowerCapacity"].sum()
     
     if method in ("Standard", "MILP"):
         sum_cols = ["PowerCapacity", "STOCapacity", "STOMaxChargingPower", "InitialPower", "CHPMaxHeat"]
@@ -348,7 +350,7 @@ def create_agg_dict(df_, method="Standard"):
                         'coef_COP_a',
                         'coef_COP_b'  
                     ]
-        min_cols = ["PartLoadMin", "StartUpTime"]
+        min_cols = ["StartUpTime"]
         ramping_cost = ["RampingCost"]
         nunits = ["Nunits"]
 
@@ -356,6 +358,7 @@ def create_agg_dict(df_, method="Standard"):
         agg_dict = _list2dict(sum_cols, 'sum')
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(weighted_avg_cols, wm_pcap))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(min_cols, 'min'))
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(['PartLoadMin'], min_load))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(ramping_cost, get_ramping_cost))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(nunits, lambda x: 1))
         agg_dict = dict((k,v) for k,v in agg_dict.items() if k in df_.columns) # remove unnecesary columns
@@ -381,7 +384,7 @@ def create_agg_dict(df_, method="Standard"):
                                 'coef_COP_a',
                                 'coef_COP_b'  
                             ]
-        min_cols = ["PartLoadMin", "StartUpTime"]
+        min_cols = ["StartUpTime"]
         ramping_cost = ["RampingCost"]
         nunits = ["Nunits"]
 
@@ -389,6 +392,7 @@ def create_agg_dict(df_, method="Standard"):
         agg_dict = _list2dict(sum_cols, 'sum')
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(weighted_avg_cols, wm_pcap))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(min_cols, 'min'))
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(['PartLoadMin'], lambda x: 0))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(ramping_cost, get_ramping_cost))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(nunits, lambda x: 1))
         agg_dict = dict((k,v) for k,v in agg_dict.items() if k in df_.columns) # remove unnecesary columns
@@ -453,8 +457,8 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
             ###### 1) Highly flexible
             ###### 2) Low Pmin
             ###### 3) Similar characteristics --> similarity expressed via fingerprints
-            # First, cluster by same string keys and flexible and low_pmin
-            # Join grouped data with inflexible and no low_pmin data
+            # First, cluster by same string keys and flexible and low_pmax
+            # Join grouped data with inflexible and no low_pmmax data
             # Group joined dataframe by string keys including same technical characteristics using fingerprints
             #  The more Nslices, the more heterogenity between data, the less is merged
             # Definition of the fingerprint value of each power plant, i.e. the pattern of the slices number in which each of
@@ -469,12 +473,12 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
                 & (plants["MinUpTime"] <= 1)
             )
 
-            low_pmin = plants["PartLoadMin"] <= PartLoadMax
+            low_pmax = plants["PowerCapacity"] <= Pmax
             plants["flex"] = highly_flexible
-            plants["low_pmin"] = low_pmin
+            plants["low_pmax"] = low_pmax
             plants["FormerIndexes"] = pd.Series(plants.index.values).apply(lambda x: [x])
 
-            condition = (plants["low_pmin"] == True) | (plants["flex"] == True)
+            condition = (plants["low_pmax"]) | (plants["flex"])
             first_cluster = plants[condition]  # all data without other clustering
             first_cluster = group_plants(first_cluster, method, False, string_keys)
 
@@ -512,20 +516,20 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
 
             # the elements of the list are irrelevant for the clustering
             first_cluster["fingerprints"] = first_cluster["fingerprints"].astype(str)
-            low_pmax = first_cluster["PowerCapacity"] <= Pmax
-            if first_cluster[low_pmax].empty == False:
-                grouped_ = group_plants(
-                    first_cluster[low_pmax], method, True, string_keys + ["fingerprints"]
+            low_pmin = first_cluster["PartLoadMin"] <= PartLoadMax
+            if not first_cluster[low_pmin].empty:
+                second_cluster = group_plants(
+                    first_cluster[low_pmin], method, True, string_keys + ["fingerprints"]
                 )
-                plants_merged = grouped_.append(first_cluster[~low_pmax], ignore_index=True)
+                plants_merged = second_cluster.append(first_cluster[~low_pmin], ignore_index=True)
             else:
                 plants_merged = first_cluster[:]
 
             plants = plants.drop(
-                ["flex", "low_pmin"], axis=1
+                ["flex", "low_pmax"], axis=1
             )
             plants_merged = plants_merged.drop(
-                ["index","fingerprints", "flex", "low_pmin"], axis=1
+                ["index","fingerprints", "flex", "low_pmax"], axis=1
             )
         else:  # not all only ones
             logging.warn(
