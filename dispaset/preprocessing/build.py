@@ -318,11 +318,14 @@ def build_single_run(config, profiles=None):
                'PriceTransmission':PriceTransmission}
     
     # Merge the following time series with weighted averages
-    for key in ['ScaledInflows','ReservoirLevels','Outages','AvailabilityFactors','CostHeatSlack']:
+    for key in ['ScaledInflows','Outages','AvailabilityFactors','CostHeatSlack']:
         finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key)
     # Merge the following time series by summing
     for key in ['HeatDemand']:
         finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
+    # Merge the following time series by weighted average based on storage capacity
+    for key in ['ReservoirLevels']:
+        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='StorageWeightedAverage')
 
 # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:

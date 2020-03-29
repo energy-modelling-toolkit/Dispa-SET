@@ -234,16 +234,16 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
                 # Renaming the subunits df headers with the old plant indexes instead of the unit names:
                 subunits.columns = mapping['FormerIndexes'][newunit]
                 if method == 'WeightedAverage':
-                    if tablename == 'ReservoirLevels':
-                        for idx in oldindexes:
-                            name = plants['Unit'][idx]
-                            value = value + subunits[idx] * np.maximum(1e-9, plants['STOCapacity'][idx]*plants['Nunits'][idx])
-                        P_j = np.sum(np.maximum(1e-9, plants['STOCapacity'][oldindexes]*plants['Nunits'][oldindexes]))
-                    else:
-                        for idx in oldindexes:
-                            name = plants['Unit'][idx]
-                            value = value + subunits[idx] * np.maximum(1e-9, plants['PowerCapacity'][idx]*plants['Nunits'][idx])
-                        P_j = np.sum(np.maximum(1e-9, plants['PowerCapacity'][oldindexes]*plants['Nunits'][oldindexes]))
+                    for idx in oldindexes:
+                        name = plants['Unit'][idx]
+                        value = value + subunits[idx] * np.maximum(1e-9, plants['PowerCapacity'][idx]*plants['Nunits'][idx])
+                    P_j = np.sum(np.maximum(1e-9, plants['PowerCapacity'][oldindexes]*plants['Nunits'][oldindexes]))
+                    merged[newunit] = value / P_j
+                elif method == 'StorageWeightedAverage':
+                    for idx in oldindexes:
+                       name = plants['Unit'][idx]
+                       value = value + subunits[idx] * np.maximum(1e-9, plants['STOCapacity'][idx]*plants['Nunits'][idx])
+                    P_j = np.sum(np.maximum(1e-9, plants['STOCapacity'][oldindexes]*plants['Nunits'][oldindexes]))
                     merged[newunit] = value / P_j
                 elif method == 'Sum':
                     merged[newunit] = subunits.sum(axis=1)
