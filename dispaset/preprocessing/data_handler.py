@@ -437,10 +437,10 @@ def load_config_excel(ConfigFile,AbsPath=True):
             config['default'][p] = sheet.cell_value(default[p], 5)
             
         #True/Falst values:
-        config['zones'] = read_truefalse(sheet, 225, 1, 246, 3)
-        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 246, 6)
-        config['mts_zones'] = read_truefalse(sheet, 225, 1, 246, 3, 2)
-        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 246, 6, 2)
+        config['zones'] = read_truefalse(sheet, 225, 1, 247, 3)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 247, 6)
+        config['mts_zones'] = read_truefalse(sheet, 225, 1, 247, 3, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 247, 6, 2)
         config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 319, 3)
 
         # Set default values (for backward compatibility):
