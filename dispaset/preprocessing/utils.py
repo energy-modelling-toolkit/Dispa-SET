@@ -19,9 +19,9 @@ from ..misc.str_handler import clean_strings, shrink_to_64
 
 
 def pd_timestep(hours):
-    '''
+    """
     Function that converts time steps in hours into pandas frequencies (e.g '1h', '15min', ...)
-    '''
+    """
     if not isinstance(hours,(int,float)):
         logging.critical('Time steps must be provided in hours (integer or float number')
         sys.exit(1)
@@ -36,19 +36,19 @@ def pd_timestep(hours):
 
 
 def EfficiencyTimeSeries(config,plants,Temperatures):
-    '''
+    """
     Function that calculates an efficiency time series for each unit
     In case of generation unit, the efficiency is constant in time (for now)
     In case of of p2h units, the efficicncy is defined as the COP, which can be
     temperature-dependent or not
     If it is temperature-dependent, the formula is:
         COP = COP_nom + coef_a * (T-T_nom) + coef_b * (T-T_nom)^2
-    
+
     :param plants:          Pandas dataframe with the original list of units
     :param Temperatures:    Dataframe with the temperature for all relevant units
-    
+
     :returns:               Dataframe with a time series of the efficiency for each unit
-    '''
+    """
     Efficiencies = pd.DataFrame(columns = plants.index,index=config['idx_long'])
     for u in plants.index:
         z = plants.loc[u,'Zone']
@@ -62,15 +62,16 @@ def EfficiencyTimeSeries(config,plants,Temperatures):
         Efficiencies[u] = eff
     return Efficiencies
 
+
 def select_units(units,config):
-    '''
+    """
     Function returning a new list of units by removing the ones that have unknown
     technology, zero capacity, or unknown zone
-    
+
     :param units:       Pandas dataframe with the original list of units
     :param config:      Dispa-SET config dictionnary
     :return:            New list of units
-    '''
+    """
     for unit in units.index:
         if units.loc[unit,'Technology'] == 'Other':
             logging.warning('Removed Unit ' + str(units.loc[unit,'Unit']) + ' since its technology is unknown')
@@ -83,6 +84,7 @@ def select_units(units,config):
             units.drop(unit,inplace=True)
     units.index = range(len(units))
     return units
+
 
 def incidence_matrix(sets, set_used, parameters, param_used):
     """
@@ -128,10 +130,10 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
     # Checking that all values are positive:
     if (NTC_inter.values < 0).any():
         pos = np.where(NTC_inter.values < 0)
-        logging.warning('WARNING: At least NTC value is negative, for example in line ' + str(NTC_inter.columns[pos[1][0]]) + ' and time step ' + str(NTC_inter.index[pos[0][0]]))
+        logging.warning('At least one NTC value is negative, for example in line ' + str(NTC_inter.columns[pos[1][0]]) + ' and time step ' + str(NTC_inter.index[pos[0][0]]))
     if (Historical_flows.values < 0).any():
         pos = np.where(Historical_flows.values < 0)
-        logging.warning('WARNING: At least one historical flow is negative, for example in line ' + str(Historical_flows.columns[pos[1][0]]) + ' and time step ' + str(Historical_flows.index[pos[0][0]]))
+        logging.warning('At least one historical flow is negative, for example in line ' + str(Historical_flows.columns[pos[1][0]]) + ' and time step ' + str(Historical_flows.index[pos[0][0]]))
     all_connections = []
     simulation_connections = []
     # List all connections from the dataframe headers:
@@ -212,6 +214,7 @@ def _find_nearest(array, value):
     idx = (np.abs(array - value)).argmin()
     return idx
 
+
 def _reverse_dict(dict_):
     """
     Reverse Dictionary (Key, Value) to (Value, Key)
@@ -223,6 +226,7 @@ def _reverse_dict(dict_):
         for x in v:
             new_dic[x] = k
     return new_dic
+
 
 def _split_list(list_):
     """
@@ -239,7 +243,9 @@ def _split_list(list_):
                 res += str(l)
     return res
 
+
 def _list2dict(list_, agg): return {key: agg for key in list_} 
+
 
 def _flatten_list(l):
     flat_list = []
@@ -247,6 +253,7 @@ def _flatten_list(l):
         for item in sublist:
             flat_list.append(item)
     return flat_list
+
 
 def _merge_two_dicts(x, y):
     """Given two dicts, merge them into a new dict as a shallow copy.
@@ -257,15 +264,18 @@ def _merge_two_dicts(x, y):
     z.update(y)
     return z
 
+
 def _get_index(df_, idx):
     res = [_flatten_list(list(df_.loc[i]['FormerIndexes'].values)) for i in idx]
     return res
+
 
 def _create_mapping(merged_df):
     mapping = {"NewIndex": {}, "FormerIndexes": {}}
     mapping['FormerIndexes'] = merged_df['FormerIndexes'].to_dict()
     mapping['NewIndex'] = _reverse_dict(mapping['FormerIndexes'])
     return mapping
+
 
 def _clean_df(df_merged, df_, string_keys):
     # if merged unit, create name -> else take old name for unit
@@ -276,16 +286,16 @@ def _clean_df(df_merged, df_, string_keys):
     
     
 def group_plants(plants, method, df_grouped=False, group_list = ['Zone', 'Technology', 'Fuel']):
-    '''
+    """
     This function returns the final dataframe with the merged units and their characteristics
-    
+
     :param plants:          Pandas dataframe with each power plant and their characteristics (following the DispaSET format)
     :param method:          Select clustering method ('Standard'/'LP'/None)
     :param df_grouped:      Set to True if this plants dataframe has already been grouped and contains the column "FormerIndexes"
     :param group_list:      List of columns whose values must be identical in order to group two units
     :return:                A list with the merged plants and the mapping between the original and merged units
-    
-    '''
+
+    """
     # Definition of the merged power plants dataframe:
     plants_merged = pd.DataFrame(columns=plants.columns)
     grouped = plants.groupby(group_list, as_index=False)
@@ -315,14 +325,13 @@ def update_unclustered_col(row, df):
         return row
 
 
-
 def create_agg_dict(df_, method="Standard"):
-    '''
+    """
     This function returns a dictionnary with the proper aggregation method
     for each columns of the units table, depending on the clustering method
-    
+
     Author: Matthias Zech
-    '''
+    """
     
     # lambda functions for other aggregations than standard aggregators like min/max,...
     wm_pcap = lambda x: np.average(x.astype(float), weights=df_.loc[x.index, "PowerCapacity"]) # weighted mean with weight=PowerCapacity
@@ -413,6 +422,7 @@ def create_agg_dict(df_, method="Standard"):
         agg_dict = dict((k,v) for k,v in agg_dict.items() if k in df_.columns) # remove unnecesary columns
         
         return agg_dict
+
 
 def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
     """
@@ -532,7 +542,7 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
                 ["index","fingerprints", "flex", "low_pmax"], axis=1
             )
         else:  # not all only ones
-            logging.warn(
+            logging.warning(
                 "The standard (or MILP) clustering method is only applicable if all values of the Nunits column in the power plant data are set to one. At least one different value has been encountered. No clustering will be applied"
             )
             plants_merged = plants.copy()
@@ -541,7 +551,7 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
 
     elif method == "LP clustered":
         if not OnlyOnes:
-            logging.warn(
+            logging.warning(
                 "The LP clustering method aggregates all the units of the same type. Individual units are not considered"
             )
             list_mult = [ 
@@ -570,7 +580,7 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
 
     elif method == "LP":
         if not OnlyOnes:
-            logging.warn(
+            logging.warning(
                 "The LP method aggregates all identical units by multiplying by the Nunits variable"
             )
             list_mult = [ 
@@ -625,14 +635,14 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
             + " new units"
         )
     else:
-        logging.warn("Did not cluster any unit")
+        logging.warning("Did not cluster any unit")
         
     plants_merged = plants_merged.apply(lambda x: update_unclustered_col(x, plants), axis=1) # use old values for plants which were not merged
     return plants_merged, mapping
 
 
 def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_path=''):
-    '''
+    """
     Function used to modify the storage capacities in the Dispa-SET generated input data
     The function update the Inputs.p file in the simulation directory at each call
 
@@ -643,7 +653,7 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
     :param write_gdx:   boolean defining if Inputs.gdx should be also overwritten with the new data
     :param dest_path:   Simulation environment path to write the new input data. If unspecified, no data is written!
     :return:            New SimData dictionary
-    '''
+    """
     import pickle
 
     if isinstance(inputs,str):
@@ -698,7 +708,7 @@ def adjust_storage(inputs,tech_fuel,scaling=1,value=None,write_gdx=False,dest_pa
 
 
 def adjust_capacity(inputs,tech_fuel,scaling=1,value=None,singleunit=False,write_gdx=False,dest_path=''):
-    '''
+    """
     Function used to modify the installed capacities in the Dispa-SET generated input data
     The function update the Inputs.p file in the simulation directory at each call
 
@@ -710,7 +720,7 @@ def adjust_capacity(inputs,tech_fuel,scaling=1,value=None,singleunit=False,write
     :param write_gdx:   boolean defining if Inputs.gdx should be also overwritten with the new data
     :param dest_path:   Simulation environment path to write the new input data. If unspecified, no data is written!
     :return:            New SimData dictionary
-    '''
+    """
     import pickle
 
     if isinstance(inputs, str):

@@ -18,8 +18,6 @@ from ..common import commons
 from .data_handler import ds_to_df
 
 
-
-
 def get_load_data(inputs, z):
     """ 
     Get the load curve, the residual load curve, and the net residual load curve of a specific zone
@@ -404,11 +402,11 @@ def get_indicators_powerplant(inputs, results):
 
 
 def CostExPost(inputs,results):
-    '''
+    """
     Ex post computation of the operational costs with plotting. This allows breaking down
-    the cost into its different components and check that it matches with the objective 
+    the cost into its different components and check that it matches with the objective
     function from the optimization.
-    
+
     The cost objective function is the following:
              SystemCost(i)
              =E=
@@ -425,9 +423,9 @@ def CostExPost(inputs,results):
              +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
              +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
 
-             
+
     :returns: tuple with the cost components and their cumulative sums in two dataframes.
-    '''
+    """
     import datetime
     
     dfin = inputs['param_df']
@@ -555,7 +553,6 @@ def get_units_operation_cost(inputs, results):
 
     Main Author: @AbdullahAlawad
     """
-
     datain = ds_to_df(inputs)
 
     #DataFrame with startup times for each unit (1 for startup)

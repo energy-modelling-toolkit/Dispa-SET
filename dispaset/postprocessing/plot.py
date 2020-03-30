@@ -146,20 +146,20 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None,
     axes[0].set_ylabel('Power [GW]')
     axes[0].yaxis.label.set_fontsize(12)
 
-    load_change = pd.Series(0,index=demand.index)
-    load_changed=False
+    load_change = pd.Series(0, index=demand.index)
+    load_changed = False
     if isinstance(shedload, pd.Series):
         if not shedload.index.equals(demand.index):
             logging.critical('The shedload time series must have the same index as the demand')
             sys.exit(1)
         load_change += -shedload
-        load_changed=True
+        load_changed = True
     if isinstance(shiftedload, pd.Series):
         if not shiftedload.index.equals(demand.index):
             logging.critical('The shiftedload time series must have the same index as the demand')
             sys.exit(1)
         load_change += -shiftedload
-        load_changed=True
+        load_changed = True
     reduced_demand = demand + load_change
     axes[0].plot(pdrng, reduced_demand[pdrng], color='k', alpha=alpha, linestyle='dashed')
     line_shedload = mlines.Line2D([], [], color='black', alpha=alpha, label='New load', linestyle='dashed')
@@ -174,7 +174,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None,
     elif level is None:
         plt.legend(handles=[line_demand] + [line_shedload] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
         axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
-                         linestyle='dashed')
+                             linestyle='dashed')
     else:
         plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_shedload] + [line_SOC] +
                                                                    patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
@@ -357,13 +357,13 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
     aggregation = False
     if 'OutputStorageLevel' in results:
         lev = filter_by_zone(results['OutputStorageLevel'], inputs, z)
-        lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] / 1e3 # GWh of storage
+        lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] / 1e3  # GWh of storage
         level = filter_by_storage(lev, inputs, StorageSubset='s')
-        levels = pd.DataFrame(index=results['OutputStorageLevel'].index,columns=inputs['sets']['t'])
-        for t in ['HDAM','HPHS','BEVS','BATS']:
-            temp = filter_by_tech(level,inputs,t)
+        levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
+        for t in ['HDAM', 'HPHS', 'BEVS', 'BATS']:
+            temp = filter_by_tech(level, inputs, t)
             levels[t] = temp.sum(axis=1)
-        levels.dropna(axis=1,inplace=True)
+        levels.dropna(axis=1, inplace=True)
         for col in levels.columns:
             if levels[col].max() == 0 and levels[col].min() == 0:
                 del levels[col]
@@ -384,7 +384,6 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
     else:
         demand_flex = pd.Series(0, index=results['OutputPower'].index)
 
-    
     demand_da = inputs['param_df']['Demand'][('DA', z)] / 1000  # GW
     demand = pd.DataFrame(demand_da + demand_p2h + demand_flex, columns=[('DA', z)])
     demand = demand[('DA', z)]
@@ -397,7 +396,7 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
     else:
         shed_load = pd.Series(0, index=demand.index) / 1000  # GW
     if 'OutputDemandModulation' in results and z in results['OutputDemandModulation']:
-        shifted_load = -results['OutputDemandModulation'][z] / 1000 # GW
+        shifted_load = -results['OutputDemandModulation'][z] / 1000  # GW
         shifted_load = pd.Series(shifted_load, index=demand.index).fillna(0)
     else:
         shifted_load = pd.Series(0, index=demand.index) / 1000  # GW
@@ -412,7 +411,8 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
     else:
         curtailment = None
 
-    plot_dispatch(demand, plotdata, level, curtailment=curtailment, shedload = shed_load, shiftedload=shifted_load, rng=rng, alpha=0.5)
+    plot_dispatch(demand, plotdata, level, curtailment=curtailment, shedload=shed_load, shiftedload=shifted_load,
+                  rng=rng, alpha=0.5)
 
     # Generation plot:
     if rug_plot:
