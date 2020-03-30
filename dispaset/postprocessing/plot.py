@@ -103,7 +103,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None,
             axes[1].plot(pdrng, level[pdrng], color='k', alpha=alpha, linestyle=':')
             axes[1].fill_between(pdrng, 0, level[pdrng],
                                  facecolor=commons['colors']['WAT'], alpha=.3)
-        axes[1].set_ylabel('Level [TWh]')
+        axes[1].set_ylabel('Level [GWh]')
         axes[1].yaxis.label.set_fontsize(12)
         line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Reservoir', linestyle=':')
 
@@ -356,7 +356,8 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
 
     aggregation = False
     if 'OutputStorageLevel' in results:
-        lev = filter_by_zone(results['OutputStorageLevel'], inputs, z) / 1E6  # TWh
+        lev = filter_by_zone(results['OutputStorageLevel'], inputs, z)
+        lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] / 1e3 # GWh of storage
         level = filter_by_storage(lev, inputs, StorageSubset='s')
         levels = pd.DataFrame(index=results['OutputStorageLevel'].index,columns=inputs['sets']['t'])
         for t in ['HDAM','HPHS','BEVS','BATS']:
