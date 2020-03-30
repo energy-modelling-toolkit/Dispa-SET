@@ -26,12 +26,14 @@ Sets
 	n       Zones within each country (currently one zone, or node, per country)
 	p       Pollutants
 	p2h(au) Power to heat units
+	p2h2(s) Power to H2 storage units
 	t       Power generation technologies
 	th(au)  Units with thermal storage
 	tr(t)   Renewable power generation technologies
 	u(au)   Generation units (all units minus P2HT units)
 	s(u)    Storage units (including hydro reservoirs)
 	chp(u)  CHP units
+	wat(s)  Hydro storage technologies
 	z(h)	Subset of every simulated hour
 	======= =================================================================================
 
@@ -57,6 +59,7 @@ Parameters
 	CostStartUp(u)                          EUR/u   Start-up costs for one unit
 	CostVariable(u,h)                       EUR/MWh Variable costs
 	CostHeatSlack(th,h)              	EUR/MWh Cost of supplying heat via other means
+	CostH2Slack(p2h2,h)			EUR/MWh Cost of supplying H2 by other means
 	Curtailment(n)                          n.a.    Curtailment {binary: 1 allowed}
 	Demand(mk,n,h)                          MW      Hourly demand in each zone
 	Efficiency(p2h,h)                       %       Power plant efficiency
@@ -133,6 +136,7 @@ Optimization Variables
     ShedLoad(n,h)           MW      Shed load
     StorageInput(au,h)      MWh     Charging input for storage units
     StorageLevel(au,h)      MWh     Storage level of charge
+    StorageSlack(s,i)	    MWh     Unsatisfied storage level
     Spillage(s,h)           MWh     Spillage from water reservoirs
     SystemCost(h)           EUR     Total system cost
     LL_MaxPower(n,h)        MW      Deficit in terms of maximum power
@@ -142,6 +146,7 @@ Optimization Variables
     LL_2U(n,h)              MW      Deficit in reserve up
     LL_3U(n,h)              MW      Deficit in reserve up - non spinning
     LL_2D(n,h)              MW      Deficit in reserve down
+    WaterSlack(s)	    MWh     Unsatisfied water level at end of optimization period
     ======================= ======= =============================================================
 
 Integer Variables
@@ -183,7 +188,8 @@ The goal of the unit commitment problem is to minimize the total power system co
 	& + \sum_{u,i} CostVariable_{u,i} \cdot Power_{u,i} \cdot TimeStep    \\
 	& + \sum_{l,i} PriceTransimission_{l,i} \cdot Flow_{l,i} \cdot TimeStep \\ 
 	& + \sum_{n,i} CostLoadShedding_{i,n} \cdot ShedLoad_{i,n} \cdot TimeStep  \\
-	& + \sum _{th,i} CostHeatSlack_{th,i} \cdot  HeatSlack_{th,i} \cdot TimeStep) \\
+	& + \sum_{th,i} CostHeatSlack_{th,i} \cdot  HeatSlack_{th,i} \cdot TimeStep) \\
+	& + \sum_{p2h2,i} CostH2Slack_{p2h2,i} \cdot StorageSlack_{p2h2,i} \cdot TimeStep \\
 	& + \sum _{chp,i} CostVariable_{chp,i} \cdot CHPPowerLossFactor_{chp} \cdot Heat_{chp,i} \cdot TimeStep) \\
 	& + \sum_{i,n} VOLL_{Power} \cdot \left( \mathit{LL}_{MaxPower,i,n} + \mathit{LL}_{MinPower,i,n} \right) \cdot TimeStep \\
 	& + \sum_{i,n} 0.8 \cdot VOLL_{Reserve} \cdot \left( LL_{2U,i,n} + LL_{2D,i,n}+ LL_{3U,i,n} \right) \cdot TimeStep \\
@@ -204,6 +210,7 @@ The costs can be broken down as:
 * Transmission: depending of the flow transmitted through the lines.
 * Loss of load: power exceeding the demand or not matching it, ramping and reserve.
 * spillage: due to spillage in storage.
+* H2: cost of unsatisfied hydrogen by production from electrolyzers
 * Water : cost of water coming from unsatisfied water level at the end of the optimization period.
 
 The variable production costs (in EUR/MWh), are determined by fuel and emission prices corrected by the efficiency (which is considered to be constant for all levels of output in this version of the model) and the emission rate of the unit (equation ):
@@ -429,7 +436,7 @@ A similar inequality can be written for the ninimum down time:
 Storage-related constraints
 ---------------------------
 
-Generation units with energy storage capabilities (mostly large hydro reservoirs and pumped hydro storage units) must meet additional restrictions related to the amount of energy stored. Storage units are considered to be subject to the same constraints as non-storage power plants. In addition to those constraints, storage-specific restrictions are added for the set of storage units (i.e. a subset of all units). These restrictions include the storage capacity, inflow, outflow, charging, charging capacity, charge/discharge efficiencies, etc. Discharging is considered as the standard operation mode and is therefore linked to the Power variable, common to all units.
+Generation units with energy storage capabilities (large hydro reservoirs, pumped hydro storage units, hydrogen storage units or batteries) must meet additional restrictions related to the amount of energy stored. Storage units are considered to be subject to the same constraints as non-storage power plants. In addition to those constraints, storage-specific restrictions are added for the set of storage units (i.e. a subset of all units). These restrictions include the storage capacity, inflow, outflow, charging, charging capacity, charge/discharge efficiencies, etc. Discharging is considered as the standard operation mode and is therefore linked to the Power variable, common to all units.
 
 The first constraint imposes that the energy stored by a given unit is bounded by a minimum value:
 
@@ -443,7 +450,7 @@ In the case of a storage unit, the availability factor applies to the charging/d
 
 	\mathit{StorageLevel}_{s,i} \leq \mathit{StorageCapacity}_s \cdot \mathit{AvailabilityFactor}_{s,i} \cdot \mathit{Nunits}_s
 
-The energy added to the storage unit is limited by the charging capacity. Charging is allowed only if the unit is not producing (discharging) at the same time (i.e. if Committed, corresponding to the {\textquotedbl}normal{\textquotedbl} mode, is equal to 0).
+The energy added to the storage unit is limited by the charging capacity. Charging is allowed only if the unit is not producing (discharging) at the same time (i.e. if Committed, corresponding to the normal mode, is equal to 0).
 
 .. math::
 
@@ -457,11 +464,12 @@ Discharge is limited by the level of charge of the storage unit:
 
 	\frac{\mathit{Power}_{i,s}\cdot \mathit{TimeStep}}{\mathit{StorageDischargeEfficienc}y_s} + \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}
 
-	+ \mathit{Spillage}_{s,i} -\mathit{StorageInflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}
+	+ \mathit{Spillage}_{wat,i} -\mathit{StorageInflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep} - StorageSlack_{p2h2,i}
 
 	\leq \mathit{StorageLevel}_{s,i}
 
-It is worthwhile to note that StorageInflow and StorageOuflow must be multiplied by the number of units because they are defined for a single storage plant. On the contrary StorageLevel, Spillage and Power are defined for all units s.
+It is worthwhile to note that StorageInflow and StorageOuflow must be multiplied by the number of units because they are defined for a single storage plant. On the contrary StorageLevel, Spillage and Power are defined for all units s. 
+StorageInflow and Storage Outflow are predefined time series, whose meaning depends on the type of storage units: for hydro units, it is the natural water flows. For hydrogen units, StorageInflow is 0 at all times, but StorageOutflow represents the hydrogen demand (for fuel cell vehicles, industries,...). For batteries, both parameters are null at all times.
 
 Charge is limited by the level of charge of the storage unit:
 
@@ -469,9 +477,9 @@ Charge is limited by the level of charge of the storage unit:
 
 	\mathit{StorageInput}_{s,i} \cdot \mathit{StorageChargingEfficiency}_s \cdot \mathit{TimeStep}
 
-	- \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}-  \mathit{Spillage}_{s,i}
+	- \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}-  \mathit{Spillage}_{wat,i}
 	
-	+ \mathit{StorageInflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}
+	+ \mathit{StorageInflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep} + StorageSlack_{p2h2,i}
 
 	\leq \mathit{StorageCapacity}_s \cdot \mathit{AvailabilityFactor}_{s,i} 
 
@@ -483,17 +491,17 @@ Besides, the energy stored in a given period is given by the energy stored in th
 	
 	\mathit{StorageLevel}_{s,i-1} + \mathit{StorageInflow}_{s,i}  \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}
 
-	+ \mathit{StorageInput}_{s,i} \cdot \mathit{StorageChargingEfficiency}_s \cdot \mathit{TimeStep}
+	+ \mathit{StorageInput}_{s,i} \cdot \mathit{StorageChargingEfficiency}_s \cdot \mathit{TimeStep} + StorageSlack_{p2h2,i}
 
 	= \mathit{StorageLevel}_{s,i} + \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep} 
 
-	+ \frac{\mathit{Power}_{s,i}\cdot \mathit{TimeStep}}{\mathit{StorageDischargeEfficienc}y_s}
+	+ Spillage_{wat,i} + \frac{\mathit{Power}_{s,i}\cdot \mathit{TimeStep}}{\mathit{StorageDischargeEfficienc}y_s}
 
 Some storage units are equiped with large reservoirs, whose capacity at full load might be longer than the optimisation horizon. Therefore, a minimum level constraint is required for the last hour of the optimisation, which otherwise would systematically tend to empty the reservoir as much a possible. An exogenous minimum profile is thus provided and the following constraint is applied:
 
 .. math::
 
-	\mathit{StorageLevel}_{s,N} \geq StorageFinalMin_{s} + WaterSlack_s
+	\mathit{StorageLevel}_{s,N} \geq StorageFinalMin_{s} + WaterSlack_{wat}
 
 where N is the last period of the optimization horizon, StorageProfile is a non-dimensional minimum storage level provided as an exogenous input and WaterSlack is a variable defining the unsatified water level. The price associated to that water is very high.
 
@@ -659,7 +667,7 @@ In that case, the commitment status variables Commited, StartUp and ShutDown are
 
 Mid Term Scheduling (MTS)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
-In some cases, collecting accurate and reliable historical storage levels and profiles in form of hourly timeseries might be a difficult or close to impossible task. In future scenarios storage levels are usually forecasted based on the historical data. The lack of such data also impacts the accurate modelling of such scenarios. In systems with high shares of hydro dams (HDAM) and pumped hydro storage (HPHS) units, such as Norway and Albania, this might have a huge impact on the overall results of the simulation. In order to avoid this, Dispa-SET’s Midterm Hydro-Thermal Scheduling (MTS) module represents a simplified version of the original MILP unit commitment and power dispatch model. This version is a simplified version of the linear programming formulation which allows perfect foresight and allocation of water resources for the whole optimization period and not only for the tactical horizon of each optimization step. This module enables quick calculation (later also referring as allocation) of reservoir levels which are then used as guidance curves (minimum level constraints) in one of the four main Dispa-SET formulations. The main options are:
+In some cases, collecting accurate and reliable historical storage levels and profiles in form of hourly timeseries might be a difficult or close to impossible task. In future scenarios storage levels are usually forecasted based on the historical data. The lack of such data also impacts the accurate modelling of such scenarios. In systems with high shares of hydro dams (HDAM) and pumped hydro storage (HPHS) units, such as Norway and Albania, this might have a huge impact on the overall results of the simulation. In order to avoid this, Dispa-SET’s Midterm Hydro-Thermal Scheduling (MTS) module represents a simplified version of the original MILP unit commitment and power dispatch model. This version is a simplified version of the linear programming formulation which allows perfect foresight and allocation of water resources for the whole optimization period and not only for the tactical horizon of each optimization step. Also h2 level in storage units is optimised. This module enables quick calculation (later also referring as allocation) of reservoir levels which are then used as guidance curves (minimum level constraints) in one of the four main Dispa-SET formulations. The main options are:
 
 * No-MTS, in which historical curves are used,
 * Zonal-MTS, in which MTS is run for each Zone individually, 
@@ -692,7 +700,8 @@ Firstly, the cost equation is modified as follow:
 	& + \sum_{u,i} CostVariable_{u,i} \cdot Power_{u,i} \cdot TimeStep    \\
 	& + \sum_{l,i} PriceTransimission_{l,i} \cdot Flow_{l,i} \cdot TimeStep \\ 
 	& + \sum_{n,i} CostLoadShedding_{i,n} \cdot ShedLoad_{i,n} \cdot TimeStep  \\
-	& + \sum _{th,i} CostHeatSlack_{th,i} \cdot  HeatSlack_{th,i} \cdot TimeStep) \\
+	& + \sum_{th,i} CostHeatSlack_{th,i} \cdot  HeatSlack_{th,i} \cdot TimeStep) \\
+	& + \sum_{p2h2,i} CostH2Slack_{p2h2,i} \cdot StorageSlack_{p2h2,i} \cdot TimeStep) \\ 
 	& + \sum _{chp,i} CostVariable_{chp,i} \cdot CHPPowerLossFactor_{chp} \cdot Heat_{chp,i} \cdot TimeStep) \\
 	& + \sum_{i,n} VOLL_{Power} \cdot \left( \mathit{LL}_{MaxPower,i,n} + \mathit{LL}_{MinPower,i,n} \right) \cdot TimeStep \\
 	& + \sum_{i,n} 0.8 \cdot VOLL_{Reserve} \cdot \left( LL_{2U,i,n} + LL_{2D,i,n}+ LL_{3U,i,n} \right) \cdot TimeStep \\

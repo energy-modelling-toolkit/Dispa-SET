@@ -348,8 +348,11 @@ Variable capacity storage
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 In special cases, it might be necessary to simulate a storage unit whose capacity varies in time. A typical example is the simulation of the storage capacity provided by electric vehicles: depending on the time of the day, the connected battery capacity varies. 
 
-This special case can be simulated using the "AvailabilityFactor" input. In the case of a storage unit, reduces the avaiable capacity by a factor varying from 0 to 1. 
+This special case can be simulated using the "AvailabilityFactor" input. In the case of a storage unit, reduces the available capacity by a factor varying from 0 to 1. 
 
+Other storage units
+-------------------
+Other storage units include H2 storage, batteries (BATS) and electric vehicles (BEVS). In case of H2 storage, the parameter StorageInflow are defined null at all times whereas StorageOutflow corresponds to the hydrogen demand at each timsestep. For batteries and BEVS, both parameters are set to 0 all the time. 
 
 Power plant outages
 -------------------
