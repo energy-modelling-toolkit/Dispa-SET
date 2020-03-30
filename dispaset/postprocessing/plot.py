@@ -299,7 +299,7 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
     ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005, linewidth=2,
             color='k')
     plt.show()
-    return ax
+    return GenPerZone
 
 
 def plot_zone_capacities(inputs, plot=True):
