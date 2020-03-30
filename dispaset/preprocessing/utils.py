@@ -53,8 +53,8 @@ def EfficiencyTimeSeries(config,plants,Temperatures):
     for u in plants.index:
         z = plants.loc[u,'Zone']
         if plants.loc[u,'Technology'] == 'P2HT' and 'Tnominal' in plants:
-            eff = plants.loc[u,'COP'] + plants.loc[u,'coef_COP_a'] * (Temperatures[z] - plants.loc[u,'Tnominal'])
-            + plants.loc[u,'coef_COP_a'] * (Temperatures[z] - plants.loc[u,'Tnominal'])**2
+            eff = plants.loc[u,'COP'] + plants.loc[u,'coef_COP_a'] * (Temperatures[z] - plants.loc[u,'Tnominal']) + \
+                  plants.loc[u,'coef_COP_b'] * (Temperatures[z] - plants.loc[u,'Tnominal'])**2
         elif plants.loc[u,'Technology'] == 'P2HT':
             eff = plants.loc[u,'COP']
         else:
