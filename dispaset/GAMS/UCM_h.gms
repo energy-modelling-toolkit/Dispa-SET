@@ -131,9 +131,9 @@ PowerCapacity(au)               [MW\u]     Installed capacity
 PowerInitial(u)                  [MW\u]     Power output before initial period
 PowerMinStable(au)              [MW\u]     Minimum power output
 PriceTransmission(l,h)           [EUR\MWh]  Transmission price
-StorageChargingCapacity(au)       [MW\u]     Storage capacity
-StorageChargingEfficiency(au)   [%]      Charging efficiency
-StorageSelfDischarge(au)        [%\day]  Self-discharge of the storage units
+StorageChargingCapacity(u)        [MW\u]     Storage capacity
+StorageChargingEfficiency(s)     [%]      Charging efficiency
+StorageSelfDischarge(au)         [%\day]  Self-discharge of the storage units
 RampDownMaximum(u)               [MW\h\u]   Ramp down limit
 RampShutDownMaximum(u)           [MW\h\u]   Shut-down ramp limit
 RampStartUpMaximum(u)            [MW\h\u]   Start-up ramp limit
@@ -142,12 +142,12 @@ RampShutDownMaximumH(u,h)        [MW\h\u]   Shut-down ramp limit - Clustered for
 RampUpMaximum(u)                 [MW\h\u]   Ramp up limit
 Reserve(t)                       [n.a.]   Reserve technology {1 0}
 StorageCapacity(au)             [MWh\u]    Storage capacity
-StorageDischargeEfficiency(au)  [%]      Discharge efficiency
-StorageOutflow(u,h)              [MWh\u]    Storage outflows
-StorageInflow(u,h)               [MWh\u]    Storage inflows (potential energy)
-StorageInitial(au)                [MWh]    Storage level before initial period
-StorageProfile(u,h)              [MWh]    Storage level to be resepected at the end of each horizon
-StorageMinimum(au)                [MWh\u]    Storage minimum
+StorageDischargeEfficiency(s)   [%]      Discharge efficiency
+StorageOutflow(s,h)              [MWh\u]    Storage outflows
+StorageInflow(s,h)               [MWh\u]    Storage inflows (potential energy)
+StorageInitial(au)               [MWh]    Storage level before initial period
+StorageProfile(s,h)              [MWh]    Storage level to be resepected at the end of each horizon
+StorageMinimum(au)               [MWh\u]    Storage minimum
 Technology(u,t)                  [n.a.]   Technology type {1 0}
 TimeDownMinimum(u)               [h]      Minimum down time
 TimeUpMinimum(u)                 [h]      Minimum up time
@@ -348,8 +348,8 @@ PowerConsumption(p2h,h)    [MW]    Power consumption by P2H units
 PowerMaximum(u,h)          [MW]    Power output
 PowerMinimum(u,h)          [MW]    Power output
 ShedLoad(n,h)              [MW]    Shed load
-StorageInput(au,h)        [MWh]   Charging input for storage units
-StorageLevel(au,h)        [MWh]   Storage level of charge
+StorageInput(au,h)         [MWh]   Charging input for storage units
+StorageLevel(au,h)         [MWh]   Storage level of charge
 LL_MaxPower(n,h)           [MW]    Deficit in terms of maximum power
 LL_RampUp(u,h)             [MW]    Deficit in terms of ramping up for each plant
 LL_RampDown(u,h)           [MW]    Deficit in terms of ramping down
@@ -365,7 +365,7 @@ Reserve_3U(u,h)            [MW]    Non spinning quick start reserve up
 Heat(au,h)                [MW]    Heat output by chp plant
 HeatSlack(au,h)           [MW]    Heat satisfied by other sources
 WaterSlack(s)             [MWh]   Unsatisfied water level constraint at end of optimization period
-StorageSlack(s,i)         [MWh]   Unsatisfied storage level constraint at end of simulation timestep
+StorageSlack(au,h)         [MWh]   Unsatisfied storage level constraint at end of simulation timestep
 ;
 
 free variable

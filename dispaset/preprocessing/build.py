@@ -301,6 +301,9 @@ def build_single_run(config, profiles=None):
     # check chp plants:
     check_h2(config, Plants_h2)
     
+    # Water storage
+    Plants_wat = Plants_merged[Plants_merged['Fuel'] == 'WAT'].copy()
+    
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
     
@@ -379,10 +382,11 @@ def build_single_run(config, profiles=None):
     sets['u'] = Plants_merged[Plants_merged['Technology']!='P2HT'].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
     sets['p2h'] = Plants_p2h.index.tolist()
-    sets['p2g'] = Plants_h2.index.tolist()
+    sets['p2h2'] = Plants_h2.index.tolist()
     sets['th'] = Plants_heat.index.tolist()
     sets['t'] = commons['Technologies']
     sets['tr'] = commons['tech_renewables']
+    sets['wat'] = Plants_wat.index.tolist()
 
     ###################################################################################################################
     ############################################   Parameters    ######################################################
@@ -399,7 +403,7 @@ def build_single_run(config, profiles=None):
     sets_param['CHPMaxHeat'] = ['chp']
     sets_param['CostFixed'] = ['au']
     sets_param['CostHeatSlack'] = ['th','h']
-    sets_param['CostH2Slack'] = ['p2g','h']
+    sets_param['CostH2Slack'] = ['p2h2','h']
     sets_param['CostLoadShedding'] = ['n','h']
     sets_param['CostRampUp'] = ['au']
     sets_param['CostRampDown'] = ['au']
@@ -415,7 +419,6 @@ def build_single_run(config, profiles=None):
     sets_param['FlowMinimum'] = ['l', 'h']
     sets_param['Fuel'] = ['au', 'f']
     sets_param['HeatDemand'] = ['th','h']
-    sets_param['H2Demand'] = ['p2g','h']
     sets_param['LineNode'] = ['l', 'n']
     sets_param['LoadShedding'] = ['n','h']
     sets_param['Location'] = ['au', 'n']
@@ -432,7 +435,7 @@ def build_single_run(config, profiles=None):
     sets_param['RampShutDownMaximum'] = ['au']
     sets_param['Reserve'] = ['t']
     sets_param['StorageCapacity'] = ['au']
-    sets_param['StorageChargingCapacity'] = ['s']
+    sets_param['StorageChargingCapacity'] = ['au']
     sets_param['StorageChargingEfficiency'] = ['s']
     sets_param['StorageDischargeEfficiency'] = ['s']
     sets_param['StorageSelfDischarge'] = ['au']
@@ -444,6 +447,7 @@ def build_single_run(config, profiles=None):
     sets_param['Technology'] = ['au', 't']
     sets_param['TimeUpMinimum'] = ['au']
     sets_param['TimeDownMinimum'] = ['au']
+    #sets_param['H2Demand'] = ['p2h2','h']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -466,7 +470,7 @@ def build_single_run(config, profiles=None):
     # %%
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
     for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
-                'CostRampUp','StorageCapacity', 'StorageSelfDischarge']:
+                'CostRampUp','StorageCapacity', 'StorageSelfDischarge', 'StorageChargingCapacity']:
         parameters[var]['val'] = Plants_merged[var].values
 
     # List of parameters whose value is not necessarily specified in the dataframe Plants_merged
@@ -476,8 +480,9 @@ def build_single_run(config, profiles=None):
 
 
     # List of parameters whose value is known, and provided in the dataframe Plants_sto.
-    for var in ['StorageChargingCapacity', 'StorageChargingEfficiency']:
-        parameters[var]['val'] = Plants_sto[var].values
+    for var in ['StorageChargingEfficiency']:
+        parameters[var]['val'] = Plants_sto[var].values    
+    
 
     # The storage discharge efficiency is actually given by the unit efficiency:
     parameters['StorageDischargeEfficiency']['val'] = Plants_sto['Efficiency'].values
@@ -531,9 +536,11 @@ def build_single_run(config, profiles=None):
             parameters['CostHeatSlack']['val'][i, :] = finalTS['CostHeatSlack'][u][idx_sim].values
             
     # H2 time series:
-    for i, u in enumerate(sets['p2g']):
+    for i,u in enumerate(sets['s']):
         if u in finalTS['H2Demand']:
-            parameters['H2Demand']['val'][i, :] = finalTS['H2Demand'][u][idx_sim].values
+            parameters['StorageOutflow']['val'][i, :] = finalTS['H2Demand'][u][idx_sim].values
+    for i, u in enumerate(sets['p2h2']):
+        if u in finalTS['H2Demand']:
             parameters['CostH2Slack']['val'][i, :] = finalTS['CostH2Slack'][u][idx_sim].values
 
     # Ramping rates are reconstructed for the non dimensional value provided (start-up and normal ramping are not differentiated)

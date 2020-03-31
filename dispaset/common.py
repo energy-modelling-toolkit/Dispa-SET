@@ -14,7 +14,7 @@ commons['Technologies'] = ['COMC', 'GTUR', 'HDAM', 'HROR', 'HPHS', 'ICEN', 'PHOT
 # List of renewable technologies:
 commons['tech_renewables'] = ['WTON', 'WTOF', 'PHOT', 'HROR']
 # List of storage technologies:
-commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS']
+commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS','P2GS']
 # List of CHP types:
 commons['types_CHP'] = ['extraction','back-pressure', 'p2h']
 # DispaSET fuels:
