@@ -159,18 +159,7 @@ def build_single_run(config, profiles=None):
     Outages = UnitBasedTable(plants,'Outages',config,fallbacks=['Unit','Technology'])
     AF = UnitBasedTable(plants,'RenewablesAF',config,fallbacks=['Unit','Technology'],default=1,RestrictWarning=commons['tech_renewables'])
 
-    # Reservoir levels
-    """
-    :profiles:      if turned on reservoir levels are overwritten by newly calculated ones 
-                    from the mid term scheduling simulations
-    """
-    if profiles is None:
-        ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
-    else:
-        ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
-        MidTermSchedulingProfiles = profiles
-        ReservoirLevels.update(MidTermSchedulingProfiles)
-
+    ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_sto,'ReservoirScaledInflows',config,fallbacks=['Unit','Technology','Zone'],default=0)
     HeatDemand = UnitBasedTable(plants_heat,'HeatDemand',config,fallbacks=['Unit'],default=0)
     CostHeatSlack = UnitBasedTable(plants_heat,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
@@ -326,6 +315,14 @@ def build_single_run(config, profiles=None):
     # Merge the following time series by weighted average based on storage capacity
     for key in ['ReservoirLevels']:
         finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='StorageWeightedAverage')
+        # Update reservoir levels with newly computed ones from the mid-term scheduling
+        if profiles is not None:
+            if all(profiles.columns.isin(finalTS[key].columns)):
+                finalTS[key].update(profiles)
+                logging.info('New reservoir levels from Mid-term scheduling are now imposed instead of historic values')
+            else:
+                logging.critical('MTS and finalTS column names do not match!')
+                sys.exit(1)
 
 # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:
@@ -467,7 +464,7 @@ def build_single_run(config, profiles=None):
 
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
-        if profiles is not None:
+        if profiles is None:
             if (config['InitialFinalReservoirLevel'] == 0) or (config['InitialFinalReservoirLevel'] == ""):
                 if s in finalTS['ReservoirLevels']:
                     # get the time
@@ -482,9 +479,13 @@ def build_single_run(config, profiles=None):
                     parameters['StorageProfile']['val'][i, :] = 0.5
             else:
                 if (config['default']['ReservoirLevelInitial'] > 1) or (config['default']['ReservoirLevelFinal'] > 1):
-                    logging.warning(s + ': The initial or final reservoir levels are higher than its capacity!' )
-                parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * Plants_sto['StorageCapacity'][s]
-                parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
+                    logging.critical(s + ': The initial or final reservoir levels are higher than its capacity!' )
+                    sys.exit(1)
+                else:
+                    parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * Plants_sto['StorageCapacity'][s]
+                    parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
+                    logging.info(s + ': New initial reservoir level is set to: ' + str(config['default']['ReservoirLevelInitial']) +
+                                    ', new final reservoir level is set to: ' + str(config['default']['ReservoirLevelFinal']))
         else:
             if s in finalTS['ReservoirLevels']:
                 # get the time
