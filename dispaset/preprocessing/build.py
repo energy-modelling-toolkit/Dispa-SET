@@ -159,7 +159,30 @@ def build_single_run(config, profiles=None):
     Outages = UnitBasedTable(plants,'Outages',config,fallbacks=['Unit','Technology'])
     AF = UnitBasedTable(plants,'RenewablesAF',config,fallbacks=['Unit','Technology'],default=1,RestrictWarning=commons['tech_renewables'])
 
+    # Reservoir levels
+    """
+    :profiles:      if turned on reservoir levels are overwritten by newly calculated ones 
+                    from the mid term scheduling simulations
+    """
     ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
+    if profiles is not None:
+        if config['HydroScheduling'] == 'Zonal':
+            if config['SimulationType'] == 'Standard':
+                logging.critical("SimulationType: 'Standard' and HydroScheduling: 'Zonal' not supported! Please"
+                                 " choose different input options")
+                sys.exit(1)
+            else:
+                # Remove the unit number (e.g. [1] - xxxxx)
+                profiles = profiles.rename(columns={col: col.split(' - ')[1] for col in profiles.columns})
+                logging.info('Temporary MTS profile names trimmed back to original unit names')
+
+            if all(profiles.columns.isin(ReservoirLevels.columns)):
+                ReservoirLevels.update(profiles)
+                logging.info('New reservoir levels from Mid-term scheduling are now imposed instead of historic values')
+            else:
+                logging.critical('MTS and finalTS column names do not match!')
+                sys.exit(1)
+
     ReservoirScaledInflows = UnitBasedTable(plants_sto,'ReservoirScaledInflows',config,fallbacks=['Unit','Technology','Zone'],default=0)
     HeatDemand = UnitBasedTable(plants_heat,'HeatDemand',config,fallbacks=['Unit'],default=0)
     CostHeatSlack = UnitBasedTable(plants_heat,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
@@ -317,12 +340,20 @@ def build_single_run(config, profiles=None):
         finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='StorageWeightedAverage')
         # Update reservoir levels with newly computed ones from the mid-term scheduling
         if profiles is not None:
-            if all(profiles.columns.isin(finalTS[key].columns)):
-                finalTS[key].update(profiles)
-                logging.info('New reservoir levels from Mid-term scheduling are now imposed instead of historic values')
+            if config['HydroScheduling'] != 'Zonal':
+                if all(profiles.columns.isin(finalTS[key].columns)):
+                    finalTS[key].update(profiles)
+                    logging.info('New reservoir levels from Mid-term scheduling are now imposed instead of historic values')
+                else:
+                    logging.critical('MTS and finalTS column names do not match!')
+                    sys.exit(1)
             else:
-                logging.critical('MTS and finalTS column names do not match!')
-                sys.exit(1)
+                if config['SimulationType'] == 'Standard':
+                    logging.critical("SimulationType: 'Standard' and HydroScheduling: 'Zonal' not supported! Please"
+                                     " choose different input options")
+                    sys.exit(1)
+                else:
+                    continue
 
 # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:

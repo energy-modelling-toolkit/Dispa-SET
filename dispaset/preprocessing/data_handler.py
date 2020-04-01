@@ -315,7 +315,7 @@ def load_time_series(config,path,header='infer'):
                          '. However, its length does not allow guessing its timestamps. Please use a 8760 elements time series')
             sys.exit(1)
 
-    if data.index.is_all_dates:   
+    if data.index.is_all_dates:
         data.index = data.index.tz_localize(None)   # removing locational data
         # Checking if the required index entries are in the data:
         common = data.index.intersection(config['idx'])
