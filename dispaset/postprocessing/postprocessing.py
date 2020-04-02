@@ -86,18 +86,18 @@ def aggregate_by_fuel(PowerOutput, Inputs, SpecifyFuels=None):
     return PowerByFuel
 
 
-def filter_by_zone(PowerOutput, inputs, z):
+def filter_by_zone(Output, inputs, z):
     """
-    This function filters the dispaset Output Power dataframe by zone
+    This function filters the dispaset Output dataframes by zone
 
-    :param PowerOutput:     Dataframe of power generationwith units as columns and time as index
-    :param Inputs:          Dispaset inputs version 2.1.1
+    :param Output:          Dataframe of dispaset output with units as columns and time as index
+    :param Inputs:          Dispaset inputs 
     :param z:               Selected zone (e.g. 'BE')
-    :returns Power:          Dataframe with power generation by zone
+    :returns Power:         Dataframe with power generation by zone
     """
     loc = inputs['units']['Zone']
-    Power = PowerOutput.loc[:, [u for u in PowerOutput.columns if loc[u] == z]]
-    return Power
+    ZoneOutput = Output.loc[:, [u for u in Output.columns if loc[u] == z]]
+    return ZoneOutput
 
 
 def filter_by_tech(PowerOutput, inputs, t):
@@ -410,36 +410,48 @@ def CostExPost(inputs,results):
     function from the optimization.
     
     The cost objective function is the following:
-             SystemCost(i)
-             =E=
-             sum(u,CostFixed(u)*Committed(u,i))
-             +sum(u,CostStartUpH(u,i) + CostShutDownH(u,i))
-             +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
-             +sum(u,CostVariable(u,i) * Power(u,i))
-             +sum(l,PriceTransmission(l,i)*Flow(l,i))
-             +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
-             +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
-             +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
-             +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
-             +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
-             +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
-             +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
+         SystemCost(i)
+         =E=
+         sum(u,CostFixed(u)*TimeStep*Committed(u,i))
+         +sum(u,CostStartUpH(u,i) + CostShutDownH(u,i))
+         +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
+         +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
+         +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
+         +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
+         +sum(th, CostHeatSlack(th,i) * HeatSlack(th,i)*TimeStep)
+         +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
+         +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
+         +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
+         +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
+         +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
 
              
-    :returns: tuple with the cost components and their cumulative sums in two dataframes.
+    :returns: tuple[0]: dataframe with all different types of costs
+    :returns: tuple[1]: cumulative sum of all costs time series
+    :returns: tuple[2]: costs time series disaggregated by zone
     '''
     import datetime
     
     dfin = inputs['param_df']
     timeindex = results['OutputPower'].index
+    config = inputs['config']
+    TimeStep = config['SimulationTimeStep']
+    VOLL = inputs['config']['default']['ValueOfLostLoad']
     
+    
+    # Define output dataframe:
     costs = pd.DataFrame(index=timeindex)
+    
+    # Add possible missing columns:"
+    if 'OutputCommitted' not in results:
+        results['OutputCommitted'] = pd.DataFrame(1,index=results['OutputPower'].index,columns=results['OutputPower'].columns)
+    
     
     #%% Fixed Costs:
     costs['FixedCosts'] = 0
     for u in results['OutputCommitted']:
         if u in dfin['CostFixed'].index:
-            costs['FixedCosts'] =+ dfin.loc[u,'CostFixed'] * results['OutputCommitted'][u]
+            costs['FixedCosts'] =+ dfin['CostFixed'].loc[u,'CostFixed'] * results['OutputCommitted'][u] * TimeStep
     
             
     #%% Ramping and startup costs:
@@ -497,34 +509,34 @@ def CostExPost(inputs,results):
     costs['CostRampDown'] = CostRampDown.sum(axis=1).fillna(0)
     
     #%% Variable cost:
-    costs['CostVariable'] = (results['OutputPower'] * dfin['CostVariable']).fillna(0).sum(axis=1)
+    costs['CostVariable'] = (results['OutputPower'] * dfin['CostVariable']).fillna(0).sum(axis=1) * TimeStep
     
     #%% Transmission cost:
-    costs['CostTransmission'] = (results['OutputFlow'] * dfin['PriceTransmission']).fillna(0).sum(axis=1)
+    costs['CostTransmission'] = (results['OutputFlow'] * dfin['PriceTransmission']).fillna(0).sum(axis=1) * TimeStep
     
     #%% Shedding cost:
-    costs['CostLoadShedding'] = (results['OutputShedLoad'] * dfin['CostLoadShedding']).fillna(0).sum(axis=1)
+    costs['CostLoadShedding'] = (results['OutputShedLoad'] * dfin['CostLoadShedding']).fillna(0).sum(axis=1) * TimeStep
     
     #%% Heating costs:
-    costs['CostHeatSlack'] = (results['OutputHeatSlack'] * dfin['CostHeatSlack']).fillna(0).sum(axis=1)
+    costs['CostHeatSlack'] = (results['OutputHeatSlack'] * dfin['CostHeatSlack']).fillna(0).sum(axis=1) * TimeStep
     CostHeat = pd.DataFrame(index=results['OutputHeat'].index,columns=results['OutputHeat'].columns)
     for u in CostHeat:
         if u in dfin['CHPPowerLossFactor'].index:
-            CostHeat[u] = dfin['CostVariable'][u].fillna(0) * results['OutputHeat'][u].fillna(0) * dfin['CHPPowerLossFactor'].loc[u,'CHPPowerLossFactor']
+            CostHeat[u] = dfin['CostVariable'][u].fillna(0) * results['OutputHeat'][u].fillna(0) * dfin['CHPPowerLossFactor'].loc[u,'CHPPowerLossFactor'] * TimeStep
         else:
-            CostHeat[u] = dfin['CostVariable'][u].fillna(0) * results['OutputHeat'][u].fillna(0)
-    costs['CostHeat'] = CostHeat.sum(axis=1).fillna(0)
+            CostHeat[u] = dfin['CostVariable'][u].fillna(0) * results['OutputHeat'][u].fillna(0) * TimeStep
+    costs['CostHeat'] = CostHeat.sum(axis=1).fillna(0) 
     
     #%% Lost loads:
     # NB: the value of lost load is currently hard coded. This will have to be updated
     # Locate prices for LL
     #TODO:
-    costs['LostLoad'] = 80e3* (results['LostLoad_2D'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_2U'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0))  \
-                       + 100e3*(results['LostLoad_MaxPower'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_MinPower'].reindex(timeindex).sum(axis=1).fillna(0)) \
-                       + 70e3*(results['LostLoad_RampDown'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_RampUp'].reindex(timeindex).sum(axis=1).fillna(0))
+    costs['LostLoad'] = 0.8 * VOLL * TimeStep * (results['LostLoad_2D'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_2U'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0))  \
+                       + VOLL * TimeStep * (results['LostLoad_MaxPower'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_MinPower'].reindex(timeindex).sum(axis=1).fillna(0)) \
+                       + 0.7 * VOLL * TimeStep * (results['LostLoad_RampDown'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_RampUp'].reindex(timeindex).sum(axis=1).fillna(0))
         
     #%% Spillage:
-    costs['Spillage'] = 1 * results['OutputSpillage'].sum(axis=1).fillna(0)
+    costs['Spillage'] = config['default']['PriceOfSpillage'] * results['OutputSpillage'].sum(axis=1).fillna(0)
     
     #%% Plotting
     # Drop na columns:
@@ -541,7 +553,40 @@ def CostExPost(inputs,results):
     diff = (costs.sum(axis=1) - results['OutputSystemCost']).abs()
     if diff.max() > 0.01 * results['OutputSystemCost'].max():
         logging.critical('There are significant differences between the cost computed ex post and and the cost provided by the optimization results!')
-    return costs,sumcost
+
+    #%% Compute cost per zone
+    costs_zone = pd.DataFrame(index=timeindex)
+    zones = inputs['sets']['n']
+    for z in zones:
+        # Assign transmission costs to the importing country:
+        lines = [l for l in results['OutputFlow'].columns if l.endswith(z)]
+        FlowToZone = results['OutputFlow'].loc[:, lines]
+        ZoneTransmissionPrice = dfin['PriceTransmission'].loc[:,lines]
+        # Add possibly missing columns:
+        for key in ['OutputShedLoad','LostLoad_2D','LostLoad_2U','LostLoad_3U','LostLoad_MaxPower','LostLoad_MinPower']:
+            if z not in results[key]:
+                results[key][z] = 0
+        FixedCosts = 0
+        for u in filter_by_zone(results['OutputCommitted'],inputs,z):
+            if u in dfin['CostFixed'].index:
+                FixedCosts =+ dfin['CostFixed'].loc[u,'CostFixed'] * results['OutputCommitted'][u] * TimeStep
+    
+        costs_zone[z] = FixedCosts \
+                        + filter_by_zone(CostStartUp,inputs,z).sum(axis=1).fillna(0)   \
+                        + filter_by_zone(CostShutDown,inputs,z).sum(axis=1).fillna(0)   \
+                        + filter_by_zone(CostRampUp,inputs,z).sum(axis=1).fillna(0)  \
+                        + filter_by_zone(CostRampDown,inputs,z).sum(axis=1).fillna(0) \
+                        + filter_by_zone((results['OutputPower'] * dfin['CostVariable']),inputs,z).fillna(0).sum(axis=1) * TimeStep \
+                        + (FlowToZone * ZoneTransmissionPrice).fillna(0).sum(axis=1) * TimeStep \
+                        + (results['OutputShedLoad'][z] * dfin['CostLoadShedding'][z]).fillna(0) * TimeStep \
+                        + filter_by_zone((results['OutputHeatSlack'] * dfin['CostHeatSlack']),inputs,z).fillna(0).sum(axis=1) * TimeStep \
+                        + filter_by_zone(CostHeat,inputs,z).sum(axis=1).fillna(0)  \
+                        + 0.8 * VOLL * TimeStep * (results['LostLoad_2D'][z].reindex(timeindex).fillna(0) + results['LostLoad_2U'][z].reindex(timeindex).fillna(0) + results['LostLoad_3U'][z].reindex(timeindex).fillna(0))  \
+                        + VOLL * TimeStep * (results['LostLoad_MaxPower'][z].reindex(timeindex).fillna(0) + results['LostLoad_MinPower'][z].reindex(timeindex).fillna(0)) \
+                        + 0.7 * VOLL * TimeStep * filter_by_zone((results['LostLoad_RampDown'].reindex(timeindex).fillna(0) + results['LostLoad_RampUp'].reindex(timeindex).fillna(0)),inputs,z).sum(axis=1) \
+                        + config['default']['PriceOfSpillage'] * filter_by_zone(results['OutputSpillage'],inputs,z).sum(axis=1).fillna(0)
+
+    return costs,sumcost,costs_zone
 
 
 def get_units_operation_cost(inputs, results):
@@ -600,6 +645,13 @@ def get_units_operation_cost(inputs, results):
 
     OperatedUnitList = results['OutputCommitted'].columns
     for u in OperatedUnitList:
+        if u not in results['OutputPower']:
+            results['OutputPower'][u]=0
+            RampUps[u] = 0
+            RampDowns[u] = 0
+            StartUps[u] = 0
+            ShutDowns[u] = 0
+            logging.warning('Unit ' + u + ' is in the table committed but not in the output power table')
         unit_indexNo = inputs['units'].index.get_loc(u)
         FiexedCost.loc[:,[u]] = np.array(results['OutputCommitted'].loc[:,[u]])*inputs['parameters']['CostFixed']['val'][unit_indexNo]
         StartUpCost.loc[:,[u]] = np.array(StartUps.loc[:,[u]])*inputs['parameters']['CostStartUp']['val'][unit_indexNo]
