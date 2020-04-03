@@ -239,6 +239,12 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
                         value = value + subunits[idx] * np.maximum(1e-9, plants['PowerCapacity'][idx]*plants['Nunits'][idx])
                     P_j = np.sum(np.maximum(1e-9, plants['PowerCapacity'][oldindexes]*plants['Nunits'][oldindexes]))
                     merged[newunit] = value / P_j
+                elif method == 'StorageWeightedAverage':
+                    for idx in oldindexes:
+                       name = plants['Unit'][idx]
+                       value = value + subunits[idx] * np.maximum(1e-9, plants['STOCapacity'][idx]*plants['Nunits'][idx])
+                    P_j = np.sum(np.maximum(1e-9, plants['STOCapacity'][oldindexes]*plants['Nunits'][oldindexes]))
+                    merged[newunit] = value / P_j
                 elif method == 'Sum':
                     merged[newunit] = subunits.sum(axis=1)
                 else:
@@ -309,7 +315,7 @@ def load_time_series(config,path,header='infer'):
                          '. However, its length does not allow guessing its timestamps. Please use a 8760 elements time series')
             sys.exit(1)
 
-    if data.index.is_all_dates:   
+    if data.index.is_all_dates:
         data.index = data.index.tz_localize(None)   # removing locational data
         # Checking if the required index entries are in the data:
         common = data.index.intersection(config['idx'])
@@ -431,10 +437,10 @@ def load_config_excel(ConfigFile,AbsPath=True):
             config['default'][p] = sheet.cell_value(default[p], 5)
             
         #True/Falst values:
-        config['zones'] = read_truefalse(sheet, 225, 1, 246, 3)
-        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 246, 6)
-        config['mts_zones'] = read_truefalse(sheet, 225, 1, 246, 3, 2)
-        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 246, 6, 2)
+        config['zones'] = read_truefalse(sheet, 225, 1, 247, 3)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 247, 6)
+        config['mts_zones'] = read_truefalse(sheet, 225, 1, 247, 3, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 247, 6, 2)
         config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 319, 3)
 
         # Set default values (for backward compatibility):
