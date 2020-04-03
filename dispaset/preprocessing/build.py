@@ -322,15 +322,15 @@ def build_single_run(config, profiles=None):
             logging.critical("SimulationType: 'Standard' and HydroScheduling: 'Zonal' not supported! Please"
                                  " choose different input options")
             sys.exit(1)
-            if all(profiles.columns.isin(finalTS['ReservoirLevels'].columns)):
-                finalTS['ReservoirLevels'].update(profiles)
-                logging.info('New reservoir levels from Mid-term scheduling are now imposed instead of historic values')
-            else:
-                for key in profiles.columns:
-                    if key not in finalTS['ReservoirLevels'].columns:
-                        logging.critical('The reservoir profile "' + key + '" provided by the MTS is not found in the ReservoirLevels table')
-                        print(ReservoirLevels.columns)
-                        sys.exit(1)
+        if all(profiles.columns.isin(finalTS['ReservoirLevels'].columns)):
+            finalTS['ReservoirLevels'].update(profiles)
+            logging.info('New reservoir levels from Mid-term scheduling are now imposed instead of historic values')
+        else:
+            for key in profiles.columns:
+                if key not in finalTS['ReservoirLevels'].columns:
+                    logging.critical('The reservoir profile "' + key + '" provided by the MTS is not found in the ReservoirLevels table')
+                    print(ReservoirLevels.columns)
+                    sys.exit(1)
 
 # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:
