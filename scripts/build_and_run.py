@@ -15,10 +15,12 @@ import dispaset as ds
 
 # Load the configuration file
 config = ds.load_config('../ConfigFiles/ConfigTest.xlsx')
-config['SimulationTimeStep'] = 24
+#config['SimulationTimeStep'] = 24
 
 # Build the simulation environment:
 SimData = ds.build_simulation(config)
 
 # Solve using GAMS:
 r = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
+
+inputs,results = ds.get_sim_results(config['SimulationDirectory'],cache=False)

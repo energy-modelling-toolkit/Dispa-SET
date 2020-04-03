@@ -28,7 +28,7 @@ def get_git_revision_tag():
         return 'NA'
 
 
-def build_single_run(config, profiles=None):
+def build_single_run(config, profiles=None, MTS=False):
     """
     This function reads the DispaSET config, loads the specified data,
     processes it when needed, and formats it in the proper DispaSET format.
@@ -490,7 +490,13 @@ def build_single_run(config, profiles=None):
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
     for var in ['CHPPowerToHeat','CHPPowerLossFactor', 'CHPMaxHeat']:
         parameters[var]['val'] = Plants_chp[var].values
-
+   
+    # Only hydro and p2h2 units are part of mid term scheduling
+    if profiles is not None:
+        for r in ReservoirLevels.columns:
+            if r not in sets['wat'] and r not in sets['p2h2']:
+                ReservoirLevels.loc[:,r] = 0
+                
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
         if profiles is not None:
@@ -512,7 +518,7 @@ def build_single_run(config, profiles=None):
                 parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * Plants_sto['StorageCapacity'][s]
                 parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
         else:
-            if s in finalTS['ReservoirLevels']:
+            if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) :
                 # get the time
                 parameters['StorageInitial']['val'][i] = finalTS['ReservoirLevels'][s][idx_sim[0]] * \
                                                          Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
@@ -712,7 +718,18 @@ def build_single_run(config, profiles=None):
 
     if not os.path.exists(sim):
         os.makedirs(sim)
-    if LP:
+    if MTS:
+        fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
+        fout = open(os.path.join(sim,'UCM_h.gms'), "wt")
+        for line in fin:
+            fout.write(line.replace('$setglobal MTS 0', '$setglobal MTS 1'))
+#            fout.write(line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1'))
+        fin.close()
+        fout.close()
+        # additionally allso copy UCM_h_simple.gms
+        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+                        os.path.join(sim, 'UCM_h_simple.gms'))    
+    elif LP and not MTS:
         fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
         fout = open(os.path.join(sim,'UCM_h.gms'), "wt")
         for line in fin:

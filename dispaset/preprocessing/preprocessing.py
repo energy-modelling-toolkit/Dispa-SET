@@ -115,7 +115,8 @@ def mid_term_scheduling(config,TimeStep=None, mts_plot=None):
         for i,c in enumerate(config['mts_zones']):
             logging.info('(Currently simulating Zone): ' + str(i+1) + ' out of ' + str(no_of_zones))
             temp_config['zones'] = [c]                    # Override zone that needs to be simulated
-            _ = build_single_run(temp_config)       # Create temporary SimData
+            _ = build_single_run(temp_config, MTS=True)       # Create temporary SimData
+            
             r = solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
                            gams_folder=temp_config['GAMS_folder'],
                            gams_file=gams_file,
@@ -142,7 +143,7 @@ def mid_term_scheduling(config,TimeStep=None, mts_plot=None):
 
     # Solving reservoir levels for all regions simultaneously
     elif config['HydroScheduling'] == 'Regional':
-        _ = build_single_run(temp_config)        # Create temporary SimData
+        _ = build_single_run(temp_config, MTS=True)        # Create temporary SimData
         r = solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
                        gams_folder=temp_config['GAMS_folder'],
                        gams_file=gams_file,
@@ -157,7 +158,7 @@ def mid_term_scheduling(config,TimeStep=None, mts_plot=None):
         elif len(temp_results['OutputStorageLevel']) < len(idx):   
             profiles = temp_results['OutputStorageLevel'].reindex(range(1,len(idx)+1)).fillna(0).set_index(idx)
         else:
-            profiles = temp_results['OutputStorageLevel'].set_index(idx)
+            profiles = temp_results['OutputStorageLevel'].set_index(idx)   
     else:
         logging.error('HydroScheduling parameter should be either "Regional" or "Zonal" (case sensitive). ')
         sys.exit()
