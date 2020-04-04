@@ -235,12 +235,13 @@ def _split_list(list_):
 
     """
     res = str()
-    for l in list_:
-        if str(l) != 'nan':
-            if l != list_[-1]:
-                res += str(l) + " - "
-            else:
-                res += str(l)
+    # remove empty elements from the list:
+    newlist = [l for l in list_ if (str(l)!='nan') and (str(l)!='')]
+    for l in newlist:
+        if l != newlist[-1]:
+            res += str(l) + " - "
+        else:
+            res += str(l)
     return res
 
 
@@ -248,10 +249,18 @@ def _list2dict(list_, agg): return {key: agg for key in list_}
 
 
 def _flatten_list(l):
+    """
+    Function that unfolds nested lists
+    Example: 
+        [1, 3, ['aa','bb'],4] is turned into [1,3, 'aa', 'bb', 4]
+    """
     flat_list = []
     for sublist in l:
-        for item in sublist:
-            flat_list.append(item)
+        if isinstance(sublist,list):
+            for item in sublist:
+                flat_list.append(item)
+        else:
+            flat_list.append(sublist)
     return flat_list
 
 
@@ -266,8 +275,9 @@ def _merge_two_dicts(x, y):
 
 
 def _get_index(df_, idx):
-    res = [_flatten_list(list(df_.loc[i]['FormerIndexes'].values)) for i in idx]
-    return res
+    former_indexes = [_flatten_list(list(df_.loc[i]['FormerIndexes'].values)) for i in idx]
+    former_units = [_flatten_list(list(df_.loc[i]['FormerUnits'].values)) for i in idx]
+    return former_indexes,former_units
 
 
 def _create_mapping(merged_df):
@@ -277,7 +287,7 @@ def _create_mapping(merged_df):
     return mapping
 
 
-def _clean_df(df_merged, df_, string_keys):
+def _new_unit_names(df_merged, df_, string_keys):
     # if merged unit, create name -> else take old name for unit
     keys = ['FormerIndexes'] + string_keys
     create_unit_name = lambda x: str(x.FormerIndexes) + " - " + df_.iloc[x.FormerIndexes[0]]['Unit'] if len(x.FormerIndexes) == 1 else shrink_to_64(clean_strings(_split_list(list(x[keys].values))))
@@ -285,7 +295,7 @@ def _clean_df(df_merged, df_, string_keys):
     return df_merged.set_index('Unit', drop=False)
     
     
-def group_plants(plants, method, df_grouped=False, group_list = ['Zone', 'Technology', 'Fuel']):
+def group_plants(plants, method, df_grouped=False, group_list = ['Zone', 'Technology', 'Fuel', 'CHPType']):
     """
     This function returns the final dataframe with the merged units and their characteristics
 
@@ -302,28 +312,16 @@ def group_plants(plants, method, df_grouped=False, group_list = ['Zone', 'Techno
     agg_dict = create_agg_dict(plants, method=method)
     plants_merged = plants_merged.append(grouped.agg(agg_dict))
     idx = [list(i.values) for i in list(grouped.groups.values())]
-
     if df_grouped == False:
-        idx = [list(plants.loc[i]['index'].values) for i in idx]
-        plants_merged['FormerIndexes'] = idx
+        plants_merged['FormerIndexes'] = [list(plants.loc[i]['index'].values) for i in idx]
+        plants_merged['FormerUnits'] = [list(plants.loc[i]['Unit'].values) for i in idx]
 
     else:
-         # this must be second dataframe != index
-        former_indexes = list(_get_index(plants, idx))
-        plants_merged['FormerIndexes'] = former_indexes
-
+         # case in which the plants have already been clustered once => nested lists in FormerIndexes
+        former_indexes, former_units = _get_index(plants, idx)
+        plants_merged['FormerIndexes']= list(former_indexes)
+        plants_merged['FormerUnits'] = list(former_units)
     return plants_merged
-
-def update_unclustered_col(row, df):
-    """ 
-    Updates those rows which were not merged with old values
-    Important when column not in grouping, but old values need to be retained
-    """
-    if len(row['FormerIndexes']) == 1:
-        return df.iloc[row['FormerIndexes'][0]]
-    else:
-        return row
-
 
 def create_agg_dict(df_, method="Standard"):
     """
@@ -487,6 +485,7 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
             plants["flex"] = highly_flexible
             plants["low_pmax"] = low_pmax
             plants["FormerIndexes"] = pd.Series(plants.index.values).apply(lambda x: [x])
+            plants["FormerUnits"] = pd.Series(plants['Unit'].values).apply(lambda x: [x])
 
             condition = (plants["low_pmax"]) | (plants["flex"])
             first_cluster = plants[condition]  # all data without other clustering
@@ -536,7 +535,7 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
                 plants_merged = first_cluster[:]
 
             plants = plants.drop(
-                ["flex", "low_pmax"], axis=1
+                ["flex", "low_pmax","FormerIndexes"], axis=1
             )
             plants_merged = plants_merged.drop(
                 ["index","fingerprints", "flex", "low_pmax"], axis=1
@@ -547,6 +546,7 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
             )
             plants_merged = plants.copy()
             plants_merged["FormerIndexes"] = plants["index"].apply(lambda x: [x])
+            plants_merged["FormerUnits"] = plants["Unit"].apply(lambda x: [x])
         
 
     elif method == "LP clustered":
@@ -606,6 +606,7 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
         )
         plants_merged["RampingCost"] = plants_merged.apply(ramping_lbd, axis=1)
         plants_merged["FormerIndexes"] = plants["index"].apply(lambda x: [x])
+        plants_merged["FormerUnits"] = plants["Unit"].apply(lambda x: [x])
 
     elif method == "Integer clustering":
         plants_merged = group_plants(plants, method="Integer clustering")
@@ -614,6 +615,7 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
     elif method == "No clustering":
         plants_merged = plants.copy()
         plants_merged["FormerIndexes"] = plants["index"].apply(lambda x: [x])
+        plants_merged["FormerUnits"] = plants["Unit"].apply(lambda x: [x])
 
     else:
         logging.error(
@@ -621,10 +623,9 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
         )
         sys.exit(1)
 
-    # clean df_
-    plants_merged = _clean_df(plants_merged, plants, string_keys)
-
+    plants_merged = _new_unit_names(plants_merged, plants, string_keys)
     # Modify the Unit names with the original index number. In case of merged plants, indicate all indexes + the plant type and fuel
+
     mapping = _create_mapping(plants_merged)
     if Nunits != len(plants_merged):
         logging.info(
@@ -636,8 +637,15 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
         )
     else:
         logging.warning("Did not cluster any unit")
-        
-    plants_merged = plants_merged.apply(lambda x: update_unclustered_col(x, plants), axis=1) # use old values for plants which were not merged
+    
+    # indexes of units which were not clustered:
+    idx_merged = [i for i in plants_merged.index if len(plants_merged.loc[i,'FormerIndexes'])==1]
+    idx_orig = [plants_merged.loc[i,'FormerIndexes'][0] for i in idx_merged]
+    columns = plants_merged.columns.drop(['Unit','FormerIndexes','FormerUnits'])
+    plants_merged.loc[idx_merged,columns] = plants.loc[idx_orig,columns].values
+    #reorder columns:
+    new_columns = [key for key in plants.columns if key in plants_merged] 
+    plants_merged = plants_merged[new_columns + list(plants_merged.columns.drop(new_columns))]
     return plants_merged, mapping
 
 

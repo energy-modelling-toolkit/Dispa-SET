@@ -164,6 +164,17 @@ def build_single_run(config, profiles=None):
     HeatDemand = UnitBasedTable(plants_heat,'HeatDemand',config,fallbacks=['Unit'],default=0)
     CostHeatSlack = UnitBasedTable(plants_heat,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
     Temperatures = NodeBasedTable('Temperatures',config)
+    
+    # Update reservoir levels with newly computed ones from the mid-term scheduling
+    if profiles is not None:
+        for key in profiles.columns:
+            if key not in ReservoirLevels.columns:
+                logging.error('The reservoir profile "' + key + '" provided by the MTS is not found in the ReservoirLevels table')
+                print(ReservoirLevels.columns)
+            else:
+                ReservoirLevels[key].update(profiles[key])
+                logging.info('The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
+
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
@@ -315,22 +326,6 @@ def build_single_run(config, profiles=None):
     # Merge the following time series by weighted average based on storage capacity
     for key in ['ReservoirLevels']:
         finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='StorageWeightedAverage')
-
-    # Update reservoir levels with newly computed ones from the mid-term scheduling
-    if profiles is not None:
-        if config['HydroScheduling'] == 'Zonal' and config['SimulationType'] == 'Standard':
-            logging.critical("SimulationType: 'Standard' and HydroScheduling: 'Zonal' not supported! Please"
-                                 " choose different input options")
-            sys.exit(1)
-        if all(profiles.columns.isin(finalTS['ReservoirLevels'].columns)):
-            finalTS['ReservoirLevels'].update(profiles)
-            logging.info('New reservoir levels from Mid-term scheduling are now imposed instead of historic values')
-        else:
-            for key in profiles.columns:
-                if key not in finalTS['ReservoirLevels'].columns:
-                    logging.critical('The reservoir profile "' + key + '" provided by the MTS is not found in the ReservoirLevels table')
-                    print(ReservoirLevels.columns)
-                    sys.exit(1)
 
 # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:

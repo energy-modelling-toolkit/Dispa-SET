@@ -382,7 +382,7 @@ def read_truefalse(sheet, rowstart, colstart, rowstop, colstop, colapart=1):
     The list of strings associated with a True value is returned
     """
     out = []
-    for i in range(rowstart, rowstop):
+    for i in range(rowstart, rowstop+1):
         if sheet.cell_value(i, colstart + colapart) == 1:
             out.append(sheet.cell_value(i, colstart))
     return out
