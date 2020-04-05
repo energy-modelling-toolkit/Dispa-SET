@@ -111,6 +111,7 @@ CostShutDown(u)                  [EUR\u]    Shut-down costs
 CostStartUp(u)                   [EUR\u]    Start-up costs
 CostVariable(u,h)                [EUR\MW]   Variable costs
 CostHeatSlack(th,h)             [EUR\MWh]  Cost of supplying heat via other means
+CostH2Slack(p2h2,h)              [EUR\MWh] Cost of supplying H2 by other means
 CostLoadShedding(n,h)            [EUR\MWh] Cost of load shedding
 Curtailment(n)                   [n.a]    Curtailment allowed or not {1 0} at node n
 Demand(mk,n,h)                   [MW]     Demand
@@ -132,9 +133,9 @@ PowerCapacity(au)               [MW\u]     Installed capacity
 PowerInitial(u)                  [MW\u]     Power output before initial period
 PowerMinStable(au)              [MW\u]     Minimum power output
 PriceTransmission(l,h)           [EUR\MWh]  Transmission price
-StorageChargingCapacity(au)       [MW\u]     Storage capacity
-StorageChargingEfficiency(au)   [%]      Charging efficiency
-StorageSelfDischarge(au)        [%\day]  Self-discharge of the storage units
+StorageChargingCapacity(u)        [MW\u]     Storage capacity
+StorageChargingEfficiency(s)     [%]      Charging efficiency
+StorageSelfDischarge(au)         [%\day]  Self-discharge of the storage units
 RampDownMaximum(u)               [MW\h\u]   Ramp down limit
 RampShutDownMaximum(u)           [MW\h\u]   Shut-down ramp limit
 RampStartUpMaximum(u)            [MW\h\u]   Start-up ramp limit
@@ -191,6 +192,8 @@ $LOAD tr
 $LOAD f
 $LOAD p
 $LOAD s
+$LOAD wat
+$LOAD p2h2
 $LOAD chp
 $LOAD p2h
 $LOAD th
@@ -1148,6 +1151,7 @@ OutputPower(u,h)
 OutputPowerConsumption(p2h,h)
 OutputStorageInput(au,h)
 OutputStorageLevel(au,h)
+OutputStorageSlack(p2h2,h)
 OutputSystemCost(h)
 OutputSpillage(s,h)
 OutputShedLoad(n,h)
