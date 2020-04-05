@@ -425,15 +425,13 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
         if input_value not in plants.columns:
             logging.error("The plants dataframe requires a '" + input_value + "' column for clustering")
             sys.exit(1)
-    if not "Nunits" in plants:
-        plants["Nunits"] = 1
 
     Nunits = len(plants)
     plants.index = range(Nunits)
     plants_merged = pd.DataFrame(columns=plants.columns)
 
     # Fill nan values:
-    string_keys = ["Zone", "Technology", "Fuel", "CHPType"]
+    string_keys = ["Zone", "Technology", "Fuel", "CHPType","Zone_th","Zone_h2"]
     for key in string_keys:
         plants[key].fillna("", inplace=True)
 

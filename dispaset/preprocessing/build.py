@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from future.builtins import int
 
-from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
+from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, check_h2_demand, \
     check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_h2, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
@@ -142,13 +142,22 @@ def build_single_run(config, profiles=None, MTS=False):
             plants[key] = plants[key+'_pu'] * plants['PowerCapacity']
         else:
             plants[key] = 0
+
+    # If not present, add the non-compulsory fields to the units table:
+    plants_defaults = {'CHPPowerLossFactor':np.nan,'CHPPowerToHeat':np.nan,'CHPType':np.nan,'STOCapacity':np.nan,
+                       'STOSelfDischarge':np.nan,'STOMaxChargingPower':np.nan,'STOChargingEfficiency':np.nan, 
+                       'CHPMaxHeat':np.nan,'Nunits':1}
+    for key in plants_defaults:
+        if key not in plants.columns:
+            plants[key] = plants_defaults[key]
+    # If the thermal and h2 zones are not defined in the units table, define one individual zone per power plant:
+    for key in ['Zone_th','Zone_h2']:
+        if key not in plants.columns:
+            plants[key] = plants['Unit']
+            logging.info('No "' + key + '" header was found in the units table. One individual zone is defined per power plant')
+
     # check plant list:
     check_units(config, plants)
-    # If not present, add the non-compulsory fields to the units table:
-    for key in ['CHPPowerLossFactor','CHPPowerToHeat','CHPType','STOCapacity','STOSelfDischarge','STOMaxChargingPower','STOChargingEfficiency', 'CHPMaxHeat']:
-        if key not in plants.columns:
-            plants[key] = np.nan
-
 
     # Defining the hydro storages:
     plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
@@ -190,9 +199,18 @@ def build_single_run(config, profiles=None, MTS=False):
     H2Demand = UnitBasedTable(plants_h2,'H2Demand',config,fallbacks=['Unit'],default=0)
     CostH2Slack = UnitBasedTable(plants_h2,'CostH2Slack',config,fallbacks=['Unit','Zone'],default=config['default']['CostH2Slack'])
 
+    # Detecting thermal and h2 zones:
+    zones_th = plants_heat['Zone_th'].unique().tolist()
+    zones_h2 = plants_h2['Zone_h2'].unique().tolist()
+    if '' in zones_th:
+        zones_th.remove('')
+    if '' in zones_h2:
+        zones_h2.remove('') 
+
     # data checks:
     check_AvailabilityFactors(plants,AF)
-    check_heat_demand(plants,HeatDemand)
+    check_heat_demand(plants,HeatDemand,zones_th)
+    check_h2_demand(plants,H2Demand,zones_h2)
     check_temperatures(plants,Temperatures)
     check_FlexibleDemand(ShareOfFlexibleDemand)
     check_reserves(Reserve2D,Reserve2U,Load)
@@ -343,10 +361,10 @@ def build_single_run(config, profiles=None, MTS=False):
     for key in ['ScaledInflows','ReservoirLevels','Outages','AvailabilityFactors','CostHeatSlack','CostH2Slack']:
         finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key)
     # Merge the following time series by summing
-    for key in ['HeatDemand']:
-        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
-    for key in ['H2Demand']:
-        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
+    # for key in ['HeatDemand']:
+    #     finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
+    # for key in ['H2Demand']:
+    #     finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
         
 # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:
@@ -374,6 +392,8 @@ def build_single_run(config, profiles=None, MTS=False):
     sets['z'] = [str(x + 1) for x in range(int(Nsim - config['LookAhead'] * config['SimulationTimeStep'])) ]
     sets['mk'] = ['DA', '2U', '2D','Flex']
     sets['n'] = config['zones']
+    sets['n_th'] = zones_th
+    sets['n_h2'] = zones_h2
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['f'] = commons['Fuels']
@@ -422,6 +442,8 @@ def build_single_run(config, profiles=None, MTS=False):
     sets_param['LineNode'] = ['l', 'n']
     sets_param['LoadShedding'] = ['n','h']
     sets_param['Location'] = ['au', 'n']
+    sets_param['Location_th'] = ['au', 'n_th']
+    sets_param['Location_h2'] = ['au', 'n_h2']
     sets_param['Markup'] = ['au', 'h']
     sets_param['Nunits'] = ['au']
     sets_param['OutageFactor'] = ['au', 'h']
@@ -464,7 +486,7 @@ def build_single_run(config, profiles=None, MTS=False):
         parameters[var] = define_parameter(sets_param[var], sets, value=1e7)
 
     # Boolean parameters:
-    for var in ['Technology', 'Fuel', 'Reserve', 'Location']:
+    for var in ['Technology', 'Fuel', 'Reserve', 'Location', 'Location_h2', 'Location_th']:
         parameters[var] = define_parameter(sets_param[var], sets, value='bool')
 
     # %%
@@ -650,6 +672,10 @@ def build_single_run(config, profiles=None, MTS=False):
     # Location
     for i in range(len(sets['n'])):
         parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['zones'][i]).values
+    for i in range(len(sets['n_th'])):
+        parameters['Location_th']['val'][:, i] = (Plants_merged['Zone_th'] == zones_th[i]).values
+    for i in range(len(sets['n_h2'])):
+        parameters['Location_h2']['val'][:, i] = (Plants_merged['Zone_h2'] == zones_h2[i]).values
 
     # CHPType parameter:
     sets['chp_type'] = ['Extraction','Back-Pressure', 'P2H']

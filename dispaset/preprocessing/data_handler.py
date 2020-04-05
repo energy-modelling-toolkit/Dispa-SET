@@ -202,9 +202,6 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
     :param tablename:   Name of the table being processed (e.g. 'Outages'), used in the warnings
     :return merged:     Pandas dataframe with the merged time series when necessary
     """
-    # backward compatibility:
-    if not "Nunits" in plants:
-        plants['Nunits'] = 1
 
     plants.index = range(len(plants))
     merged = pd.DataFrame(index=data.index)

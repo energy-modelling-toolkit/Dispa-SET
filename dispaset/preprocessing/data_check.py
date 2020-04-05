@@ -160,7 +160,7 @@ def check_h2(config, plants):
     """   
     keys = ['PowerCapacity','Efficiency']
     NonNaNKeys = []
-    StrKeys = []
+    StrKeys = ['Zone_h2']
     
     if len(plants)==0:  # If there are no P2HT units, exit the check
         return True
@@ -207,7 +207,7 @@ def check_p2h(config, plants):
     """   
     keys = ['COP']
     NonNaNKeys = ['COP']
-    StrKeys = []
+    StrKeys = ['Zone_th']
     
     if len(plants)==0:  # If there are no P2HT units, exit the check
         return True
@@ -260,7 +260,7 @@ def check_chp(config, plants):
     """   
     keys = ['CHPType','CHPPowerToHeat','CHPPowerLossFactor']
     NonNaNKeys = ['CHPPowerToHeat','CHPPowerLossFactor']
-    StrKeys = ['CHPType']
+    StrKeys = ['CHPType','Zone_h2']
     
     for key in keys:
         if key not in plants:
@@ -372,20 +372,16 @@ def check_units(config, plants):
     """
 
     keys = ['Unit', 'Fuel', 'Zone', 'Technology', 'PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate',
-            'StartUpTime', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost', 'Efficiency', 'CO2Intensity']
+            'StartUpTime', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost', 'Efficiency', 'CO2Intensity',
+            'Nunits']
     NonNaNKeys = ['PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate', 'Efficiency', 'RampingCost',
-                  'CO2Intensity']
-    StrKeys = ['Unit', 'Zone', 'Fuel', 'Technology']
+                  'CO2Intensity','Nunits']
+    StrKeys = ['Unit', 'Zone', 'Fuel', 'Technology','Zone_th','Zone_h2']
 
     # Special treatment for the Optional key Nunits:
-    if 'Nunits' in plants:
-        keys.append('Nunits')
-        NonNaNKeys.append('Nunits')
-        if any([not float(x).is_integer() for x in plants['Nunits']]):
-            logging.error('Some values are not integers in the "Nunits" column of the plant database')
-            sys.exit(1)
-    else:
-        logging.info('The columns "Nunits" is not present in the power plant database. A value of one will be assumed by default')
+    if any([not float(x).is_integer() for x in plants['Nunits']]):
+        logging.error('Some values are not integers in the "Nunits" column of the plant database')
+        sys.exit(1)
 
     for key in keys:
         if key not in plants:
@@ -473,27 +469,26 @@ def check_units(config, plants):
     return True
 
 
-def check_heat_demand(plants,data):
+def check_heat_demand(plants,data,zones_th):
     '''
     Function that checks the validity of the heat demand profiles
 
-    :param     plants:  List of CHP plants
+    :param     plants:  List of plants
+    :param     data: Dataframe with the heat demand time series
+    :param     zones_th: list with the heating zones
     '''
     plants.index = plants['Unit']
     plants_heating = plants[[str(plants['CHPType'][u]).lower() in commons['types_CHP'] or plants.loc[u,'Technology']=='P2HT' for u in plants.index]]
     plants_chp = plants[[str(plants['CHPType'][u]).lower() in commons['types_CHP'] for u in plants.index]]
 
-    for u in data:
-        if u in plants_heating.index:
-            if 'Nunits' in plants_heating:
-                Nunits = plants.loc[u,'Nunits']
-            else:
-                Nunits = 1
-            if (data[u] == 0).all():
-                logging.critical('Heat demand data for CHP unit "' + u + '" is either no found or always equal to zero')
-        else:
-            logging.warning('The heat demand profile with header "' + str(u) + '" does not correspond to any CHP plant. It will be ignored.')
-        if u in plants_chp.index:
+    for z in data:    # for each heating zone in the heating demand data
+        if z not in zones_th:
+            logging.error('The heat demand profile with header "' + str(z) + '" does not correspond to any heating zone. It will be ignored.')
+        elif (data[z] == 0).all():
+            logging.error('Heat demand data for zone "' + z + '" is either no found or always equal to zero') 
+        if z in plants_chp.index:    # special case in which the heating zone corresponds to a single CHP unit
+            u = z
+            Nunits = plants.loc[u,'Nunits']
             plant_CHP_type = plants.loc[u,'CHPType'].lower()
             if pd.isnull(plants.loc[u, 'CHPMaxHeat']):
                 plant_Qmax = +np.inf
@@ -519,10 +514,35 @@ def check_heat_demand(plants,data):
                 logging.warning('The minimum thermal demand for unit ' + str(u) + ' (' + str(data[u].min()) + ') is lower than its minimum thermal generation (' + str(Qmin) + ' MWth)')
 
 
-    # check that a heating demand has been provided for all heating technologies
-    for u in plants_heating.index:
-        if u not in data:
-            logging.critical('No heat demand data was found for unit ' + u)
+    # check that a heating demand has been provided for all heating zones
+    for z in zones_th:
+        if z not in data:
+            logging.critical('No heat demand data was found for thermal zone ' + z)
+            sys.exit(1)
+ 
+    return True
+
+
+def check_h2_demand(plants,data,zones_h2):
+    '''
+    Function that checks the validity of the heat demand profiles
+
+    :param     plants:  List of plants
+    :param     data: Dataframe with the h2 demand time series
+    :param     zones_th: list with the h2 zones
+    '''
+    plants_h2 = plants[plants['Technology']=='P2GS']  
+
+    for z in data:    # for each heating zone in the heating demand data
+        if z not in zones_h2:
+            logging.error('The h2 demand profile with header "' + str(z) + '" does not correspond to any h2 zone. It will be ignored.')
+        elif (data[z] == 0).all():
+            logging.error('H2 demand data for zone "' + z + '" is either no found or always equal to zero') 
+
+    # check that a h2 demand has been provided for all zones
+    for z in zones_h2:
+        if z not in data:
+            logging.critical('No h2 demand data was found for zone ' + z)
             sys.exit(1)
  
     return True
