@@ -63,6 +63,7 @@ $setglobal ActivateFlexibleDemand 1
 SETS
 mk               Markets
 n                Nodes
+n_th             NodesThermal
 l                Lines
 au               All Units
 u(au)           Generation units
@@ -110,7 +111,6 @@ CostShutDown(u)                  [EUR\u]    Shut-down costs
 CostStartUp(u)                   [EUR\u]    Start-up costs
 CostVariable(u,h)                [EUR\MW]   Variable costs
 CostHeatSlack(th,h)             [EUR\MWh]  Cost of supplying heat via other means
-CostH2Slack(p2h2,h)              [EUR\MWh] Cost of supplying H2 by other means
 CostLoadShedding(n,h)            [EUR\MWh] Cost of load shedding
 Curtailment(n)                   [n.a]    Curtailment allowed or not {1 0} at node n
 Demand(mk,n,h)                   [MW]     Demand
@@ -124,6 +124,7 @@ HeatDemand(au,h)                [MWh\u]  Heat demand profile for chp units
 LineNode(l,n)                    [n.a.]   Incidence matrix {-1 +1}
 LoadShedding(n,h)                [MW]   Load shedding capacity
 Location(au,n)                    [n.a.]   Location {1 0}
+Location_th(au,n_th)              [n.a] Location_th {1 0}
 Markup(u,h)                      [EUR\MW]   Markup
 OutageFactor(u,h)                [%]      Outage Factor (100% = full outage)
 PartLoadMin(au)                 [%]      Minimum part load
@@ -131,9 +132,9 @@ PowerCapacity(au)               [MW\u]     Installed capacity
 PowerInitial(u)                  [MW\u]     Power output before initial period
 PowerMinStable(au)              [MW\u]     Minimum power output
 PriceTransmission(l,h)           [EUR\MWh]  Transmission price
-StorageChargingCapacity(u)        [MW\u]     Storage capacity
-StorageChargingEfficiency(s)     [%]      Charging efficiency
-StorageSelfDischarge(au)         [%\day]  Self-discharge of the storage units
+StorageChargingCapacity(au)       [MW\u]     Storage capacity
+StorageChargingEfficiency(au)   [%]      Charging efficiency
+StorageSelfDischarge(au)        [%\day]  Self-discharge of the storage units
 RampDownMaximum(u)               [MW\h\u]   Ramp down limit
 RampShutDownMaximum(u)           [MW\h\u]   Shut-down ramp limit
 RampStartUpMaximum(u)            [MW\h\u]   Start-up ramp limit
@@ -181,6 +182,7 @@ $gdxin %inputfilename%
 
 $LOAD mk
 $LOAD n
+$LOAD n_th
 $LOAD l
 $LOAD au
 $LOAD u
@@ -189,8 +191,6 @@ $LOAD tr
 $LOAD f
 $LOAD p
 $LOAD s
-$LOAD wat
-$LOAD p2h2
 $LOAD chp
 $LOAD p2h
 $LOAD th
@@ -222,6 +222,7 @@ $LOAD HeatDemand
 $LOAD LineNode
 $LOAD LoadShedding
 $LOAD Location
+$LOAD Location_th
 $LOAD Markup
 $LOAD Nunits
 $LOAD OutageFactor
@@ -257,6 +258,7 @@ $If %Verbose% == 0 $goto skipdisplay
 Display
 mk,
 n,
+n_th,
 l,
 u,
 t,
@@ -291,6 +293,7 @@ Fuel,
 HeatDemand,
 LineNode,
 Location,
+Location_th
 LoadShedding
 Markup,
 OutageFactor,
@@ -363,7 +366,7 @@ Reserve_2U(u,h)            [MW]    Spinning reserve up
 Reserve_2D(u,h)            [MW]    Spinning reserve down
 Reserve_3U(u,h)            [MW]    Non spinning quick start reserve up
 Heat(au,h)                [MW]    Heat output by chp plant
-HeatSlack(au,h)           [MW]    Heat satisfied by other sources
+HeatSlack(n_h,h)           [MW]    Heat satisfied by other sources
 WaterSlack(s)             [MWh]   Unsatisfied water level constraint at end of optimization period
 StorageSlack(au,h)         [MWh]   Unsatisfied storage level constraint at end of simulation timestep
 ;
@@ -421,8 +424,8 @@ EQ_Objective_function
 EQ_CHP_extraction_Pmax
 EQ_CHP_extraction
 EQ_CHP_backpressure
-EQ_CHP_demand_satisfaction
 EQ_CHP_max_heat
+EQ_Heat_Demand_balance
 EQ_Heat_Storage_balance
 EQ_Heat_Storage_minimum
 EQ_Heat_Storage_level
@@ -923,11 +926,11 @@ EQ_Max_P2H(p2h,i)..
          PowerCapacity(p2h) * Nunits(p2h)
 ;
 
-EQ_CHP_demand_satisfaction(th,i)..
-         Heat(th,i) + HeatSlack(th,i)
+EQ_Heat_Demand_balance(n_th,i)..
+         sum(chp, Heat(chp,i)*Location_th(chp,n_th) + sum(p2h, Heat(p2h,i)*Location_th(p2h,n_th)
          =E=
-         HeatDemand(th,i)
-;
+         HeatDemand(n_th, i)
+         - HeatSlack(n_th,i)
 
 *Heat Storage balance
 EQ_Heat_Storage_balance(th,i)..
@@ -968,7 +971,7 @@ EQ_Objective_function,
 EQ_CHP_extraction_Pmax,
 EQ_CHP_extraction,
 EQ_CHP_backpressure,
-EQ_CHP_demand_satisfaction,
+EQ_Heat_Demand_balance,
 EQ_CHP_max_heat,
 EQ_CostRampUp,
 EQ_CostRampDown,
@@ -1145,7 +1148,6 @@ OutputPower(u,h)
 OutputPowerConsumption(p2h,h)
 OutputStorageInput(au,h)
 OutputStorageLevel(au,h)
-OutputStorageSlack(p2h2,h)
 OutputSystemCost(h)
 OutputSpillage(s,h)
 OutputShedLoad(n,h)
