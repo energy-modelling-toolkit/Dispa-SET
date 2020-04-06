@@ -190,6 +190,56 @@ def UnitBasedTable(plants,varname,config,fallbacks=['Unit'],default=None,Restric
         sys.exit(1)
     return out
 
+def GenericTable(headers,varname,config,default=None):
+    '''
+    This function loads the tabular data stored in csv files and assigns the
+    proper values to each pre-specified column. If not found, the
+    default value is assigned.
+
+    :param headers:             List with the column headers to be read
+    :param varname:             Variable to be read
+    :param config:              Config variable
+    :param default:             Default value to be applied if no data is found
+    :param RestrictWarning:     Only display the warnings if the unit belongs to the list of technologies provided in this parameter
+    
+    :return:           Dataframe with the time series for each unit
+    '''
+    path = config[varname]    
+    paths = {}
+    if os.path.isfile(path):
+        paths['all'] = path
+        SingleFile=True
+    elif '##' in path:
+        logging.critical('The table provided for variable ' + varname + 'Must be a single file')
+        sys.exit(1)
+    elif path != '':
+        logging.critical('A path has been specified for table ' + varname + ' (' + path + ') but no file has been found')
+        sys.exit(1)
+
+    data = pd.DataFrame(index=config['idx_long'])
+    if len(paths) == 0:
+        logging.info('No data file specified for the table ' + varname + '. Using default value ' + str(default))
+        if default is None:
+            out = pd.DataFrame(index=config['idx_long'])
+        elif isinstance(default,(float,int)):
+            out = pd.DataFrame(default,index=config['idx_long'],columns=headers)
+        else:
+            logging.critical('Default value provided for table ' + varname + ' is not valid')
+            sys.exit(1)
+    else: # assembling the files in a single dataframe:
+        data = load_time_series(config,paths['all'])          
+        # For each plant and each fallback key, try to find the corresponding column in the data
+        out = pd.DataFrame(index=config['idx_long'])
+        for header in headers:
+            if header in data:
+                out[header] = data[header]
+            else:
+                logging.info('No specific information was found for header ' + header + ' in table ' + varname + '. Using default value ' + str(default))
+    if not out.columns.is_unique:
+        logging.critical('The column headers of table "' + varname + '" are not unique!. The following headers are duplicated: ' + str(out.columns.get_duplicates()))
+        sys.exit(1)
+    return out
+
 
 def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
     """

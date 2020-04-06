@@ -11,7 +11,7 @@ from future.builtins import int
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, check_h2_demand, \
     check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_h2, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves
-from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
+from .data_handler import NodeBasedTable, GenericTable, load_time_series, UnitBasedTable, merge_series, define_parameter
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
 
 from ..common import commons
@@ -192,8 +192,6 @@ def build_single_run(config, profiles=None, MTS=False):
         ReservoirLevels.update(MidTermSchedulingProfiles)
 
     ReservoirScaledInflows = UnitBasedTable(plants_sto,'ReservoirScaledInflows',config,fallbacks=['Unit','Technology','Zone'],default=0)
-    HeatDemand = UnitBasedTable(plants_heat,'HeatDemand',config,fallbacks=['Unit'],default=0)
-    CostHeatSlack = UnitBasedTable(plants_heat,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
     Temperatures = NodeBasedTable('Temperatures',config)
     
     H2Demand = UnitBasedTable(plants_h2,'H2Demand',config,fallbacks=['Unit'],default=0)
@@ -206,6 +204,9 @@ def build_single_run(config, profiles=None, MTS=False):
         zones_th.remove('')
     if '' in zones_h2:
         zones_h2.remove('') 
+        
+    HeatDemand = GenericTable(zones_th,'HeatDemand',config,default=0)
+    CostHeatSlack = GenericTable(zones_th,'CostHeatSlack',config,default=config['default']['CostHeatSlack'])
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
@@ -358,7 +359,7 @@ def build_single_run(config, profiles=None, MTS=False):
                'H2Demand':H2Demand}
     
     # Merge the following time series with weighted averages
-    for key in ['ScaledInflows','ReservoirLevels','Outages','AvailabilityFactors','CostHeatSlack','CostH2Slack']:
+    for key in ['ScaledInflows','ReservoirLevels','Outages','AvailabilityFactors']:
         finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key)
     # Merge the following time series by summing
     # for key in ['HeatDemand']:
@@ -422,7 +423,7 @@ def build_single_run(config, profiles=None, MTS=False):
     sets_param['CHPPowerLossFactor'] = ['chp']
     sets_param['CHPMaxHeat'] = ['chp']
     sets_param['CostFixed'] = ['au']
-    sets_param['CostHeatSlack'] = ['th','h']
+    sets_param['CostHeatSlack'] = ['n_th','h']
     sets_param['CostH2Slack'] = ['p2h2','h']
     sets_param['CostLoadShedding'] = ['n','h']
     sets_param['CostRampUp'] = ['au']
@@ -558,7 +559,7 @@ def build_single_run(config, profiles=None, MTS=False):
             parameters['StorageInflow']['val'][i, :] = finalTS['ScaledInflows'][s][idx_sim].values * \
                                                        Plants_sto['PowerCapacity'][s]
     # CHP time series:
-    for i, u in enumerate(sets['th']):
+    for i, u in enumerate(sets['n_th']):
         if u in finalTS['HeatDemand']:
             parameters['HeatDemand']['val'][i, :] = finalTS['HeatDemand'][u][idx_sim].values
             parameters['CostHeatSlack']['val'][i, :] = finalTS['CostHeatSlack'][u][idx_sim].values
@@ -567,7 +568,7 @@ def build_single_run(config, profiles=None, MTS=False):
     for i,u in enumerate(sets['s']):
         if u in finalTS['H2Demand']:
             parameters['StorageOutflow']['val'][i, :] = finalTS['H2Demand'][u][idx_sim].values
-    for i, u in enumerate(sets['p2h2']):
+    for i, u in enumerate(sets['n_h2']):
         if u in finalTS['H2Demand']:
             parameters['CostH2Slack']['val'][i, :] = finalTS['CostH2Slack'][u][idx_sim].values
 
