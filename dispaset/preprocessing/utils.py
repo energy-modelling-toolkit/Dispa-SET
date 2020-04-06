@@ -75,7 +75,7 @@ def select_units(units,config):
         if units.loc[unit,'Technology'] == 'Other':
             logging.warning('Removed Unit ' + str(units.loc[unit,'Unit']) + ' since its technology is unknown')
             units.drop(unit,inplace=True)
-        elif units.loc[unit,'PowerCapacity'] == 0:
+        elif units.loc[unit,'PowerCapacity'] == 0 and units.loc[unit,'STOMaxChargingPower'] == 0:
             logging.warning('Removed Unit ' + str(units.loc[unit,'Unit']) + ' since it has a null capacity')
             units.drop(unit,inplace=True)
         elif units.loc[unit,'Zone'] not in config['zones']:
