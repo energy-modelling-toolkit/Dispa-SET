@@ -718,18 +718,8 @@ def build_single_run(config, profiles=None, MTS=False):
 
     if not os.path.exists(sim):
         os.makedirs(sim)
-    if MTS:
-        fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
-        fout = open(os.path.join(sim,'UCM_h.gms'), "wt")
-        for line in fin:
-            fout.write(line.replace('$setglobal MTS 0', '$setglobal MTS 1'))
-#            fout.write(line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1'))
-        fin.close()
-        fout.close()
-        # additionally allso copy UCM_h_simple.gms
-        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-                        os.path.join(sim, 'UCM_h_simple.gms'))    
-    elif LP and not MTS:
+  
+    if LP or MTS:
         fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
         fout = open(os.path.join(sim,'UCM_h.gms'), "wt")
         for line in fin:
