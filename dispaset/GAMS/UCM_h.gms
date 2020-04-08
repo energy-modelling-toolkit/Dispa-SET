@@ -817,7 +817,7 @@ EQ_Storage_MaxCharge(s,i)..
 
 *Storage balance
 EQ_Storage_balance(s,i)..
-         StorageInitial(s)$(ord(i) = 1)
+         StorageInitial(s)$(ord(i) = 1)*Nunits(s)
          +StorageLevel(s,i-1)$(ord(i) > 1)
 *         +StorageLevelH(h--1,s)
          +StorageInflow(s,i)*Nunits(s)*TimeStep
