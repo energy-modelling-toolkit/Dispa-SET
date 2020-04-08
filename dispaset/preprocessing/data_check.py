@@ -25,7 +25,7 @@ def isStorage(tech):
     '''
     Function that returns true the technology is a storage technology
     '''
-    return tech in ['HDAM','HPHS','CAES','BATS','BEVS','THMS','P2GS']
+    return tech in ['HDAM','HPHS','CAES','BATS','BEVS','THMS','P2GS','SCSP']
 
 
 
@@ -87,7 +87,7 @@ def check_clustering(plants,plants_merged):
             logging.error('The installed capacity for technology "' + tech[0] + '" and fuel "' + tech[1] + '" is not equal between the original units table (P = ' + str(P_old) + ') and the clustered table (P = ' + str(P_new) + ')')
             sys.exit(1)
     # Check the overall installed storage capacity:
-    List_tech_storage = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS']
+    List_tech_storage = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS', 'SCSP']
     isstorage = pd.Series(index=plants.index,dtype='bool')
     for u in isstorage.index:
         isstorage[u] = plants.Technology[u] in List_tech_storage

@@ -359,7 +359,7 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
         lev = filter_by_zone(results['OutputStorageLevel'], inputs, z) / 1E6  # TWh
         level = filter_by_storage(lev, inputs, StorageSubset='s')
         levels = pd.DataFrame(index=results['OutputStorageLevel'].index,columns=inputs['sets']['t'])
-        for t in ['HDAM','HPHS','BEVS','BATS']:
+        for t in ['HDAM','HPHS','BEVS','BATS','SCSP']:
             temp = filter_by_tech(level,inputs,t)
             levels[t] = temp.sum(axis=1)
         levels.dropna(axis=1,inplace=True)
