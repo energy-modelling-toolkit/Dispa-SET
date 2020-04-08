@@ -1068,7 +1068,7 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          display day,FirstHour,LastHour,LastKeptHour;
 
 *        Defining the minimum level at the end of the horizon, ensuring that it is feasible with the provided inflows:
-         StorageFinalMin(s) =  min(StorageInitial(s) + (sum(i,StorageInflow(s,i)*TimeStep) - sum(i,StorageOutflow(s,i)*TimeStep))*Nunits(s), sum(i$(ord(i)=card(i)),StorageProfile(s,i)*Nunits(s)*StorageCapacity(s)*AvailabilityFactor(s,i)));
+         StorageFinalMin(s) =  min(StorageInitial(s)*Nunits(s) + (sum(i,StorageInflow(s,i)*TimeStep) - sum(i,StorageOutflow(s,i)*TimeStep))*Nunits(s), sum(i$(ord(i)=card(i)),StorageProfile(s,i)*Nunits(s)*StorageCapacity(s)*AvailabilityFactor(s,i)));
 *        Correcting the minimum level to avoid the infeasibility in case it is too close to the StorageCapacity:
          StorageFinalMin(s) = min(StorageFinalMin(s),Nunits(s)*StorageCapacity(s) - Nunits(s)*smax(i,StorageInflow(s,i)*TimeStep));
 
@@ -1167,34 +1167,34 @@ LostLoad_WaterSlack(s)
 StorageShadowPrice(au,h)
 ;
 
-$If %MTS%==0 OutputCommitted(u,h)=Committed.L(u,h);
-OutputFlow(l,h)=Flow.L(l,h);
-OutputPower(u,h)=Power.L(u,h);
-OutputPowerConsumption(p2h,h)=PowerConsumption.L(p2h,h);
-OutputHeat(au,h)=Heat.L(au,h);
-OutputHeatSlack(au,h)=HeatSlack.L(au,h);
-OutputStorageInput(s,h)=StorageInput.L(s,h);
-OutputStorageInput(th,h)=StorageInput.L(th,h);
-OutputStorageLevel(s,h)=StorageLevel.L(s,h)/StorageCapacity(s);
-OutputStorageSlack(p2h2,h) = StorageSlack.L(p2h2,h);
-OutputStorageLevel(th,h)=StorageLevel.L(th,h);
-OutputSystemCost(h)=SystemCost.L(h);
-OutputSpillage(s,h)  = Spillage.L(s,h) ;
-OutputShedLoad(n,h) = ShedLoad.L(n,h);
-OutputCurtailedPower(n,h)=CurtailedPower.L(n,h);
-$If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)=DemandModulation.L(n,h);
-LostLoad_MaxPower(n,h)  = LL_MaxPower.L(n,h);
-LostLoad_MinPower(n,h)  = LL_MinPower.L(n,h);
-LostLoad_2D(n,h) = LL_2D.L(n,h);
-LostLoad_2U(n,h) = LL_2U.L(n,h);
-LostLoad_3U(n,h) = LL_3U.L(n,h);
-$If %MTS%==0 LostLoad_RampUp(n,h)    = sum(u,LL_RampUp.L(u,h)*Location(u,n));
-$If %MTS%==0 LostLoad_RampDown(n,h)  = sum(u,LL_RampDown.L(u,h)*Location(u,n));
-ShadowPrice(n,h) = EQ_Demand_balance_DA.m(n,h);
-HeatShadowPrice(au,h) = EQ_CHP_demand_satisfaction.m(au,h);
+$If %MTS%==0 OutputCommitted(u,z)=Committed.L(u,z);
+OutputFlow(l,z)=Flow.L(l,z);
+OutputPower(u,z)=Power.L(u,z);
+OutputPowerConsumption(p2h,z)=PowerConsumption.L(p2h,z);
+OutputHeat(au,z)=Heat.L(au,z);
+OutputHeatSlack(au,z)=HeatSlack.L(au,z);
+OutputStorageInput(s,z)=StorageInput.L(s,z);
+OutputStorageInput(th,z)=StorageInput.L(th,z);
+OutputStorageLevel(s,z)=StorageLevel.L(s,z)/StorageCapacity(s);
+OutputStorageSlack(p2h2,z) = StorageSlack.L(p2h2,z);
+OutputStorageLevel(th,z)=StorageLevel.L(th,z);
+OutputSystemCost(z)=SystemCost.L(z);
+OutputSpillage(s,z)  = Spillage.L(s,z) ;
+OutputShedLoad(n,z) = ShedLoad.L(n,z);
+OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
+$If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
+LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
+LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
+LostLoad_2D(n,z) = LL_2D.L(n,z);
+LostLoad_2U(n,z) = LL_2U.L(n,z);
+LostLoad_3U(n,z) = LL_3U.L(n,z);
+$If %MTS%==0 LostLoad_RampUp(n,z)    = sum(u,LL_RampUp.L(u,z)*Location(u,n));
+$If %MTS%==0 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
+ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
+HeatShadowPrice(au,z) = EQ_CHP_demand_satisfaction.m(au,z);
 LostLoad_WaterSlack(s) = WaterSlack.L(s);
-StorageShadowPrice(s,h) = EQ_Storage_balance.m(s,h);
-StorageShadowPrice(th,h) = EQ_Heat_Storage_balance.m(th,h);
+StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
+StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
 
 EXECUTE_UNLOAD "Results.gdx"
 $If %MTS%==0 OutputCommitted,
@@ -1227,7 +1227,7 @@ status
 ;
 
 $If %MTS%==1 $goto skipresults8
-display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L;
+display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L, power.L;
 $label skipresults8
 
 $onorder
