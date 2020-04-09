@@ -771,7 +771,7 @@ $endIf;
 
 *Storage level must be above a minimum
 EQ_Storage_minimum(s,i)..
-         StorageMinimum(s)* Nunits(s)
+         StorageMinimum(s)
          =L=
          StorageLevel(s,i)
 ;
@@ -780,7 +780,7 @@ EQ_Storage_minimum(s,i)..
 EQ_Storage_level(s,i)..
          StorageLevel(s,i)
          =L=
-         StorageCapacity(s)*AvailabilityFactor(s,i)*Nunits(s)
+         StorageCapacity(s)*AvailabilityFactor(s,i)
 ;
 
 * Storage charging is bounded by the maximum capacity
@@ -812,12 +812,12 @@ EQ_Storage_MaxCharge(s,i)..
          StorageInput(s,i)*StorageChargingEfficiency(s)*TimeStep
          -StorageOutflow(s,i)*Nunits(s)*TimeStep -spillage(s,i)$(wat(s)) + StorageInflow(s,i)*Nunits(s)*TimeStep + StorageSlack(s,i)$(p2h2(s))
          =L=
-         StorageCapacity(s)*AvailabilityFactor(s,i)*Nunits(s) - StorageLevel(s,i)
+         StorageCapacity(s)*AvailabilityFactor(s,i) - StorageLevel(s,i)
 ;
 
 *Storage balance
 EQ_Storage_balance(s,i)..
-         StorageInitial(s)$(ord(i) = 1)*Nunits(s)
+         StorageInitial(s)$(ord(i) = 1)
          +StorageLevel(s,i-1)$(ord(i) > 1)
 *         +StorageLevelH(h--1,s)
          +StorageInflow(s,i)*Nunits(s)*TimeStep
@@ -1068,9 +1068,9 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          display day,FirstHour,LastHour,LastKeptHour;
 
 *        Defining the minimum level at the end of the horizon, ensuring that it is feasible with the provided inflows:
-         StorageFinalMin(s) =  min(StorageInitial(s)*Nunits(s) + (sum(i,StorageInflow(s,i)*TimeStep) - sum(i,StorageOutflow(s,i)*TimeStep))*Nunits(s), sum(i$(ord(i)=card(i)),StorageProfile(s,i)*Nunits(s)*StorageCapacity(s)*AvailabilityFactor(s,i)));
+         StorageFinalMin(s) =  min(StorageInitial(s) + (sum(i,StorageInflow(s,i)*TimeStep) - sum(i,StorageOutflow(s,i)*TimeStep))*Nunits(s), sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*AvailabilityFactor(s,i)));
 *        Correcting the minimum level to avoid the infeasibility in case it is too close to the StorageCapacity:
-         StorageFinalMin(s) = min(StorageFinalMin(s),Nunits(s)*StorageCapacity(s) - Nunits(s)*smax(i,StorageInflow(s,i)*TimeStep));
+         StorageFinalMin(s) = min(StorageFinalMin(s),StorageCapacity(s) - Nunits(s)*smax(i,StorageInflow(s,i)*TimeStep));
 
 $If %MTS%==1 $goto skipdisplay1
 $If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
