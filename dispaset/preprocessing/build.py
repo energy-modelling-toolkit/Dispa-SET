@@ -286,12 +286,6 @@ def build_single_run(config, profiles=None):
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
     
-    # merge the outages:
-    for i in plants.index:  # for all the old plant indexes
-        # get the old plant name corresponding to s:
-        oldname = plants['Unit'][i]
-        newname = mapping['NewIndex'][i]
-
     # Reserve calculation
     reserve_2U_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
     reserve_2D_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
@@ -319,13 +313,13 @@ def build_single_run(config, profiles=None):
     
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows','Outages','AvailabilityFactors','CostHeatSlack']:
-        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key)
+        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
     # Merge the following time series by summing
     for key in ['HeatDemand']:
-        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
+        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='Sum')
     # Merge the following time series by weighted average based on storage capacity
     for key in ['ReservoirLevels']:
-        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='StorageWeightedAverage')
+        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
 
 # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:

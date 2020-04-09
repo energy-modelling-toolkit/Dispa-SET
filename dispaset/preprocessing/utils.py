@@ -422,7 +422,7 @@ def create_agg_dict(df_, method="Standard"):
         return agg_dict
 
 
-def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
+def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
     """
     Merge excessively disaggregated power Units.
 
@@ -436,6 +436,8 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
     @author: Matthias Zech
     """
 
+    # do not alter the original plants table:
+    plants = plants_in.copy()
     # Checking the the required columns are present in the input pandas dataframe:
     required_inputs = ['Unit', 'PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate', 'StartUpTime',
                        'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost', 'Efficiency']
