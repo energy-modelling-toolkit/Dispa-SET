@@ -465,13 +465,15 @@ def CostExPost(inputs,results):
             powerlong.loc[indexinitial,u] = dfin['PowerInitial'].loc[u,'PowerInitial']
             committedlong.loc[indexinitial,u] = dfin['PowerInitial'].loc[u,'PowerInitial']>0
     committedlong.sort_index(inplace=True)
+    committedlong.fillna(0,inplace=True)
             
     powerlong_shifted = powerlong.copy()
     powerlong_shifted.iloc[1:,:] = powerlong.iloc[:-1,:].values
     committedlong_shifted = committedlong.copy()
     committedlong_shifted.iloc[1:,:] = committedlong.iloc[:-1,:].values
-    
+    committedlong_shifted.fillna(0,inplace=True)
     ramping = powerlong - powerlong_shifted
+   
     startups = committedlong.astype(int) - committedlong_shifted.astype(int)
     ramping.drop([ramping.index[0]],inplace=True); startups.drop([startups.index[0]],inplace=True)
     
