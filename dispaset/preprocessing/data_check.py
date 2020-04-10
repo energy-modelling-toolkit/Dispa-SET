@@ -414,13 +414,13 @@ def check_units(config, plants):
 
     lower = {'PowerCapacity': 0, 'PartLoadMin': 0, 'StartUpTime': 0, 'MinUpTime': 0, 'MinDownTime': 0, 'NoLoadCost': 0,
              'StartUpCost': 0}
-    lower_hard = {'RampUpRate': 0, 'RampDownRate': 0, 'Efficiency': 0}
+    strictly_lower = {'RampUpRate': 0, 'RampDownRate': 0, 'Efficiency': 0}
     higher = {'PartLoadMin': 1, 'Efficiency': 1}
     higher_time = {'MinUpTime': 0, 'MinDownTime': 0}  # 'StartUpTime':0,
 
     # Special treatment for the Optional key Nunits:
     if 'Nunits' in plants:
-        lower_hard['Nunits'] = 0
+        strictly_lower['Nunits'] = 0
 
     if len(plants['Unit'].unique()) != len(plants['Unit']):
         duplicates = plants['Unit'][plants['Unit'].duplicated()].tolist()
@@ -436,9 +436,9 @@ def check_units(config, plants):
                     plantlist))
             sys.exit(1)
 
-    for key in lower_hard:
-        if any(plants[key] <= lower_hard[key]):
-            plantlist = plants[plants[key] <= lower_hard[key]]
+    for key in strictly_lower:
+        if any(plants[key] <= strictly_lower[key]):
+            plantlist = plants[plants[key] <= strictly_lower[key]]
             plantlist = plantlist['Unit'].tolist()
             logging.critical(
                 'The value of ' + key + ' should be strictly higher than zero. A null or negative value has been found for units ' + str(

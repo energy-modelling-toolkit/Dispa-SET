@@ -427,6 +427,7 @@ def clustering(plants, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
             sys.exit(1)
     if not "Nunits" in plants:
         plants["Nunits"] = 1
+    plants.loc[plants['PowerCapacity']==0,'PowerCapacity'] = 1e-9
 
     Nunits = len(plants)
     plants.index = range(Nunits)
