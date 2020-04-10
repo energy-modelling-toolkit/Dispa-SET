@@ -5,8 +5,7 @@ Overview
 
 :Organization:  `Joint Research Centre`_,
 		`European Commission`_
-:Version: |version|
-:Git Revision: |release|
+:Version: |version| (|release|)
 :Date: |today|
 
 The Dispa-SET model is mainly developed within the “Joint Research Centre” of the European Commission and focuses on the balancing and flexibility problems in European grids [1]_.
@@ -117,7 +116,7 @@ References
 .. _Python 3.7: https://www.anaconda.com/distribution/
 .. _matplotlib: http://matplotlib.org
 .. _pandas: http://pandas.pydata.org
-.. _GAMS_api: http://www.gams.com/help/index.jsp?topic=%2Fgams.doc%2Fapis%2Findex.html
+.. _GAMS_api: https://github.com/kavvkon/gams-api
 .. _European Commission: https://ec.europa.eu/
 .. _Joint Research Centre: https://ec.europa.eu/jrc/en
 .. _Sylvain Quoilin: http://squoilin.eu

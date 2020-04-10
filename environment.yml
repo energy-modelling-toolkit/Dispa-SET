@@ -18,3 +18,4 @@ dependencies:
     - gdxcc
     - gamsxcc
     - optcc
+    - setuptools_scm

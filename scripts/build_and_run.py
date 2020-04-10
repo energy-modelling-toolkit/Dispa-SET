@@ -14,14 +14,10 @@ sys.path.append(os.path.abspath('..'))
 import dispaset as ds
 
 # Load the configuration file
-config = ds.load_config('../ConfigFiles/Config_NearZeroCarbon_ALLFLEX.xlsx')
-#config['SimulationTimeStep'] = 24
+config = ds.load_config('../ConfigFiles/ConfigTest.xlsx')
 
 # Build the simulation environment:
-#SimData = ds.build_simulation(config)
-SimData = ds.build_simulation(config,mts_plot=True,MTSTimeStep=24)
+SimData = ds.build_simulation(config)
 
 # Solve using GAMS:
-#r = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
-
-#inputs,results = ds.get_sim_results(config['SimulationDirectory'],cache=False)
+r = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])

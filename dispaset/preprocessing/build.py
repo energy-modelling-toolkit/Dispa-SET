@@ -14,21 +14,13 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, check
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
 
+from .. import __version__
 from ..common import commons
 from ..misc.gdx_handler import write_variables
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
-def get_git_revision_tag():
-    """Get version of DispaSET used for this run. tag + commit hash"""
-    from subprocess import check_output
-    try:
-        return check_output(["git", "describe", "--tags", "--always"]).strip()
-    except:
-        return 'NA'
-
-
-def build_single_run(config, profiles=None, MTS=False):
+def build_single_run(config, profiles=None):
     """
     This function reads the DispaSET config, loads the specified data,
     processes it when needed, and formats it in the proper DispaSET format.
@@ -38,7 +30,7 @@ def build_single_run(config, profiles=None, MTS=False):
     :param plot_load:     Boolean used to display a plot of the demand curves in the different zones
     :param profiles:      Profiles from mid term scheduling simulations
     """
-    dispa_version = str(get_git_revision_tag())
+    dispa_version = __version__
     logging.info('New build started. DispaSET version: ' + dispa_version)
     # %%################################################################################################################
     #####################################   Main Inputs    ############################################################
@@ -170,18 +162,7 @@ def build_single_run(config, profiles=None, MTS=False):
     Outages = UnitBasedTable(plants,'Outages',config,fallbacks=['Unit','Technology'])
     AF = UnitBasedTable(plants,'RenewablesAF',config,fallbacks=['Unit','Technology'],default=1,RestrictWarning=commons['tech_renewables'])
 
-    # Reservoir levels
-    """
-    :profiles:      if turned on reservoir levels are overwritten by newly calculated ones 
-                    from the mid term scheduling simulations
-    """
-    if profiles is None:
-        ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
-    else:
-        ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
-        MidTermSchedulingProfiles = profiles
-        ReservoirLevels.update(MidTermSchedulingProfiles)
-
+    ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_sto,'ReservoirScaledInflows',config,fallbacks=['Unit','Technology','Zone'],default=0)
     HeatDemand = UnitBasedTable(plants_heat,'HeatDemand',config,fallbacks=['Unit'],default=0)
     CostHeatSlack = UnitBasedTable(plants_heat,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
@@ -189,6 +170,18 @@ def build_single_run(config, profiles=None, MTS=False):
     
     H2Demand = UnitBasedTable(plants_h2,'H2Demand',config,fallbacks=['Unit'],default=0)
     CostH2Slack = UnitBasedTable(plants_h2,'CostH2Slack',config,fallbacks=['Unit','Zone'],default=config['default']['CostH2Slack'])
+
+    
+    # Update reservoir levels with newly computed ones from the mid-term scheduling
+    if profiles is not None:
+        for key in profiles.columns:
+            if key not in ReservoirLevels.columns:
+                logging.error('The reservoir profile "' + key + '" provided by the MTS is not found in the ReservoirLevels table')
+                print(ReservoirLevels.columns)
+            else:
+                ReservoirLevels[key].update(profiles[key])
+                logging.info('The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
+
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
@@ -307,12 +300,6 @@ def build_single_run(config, profiles=None, MTS=False):
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
     
-    # merge the outages:
-    for i in plants.index:  # for all the old plant indexes
-        # get the old plant name corresponding to s:
-        oldname = plants['Unit'][i]
-        newname = mapping['NewIndex'][i]
-
     # Reserve calculation
     reserve_2U_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
     reserve_2D_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
@@ -340,14 +327,15 @@ def build_single_run(config, profiles=None, MTS=False):
                'H2Demand':H2Demand}
     
     # Merge the following time series with weighted averages
-    for key in ['ScaledInflows','ReservoirLevels','Outages','AvailabilityFactors','CostHeatSlack','CostH2Slack']:
-        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key)
+    for key in ['ScaledInflows','Outages','AvailabilityFactors','CostHeatSlack']:
+        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
     # Merge the following time series by summing
-    for key in ['HeatDemand']:
-        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
-    for key in ['H2Demand']:
-        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
-        
+    for key in ['HeatDemand', 'H2Demand']:
+        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='Sum')
+    # Merge the following time series by weighted average based on storage capacity
+    for key in ['ReservoirLevels']:
+        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
+
 # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:
         check_df(FuelPrices[key], StartDate=config['idx'][0], StopDate=config['idx'][-1], name=key)
@@ -490,13 +478,7 @@ def build_single_run(config, profiles=None, MTS=False):
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
     for var in ['CHPPowerToHeat','CHPPowerLossFactor', 'CHPMaxHeat']:
         parameters[var]['val'] = Plants_chp[var].values
-   
-    # Only hydro and p2h2 units are part of mid term scheduling
-    if profiles is not None:
-        for r in ReservoirLevels.columns:
-            if r not in sets['wat'] and r not in sets['p2h2']:
-                ReservoirLevels.loc[:,r] = 0
-                
+
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
         if profiles is not None:

@@ -46,10 +46,6 @@ $set InputFileName Inputs.gdx
 * (1 for LP 0 for MIP TC)
 $setglobal LPFormulation 0
 
-* Definition of the equations that will be present in Mid Term Scheduling
-* (1 if MTS is active, 0 otherwise)
-$setglobal MTS 0
-
 * Flag to retrieve status or not
 * (1 to retrieve 0 to not)
 $setglobal RetrieveStatus 0
@@ -323,7 +319,7 @@ $label skipdisplay
 *===============================================================================
 *Definition of variables
 *===============================================================================
-$If %MTS% == 1 $goto skipVariables
+
 VARIABLES
 Committed(u,h)      [n.a.]  Unit committed at hour h {1 0} or integer
 StartUp(u,h)        [n.a.]  Unit start up at hour h {1 0}  or integer
@@ -333,7 +329,7 @@ ShutDown(u,h)       [n.a.]  Unit shut down at hour h {1 0} or integer
 $If %LPFormulation% == 1 POSITIVE VARIABLES Committed (u,h) ; Committed.UP(u,h) = 1 ;
 $If not %LPFormulation% == 1 INTEGER VARIABLES Committed (u,h), StartUp(u,h), ShutDown(u,h) ; Committed.UP(u,h) = Nunits(u) ; StartUp.UP(u,h) = Nunits(u) ; ShutDown.UP(u,h) = Nunits(u) ;
 
-$label skipVariables
+
 
 POSITIVE VARIABLES
 AccumulatedOverSupply(n,h) [MWh]   Accumulated oversupply due to the flexible demand
@@ -379,8 +375,8 @@ DemandModulation(n,h)      [MW] Difference between the flexible demand and the b
 
 
 *Initial commitment status
-$If %MTS%==0 CommittedInitial(u)=0;
-$If %MTS%==0 CommittedInitial(u)$(PowerInitial(u)>0)=1;
+CommittedInitial(u)=0;
+CommittedInitial(u)$(PowerInitial(u)>0)=1;
 
 * Definition of the minimum stable load:
 PowerMinStable(au) = PartLoadMin(au)*PowerCapacity(au);
@@ -1249,7 +1245,7 @@ EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=N par=PartLoadMin
 
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N var=CurtailedPower rng=CurtailedPower!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N var=ShedLoad rng=ShedLoad!A1 rdim=1 cdim=1'
-$If %MTS%==0 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputCommitted rng=Committed!A1 rdim=1 cdim=1'
+EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputCommitted rng=Committed!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputFlow rng=Flow!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputPower rng=Power!A5 epsout=0 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputPowerConsumption rng=Power!A5 epsout=0 rdim=1 cdim=1'
@@ -1286,7 +1282,6 @@ i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
 StorageFinalMin(s) =  min(StorageInitial(s) + sum(i,StorageInflow(s,i)*TimeStep) - sum(i,StorageOutflow(s,i)*TimeStep) , sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*AvailabilityFactor(s,i)));
 StorageFinalMin(s) = min(StorageFinalMin(s),StorageCapacity(s) - smax(i,StorageInflow(s,i)*TimeStep));
 
-$If %MTS%==1 $goto skipresults9
 $If %Verbose% == 1   Display TimeUpLeft_initial,TimeUpLeft_JustStarted,PowerInitial,CommittedInitial,StorageFinalMin;
 $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;

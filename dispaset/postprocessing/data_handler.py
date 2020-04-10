@@ -234,7 +234,7 @@ def inputs_to_xarray(inputs):
         #Remove config from dict and add it later as dataset attribute (metadata)
         __ = in_keys.pop('Config')
         config = inputs['config']
-
+        version = inputs.get('version','')
         all_ds = []
         # Iterate all and build values nad coordinates
         for k,v in in_keys.items():
@@ -254,6 +254,7 @@ def inputs_to_xarray(inputs):
 
             all_ds.append(ds)
         inputs = xr.merge(all_ds)
+        inputs.attrs['version'] = version
         for key in config:
             if isinstance(config[key], (float,int,str)):
                 inputs.attrs[key] = config[key]
