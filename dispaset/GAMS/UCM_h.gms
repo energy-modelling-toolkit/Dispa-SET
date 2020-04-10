@@ -804,7 +804,7 @@ EQ_Storage_MaxDischarge(s,i)..
          Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
          +StorageOutflow(s,i)*Nunits(s)*TimeStep +spillage(s,i)$(wat(s)) - StorageInflow(s,i)*Nunits(s)*TimeStep - StorageSlack(s,i)$(p2h2(s))
          =L=
-         StorageLevel(s,i)
+         StorageInitial(s)$(ord(i) = 1) + StorageLevel(s,i-1)$(ord(i) > 1)
 ;
 
 *Charging is limited by the remaining storage capacity
@@ -812,7 +812,8 @@ EQ_Storage_MaxCharge(s,i)..
          StorageInput(s,i)*StorageChargingEfficiency(s)*TimeStep
          -StorageOutflow(s,i)*Nunits(s)*TimeStep -spillage(s,i)$(wat(s)) + StorageInflow(s,i)*Nunits(s)*TimeStep + StorageSlack(s,i)$(p2h2(s))
          =L=
-         StorageCapacity(s)*AvailabilityFactor(s,i) - StorageLevel(s,i)
+         (StorageCapacity(s)-StorageInitial(s))$(ord(i) = 1)
+         + (StorageCapacity(s)*AvailabilityFactor(s,i) - StorageLevel(s,i-1))$(ord(i) > 1)
 ;
 
 *Storage balance
@@ -1083,10 +1084,7 @@ $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCos
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
 
 $If %Verbose% == 0 $goto skipdisplay3
-$Ifthen %MTS%==1                         Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
-$elseif %LPFormulation% == 1             Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
-$else not %LPFormulation% == 1           Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Commitment.M, EQ_MinUpTime.M, EQ_MinDownTime.M, EQ_RampUp_TC.M, EQ_RampDown_TC.M, EQ_Demand_balance_DA.M, EQ_Demand_balance_2U.M, EQ_Demand_balance_2D.M, EQ_Demand_balance_3U.M, EQ_Reserve_2U_capability.M, EQ_Reserve_2D_capability.M, EQ_Reserve_3U_capability.M, EQ_Power_must_run.M, EQ_Power_available.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_SystemCost.M, EQ_Flow_limits_lower.M, EQ_Flow_limits_upper.M, EQ_Force_Commitment.M, EQ_Force_DeCommitment.M, EQ_LoadShedding.M ;
-$endIf;
+Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
 $label skipdisplay3
 
          status("model",i) = UCM_SIMPLE.Modelstat;
@@ -1117,12 +1115,7 @@ $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i
 
 
 *Loop variables to display after solving:
-$If %MTS%==1 $goto skipdisplay4
-$If %Verbose% == 1 Display LastKeptHour,PowerInitial,CostStartUpH.L,CostShutDownH.L,CostRampUpH.L;
-$label skipdisplay4
-$If %MTS%==0 $goto skipdisplay5
-$If %Verbose% == 1 Display LastKeptHour,PowerInitial;
-$label skipdisplay5
+Display LastKeptHour,PowerInitial;
 );
 
 CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n));
