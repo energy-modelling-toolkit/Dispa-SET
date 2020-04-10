@@ -504,30 +504,35 @@ def build_single_run(config, profiles=None, MTS=False):
                 if s in finalTS['ReservoirLevels']:
                     # get the time
                     parameters['StorageInitial']['val'][i] = finalTS['ReservoirLevels'][s][idx_sim[0]] * \
+                                                             finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
                                                              Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
                     parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
                     if any(finalTS['ReservoirLevels'][s] > 1):
                         logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
                 else:
                     logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
-                    parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
+                    parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s] * finalTS['AvailabilityFactors'][s][idx_sim[0]] \
+                                                            * Plants_sto['Nunits'][s]
                     parameters['StorageProfile']['val'][i, :] = 0.5
             else:
                 if (config['default']['ReservoirLevelInitial'] > 1) or (config['default']['ReservoirLevelFinal'] > 1):
                     logging.warning(s + ': The initial or final reservoir levels are higher than its capacity!' )
-                parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * Plants_sto['StorageCapacity'][s]
+                parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * \
+                                                             finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
+                                                             Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
                 parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
         else:
             if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) :
                 # get the time
                 parameters['StorageInitial']['val'][i] = finalTS['ReservoirLevels'][s][idx_sim[0]] * \
-                                                         Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
+                                                             finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
+                                                             Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
                 parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
                 if any(finalTS['ReservoirLevels'][s] > 1):
                     logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
             else:
                 logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
-                parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
+                parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s] * finalTS['AvailabilityFactors'][s][idx_sim[0]]
                 parameters['StorageProfile']['val'][i, :] = 0.5
 
     # Storage Inflows:

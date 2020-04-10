@@ -283,10 +283,9 @@ def ds_to_df(inputs):
         config = inputs['config']
         first_day = dt.datetime(config['StartDate'][0], config['StartDate'][1], config['StartDate'][2], 0)
         last_day = dt.datetime(config['StopDate'][0], config['StopDate'][1], config['StopDate'][2], 23)
-        dates = pd.date_range(start=first_day, end=last_day, freq='1h')
+        dates = pd.date_range(start=first_day, end=last_day, freq=str(inputs['config']['SimulationTimeStep'])+'h')
         timeindex = True
     except KeyError:
-        logging.warn('Could not find the start/stop date information in the inputs. Using an integer index')
         dates = range(1, len(sets['z']) + 1)
         timeindex = False
     if len(dates) > len(sets['h']):

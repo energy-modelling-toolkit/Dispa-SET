@@ -12,7 +12,7 @@ commons['TimeStep'] = '1h'
 commons['Technologies'] = ['COMC', 'GTUR', 'HDAM', 'HROR', 'HPHS', 'ICEN', 'PHOT', 'STUR', 'WTOF', 'WTON', 'CAES',
                            'BATS', 'BEVS', 'THMS', 'P2GS','P2HT','SCSP']
 # List of renewable technologies:
-commons['tech_renewables'] = ['WTON', 'WTOF', 'PHOT', 'HROR']
+commons['tech_renewables'] = ['WTON', 'WTOF', 'PHOT', 'HROR', 'SCSP']
 # List of storage technologies:
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS','P2GS','SCSP']
 # List of CHP types:
@@ -52,7 +52,8 @@ commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': 'darkviolet'
                      'HPHS': 'blue',
                      'THMS': '#C04000ff',
                      'BATS': '#41A317ff',
-                     'BEVS': '#b9c33799'}
+                     'BEVS': '#b9c33799',
+                     'SCSP': '#e6a532ff'}
 
 commons['colors']['curtailment'] = 'red'
 # Hatches associated with each fuel:
