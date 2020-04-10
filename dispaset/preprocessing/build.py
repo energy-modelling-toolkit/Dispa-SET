@@ -371,7 +371,7 @@ def build_single_run(config, profiles=None, MTS=False):
     # The sets are defined within a dictionary:
     sets = {}
     sets['h'] = [str(x + 1) for x in range(Nsim)]
-    sets['z'] = [str(x + 1) for x in range(int(Nsim - config['LookAhead'] * config['SimulationTimeStep'])) ]
+    sets['z'] = [str(x + 1) for x in range(int(Nsim - config['LookAhead'] * 24/config['SimulationTimeStep'])) ]
     sets['mk'] = ['DA', '2U', '2D','Flex']
     sets['n'] = config['zones']
     sets['au'] = Plants_merged.index.tolist()
