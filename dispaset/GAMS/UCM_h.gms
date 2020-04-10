@@ -145,7 +145,7 @@ StorageInflow(u,h)               [MWh\u]    Storage inflows (potential energy)
 StorageInitial(au)                [MWh]    Storage level before initial period
 StorageProfile(u,h)              [MWh]    Storage level to be resepected at the end of each horizon
 StorageMinimum(au)                [MWh\u]    Storage minimum
-Technology(u,t)                  [n.a.]   Technology type {1 0}
+Technology(au,t)                  [n.a.]   Technology type {1 0}
 TimeDownMinimum(u)               [h]      Minimum down time
 TimeUpMinimum(u)                 [h]      Minimum up time
 $If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment status as for the MILP
@@ -354,6 +354,8 @@ SystemCost(h)              [EUR]   Hourly system cost
 Reserve_2U(u,h)            [MW]    Spinning reserve up
 Reserve_2D(u,h)            [MW]    Spinning reserve down
 Reserve_3U(u,h)            [MW]    Non spinning quick start reserve up
+p2h_Reserve_2U(p2h,h)      [MW]    Spinning reserve up
+p2h_Reserve_2D(p2h,h)      [MW]    Spinning reserve down
 Heat(au,h)                [MW]    Heat output by chp plant
 HeatSlack(au,h)           [MW]    Heat satisfied by other sources
 WaterSlack(s)              [MWh]   Unsatisfied water level constraint
@@ -437,6 +439,8 @@ EQ_Power_available
 EQ_Reserve_2U_capability
 EQ_Reserve_2D_capability
 EQ_Reserve_3U_capability
+EQ_p2h_Reserve_2U_capability
+EQ_p2h_Reserve_2D_capability
 EQ_Storage_minimum
 EQ_Storage_level
 EQ_Storage_input
@@ -661,6 +665,7 @@ EQ_No_Flexible_Demand(n,i)..
 *Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(n,i)..
          sum((u,t),Reserve_2U(u,i)*Technology(u,t)*Reserve(t)*Location(u,n))
+         +sum((p2h,t),p2h_Reserve_2U(p2h,i)*Technology(p2h,t)*Reserve(t)*Location(p2h,n))
          =G=
          +Demand("2U",n,i)*(1-K_QuickStart(n))
          -LL_2U(n,i)
@@ -677,6 +682,7 @@ EQ_Demand_balance_3U(n,i)..
 *Hourly demand balance in the downwards reserve market for each node
 EQ_Demand_balance_2D(n,i)..
          sum((u,t),Reserve_2D(u,i)*Technology(u,t)*Reserve(t)*Location(u,n))
+         +sum((p2h,t),p2h_Reserve_2D(p2h,i)*Technology(p2h,t)*Reserve(t)*Location(p2h,n))
          =G=
          Demand("2D",n,i)
          -LL_2D(n,i)
@@ -723,6 +729,18 @@ EQ_Reserve_3U_capability(u,i)$(QuickStartPower(u,i) > 0)..
          Nunits(u)*QuickStartPower(u,i)*TimeStep
 ;
 $endIf;
+
+EQ_p2h_Reserve_2U_capability(p2h,i)..
+         p2h_Reserve_2U(p2h,i)
+         =l=
+         PowerConsumption(p2h,i)
+;
+
+EQ_p2h_Reserve_2D_capability(p2h,i)..
+         p2h_Reserve_2D(p2h,i)
+         =l=
+         PowerCapacity(p2h)*Nunits(p2h)-PowerConsumption(p2h,i)
+;
 
 *Minimum power output is above the must-run output level for each unit in all periods
 $Ifthen %MTS% == 0
@@ -982,6 +1000,8 @@ EQ_Heat_Storage_level,
 EQ_Reserve_2U_capability,
 EQ_Reserve_2D_capability,
 EQ_Reserve_3U_capability,
+EQ_p2h_Reserve_2U_capability,
+EQ_p2h_Reserve_2D_capability,
 EQ_Storage_minimum,
 EQ_Storage_level,
 EQ_Storage_input,
