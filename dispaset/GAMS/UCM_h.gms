@@ -825,6 +825,7 @@ EQ_Storage_balance(s,i)..
          +StorageOutflow(s,i)*Nunits(s)*TimeStep
          +spillage(s,i)$(wat(s))
          +Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
+         -LL_rampup(s,i)
 
 ;
 
