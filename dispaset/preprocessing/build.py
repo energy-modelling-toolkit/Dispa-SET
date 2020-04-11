@@ -176,8 +176,7 @@ def build_single_run(config, profiles=None):
     if profiles is not None:
         for key in profiles.columns:
             if key not in ReservoirLevels.columns:
-                logging.error('The reservoir profile "' + key + '" provided by the MTS is not found in the ReservoirLevels table')
-                print(ReservoirLevels.columns)
+                logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the ReservoirLevels table')
             else:
                 ReservoirLevels[key].update(profiles[key])
                 logging.info('The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
@@ -327,7 +326,7 @@ def build_single_run(config, profiles=None):
                'H2Demand':H2Demand}
     
     # Merge the following time series with weighted averages
-    for key in ['ScaledInflows','Outages','AvailabilityFactors','CostHeatSlack']:
+    for key in ['ScaledInflows','Outages','AvailabilityFactors','CostHeatSlack','CostH2Slack']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
     # Merge the following time series by summing
     for key in ['HeatDemand', 'H2Demand']:
@@ -478,44 +477,22 @@ def build_single_run(config, profiles=None):
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
     for var in ['CHPPowerToHeat','CHPPowerLossFactor', 'CHPMaxHeat']:
         parameters[var]['val'] = Plants_chp[var].values
-
+        
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
-        if profiles is not None:
-            if (config['InitialFinalReservoirLevel'] == 0) or (config['InitialFinalReservoirLevel'] == ""):
-                if s in finalTS['ReservoirLevels']:
-                    # get the time
-                    parameters['StorageInitial']['val'][i] = finalTS['ReservoirLevels'][s][idx_sim[0]] * \
-                                                             finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
-                                                             Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
-                    parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
-                    if any(finalTS['ReservoirLevels'][s] > 1):
-                        logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
-                else:
-                    logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
-                    parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s] * finalTS['AvailabilityFactors'][s][idx_sim[0]] \
-                                                            * Plants_sto['Nunits'][s]
-                    parameters['StorageProfile']['val'][i, :] = 0.5
-            else:
-                if (config['default']['ReservoirLevelInitial'] > 1) or (config['default']['ReservoirLevelFinal'] > 1):
-                    logging.warning(s + ': The initial or final reservoir levels are higher than its capacity!' )
-                parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * \
-                                                             finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
-                                                             Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
-                parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
+        if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(finalTS['ReservoirLevels'][s] <= 1) :
+            # get the time series
+             parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
+        elif s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and any(finalTS['ReservoirLevels'][s] > 1):
+            logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
+            sys.exit(1)
         else:
-            if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) :
-                # get the time
-                parameters['StorageInitial']['val'][i] = finalTS['ReservoirLevels'][s][idx_sim[0]] * \
-                                                             finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
-                                                             Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
-                parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
-                if any(finalTS['ReservoirLevels'][s] > 1):
-                    logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
-            else:
-                logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
-                parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s] * finalTS['AvailabilityFactors'][s][idx_sim[0]]
-                parameters['StorageProfile']['val'][i, :] = 0.5
+            logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Using the provided default initial and final values')
+            parameters['StorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],config['default']['ReservoirLevelFinal'],len(idx_sim))
+        # The initial level is the same as the first value of the profile:
+        parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0]  * \
+                                                  finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
+                                                  Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
 
     # Storage Inflows:
     for i, s in enumerate(sets['s']):
@@ -706,7 +683,7 @@ def build_single_run(config, profiles=None):
     if not os.path.exists(sim):
         os.makedirs(sim)
   
-    if LP or MTS:
+    if LP:
         fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
         fout = open(os.path.join(sim,'UCM_h.gms'), "wt")
         for line in fin:

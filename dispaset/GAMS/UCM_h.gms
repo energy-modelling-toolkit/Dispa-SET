@@ -143,7 +143,7 @@ StorageOutflow(s,h)              [MWh\u]    Storage outflows
 StorageInflow(s,h)               [MWh\u]    Storage inflows (potential energy)
 StorageInitial(au)               [MWh]    Storage level before initial period
 StorageProfile(s,h)              [MWh]    Storage level to be resepected at the end of each horizon
-StorageMinimum(au)               [MWh\u]    Storage minimum
+StorageMinimum(au)               [MWh]    Storage minimum
 Technology(u,t)                  [n.a.]   Technology type {1 0}
 TimeDownMinimum(u)               [h]      Minimum down time
 TimeUpMinimum(u)                 [h]      Minimum up time
@@ -776,7 +776,7 @@ EQ_Storage_minimum(s,i)..
 EQ_Storage_level(s,i)..
          StorageLevel(s,i)
          =L=
-         StorageCapacity(s)*AvailabilityFactor(s,i)
+         StorageCapacity(s)*AvailabilityFactor(s,i)*Nunits(s)
 ;
 
 * Storage charging is bounded by the maximum capacity
@@ -796,27 +796,27 @@ $endif;
 * The system could curtail by pumping and turbining at the same time if Nunits>1. This should be included into the curtailment equation!
 
 *Discharge is limited by the storage level
-EQ_Storage_MaxDischarge(s,i)..
-         Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
-         +StorageOutflow(s,i)*Nunits(s)*TimeStep +spillage(s,i)$(wat(s)) - StorageInflow(s,i)*Nunits(s)*TimeStep - StorageSlack(s,i)$(p2h2(s))
+EQ_Storage_MaxDischarge(wat,i)..
+         Power(wat,i)*TimeStep/(max(StorageDischargeEfficiency(wat),0.0001))
+         +StorageOutflow(wat,i)*Nunits(wat)*TimeStep +spillage(wat,i) - StorageInflow(wat,i)*Nunits(wat)*TimeStep
          =L=
-         StorageInitial(s)$(ord(i) = 1) + StorageLevel(s,i-1)$(ord(i) > 1)
+         StorageInitial(wat)$(ord(i) = 1) + StorageLevel(wat,i-1)$(ord(i) > 1)
 ;
 
 *Charging is limited by the remaining storage capacity
-EQ_Storage_MaxCharge(s,i)..
-         StorageInput(s,i)*StorageChargingEfficiency(s)*TimeStep
-         -StorageOutflow(s,i)*Nunits(s)*TimeStep -spillage(s,i)$(wat(s)) + StorageInflow(s,i)*Nunits(s)*TimeStep + StorageSlack(s,i)$(p2h2(s))
+EQ_Storage_MaxCharge(wat,i)..
+         StorageInput(wat,i)*StorageChargingEfficiency(wat)*TimeStep
+         -StorageOutflow(wat,i)*Nunits(wat)*TimeStep -spillage(wat,i)
+         + StorageInflow(wat,i)*Nunits(wat)*TimeStep
          =L=
-         (StorageCapacity(s)-StorageInitial(s))$(ord(i) = 1)
-         + (StorageCapacity(s)*AvailabilityFactor(s,i) - StorageLevel(s,i-1))$(ord(i) > 1)
+         (Nunits(wat) * StorageCapacity(wat)-StorageInitial(wat))$(ord(i) = 1)
+         + (Nunits(wat) * StorageCapacity(wat)*AvailabilityFactor(wat,i-1) - StorageLevel(wat,i-1))$(ord(i) > 1)
 ;
 
 *Storage balance
 EQ_Storage_balance(s,i)..
          StorageInitial(s)$(ord(i) = 1)
          +StorageLevel(s,i-1)$(ord(i) > 1)
-*         +StorageLevelH(h--1,s)
          +StorageInflow(s,i)*Nunits(s)*TimeStep
          +StorageInput(s,i)*StorageChargingEfficiency(s)*TimeStep
          +StorageSlack(s,i)$(p2h2(s))
@@ -825,6 +825,7 @@ EQ_Storage_balance(s,i)..
          +StorageOutflow(s,i)*Nunits(s)*TimeStep
          +spillage(s,i)$(wat(s))
          +Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
+
 ;
 
 * Minimum level at the end of the optimization horizon:
@@ -1065,9 +1066,9 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          display day,FirstHour,LastHour,LastKeptHour;
 
 *        Defining the minimum level at the end of the horizon, ensuring that it is feasible with the provided inflows:
-         StorageFinalMin(s) =  min(StorageInitial(s) + (sum(i,StorageInflow(s,i)*TimeStep) - sum(i,StorageOutflow(s,i)*TimeStep))*Nunits(s), sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*AvailabilityFactor(s,i)));
+         StorageFinalMin(s) =  min(StorageInitial(s) + (sum(i,StorageInflow(s,i)*TimeStep) - sum(i,StorageOutflow(s,i)*TimeStep))*Nunits(s), sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i)));
 *        Correcting the minimum level to avoid the infeasibility in case it is too close to the StorageCapacity:
-         StorageFinalMin(s) = min(StorageFinalMin(s),StorageCapacity(s) - Nunits(s)*smax(i,StorageInflow(s,i)*TimeStep));
+         StorageFinalMin(s) = min(StorageFinalMin(s),StorageCapacity(s)*Nunits(s) - Nunits(s)*smax(i,StorageInflow(s,i)*TimeStep));
 
 $If %MTS%==1 $goto skipdisplay1
 $If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
@@ -1080,7 +1081,7 @@ $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCos
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
 
 $If %Verbose% == 0 $goto skipdisplay3
-Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
+Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M,  EQ_Flow_limits_lower.M ;
 $label skipdisplay3
 
          status("model",i) = UCM_SIMPLE.Modelstat;
@@ -1164,7 +1165,7 @@ OutputHeat(au,z)=Heat.L(au,z);
 OutputHeatSlack(au,z)=HeatSlack.L(au,z);
 OutputStorageInput(s,z)=StorageInput.L(s,z);
 OutputStorageInput(th,z)=StorageInput.L(th,z);
-OutputStorageLevel(s,z)=StorageLevel.L(s,z)/StorageCapacity(s);
+OutputStorageLevel(s,z)=StorageLevel.L(s,z)/(StorageCapacity(s)*AvailabilityFactor(s,z));
 OutputStorageSlack(p2h2,z) = StorageSlack.L(p2h2,z);
 OutputStorageLevel(th,z)=StorageLevel.L(th,z);
 OutputSystemCost(z)=SystemCost.L(z);

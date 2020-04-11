@@ -28,7 +28,7 @@ except ImportError:
     pass
 
 
-def build_simulation(config, mts_plot=None, MTSTimeStep=None):
+def build_simulation(config, mts_plot=None, MTSTimeStep=24):
     """
     A function that builds different simulation environments based on the hydro scheduling option in the config file
     Hydro scheduling options:
@@ -112,6 +112,9 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
 
     # remove look ahead:
     temp_config['LookAhead'] = 0
+    
+    # Don't use any historical reservoir level:
+    temp_config['ReservoirLevels'] = ''
     
     # use a LP formulation
     temp_config['SimulationType'] = 'LP clustered'
