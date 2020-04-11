@@ -806,8 +806,6 @@ EQ_Storage_MaxDischarge(wat,i)..
 *Charging is limited by the remaining storage capacity
 EQ_Storage_MaxCharge(wat,i)..
          StorageInput(wat,i)*StorageChargingEfficiency(wat)*TimeStep
-         -StorageOutflow(wat,i)*Nunits(wat)*TimeStep -spillage(wat,i)
-         + StorageInflow(wat,i)*Nunits(wat)*TimeStep
          =L=
          (Nunits(wat) * StorageCapacity(wat)-StorageInitial(wat))$(ord(i) = 1)
          + (Nunits(wat) * StorageCapacity(wat)*AvailabilityFactor(wat,i-1) - StorageLevel(wat,i-1))$(ord(i) > 1)
@@ -825,8 +823,6 @@ EQ_Storage_balance(s,i)..
          +StorageOutflow(s,i)*Nunits(s)*TimeStep
          +spillage(s,i)$(wat(s))
          +Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
-         -LL_rampup(s,i)
-
 ;
 
 * Minimum level at the end of the optimization horizon:
