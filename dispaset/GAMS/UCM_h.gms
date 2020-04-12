@@ -796,19 +796,22 @@ $endif;
 * The system could curtail by pumping and turbining at the same time if Nunits>1. This should be included into the curtailment equation!
 
 *Discharge is limited by the storage level
-EQ_Storage_MaxDischarge(wat,i)..
-         Power(wat,i)*TimeStep/(max(StorageDischargeEfficiency(wat),0.0001))
-         +StorageOutflow(wat,i)*Nunits(wat)*TimeStep +spillage(wat,i) - StorageInflow(wat,i)*Nunits(wat)*TimeStep
+EQ_Storage_MaxDischarge(s,i)$(StorageCapacity(s)>PowerCapacity(s)*TimeStep)..
+         Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
          =L=
-         StorageInitial(wat)$(ord(i) = 1) + StorageLevel(wat,i-1)$(ord(i) > 1)
+         StorageInitial(s)$(ord(i) = 1) + StorageLevel(s,i-1)$(ord(i) > 1)
+         +StorageInflow(s,i)*Nunits(s)*TimeStep
+         -StorageOutflow(s,i)*Nunits(s)*TimeStep
 ;
 
 *Charging is limited by the remaining storage capacity
-EQ_Storage_MaxCharge(wat,i)..
-         StorageInput(wat,i)*StorageChargingEfficiency(wat)*TimeStep
+EQ_Storage_MaxCharge(s,i)$(StorageCapacity(s)>PowerCapacity(s)*TimeStep)..
+         StorageInput(s,i)*StorageChargingEfficiency(s)*TimeStep
          =L=
-         (Nunits(wat) * StorageCapacity(wat)-StorageInitial(wat))$(ord(i) = 1)
-         + (Nunits(wat) * StorageCapacity(wat)*AvailabilityFactor(wat,i-1) - StorageLevel(wat,i-1))$(ord(i) > 1)
+         (Nunits(s) * StorageCapacity(s)-StorageInitial(s))$(ord(i) = 1)
+         + (Nunits(s) * StorageCapacity(s)*AvailabilityFactor(s,i-1) - StorageLevel(s,i-1))$(ord(i) > 1)
+         -StorageInflow(s,i)*Nunits(s)*TimeStep
+         +StorageOutflow(s,i)*Nunits(s)*TimeStep
 ;
 
 *Storage balance
@@ -821,7 +824,7 @@ EQ_Storage_balance(s,i)..
          =E=
          StorageLevel(s,i)
          +StorageOutflow(s,i)*Nunits(s)*TimeStep
-         +spillage(s,i)$(wat(s))
+         +spillage(s,i)$(wat(s)) + spillage(s,i)*Technology(s,"SCSP")
          +Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
 ;
 
@@ -1001,8 +1004,8 @@ EQ_SystemCost
 *EQ_Emission_limits,
 EQ_Flow_limits_lower,
 EQ_Flow_limits_upper,
-$If not %MTS% == 1 EQ_Force_Commitment,
-$If not %MTS% == 1 EQ_Force_DeCommitment,
+*$If not %MTS% == 1 EQ_Force_Commitment,
+*$If not %MTS% == 1 EQ_Force_DeCommitment,
 EQ_LoadShedding,
 $If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand,
 $If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand_Max,
@@ -1180,7 +1183,8 @@ $If %MTS%==0 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
 HeatShadowPrice(au,z) = EQ_CHP_demand_satisfaction.m(au,z);
 LostLoad_WaterSlack(s) = WaterSlack.L(s);
-StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
+StorageShadowPrice(s,z) = 0 ;
+*EQ_Storage_balance.m(s,z);
 StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
 
 EXECUTE_UNLOAD "Results.gdx"
