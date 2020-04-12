@@ -150,7 +150,19 @@ def check_sto(config, plants,raw_data=True):
             if np.isnan(plants.loc[u, key]):
                 logging.critical('The power plants data is missing for unit ' + unitname + ' and parameter "' + key + '"')
                 sys.exit(1)
-
+    
+    if raw_data:
+        key = 'STOCapacity'
+    else:
+        key = 'StorageCapacity'
+    for u in plants.index:
+        if plants.loc[u,key]>plants.loc[u,'PowerCapacity']*8760:
+            logging.error('The Storage capacity for unit ' + plants.loc[u,'Unit'] + ' is prohibitively high. More than one year at full power is required to discharge the reservoir')
+        elif plants.loc[u,key]>plants.loc[u,'PowerCapacity']*3000:
+            logging.warning('The Storage capacity for unit ' + plants.loc[u,'Unit'] + ' is very high.')
+        elif (plants.loc[u,key]>plants.loc[u,'PowerCapacity']*24*config['HorizonLength']/config['SimulationTimeStep']) and (config['HydroScheduling'] not in ['Zonal', 'Regional']):
+            logging.warning('The Storage capacity for unit ' + plants.loc[u,'Unit'] + ' is high. Make sure to provide a proper storage level profile')
+    
     return True
 
 
