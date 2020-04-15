@@ -728,5 +728,13 @@ def build_single_run(config, profiles=None):
         with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
             pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
     logging.info('Build finished')
-
+    
+    # Remove previously-created debug files:
+    debugfile = os.path.join(sim, 'debug.gdx')
+    if os.path.isfile(debugfile):
+        try:
+            os.remove(debugfile)
+        except OSError:
+            print ('Could not erase previous debug file ' + debugfile)
+            
     return SimData

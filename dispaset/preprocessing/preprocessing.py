@@ -214,6 +214,6 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     # Re-index to the main simulation time step:
     if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
         profiles = profiles.reindex(idx_orig, method='nearest')
-    pickle.dump(profiles, open("temp_profiles.p", "wb"))
+    pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'],"temp_profiles.p"), "wb"))
     return profiles
 
