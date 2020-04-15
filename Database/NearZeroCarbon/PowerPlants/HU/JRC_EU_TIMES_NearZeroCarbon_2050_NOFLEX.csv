@@ -1,6 +1,6 @@
 ,Unit,PowerCapacity,Nunits,Zone,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost_pu,NoLoadCost_pu,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,CHPPowerLossFactor,COP,Tnominal,coef_COP_a,coef_COP_b,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency
 HU_STUR_GEO,HU_STUR_GEO,39.333333333333336,6.0,HU,STUR,GEO,0.1,2,2,0.02,0.02,0,0.0,0.0,0.0,0.1,0.0,0.0,,,,,,,,,,,
-HU_STUR_NUC,HU_STUR_NUC,794.0,4.0,HU,STUR,NUC,0.34,24,48,0.05,0.05,300,12.5,2.2,0.25,0.34,12.0,0.0,,,,,,,,,,,
+HU_STUR_NUC,HU_STUR_NUC,794.0,4.0,HU,STUR,NUC,0.34,24,24,0.05,0.05,300,12.5,2.2,0.25,0.34,12.0,0.0,,,,,,,,,,,
 HU_COMC_GAS,HU_COMC_GAS,408.0,8.0,HU,COMC,GAS,0.51,3,3,0.07,0.07,55,2.9,0.25,0.062171053,0.57,1.0,0.3569,,,,,,,,,,,
 HU_COMC_OIL,HU_COMC_OIL,61.0,1,HU,COMC,OIL,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,
 HU_HROR_WAT,HU_HROR_WAT,49.0,1,HU,HROR,WAT,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,

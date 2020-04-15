@@ -1,6 +1,6 @@
 ,Unit,PowerCapacity,Nunits,Zone,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost_pu,NoLoadCost_pu,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,CHPPowerLossFactor,COP,Tnominal,coef_COP_a,coef_COP_b,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency
 NL_STUR_GEO,NL_STUR_GEO,12.0,1.0,NL,STUR,GEO,0.1,2,2,0.02,0.02,0,0.0,0.0,0.0,0.1,0.0,0.0,,,,,,,,,,,
-NL_STUR_NUC,NL_STUR_NUC,600.0,2.0,NL,STUR,NUC,0.34,24,48,0.05,0.05,300,12.5,2.2,0.25,0.34,12.0,0.0,,,,,,,,,,,
+NL_STUR_NUC,NL_STUR_NUC,600.0,2.0,NL,STUR,NUC,0.34,24,24,0.05,0.05,300,12.5,2.2,0.25,0.34,12.0,0.0,,,,,,,,,,,
 NL_COMC_GAS,NL_COMC_GAS,419.7558139534885,86.0,NL,COMC,GAS,0.51,3,3,0.07,0.07,55,2.9,0.25,0.062171053,0.57,1.0,0.3569,,,,,,,,,,,
 NL_STUR_OIL,NL_STUR_OIL,135.0,1.0,NL,STUR,OIL,0.33,5,5,0.02,0.02,120,0.0,1.8,0.4,0.33,1.0,0.7246,,,,,,,,,,,
 NL_HROR_WAT,NL_HROR_WAT,523.0,1,NL,HROR,WAT,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,

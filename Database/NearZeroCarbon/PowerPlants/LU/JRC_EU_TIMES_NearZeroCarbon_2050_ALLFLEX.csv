@@ -1,7 +1,7 @@
 ,Unit,PowerCapacity,Nunits,Zone,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost_pu,NoLoadCost_pu,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,CHPPowerLossFactor,COP,Tnominal,coef_COP_a,coef_COP_b,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency
 LU_COMC_GAS,LU_COMC_GAS,377.7142857142857,7.0,LU,COMC,GAS,0.51,3,3,0.07,0.07,55,2.9,0.25,0.062171053,0.57,1.0,0.3569,,,,,,,,,,,
-LU_HDAM_WAT,LU_HDAM_WAT,34.0,1,LU,HDAM,WAT,0.89,0,0,1.0,1.0,0,0.0,0.0,0.25,1.0,0.0,0.0,,,,,,,,170.0,0.0,0.0,0.89
-LU_HPHS_WAT,LU_HPHS_WAT,11.0,1,LU,HPHS,WAT,0.89,0,0,1.0,1.0,0,0.0,0.0,0.25,1.0,0.0,0.0,,,,,,,,55.0,0.0,11.0,0.89
+LU_HDAM_WAT,LU_HDAM_WAT,34.0,1,LU,HDAM,WAT,0.89,0,0,1.0,1.0,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,170.0,0.0,0.0,0.89
+LU_HPHS_WAT,LU_HPHS_WAT,11.0,1,LU,HPHS,WAT,0.89,0,0,1.0,1.0,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,55.0,0.0,11.0,0.89
 LU_HROR_WAT,LU_HROR_WAT,17.0,1,LU,HROR,WAT,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,
 LU_WTON_WIN,LU_WTON_WIN,300.0,1,LU,WTON,WIN,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,
 LU_PHOT_SUN,LU_PHOT_SUN,10526.0,1,LU,PHOT,SUN,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,
