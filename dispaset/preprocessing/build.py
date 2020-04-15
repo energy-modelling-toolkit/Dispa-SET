@@ -728,8 +728,5 @@ def build_single_run(config, profiles=None):
         with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
             pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
     logging.info('Build finished')
-    
-    if os.path.isfile(commons['logfile']):
-        shutil.copy(commons['logfile'], os.path.join(sim, 'warn_preprocessing.log'))
 
     return SimData
