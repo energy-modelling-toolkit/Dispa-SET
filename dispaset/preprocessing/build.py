@@ -542,6 +542,7 @@ def build_single_run(config, profiles=None):
         values[0, i, :] = finalTS['Load'][sets['n'][i]]
         values[1, i, :] = finalTS['Reserve2U'][sets['n'][i]]
         values[2, i, :] = finalTS['Reserve2D'][sets['n'][i]]
+        values[3, i, :] = finalTS['Load'][sets['n'][i]] * finalTS['ShareOfFlexibleDemand'][sets['n'][i]]
     parameters['Demand'] = {'sets': sets_param['Demand'], 'val': values}
 
     # Emission Rate:
