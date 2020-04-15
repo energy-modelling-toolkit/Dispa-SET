@@ -124,7 +124,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                             freq=pd_timestep(TimeStep)).tz_localize(None)
         temp_config['SimulationTimeStep'] = TimeStep
         gams_file = 'UCM_h.gms'
-        temp_config['HorizonLength'] = (idx[-1] - idx[0]).days
+        temp_config['HorizonLength'] = (idx[-1] - idx[0]).days+1
         resultfile = 'Results.gdx'
     else:
         idx = pd.date_range(start=dt.datetime(*temp_config['StartDate']),
