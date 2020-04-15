@@ -1027,11 +1027,6 @@ if (Config("RollingHorizon LookAhead","day") > ndays -1, abort "The look ahead p
 if (mod(Config("RollingHorizon LookAhead","day")*24,TimeStep) <> 0, abort "The look ahead period is not a multiple of TimeStep";);
 if (mod(Config("RollingHorizon Length","day")*24,TimeStep) <> 0, abort "The rolling horizon length is not a multiple of TimeStep";);
 
-$if %MTS% == 0 $goto skipMTS
-Config("RollingHorizon LookAhead","day")=0;
-Config("RollingHorizon Length","day")=ndays;
-$label skipMTS
-
 * Some parameters used for debugging:
 failed=0;
 $Ifthen %MTS%==0
@@ -1054,7 +1049,7 @@ display "OK";
 
 scalar starttime;
 set days /1,'ndays'/;
-display days;
+display days,ndays,TimeStep;
 PARAMETER elapsed(days);
 
 FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("RollingHorizon Length","day"),
@@ -1112,7 +1107,7 @@ $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i
 
 
 *Loop variables to display after solving:
-Display LastKeptHour,PowerInitial;
+$If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
 );
 
 CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n));

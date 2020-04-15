@@ -8,6 +8,7 @@ It comprises a single function that generates the DispaSET simulation environmen
 import datetime as dt
 import logging
 import sys
+import os, shutil
 
 import pandas as pd
 import numpy as np
@@ -18,14 +19,7 @@ from ..solve import solve_GAMS
 from ..misc.gdx_handler import gdx_to_dataframe, gdx_to_list
 from ..postprocessing.data_handler import GAMSstatus
 from .utils import pd_timestep
-
-try:
-    from future.builtins import int
-except ImportError:
-    logging.warning(
-        "Couldn't import future package. Numeric operations may differ among different versions due to incompatible "
-        "variable types")
-    pass
+from ..common import commons
 
 
 def build_simulation(config, mts_plot=None, MTSTimeStep=24):
@@ -53,7 +47,14 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
     else:
         new_profiles = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
         # Build simulation data with new profiles
+        logging.info('\n\nBuilding final simulation\n')
         SimData = build_single_run(config, new_profiles)
+        
+    # Copy the log to the simulation folder:
+    if os.path.isfile(commons['logfile']):
+        shutil.copy(commons['logfile'], os.path.join(config['SimulationDirectory'], commons['logfile']))
+    else:
+        logging.error('Could not find log file in current directory')
     return SimData
 
 def _check_results(results):
@@ -127,7 +128,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                             freq=pd_timestep(TimeStep)).tz_localize(None)
         temp_config['SimulationTimeStep'] = TimeStep
         gams_file = 'UCM_h.gms'
-        temp_config['HorizonLength'] = (idx[-1] - idx[0]).days
+        temp_config['HorizonLength'] = (idx[-1] - idx[0]).days+1
         resultfile = 'Results.gdx'
     else:
         idx = pd.date_range(start=dt.datetime(*temp_config['StartDate']),
@@ -142,7 +143,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         temp_results = {}
         profiles = pd.DataFrame(index=idx)
         for i, c in enumerate(config['mts_zones']):
-            logging.info('(Currently simulating Zone): ' + str(i + 1) + ' out of ' + str(no_of_zones))
+            logging.info('\n\nLaunching Mid-Term Scheduling for zone '+ c + ' (Number ' + str(i + 1) + ' out of ' + str(no_of_zones) + ')\n')
             temp_config['zones'] = [c]  # Override zone that needs to be simulated
             SimData = build_single_run(temp_config)  # Create temporary SimData
             units = SimData['units']
@@ -175,6 +176,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
 
     # Solving reservoir levels for all regions simultaneously
     elif config['HydroScheduling'] == 'Regional':
+        logging.info('\n\nLaunching regional Mid-Term Scheduling \n')
         SimData = build_single_run(temp_config)  # Create temporary SimData
         units = SimData['units']
         r = solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
@@ -215,6 +217,6 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     # Re-index to the main simulation time step:
     if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
         profiles = profiles.reindex(idx_orig, method='nearest')
-    pickle.dump(profiles, open("temp_profiles.p", "wb"))
+    pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'],"temp_profiles.p"), "wb"))
     return profiles
 
