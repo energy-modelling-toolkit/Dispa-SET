@@ -3,6 +3,13 @@ import os
 
 from .common import commons
 
+# Remove old log file:
+for filename in (f for f in os.listdir('.') if f.endswith('.dispa.log')):
+    try:
+        os.remove(filename)
+    except OSError:
+        print ('Could not erase previous log file ' + filename)
+
 # Logging: # TODO: Parametrize in dispacli or external config
 _LOGCONFIG = {
      "version": 1,
@@ -84,9 +91,4 @@ from .postprocessing.plot import plot_energy_zone_fuel, plot_zone_capacities, pl
 
 from .cli import *
 
-# Remove old log file:
-for filename in (f for f in os.listdir('.') if f.endswith('.dispa.log')):
-    try:
-        os.remove(filename)
-    except OSError:
-        print ('Could not erase previous log file ' + filename)
+

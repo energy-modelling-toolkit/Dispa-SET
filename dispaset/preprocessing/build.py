@@ -159,22 +159,22 @@ def build_single_run(config, profiles=None):
     Outages = UnitBasedTable(plants,'Outages',config,fallbacks=['Unit','Technology'])
     AF = UnitBasedTable(plants,'RenewablesAF',config,fallbacks=['Unit','Technology'],default=1,RestrictWarning=commons['tech_renewables'])
 
-    # Reservoir levels
-    """
-    :profiles:      if turned on reservoir levels are overwritten by newly calculated ones 
-                    from the mid term scheduling simulations
-    """
-    if profiles is None:
-        ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
-    else:
-        ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
-        MidTermSchedulingProfiles = profiles
-        ReservoirLevels.update(MidTermSchedulingProfiles)
-
+    ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_sto,'ReservoirScaledInflows',config,fallbacks=['Unit','Technology','Zone'],default=0)
     HeatDemand = UnitBasedTable(plants_heat,'HeatDemand',config,fallbacks=['Unit'],default=0)
     CostHeatSlack = UnitBasedTable(plants_heat,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
     Temperatures = NodeBasedTable('Temperatures',config)
+    
+    # Update reservoir levels with newly computed ones from the mid-term scheduling
+    if profiles is not None:
+        for key in profiles.columns:
+            if key not in ReservoirLevels.columns:
+                logging.error('The reservoir profile "' + key + '" provided by the MTS is not found in the ReservoirLevels table')
+                print(ReservoirLevels.columns)
+            else:
+                ReservoirLevels[key].update(profiles[key])
+                logging.info('The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
+
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
@@ -286,12 +286,6 @@ def build_single_run(config, profiles=None):
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
     
-    # merge the outages:
-    for i in plants.index:  # for all the old plant indexes
-        # get the old plant name corresponding to s:
-        oldname = plants['Unit'][i]
-        newname = mapping['NewIndex'][i]
-
     # Reserve calculation
     reserve_2U_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
     reserve_2D_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
@@ -318,11 +312,14 @@ def build_single_run(config, profiles=None):
                'PriceTransmission':PriceTransmission}
     
     # Merge the following time series with weighted averages
-    for key in ['ScaledInflows','ReservoirLevels','Outages','AvailabilityFactors','CostHeatSlack']:
-        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key)
+    for key in ['ScaledInflows','Outages','AvailabilityFactors','CostHeatSlack']:
+        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
     # Merge the following time series by summing
     for key in ['HeatDemand']:
-        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
+        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='Sum')
+    # Merge the following time series by weighted average based on storage capacity
+    for key in ['ReservoirLevels']:
+        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
 
 # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:
@@ -464,7 +461,7 @@ def build_single_run(config, profiles=None):
 
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
-        if profiles is not None:
+        if profiles is None:
             if (config['InitialFinalReservoirLevel'] == 0) or (config['InitialFinalReservoirLevel'] == ""):
                 if s in finalTS['ReservoirLevels']:
                     # get the time
@@ -479,9 +476,13 @@ def build_single_run(config, profiles=None):
                     parameters['StorageProfile']['val'][i, :] = 0.5
             else:
                 if (config['default']['ReservoirLevelInitial'] > 1) or (config['default']['ReservoirLevelFinal'] > 1):
-                    logging.warning(s + ': The initial or final reservoir levels are higher than its capacity!' )
-                parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * Plants_sto['StorageCapacity'][s]
-                parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
+                    logging.critical(s + ': The initial or final reservoir levels are higher than its capacity!' )
+                    sys.exit(1)
+                else:
+                    parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * Plants_sto['StorageCapacity'][s]
+                    parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
+                    logging.info(s + ': New initial reservoir level is set to: ' + str(config['default']['ReservoirLevelInitial']) +
+                                    ', new final reservoir level is set to: ' + str(config['default']['ReservoirLevelFinal']))
         else:
             if s in finalTS['ReservoirLevels']:
                 # get the time
@@ -535,6 +536,7 @@ def build_single_run(config, profiles=None):
         values[0, i, :] = finalTS['Load'][sets['n'][i]]
         values[1, i, :] = finalTS['Reserve2U'][sets['n'][i]]
         values[2, i, :] = finalTS['Reserve2D'][sets['n'][i]]
+        values[3, i, :] = finalTS['Load'][sets['n'][i]] * finalTS['ShareOfFlexibleDemand'][sets['n'][i]]
     parameters['Demand'] = {'sets': sets_param['Demand'], 'val': values}
 
     # Emission Rate:
@@ -728,7 +730,12 @@ def build_single_run(config, profiles=None):
             pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
     logging.info('Build finished')
     
-    if os.path.isfile(commons['logfile']):
-        shutil.copy(commons['logfile'], os.path.join(sim, 'warn_preprocessing.log'))
-
+    # Remove previously-created debug files:
+    debugfile = os.path.join(sim, 'debug.gdx')
+    if os.path.isfile(debugfile):
+        try:
+            os.remove(debugfile)
+        except OSError:
+            print ('Could not erase previous debug file ' + debugfile)
+            
     return SimData
