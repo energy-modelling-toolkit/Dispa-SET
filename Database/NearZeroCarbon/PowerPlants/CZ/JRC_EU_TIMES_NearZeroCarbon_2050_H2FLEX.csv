@@ -1,6 +1,6 @@
 ,Unit,PowerCapacity,Nunits,Zone,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost_pu,NoLoadCost_pu,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,CHPPowerLossFactor,COP,Tnominal,coef_COP_a,coef_COP_b,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency
 CZ_STUR_LIG,CZ_STUR_LIG,494.6666666666667,3.0,CZ,STUR,LIG,0.4,8,8,0.007692308,0.007692308,65,8.0,2.2,0.43,0.395,7.0,1.15,,,,,,,,,,,
-CZ_STUR_NUC,CZ_STUR_NUC,891.5,6.0,CZ,STUR,NUC,0.34,24,48,0.05,0.05,300,12.5,2.2,0.25,0.34,12.0,0.0,,,,,,,,,,,
+CZ_STUR_NUC,CZ_STUR_NUC,891.5,6.0,CZ,STUR,NUC,0.34,24,24,0.05,0.05,300,12.5,2.2,0.25,0.34,12.0,0.0,,,,,,,,,,,
 CZ_COMC_GAS,CZ_COMC_GAS,388.4006592199231,9.0,CZ,COMC,GAS,0.51,3,3,0.07,0.07,55,2.9,0.25,0.062171053,0.57,1.0,0.3569,,,,,,,,,,,
 CZ_GTUR_GAS,CZ_GTUR_GAS,63.22475279252885,24.0,CZ,GTUR,GAS,0.33,1,1,0.166666667,0.166666667,25,2.9,0.25,0.2,0.33,0.166666667,0.6839,,,,,,,,,,,
 CZ_HROR_WAT,CZ_HROR_WAT,1304.0,1,CZ,HROR,WAT,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,

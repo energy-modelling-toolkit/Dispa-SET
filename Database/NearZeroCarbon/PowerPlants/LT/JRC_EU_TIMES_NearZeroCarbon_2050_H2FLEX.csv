@@ -1,6 +1,6 @@
 ,Unit,PowerCapacity,Nunits,Zone,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost_pu,NoLoadCost_pu,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,CHPPowerLossFactor,COP,Tnominal,coef_COP_a,coef_COP_b,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency
 LT_STUR_GEO,LT_STUR_GEO,28.0,3.0,LT,STUR,GEO,0.1,2,2,0.02,0.02,0,0.0,0.0,0.0,0.1,0.0,0.0,,,,,,,,,,,
-LT_STUR_NUC,LT_STUR_NUC,675.0,2.0,LT,STUR,NUC,0.34,24,48,0.05,0.05,300,12.5,2.2,0.25,0.34,12.0,0.0,,,,,,,,,,,
+LT_STUR_NUC,LT_STUR_NUC,675.0,2.0,LT,STUR,NUC,0.34,24,24,0.05,0.05,300,12.5,2.2,0.25,0.34,12.0,0.0,,,,,,,,,,,
 LT_COMC_GAS,LT_COMC_GAS,409.0,2.0,LT,COMC,GAS,0.51,3,3,0.07,0.07,55,2.9,0.25,0.062171053,0.57,1.0,0.3569,,,,,,,,,,,
 LT_STUR_OIL,LT_STUR_OIL,100.0,1.0,LT,STUR,OIL,0.33,5,5,0.02,0.02,120,0.0,1.8,0.4,0.33,1.0,0.7246,,,,,,,,,,,
 LT_HROR_WAT,LT_HROR_WAT,116.0,1,LT,HROR,WAT,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,
