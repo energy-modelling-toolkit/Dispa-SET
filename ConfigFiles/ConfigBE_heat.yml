@@ -1,0 +1,98 @@
+AllowCurtailment: 1
+CostH2Slack: ''
+CostHeatSlack: ''
+CostLoadShedding: ''
+DataTimeStep: 1
+Demand: Database/Load_RealTime/##/1h/2015.csv
+Description: Simulation of a simplified power fleet (adapted from the Belgian power
+  system) with one typical power plant per technology.
+GAMS_folder: ''
+H2Demand: ''
+HeatDemand: tests/dummy_data/HeatDemandBE.csv
+HorizonLength: 5
+HydroScheduling: 'Off'
+HydroSchedulingHorizon: Annual
+InitialFinalReservoirLevel: true
+Interconnections: ''
+LoadShedding: ''
+LookAhead: 1
+NTC: Database/DayAheadNTC/1h/2015.csv
+Outages: ''
+PowerPlantData: tests/dummy_data/PowerPlantsBE.csv
+PriceOfBiomass: Database/FuelPrices/Biomass/2015.csv
+PriceOfBlackCoal: Database/FuelPrices/Coal/2015.csv
+PriceOfCO2: ''
+PriceOfFuelOil: Database/FuelPrices/Oil/2015.csv
+PriceOfGas: Database/FuelPrices/Gas/2015.csv
+PriceOfLignite: ''
+PriceOfNuclear: ''
+PriceOfPeat: ''
+PriceTransmission: ''
+RenewablesAF: Database/AvailabilityFactors/##/1h/2015.csv
+Reserve2D: ''
+Reserve2U: ''
+ReserveCalculation: Generic
+ReserveParticipation:
+- COMC
+- GTUR
+- HDAM
+- HPHS
+- ICEN
+- CAES
+- BATS
+- BEVS
+ReservoirLevels: Database/HydroData/ReservoirLevel/##/1h/2015.csv
+ReservoirScaledInflows: Database/HydroData/ScaledInflows/##/1h/2015.csv
+ShareOfFlexibleDemand: ''
+SimulationDirectory: Simulations/simulationBE
+SimulationTimeStep: 1
+SimulationType: Integer clustering
+StartDate: !!python/tuple
+- 2015
+- 1
+- 1
+- 0
+- 0
+- 0
+StopDate: !!python/tuple
+- 2015
+- 1
+- 07
+- 23
+- 59
+- 0
+Temperatures: ''
+WriteExcel: 0
+WriteGDX: 1
+WritePickle: 1
+cplex_path: ''
+default:
+  CostH2Slack: 75
+  CostHeatSlack: 45
+  CostLoadShedding: 100
+  DemandFlexibility: 0
+  LoadShedding: 0.05
+  PriceOfBiomass: 37.0
+  PriceOfBlackCoal: 11.0
+  PriceOfCO2: 7.0
+  PriceOfFuelOil: 35.0
+  PriceOfGas: 20.0
+  PriceOfLignite: 8.0
+  PriceOfNuclear: 3.0
+  PriceOfPeat: 0.0
+  PriceOfSpillage: 1
+  PriceTransmission: 0
+  ReservoirLevelFinal: 0.5
+  ReservoirLevelInitial: 0.5
+  ShareOfFlexibleDemand: 0
+  ShareOfQuickStartUnits: 0.5
+  ValueOfLostLoad: 100000.0
+  WaterValue: 100
+modifiers:
+  Demand: 1.0
+  Solar: 1.0
+  Storage: 1.0
+  Wind: 1.0
+mts_zones: []
+zones:
+- BE

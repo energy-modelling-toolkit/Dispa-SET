@@ -144,7 +144,9 @@ def build_single_run(config, profiles=None):
             plants[key] = plants_defaults[key]
     # If the thermal and h2 zones are not defined in the units table, define one individual zone per power plant:
     for key in ['Zone_th','Zone_h2']:
-        if key not in plants.columns:
+        if key in plants.columns:
+            plants[key] = plants[key].fillna('')
+        else: 
             plants[key] = plants['Unit']
             logging.info('No "' + key + '" header was found in the units table. One individual zone is defined per power plant')
 
@@ -344,7 +346,7 @@ def build_single_run(config, profiles=None):
                'H2Demand':H2Demand}
     
     # Merge the following time series with weighted averages
-    for key in ['ScaledInflows','Outages','AvailabilityFactors','CostHeatSlack','CostH2Slack']:
+    for key in ['ScaledInflows','Outages','AvailabilityFactors']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
     # Merge the following time series by weighted average based on storage capacity
     for key in ['ReservoirLevels']:
@@ -422,7 +424,7 @@ def build_single_run(config, profiles=None):
     sets_param['FlowMaximum'] = ['l', 'h']
     sets_param['FlowMinimum'] = ['l', 'h']
     sets_param['Fuel'] = ['au', 'f']
-    sets_param['HeatDemand'] = ['th','h']
+    sets_param['HeatDemand'] = ['n_th','h']
     sets_param['LineNode'] = ['l', 'n']
     sets_param['LoadShedding'] = ['n','h']
     sets_param['Location'] = ['au', 'n']

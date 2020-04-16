@@ -16,6 +16,7 @@ import pandas as pd
 
 from ..misc.gdx_handler import write_variables
 from ..misc.str_handler import clean_strings, shrink_to_64
+from pandas.api.types import is_numeric_dtype
 
 
 def pd_timestep(hours):
@@ -52,7 +53,7 @@ def EfficiencyTimeSeries(config,plants,Temperatures):
     Efficiencies = pd.DataFrame(columns = plants.index,index=config['idx_long'])
     for u in plants.index:
         z = plants.loc[u,'Zone']
-        if plants.loc[u,'Technology'] == 'P2HT' and 'Tnominal' in plants:
+        if plants.loc[u,'Technology'] == 'P2HT' and 'Tnominal' in plants and is_numeric_dtype(plants['Tnominal']) and plants.loc[u,'Tnominal']>-20:
             eff = plants.loc[u,'COP'] + plants.loc[u,'coef_COP_a'] * (Temperatures[z] - plants.loc[u,'Tnominal']) + \
                   plants.loc[u,'coef_COP_b'] * (Temperatures[z] - plants.loc[u,'Tnominal'])**2
         elif plants.loc[u,'Technology'] == 'P2HT':
@@ -72,6 +73,10 @@ def select_units(units,config):
     :param config:      Dispa-SET config dictionnary
     :return:            New list of units
     """
+    for key in ['Technology', 'PowerCapacity', 'STOMaxChargingPower', 'Zone', 'Unit']:
+        if key not in units.columns:
+            logging.critical('The power plants table does not contain the required column: ' + key)
+            sys.exit(1)
     for unit in units.index:
         if units.loc[unit,'Technology'] == 'Other':
             logging.warning('Removed Unit ' + str(units.loc[unit,'Unit']) + ' since its technology is unknown')
@@ -82,6 +87,11 @@ def select_units(units,config):
         elif units.loc[unit,'Zone'] not in config['zones']:
             logging.warning('Removed Unit ' + str(units.loc[unit,'Unit']) + ' since its zone (' + str(units.loc[unit,'Zone'])+ ') is not in the list of zones')    
             units.drop(unit,inplace=True)
+    if 'Nunits' in units:
+        for unit in units.index:
+            if units.loc[unit,'Nunits'] == 0:
+                logging.warning('Removed Unit ' + str(units.loc[unit,'Unit']) + ' since Nunits==0')
+                units.drop(unit,inplace=True)     
     units.index = range(len(units))
     return units
 
@@ -528,7 +538,7 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
             first_cluster["fingerprints"] = fingerprints
 
             # the elements of the list are irrelevant for the clustering
-            first_cluster["fingerprints"] = first_cluster["fingerprints"].astype(str)
+            first_cluster["fingerprints"] = first_cluster["fingerprints"].astype(str) 
             low_pmin = first_cluster["PartLoadMin"] <= PartLoadMax
             if not first_cluster[low_pmin].empty:
                 second_cluster = group_plants(
@@ -572,7 +582,7 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
             plants["Nunits"] = 1
             OnlyOnes = True
         
-        plants_merged = group_plants(plants, method="LP clustered")
+        plants_merged = group_plants(plants, method="LP clustered",group_list=string_keys)
         # Transforming the start-up cost into ramping for the plants that did not go through any clustering:
         ramping_lbd = (
             lambda row: row["StartUpCost"] / row["PowerCapacity"]
@@ -613,7 +623,7 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
         plants_merged["FormerUnits"] = plants["Unit"].apply(lambda x: [x])
 
     elif method == "Integer clustering":
-        plants_merged = group_plants(plants, method="Integer clustering")
+        plants_merged = group_plants(plants, method="Integer clustering",group_list = string_keys)
         # Correcting the Nunits field of the clustered plants (must be integer):
 
     elif method == "No clustering":

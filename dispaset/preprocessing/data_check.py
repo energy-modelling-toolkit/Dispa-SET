@@ -173,6 +173,7 @@ def check_h2(config, plants):
     keys = ['PowerCapacity','Efficiency']
     NonNaNKeys = []
     StrKeys = ['Zone_h2']
+    NonEmptyStrKeys = ['Zone_h2']
     
     if len(plants)==0:  # If there are no P2HT units, exit the check
         return True
@@ -205,7 +206,7 @@ def check_h2(config, plants):
                 logging.critical(
                     'A numeric value was detected in the power plants inputs for parameter "' + key + '". This column should contain strings only.')
                 sys.exit(1)
-            elif plants.loc[u, key] == '':
+            elif key in NonEmptyStrKeys and plants.loc[u, key] == '':
                 logging.critical('An empty value was detected in the power plants inputs for unit "' + unitname + '" and parameter "' + key + '"')
                 sys.exit(1)                            
 
@@ -220,6 +221,7 @@ def check_p2h(config, plants):
     keys = ['COP']
     NonNaNKeys = ['COP']
     StrKeys = ['Zone_th']
+    NonEmptyStrKeys = ['Zone_th']
     
     if len(plants)==0:  # If there are no P2HT units, exit the check
         return True
@@ -252,7 +254,7 @@ def check_p2h(config, plants):
                 logging.critical(
                     'A numeric value was detected in the power plants inputs for parameter "' + key + '". This column should contain strings only.')
                 sys.exit(1)
-            elif plants.loc[u, key] == '':
+            elif key in NonEmptyStrKeys and plants.loc[u, key] == '':
                 logging.critical('An empty value was detected in the power plants inputs for unit "' + unitname + '" and parameter "' + key + '"')
                 sys.exit(1)
     
@@ -272,7 +274,8 @@ def check_chp(config, plants):
     """   
     keys = ['CHPType','CHPPowerToHeat','CHPPowerLossFactor']
     NonNaNKeys = ['CHPPowerToHeat','CHPPowerLossFactor']
-    StrKeys = ['CHPType','Zone_h2']
+    StrKeys = ['CHPType','Zone_th']
+    NonEmptyStrKeys=['CHPType','Zone_th']
     
     for key in keys:
         if key not in plants:
@@ -302,7 +305,7 @@ def check_chp(config, plants):
                 logging.critical(
                     'A numeric value was detected in the power plants inputs for parameter "' + key + '". This column should contain strings only.')
                 sys.exit(1)
-            elif plants.loc[u, key] == '':
+            elif key in NonEmptyStrKeys and plants.loc[u, key] == '':
                 logging.critical('An empty value was detected in the power plants inputs for unit "' + unitname + '" and parameter "' + key + '"')
                 sys.exit(1)
     
@@ -389,6 +392,7 @@ def check_units(config, plants):
     NonNaNKeys = ['PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate', 'Efficiency', 'RampingCost',
                   'CO2Intensity','Nunits']
     StrKeys = ['Unit', 'Zone', 'Fuel', 'Technology','Zone_th','Zone_h2']
+    NonEmptyStrKeys=['Unit', 'Zone', 'Fuel', 'Technology']
 
     # Special treatment for the Optional key Nunits:
     if any([not float(x).is_integer() for x in plants['Nunits']]):
@@ -415,7 +419,7 @@ def check_units(config, plants):
                 logging.critical(
                     'A numeric value was detected in the power plants inputs for parameter "' + key + '". This column should contain strings only.')
                 sys.exit(1)
-            elif plants.loc[u, key] == '':
+            elif key in NonEmptyStrKeys and plants.loc[u, key] == '':
                 logging.critical('An empty value was detected in the power plants inputs for unit "' + str(
                     u) + '" and parameter "' + key + '"')
                 sys.exit(1)
