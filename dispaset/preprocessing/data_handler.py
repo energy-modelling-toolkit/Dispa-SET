@@ -241,21 +241,30 @@ def GenericTable(headers,varname,config,default=None):
     return out
 
 
-def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
+def merge_series(plants,oldplants, data, method='WeightedAverage', tablename=''):
     """
     Function that merges the times series corresponding to the merged units (e.g. outages, inflows, etc.)
 
-    :param plants:      Pandas dataframe with the information relative to the original units
+    :param plants:      Pandas dataframe with final units after clustering (must contain 'FormerUnits')
+    :param oldplants:   Pandas dataframe with the original units
     :param data:        Pandas dataframe with the time series and the original unit names as column header
-    :param mapping:     Mapping between the merged units and the original units. Output of the clustering function
     :param method:      Select the merging method ('WeightedAverage'/'Sum')
     :param tablename:   Name of the table being processed (e.g. 'Outages'), used in the warnings
     :return merged:     Pandas dataframe with the merged time series when necessary
     """
 
-    plants.index = range(len(plants))
+    if not 'FormerUnits' in plants:
+        logging.critical('The unit table provided must contain the columns "FormerUnits"')
+        sys.exit(1)
+
     merged = pd.DataFrame(index=data.index)
-    unitnames = plants.Unit.values.tolist()
+    
+    # Create a dictionary relating the former units to the new (clustered) ones:
+    units = {}
+    for u in plants.index:
+        for uu in plants.loc[u,'FormerUnits']:
+            units[uu] = u
+        
     # First check the data:
     if not isinstance(data,pd.DataFrame):
         logging.critical('The input "' + tablename + '" to the merge_series function must be a dataframe')
@@ -264,12 +273,10 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
         if str(data[key].dtype) not in ['bool','int','float','float16', 'float32', 'float64', 'float128','int8', 'int16', 'int32', 'int64']:
             logging.critical('The column "' + str(key) + '" of table + "' + tablename + '" is not numeric!')
     for key in data:
-        if key in unitnames:
-            i = unitnames.index(key)
-            newunit = mapping['NewIndex'][i]
+        if key in units:
+            newunit = units[key]
             if newunit not in merged:  # if the columns name is in the mapping and the new unit has not been processed yet
-                oldindexes = mapping['FormerIndexes'][newunit]
-                oldnames = [plants['Unit'][x] for x in oldindexes]
+                oldnames = plants.loc[newunit,'FormerUnits']
                 if all([name in data for name in oldnames]):
                     subunits = data[oldnames]
                 else:
@@ -280,19 +287,22 @@ def merge_series(plants, data, mapping, method='WeightedAverage', tablename=''):
                             sys.exit(1)
                 value = np.zeros(len(data))
                 # Renaming the subunits df headers with the old plant indexes instead of the unit names:
-                subunits.columns = mapping['FormerIndexes'][newunit]
                 if method == 'WeightedAverage':
-                    for idx in oldindexes:
-                        name = plants['Unit'][idx]
-                        value = value + subunits[idx] * np.maximum(1e-9, plants['PowerCapacity'][idx]*plants['Nunits'][idx])
-                    P_j = np.sum(np.maximum(1e-9, plants['PowerCapacity'][oldindexes]*plants['Nunits'][oldindexes]))
+                    for name in oldnames:
+                        value = value + subunits[name] * np.maximum(1e-9, oldplants['PowerCapacity'][name]*oldplants['Nunits'][name])
+                    P_j = np.sum(np.maximum(1e-9, oldplants['PowerCapacity'][oldnames]*oldplants['Nunits'][oldnames]))
+                    merged[newunit] = value / P_j
+                elif method == 'StorageWeightedAverage':
+                    for name in oldnames:
+                       value = value + subunits[name] * np.maximum(1e-9, oldplants['STOCapacity'][name]*oldplants['Nunits'][name])
+                    P_j = np.sum(np.maximum(1e-9, oldplants['STOCapacity'][oldnames]*oldplants['Nunits'][oldnames]))
                     merged[newunit] = value / P_j
                 elif method == 'Sum':
                     merged[newunit] = subunits.sum(axis=1)
                 else:
                     logging.critical('Method "' + str(method) + '" unknown in function MergeSeries')
                     sys.exit(1)
-        elif key in plants['Unit']:
+        elif key in oldplants['Unit']:
             if not isinstance(key, tuple):  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
                 logging.warning('Column ' + str(key) + ' present in the table "' + tablename + '" not found in the mapping between original and clustered units. Skipping')
         else:
@@ -357,7 +367,7 @@ def load_time_series(config,path,header='infer'):
                          '. However, its length does not allow guessing its timestamps. Please use a 8760 elements time series')
             sys.exit(1)
 
-    if data.index.is_all_dates:   
+    if data.index.is_all_dates:
         data.index = data.index.tz_localize(None)   # removing locational data
         # Checking if the required index entries are in the data:
         common = data.index.intersection(config['idx'])
@@ -424,7 +434,7 @@ def read_truefalse(sheet, rowstart, colstart, rowstop, colstop, colapart=1):
     The list of strings associated with a True value is returned
     """
     out = []
-    for i in range(rowstart, rowstop):
+    for i in range(rowstart, rowstop+1):
         if sheet.cell_value(i, colstart + colapart) == 1:
             out.append(sheet.cell_value(i, colstart))
     return out
@@ -480,10 +490,10 @@ def load_config_excel(ConfigFile,AbsPath=True):
             config['default'][p] = sheet.cell_value(default[p], 5)
             
         #True/Falst values:
-        config['zones'] = read_truefalse(sheet, 225, 1, 246, 3)
-        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 246, 6)
-        config['mts_zones'] = read_truefalse(sheet, 225, 1, 246, 3, 2)
-        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 246, 6, 2)
+        config['zones'] = read_truefalse(sheet, 225, 1, 247, 3)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 247, 6)
+        config['mts_zones'] = read_truefalse(sheet, 225, 1, 247, 3, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 247, 6, 2)
         config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 319, 3)
 
         # Set default values (for backward compatibility):

@@ -14,21 +14,13 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, check
 from .data_handler import NodeBasedTable, GenericTable, load_time_series, UnitBasedTable, merge_series, define_parameter
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
 
+from .. import __version__
 from ..common import commons
 from ..misc.gdx_handler import write_variables
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
-def get_git_revision_tag():
-    """Get version of DispaSET used for this run. tag + commit hash"""
-    from subprocess import check_output
-    try:
-        return check_output(["git", "describe", "--tags", "--always"]).strip()
-    except:
-        return 'NA'
-
-
-def build_single_run(config, profiles=None, MTS=False):
+def build_single_run(config, profiles=None):
     """
     This function reads the DispaSET config, loads the specified data,
     processes it when needed, and formats it in the proper DispaSET format.
@@ -38,7 +30,7 @@ def build_single_run(config, profiles=None, MTS=False):
     :param plot_load:     Boolean used to display a plot of the demand curves in the different zones
     :param profiles:      Profiles from mid term scheduling simulations
     """
-    dispa_version = str(get_git_revision_tag())
+    dispa_version = __version__
     logging.info('New build started. DispaSET version: ' + dispa_version)
     # %%################################################################################################################
     #####################################   Main Inputs    ############################################################
@@ -179,18 +171,7 @@ def build_single_run(config, profiles=None, MTS=False):
     Outages = UnitBasedTable(plants,'Outages',config,fallbacks=['Unit','Technology'])
     AF = UnitBasedTable(plants,'RenewablesAF',config,fallbacks=['Unit','Technology'],default=1,RestrictWarning=commons['tech_renewables'])
 
-    # Reservoir levels
-    """
-    :profiles:      if turned on reservoir levels are overwritten by newly calculated ones 
-                    from the mid term scheduling simulations
-    """
-    if profiles is None:
-        ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
-    else:
-        ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
-        MidTermSchedulingProfiles = profiles
-        ReservoirLevels.update(MidTermSchedulingProfiles)
-
+    ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_sto,'ReservoirScaledInflows',config,fallbacks=['Unit','Technology','Zone'],default=0)
     Temperatures = NodeBasedTable('Temperatures',config)
     
@@ -207,6 +188,16 @@ def build_single_run(config, profiles=None, MTS=False):
         
     HeatDemand = GenericTable(zones_th,'HeatDemand',config,default=0)
     CostHeatSlack = GenericTable(zones_th,'CostHeatSlack',config,default=config['default']['CostHeatSlack'])
+    
+    # Update reservoir levels with newly computed ones from the mid-term scheduling
+    if profiles is not None:
+        for key in profiles.columns:
+            if key not in ReservoirLevels.columns:
+                logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the ReservoirLevels table')
+            else:
+                ReservoirLevels[key].update(profiles[key])
+                logging.info('The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
+
 
     # data checks:
     check_AvailabilityFactors(plants,AF)
@@ -326,12 +317,6 @@ def build_single_run(config, profiles=None, MTS=False):
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
     
-    # merge the outages:
-    for i in plants.index:  # for all the old plant indexes
-        # get the old plant name corresponding to s:
-        oldname = plants['Unit'][i]
-        newname = mapping['NewIndex'][i]
-
     # Reserve calculation
     reserve_2U_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
     reserve_2D_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
@@ -359,14 +344,12 @@ def build_single_run(config, profiles=None, MTS=False):
                'H2Demand':H2Demand}
     
     # Merge the following time series with weighted averages
-    for key in ['ScaledInflows','ReservoirLevels','Outages','AvailabilityFactors']:
-        finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key)
-    # Merge the following time series by summing
-    # for key in ['HeatDemand']:
-    #     finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
-    # for key in ['H2Demand']:
-    #     finalTS[key] = merge_series(plants, finalTS[key], mapping, tablename=key, method='Sum')
-        
+    for key in ['ScaledInflows','Outages','AvailabilityFactors','CostHeatSlack','CostH2Slack']:
+        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
+    # Merge the following time series by weighted average based on storage capacity
+    for key in ['ReservoirLevels']:
+        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
+
 # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:
         check_df(FuelPrices[key], StartDate=config['idx'][0], StopDate=config['idx'][-1], name=key)
@@ -390,7 +373,7 @@ def build_single_run(config, profiles=None, MTS=False):
     # The sets are defined within a dictionary:
     sets = {}
     sets['h'] = [str(x + 1) for x in range(Nsim)]
-    sets['z'] = [str(x + 1) for x in range(int(Nsim - config['LookAhead'] * config['SimulationTimeStep'])) ]
+    sets['z'] = [str(x + 1) for x in range(int(Nsim - config['LookAhead'] * 24/config['SimulationTimeStep'])) ]
     sets['mk'] = ['DA', '2U', '2D','Flex']
     sets['n'] = config['zones']
     sets['n_th'] = zones_th
@@ -513,45 +496,22 @@ def build_single_run(config, profiles=None, MTS=False):
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
     for var in ['CHPPowerToHeat','CHPPowerLossFactor', 'CHPMaxHeat']:
         parameters[var]['val'] = Plants_chp[var].values
-   
-    # Only hydro and p2h2 units are part of mid term scheduling
-    if profiles is not None:
-        for r in ReservoirLevels.columns:
-            if r not in sets['wat'] and r not in sets['p2h2']:
-                ReservoirLevels.loc[:,r] = 0
-                
+        
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
-        if profiles is not None:
-            if (config['InitialFinalReservoirLevel'] == 0) or (config['InitialFinalReservoirLevel'] == ""):
-                if s in finalTS['ReservoirLevels']:
-                    # get the time
-                    parameters['StorageInitial']['val'][i] = finalTS['ReservoirLevels'][s][idx_sim[0]] * \
-                                                             Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
-                    parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
-                    if any(finalTS['ReservoirLevels'][s] > 1):
-                        logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
-                else:
-                    logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
-                    parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
-                    parameters['StorageProfile']['val'][i, :] = 0.5
-            else:
-                if (config['default']['ReservoirLevelInitial'] > 1) or (config['default']['ReservoirLevelFinal'] > 1):
-                    logging.warning(s + ': The initial or final reservoir levels are higher than its capacity!' )
-                parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * Plants_sto['StorageCapacity'][s]
-                parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
+        if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(finalTS['ReservoirLevels'][s] <= 1) :
+            # get the time series
+             parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
+        elif s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and any(finalTS['ReservoirLevels'][s] > 1):
+            logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
+            sys.exit(1)
         else:
-            if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) :
-                # get the time
-                parameters['StorageInitial']['val'][i] = finalTS['ReservoirLevels'][s][idx_sim[0]] * \
-                                                         Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
-                parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
-                if any(finalTS['ReservoirLevels'][s] > 1):
-                    logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
-            else:
-                logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
-                parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
-                parameters['StorageProfile']['val'][i, :] = 0.5
+            logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Using the provided default initial and final values')
+            parameters['StorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],config['default']['ReservoirLevelFinal'],len(idx_sim))
+        # The initial level is the same as the first value of the profile:
+        parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0]  * \
+                                                  finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
+                                                  Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
 
     # Storage Inflows:
     for i, s in enumerate(sets['s']):
@@ -601,6 +561,7 @@ def build_single_run(config, profiles=None, MTS=False):
         values[0, i, :] = finalTS['Load'][sets['n'][i]]
         values[1, i, :] = finalTS['Reserve2U'][sets['n'][i]]
         values[2, i, :] = finalTS['Reserve2D'][sets['n'][i]]
+        values[3, i, :] = finalTS['Load'][sets['n'][i]] * finalTS['ShareOfFlexibleDemand'][sets['n'][i]]
     parameters['Demand'] = {'sets': sets_param['Demand'], 'val': values}
 
     # Emission Rate:
@@ -745,18 +706,8 @@ def build_single_run(config, profiles=None, MTS=False):
 
     if not os.path.exists(sim):
         os.makedirs(sim)
-    if MTS:
-        fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
-        fout = open(os.path.join(sim,'UCM_h.gms'), "wt")
-        for line in fin:
-            fout.write(line.replace('$setglobal MTS 0', '$setglobal MTS 1'))
-#            fout.write(line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1'))
-        fin.close()
-        fout.close()
-        # additionally allso copy UCM_h_simple.gms
-        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-                        os.path.join(sim, 'UCM_h_simple.gms'))    
-    elif LP and not MTS:
+  
+    if LP:
         fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
         fout = open(os.path.join(sim,'UCM_h.gms'), "wt")
         for line in fin:
@@ -809,7 +760,12 @@ def build_single_run(config, profiles=None, MTS=False):
             pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
     logging.info('Build finished')
     
-    if os.path.isfile(commons['logfile']):
-        shutil.copy(commons['logfile'], os.path.join(sim, 'warn_preprocessing.log'))
-
+    # Remove previously-created debug files:
+    debugfile = os.path.join(sim, 'debug.gdx')
+    if os.path.isfile(debugfile):
+        try:
+            os.remove(debugfile)
+        except OSError:
+            print ('Could not erase previous debug file ' + debugfile)
+            
     return SimData

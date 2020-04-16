@@ -149,7 +149,7 @@ StorageOutflow(s,h)              [MWh\u]    Storage outflows
 StorageInflow(s,h)               [MWh\u]    Storage inflows (potential energy)
 StorageInitial(au)               [MWh]    Storage level before initial period
 StorageProfile(s,h)              [MWh]    Storage level to be resepected at the end of each horizon
-StorageMinimum(au)               [MWh\u]    Storage minimum
+StorageMinimum(au)               [MWh]    Storage minimum
 Technology(u,t)                  [n.a.]   Technology type {1 0}
 TimeDownMinimum(u)               [h]      Minimum down time
 TimeUpMinimum(u)                 [h]      Minimum up time
@@ -329,7 +329,7 @@ $label skipdisplay
 *===============================================================================
 *Definition of variables
 *===============================================================================
-$If %MTS% == 1 $goto skipVariables
+
 VARIABLES
 Committed(u,h)      [n.a.]  Unit committed at hour h {1 0} or integer
 StartUp(u,h)        [n.a.]  Unit start up at hour h {1 0}  or integer
@@ -339,7 +339,7 @@ ShutDown(u,h)       [n.a.]  Unit shut down at hour h {1 0} or integer
 $If %LPFormulation% == 1 POSITIVE VARIABLES Committed (u,h) ; Committed.UP(u,h) = 1 ;
 $If not %LPFormulation% == 1 INTEGER VARIABLES Committed (u,h), StartUp(u,h), ShutDown(u,h) ; Committed.UP(u,h) = Nunits(u) ; StartUp.UP(u,h) = Nunits(u) ; ShutDown.UP(u,h) = Nunits(u) ;
 
-$label skipVariables
+
 
 POSITIVE VARIABLES
 AccumulatedOverSupply(n,h) [MWh]   Accumulated oversupply due to the flexible demand
@@ -385,8 +385,8 @@ DemandModulation(n,h)      [MW] Difference between the flexible demand and the b
 
 
 *Initial commitment status
-$If %MTS%==0 CommittedInitial(u)=0;
-$If %MTS%==0 CommittedInitial(u)$(PowerInitial(u)>0)=1;
+CommittedInitial(u)=0;
+CommittedInitial(u)$(PowerInitial(u)>0)=1;
 
 * Definition of the minimum stable load:
 PowerMinStable(au) = PartLoadMin(au)*PowerCapacity(au);
@@ -777,7 +777,7 @@ $endIf;
 
 *Storage level must be above a minimum
 EQ_Storage_minimum(s,i)..
-         StorageMinimum(s)* Nunits(s)
+         StorageMinimum(s)
          =L=
          StorageLevel(s,i)
 ;
@@ -806,33 +806,33 @@ $endif;
 * The system could curtail by pumping and turbining at the same time if Nunits>1. This should be included into the curtailment equation!
 
 *Discharge is limited by the storage level
-EQ_Storage_MaxDischarge(s,i)..
+EQ_Storage_MaxDischarge(s,i)$(StorageCapacity(s)>PowerCapacity(s)*TimeStep)..
          Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
-         +StorageOutflow(s,i)*Nunits(s)*TimeStep +spillage(s,i)$(wat(s)) - StorageInflow(s,i)*Nunits(s)*TimeStep - StorageSlack(s,i)$(p2h2(s))
          =L=
-         StorageLevel(s,i)
+         StorageInitial(s)$(ord(i) = 1) + StorageLevel(s,i-1)$(ord(i) > 1)
+         +StorageInflow(s,i)*Nunits(s)*TimeStep
 ;
 
 *Charging is limited by the remaining storage capacity
-EQ_Storage_MaxCharge(s,i)..
+EQ_Storage_MaxCharge(s,i)$(StorageCapacity(s)>PowerCapacity(s)*TimeStep)..
          StorageInput(s,i)*StorageChargingEfficiency(s)*TimeStep
-         -StorageOutflow(s,i)*Nunits(s)*TimeStep -spillage(s,i)$(wat(s)) + StorageInflow(s,i)*Nunits(s)*TimeStep + StorageSlack(s,i)$(p2h2(s))
          =L=
-         StorageCapacity(s)*AvailabilityFactor(s,i)*Nunits(s) - StorageLevel(s,i)
+         (Nunits(s) * StorageCapacity(s)-StorageInitial(s))$(ord(i) = 1)
+         + (Nunits(s) * StorageCapacity(s)*AvailabilityFactor(s,i-1) - StorageLevel(s,i-1))$(ord(i) > 1)
+         +StorageOutflow(s,i)*Nunits(s)*TimeStep
 ;
 
 *Storage balance
 EQ_Storage_balance(s,i)..
          StorageInitial(s)$(ord(i) = 1)
          +StorageLevel(s,i-1)$(ord(i) > 1)
-*         +StorageLevelH(h--1,s)
          +StorageInflow(s,i)*Nunits(s)*TimeStep
          +StorageInput(s,i)*StorageChargingEfficiency(s)*TimeStep
          +StorageSlack(s,i)$(p2h2(s))
          =E=
          StorageLevel(s,i)
          +StorageOutflow(s,i)*Nunits(s)*TimeStep
-         +spillage(s,i)$(wat(s))
+         +spillage(s,i)$(wat(s)) + spillage(s,i)*Technology(s,"SCSP")
          +Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
 ;
 
@@ -1013,8 +1013,8 @@ EQ_SystemCost
 *EQ_Emission_limits,
 EQ_Flow_limits_lower,
 EQ_Flow_limits_upper,
-$If not %MTS% == 1 EQ_Force_Commitment,
-$If not %MTS% == 1 EQ_Force_DeCommitment,
+*$If not %MTS% == 1 EQ_Force_Commitment,
+*$If not %MTS% == 1 EQ_Force_DeCommitment,
 EQ_LoadShedding,
 $If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand,
 $If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand_Max,
@@ -1035,11 +1035,6 @@ ndays = floor(card(h)*TimeStep/24);
 if (Config("RollingHorizon LookAhead","day") > ndays -1, abort "The look ahead period is longer than the simulation length";);
 if (mod(Config("RollingHorizon LookAhead","day")*24,TimeStep) <> 0, abort "The look ahead period is not a multiple of TimeStep";);
 if (mod(Config("RollingHorizon Length","day")*24,TimeStep) <> 0, abort "The rolling horizon length is not a multiple of TimeStep";);
-
-$if %MTS% == 0 $goto skipMTS
-Config("RollingHorizon LookAhead","day")=0;
-Config("RollingHorizon Length","day")=ndays;
-$label skipMTS
 
 * Some parameters used for debugging:
 failed=0;
@@ -1063,7 +1058,7 @@ display "OK";
 
 scalar starttime;
 set days /1,'ndays'/;
-display days;
+display days,ndays,TimeStep;
 PARAMETER elapsed(days);
 
 FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("RollingHorizon Length","day"),
@@ -1074,10 +1069,8 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
          display day,FirstHour,LastHour,LastKeptHour;
 
-*        Defining the minimum level at the end of the horizon, ensuring that it is feasible with the provided inflows:
-         StorageFinalMin(s) =  min(StorageInitial(s) + (sum(i,StorageInflow(s,i)*TimeStep) - sum(i,StorageOutflow(s,i)*TimeStep))*Nunits(s), sum(i$(ord(i)=card(i)),StorageProfile(s,i)*Nunits(s)*StorageCapacity(s)*AvailabilityFactor(s,i)));
-*        Correcting the minimum level to avoid the infeasibility in case it is too close to the StorageCapacity:
-         StorageFinalMin(s) = min(StorageFinalMin(s),Nunits(s)*StorageCapacity(s) - Nunits(s)*smax(i,StorageInflow(s,i)*TimeStep));
+*        Defining the minimum level at the end of the horizon :
+         StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
 
 $If %MTS%==1 $goto skipdisplay1
 $If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
@@ -1090,10 +1083,7 @@ $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCos
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
 
 $If %Verbose% == 0 $goto skipdisplay3
-$Ifthen %MTS%==1                         Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
-$elseif %LPFormulation% == 1             Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
-$else not %LPFormulation% == 1           Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Commitment.M, EQ_MinUpTime.M, EQ_MinDownTime.M, EQ_RampUp_TC.M, EQ_RampDown_TC.M, EQ_Demand_balance_DA.M, EQ_Demand_balance_2U.M, EQ_Demand_balance_2D.M, EQ_Demand_balance_3U.M, EQ_Reserve_2U_capability.M, EQ_Reserve_2D_capability.M, EQ_Reserve_3U_capability.M, EQ_Power_must_run.M, EQ_Power_available.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_SystemCost.M, EQ_Flow_limits_lower.M, EQ_Flow_limits_upper.M, EQ_Force_Commitment.M, EQ_Force_DeCommitment.M, EQ_LoadShedding.M ;
-$endIf;
+Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M,  EQ_Flow_limits_lower.M ;
 $label skipdisplay3
 
          status("model",i) = UCM_SIMPLE.Modelstat;
@@ -1124,12 +1114,7 @@ $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i
 
 
 *Loop variables to display after solving:
-$If %MTS%==1 $goto skipdisplay4
-$If %Verbose% == 1 Display LastKeptHour,PowerInitial,CostStartUpH.L,CostShutDownH.L,CostRampUpH.L;
-$label skipdisplay4
-$If %MTS%==0 $goto skipdisplay5
-$If %Verbose% == 1 Display LastKeptHour,PowerInitial;
-$label skipdisplay5
+$If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
 );
 
 CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n));
@@ -1174,34 +1159,35 @@ LostLoad_WaterSlack(s)
 StorageShadowPrice(au,h)
 ;
 
-$If %MTS%==0 OutputCommitted(u,h)=Committed.L(u,h);
-OutputFlow(l,h)=Flow.L(l,h);
-OutputPower(u,h)=Power.L(u,h);
-OutputPowerConsumption(p2h,h)=PowerConsumption.L(p2h,h);
-OutputHeat(au,h)=Heat.L(au,h);
-OutputHeatSlack(n_th,h)=HeatSlack.L(n_th,h);
-OutputStorageInput(s,h)=StorageInput.L(s,h);
-OutputStorageInput(th,h)=StorageInput.L(th,h);
-OutputStorageLevel(s,h)=StorageLevel.L(s,h)/StorageCapacity(s);
-OutputStorageSlack(p2h2,h) = StorageSlack.L(p2h2,h);
-OutputStorageLevel(th,h)=StorageLevel.L(th,h);
-OutputSystemCost(h)=SystemCost.L(h);
-OutputSpillage(s,h)  = Spillage.L(s,h) ;
-OutputShedLoad(n,h) = ShedLoad.L(n,h);
-OutputCurtailedPower(n,h)=CurtailedPower.L(n,h);
-$If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)=DemandModulation.L(n,h);
-LostLoad_MaxPower(n,h)  = LL_MaxPower.L(n,h);
-LostLoad_MinPower(n,h)  = LL_MinPower.L(n,h);
-LostLoad_2D(n,h) = LL_2D.L(n,h);
-LostLoad_2U(n,h) = LL_2U.L(n,h);
-LostLoad_3U(n,h) = LL_3U.L(n,h);
-$If %MTS%==0 LostLoad_RampUp(n,h)    = sum(u,LL_RampUp.L(u,h)*Location(u,n));
-$If %MTS%==0 LostLoad_RampDown(n,h)  = sum(u,LL_RampDown.L(u,h)*Location(u,n));
-ShadowPrice(n,h) = EQ_Demand_balance_DA.m(n,h);
-HeatShadowPrice(n_th,h) = EQ_Heat_Demand_balance.m(n_th,h);
+$If %MTS%==0 OutputCommitted(u,z)=Committed.L(u,z);
+OutputFlow(l,z)=Flow.L(l,z);
+OutputPower(u,z)=Power.L(u,z);
+OutputPowerConsumption(p2h,z)=PowerConsumption.L(p2h,z);
+OutputHeat(au,z)=Heat.L(au,z);
+OutputHeatSlack(n_th,z)=HeatSlack.L(n_th,z);
+OutputStorageInput(s,z)=StorageInput.L(s,z);
+OutputStorageInput(th,z)=StorageInput.L(th,z);
+OutputStorageLevel(s,z)=StorageLevel.L(s,z)/max(1,StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,z));
+OutputStorageLevel(th,z)=StorageLevel.L(th,z)/max(1,StorageCapacity(th)*Nunits(th));
+OutputStorageSlack(p2h2,z) = StorageSlack.L(p2h2,z);
+OutputSystemCost(z)=SystemCost.L(z);
+OutputSpillage(s,z)  = Spillage.L(s,z) ;
+OutputShedLoad(n,z) = ShedLoad.L(n,z);
+OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
+$If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
+LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
+LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
+LostLoad_2D(n,z) = LL_2D.L(n,z);
+LostLoad_2U(n,z) = LL_2U.L(n,z);
+LostLoad_3U(n,z) = LL_3U.L(n,z);
+$If %MTS%==0 LostLoad_RampUp(n,z)    = sum(u,LL_RampUp.L(u,z)*Location(u,n));
+$If %MTS%==0 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
+ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
+HeatShadowPrice(n_th,z) = EQ_Heat_Demand_balance.m(n_th,z);
 LostLoad_WaterSlack(s) = WaterSlack.L(s);
-StorageShadowPrice(s,h) = EQ_Storage_balance.m(s,h);
-StorageShadowPrice(th,h) = EQ_Heat_Storage_balance.m(th,h);
+StorageShadowPrice(s,z) = 0 ;
+*EQ_Storage_balance.m(s,z);
+StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
 
 EXECUTE_UNLOAD "Results.gdx"
 $If %MTS%==0 OutputCommitted,
@@ -1234,7 +1220,7 @@ status
 ;
 
 $If %MTS%==1 $goto skipresults8
-display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L;
+display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L, power.L;
 $label skipresults8
 
 $onorder
@@ -1263,7 +1249,7 @@ EXECUTE 'GDXXRW.EXE "%inputfilename%" O="Results.xlsx" Squeeze=N par=PartLoadMin
 
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N var=CurtailedPower rng=CurtailedPower!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N var=ShedLoad rng=ShedLoad!A1 rdim=1 cdim=1'
-$If %MTS%==0 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputCommitted rng=Committed!A1 rdim=1 cdim=1'
+EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputCommitted rng=Committed!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputFlow rng=Flow!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputPower rng=Power!A5 epsout=0 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputPowerConsumption rng=Power!A5 epsout=0 rdim=1 cdim=1'
@@ -1300,7 +1286,6 @@ i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
 StorageFinalMin(s) =  min(StorageInitial(s) + sum(i,StorageInflow(s,i)*TimeStep) - sum(i,StorageOutflow(s,i)*TimeStep) , sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*AvailabilityFactor(s,i)));
 StorageFinalMin(s) = min(StorageFinalMin(s),StorageCapacity(s) - smax(i,StorageInflow(s,i)*TimeStep));
 
-$If %MTS%==1 $goto skipresults9
 $If %Verbose% == 1   Display TimeUpLeft_initial,TimeUpLeft_JustStarted,PowerInitial,CommittedInitial,StorageFinalMin;
 $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;

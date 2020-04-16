@@ -5,6 +5,12 @@ import codecs
 import os
 HERE = os.path.abspath(os.path.dirname(__file__))
 
+# FINAL_RELEASE is the last stable version of Dispa-SET
+# A more precisely version try to be automatically determined from the git repository using setuptools_scm.
+# If it's not possible (using git archive tarballs for example), FINAL_RELEASE will be used as fallback version.
+# edited manually when a new release is out (git tag -a)
+FINAL_RELEASE = open(os.path.join(HERE, 'VERSION')).read().strip()
+
 def read(*parts):
     """
     Build an absolute path from *parts* and and return the contents of the
@@ -13,13 +19,8 @@ def read(*parts):
     with codecs.open(os.path.join(HERE, *parts), "rb", "utf-8") as f:
         return f.read()
 
-# Sets the __version__ variable
-__version__ = None
-exec(open('dispaset/_version.py').read())
-
 setup(
     name='dispaset',
-    version=__version__,
     author='Sylvain Quoilin, Konstantinos Kavvadias',
     author_email='squoilin@uliege.be',
     description='An open-source unit commitment and optimal dispatch model ',
@@ -29,6 +30,12 @@ setup(
     packages=find_packages(),
     long_description=read('README.md'),
     include_package_data=True,
+    use_scm_version={
+        'version_scheme': 'post-release',
+        'local_scheme': lambda version: version.format_choice("" if version.exact else "+{node}", "+dirty"),
+        'fallback_version': FINAL_RELEASE,
+    },
+    setup_requires=["setuptools_scm"],
     install_requires=[
         "future >= 0.15",
         "click >= 3.3",
@@ -38,7 +45,8 @@ setup(
         "matplotlib >= 1.5.1",
         "gdxcc >= 7",
         "gamsxcc",
-        "optcc"
+        "optcc",
+        "setuptools_scm",
     ],
     entry_points={
         'console_scripts': [

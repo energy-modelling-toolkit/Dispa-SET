@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Eexample file showing how to access the Dispa-SET api to read a configuration file, 
-and build batch runs in GAMS or PYOMO
+and build batch runs in GAMS
 
 @author: K Kavvadias
 """

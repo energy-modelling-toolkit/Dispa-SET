@@ -25,7 +25,7 @@ def isStorage(tech):
     '''
     Function that returns true the technology is a storage technology
     '''
-    return tech in ['HDAM','HPHS','CAES','BATS','BEVS','THMS','P2GS']
+    return tech in ['HDAM','HPHS','CAES','BATS','BEVS','THMS','P2GS','SCSP']
 
 
 
@@ -87,7 +87,7 @@ def check_clustering(plants,plants_merged):
             logging.error('The installed capacity for technology "' + tech[0] + '" and fuel "' + tech[1] + '" is not equal between the original units table (P = ' + str(P_old) + ') and the clustered table (P = ' + str(P_new) + ')')
             sys.exit(1)
     # Check the overall installed storage capacity:
-    List_tech_storage = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS']
+    List_tech_storage = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS', 'SCSP']
     isstorage = pd.Series(index=plants.index,dtype='bool')
     for u in isstorage.index:
         isstorage[u] = plants.Technology[u] in List_tech_storage
@@ -150,7 +150,19 @@ def check_sto(config, plants,raw_data=True):
             if np.isnan(plants.loc[u, key]):
                 logging.critical('The power plants data is missing for unit ' + unitname + ' and parameter "' + key + '"')
                 sys.exit(1)
-
+    
+    if raw_data:
+        key = 'STOCapacity'
+    else:
+        key = 'StorageCapacity'
+    for u in plants.index:
+        if plants.loc[u,key]>plants.loc[u,'PowerCapacity']*8760:
+            logging.error('The Storage capacity for unit ' + plants.loc[u,'Unit'] + ' is prohibitively high. More than one year at full power is required to discharge the reservoir')
+        elif plants.loc[u,key]>plants.loc[u,'PowerCapacity']*3000:
+            logging.warning('The Storage capacity for unit ' + plants.loc[u,'Unit'] + ' is very high.')
+        elif (plants.loc[u,key]>plants.loc[u,'PowerCapacity']*24*config['HorizonLength']/config['SimulationTimeStep']) and (config['HydroScheduling'] not in ['Zonal', 'Regional']):
+            logging.warning('The Storage capacity for unit ' + plants.loc[u,'Unit'] + ' is high. Make sure to provide a proper storage level profile')
+    
     return True
 
 
@@ -410,13 +422,13 @@ def check_units(config, plants):
 
     lower = {'PowerCapacity': 0, 'PartLoadMin': 0, 'StartUpTime': 0, 'MinUpTime': 0, 'MinDownTime': 0, 'NoLoadCost': 0,
              'StartUpCost': 0}
-    lower_hard = {'RampUpRate': 0, 'RampDownRate': 0, 'Efficiency': 0}
+    strictly_lower = {'RampUpRate': 0, 'RampDownRate': 0, 'Efficiency': 0}
     higher = {'PartLoadMin': 1, 'Efficiency': 1}
     higher_time = {'MinUpTime': 0, 'MinDownTime': 0}  # 'StartUpTime':0,
 
     # Special treatment for the Optional key Nunits:
     if 'Nunits' in plants:
-        lower_hard['Nunits'] = 0
+        strictly_lower['Nunits'] = 0
 
     if len(plants['Unit'].unique()) != len(plants['Unit']):
         duplicates = plants['Unit'][plants['Unit'].duplicated()].tolist()
@@ -432,9 +444,9 @@ def check_units(config, plants):
                     plantlist))
             sys.exit(1)
 
-    for key in lower_hard:
-        if any(plants[key] <= lower_hard[key]):
-            plantlist = plants[plants[key] <= lower_hard[key]]
+    for key in strictly_lower:
+        if any(plants[key] <= strictly_lower[key]):
+            plantlist = plants[plants[key] <= strictly_lower[key]]
             plantlist = plantlist['Unit'].tolist()
             logging.critical(
                 'The value of ' + key + ' should be strictly higher than zero. A null or negative value has been found for units ' + str(
