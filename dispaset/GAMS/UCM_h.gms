@@ -802,7 +802,6 @@ EQ_Storage_MaxDischarge(s,i)$(StorageCapacity(s)>PowerCapacity(s)*TimeStep)..
          =L=
          StorageInitial(s)$(ord(i) = 1) + StorageLevel(s,i-1)$(ord(i) > 1)
          +StorageInflow(s,i)*Nunits(s)*TimeStep
-         -StorageOutflow(s,i)*Nunits(s)*TimeStep
 ;
 
 *Charging is limited by the remaining storage capacity
@@ -811,7 +810,6 @@ EQ_Storage_MaxCharge(s,i)$(StorageCapacity(s)>PowerCapacity(s)*TimeStep)..
          =L=
          (Nunits(s) * StorageCapacity(s)-StorageInitial(s))$(ord(i) = 1)
          + (Nunits(s) * StorageCapacity(s)*AvailabilityFactor(s,i-1) - StorageLevel(s,i-1))$(ord(i) > 1)
-         -StorageInflow(s,i)*Nunits(s)*TimeStep
          +StorageOutflow(s,i)*Nunits(s)*TimeStep
 ;
 
@@ -1061,10 +1059,8 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
          display day,FirstHour,LastHour,LastKeptHour;
 
-*        Defining the minimum level at the end of the horizon, ensuring that it is feasible with the provided inflows:
-         StorageFinalMin(s) =  min(StorageInitial(s) + (sum(i,StorageInflow(s,i)*TimeStep) - sum(i,StorageOutflow(s,i)*TimeStep))*Nunits(s), sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i)));
-*        Correcting the minimum level to avoid the infeasibility in case it is too close to the StorageCapacity:
-         StorageFinalMin(s) = min(StorageFinalMin(s),StorageCapacity(s)*Nunits(s) - Nunits(s)*smax(i,StorageInflow(s,i)*TimeStep));
+*        Defining the minimum level at the end of the horizon :
+         StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
 
 $If %MTS%==1 $goto skipdisplay1
 $If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
@@ -1161,9 +1157,9 @@ OutputHeat(au,z)=Heat.L(au,z);
 OutputHeatSlack(au,z)=HeatSlack.L(au,z);
 OutputStorageInput(s,z)=StorageInput.L(s,z);
 OutputStorageInput(th,z)=StorageInput.L(th,z);
-OutputStorageLevel(s,z)=StorageLevel.L(s,z)/(StorageCapacity(s)*AvailabilityFactor(s,z));
+OutputStorageLevel(s,z)=StorageLevel.L(s,z)/(StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,z));
+OutputStorageLevel(th,z)=StorageLevel.L(th,z)/(StorageCapacity(th)*Nunits(th));
 OutputStorageSlack(p2h2,z) = StorageSlack.L(p2h2,z);
-OutputStorageLevel(th,z)=StorageLevel.L(th,z);
 OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(s,z)  = Spillage.L(s,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
