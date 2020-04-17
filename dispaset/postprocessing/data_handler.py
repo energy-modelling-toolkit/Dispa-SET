@@ -34,6 +34,8 @@ col_keys = {'OutputCommitted':('u','h'),
             'ReserveDownShadowPrice':('n','h'),
             'StorageShadowPrice':('u','h'),
             'LostLoad_WaterSlack':('u'),
+            'OutputReserve_2U':('u','h'),
+            'OutputReserve_2D':('u','h'),
             'status':tuple(),
             '*':tuple()
           }
@@ -135,7 +137,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
 
     keys_sparse = ['OutputPower','OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
                    'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput', 'OutputHeat',
-                   'OutputHeatSlack','OutputDemandModulation']
+                   'OutputHeatSlack','OutputDemandModulation','OutputReserve_2U','OutputReserve_2D']
     
     # Setting the proper index to the result dataframes:
     from itertools import chain
