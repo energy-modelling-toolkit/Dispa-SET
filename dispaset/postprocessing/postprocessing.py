@@ -427,7 +427,7 @@ def CostExPost(inputs,results):
     :returns: tuple[0]: dataframe with all different types of costs
     :returns: tuple[1]: cumulative sum of all costs time series
     :returns: tuple[2]: costs time series disaggregated by zone
-    '''
+    """
     import datetime
     
     dfin = inputs['param_df']
