@@ -15,6 +15,8 @@ import dispaset as ds
 
 # Load the configuration file
 config = ds.load_config('../ConfigFiles/ConfigBE_heat.yml')
+config['HydroScheduling']='Regional'
+config['StopDate'] = (2015, 10, 7, 23, 59, 0)
 
 # Build the simulation environment:
 SimData = ds.build_simulation(config)

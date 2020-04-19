@@ -153,8 +153,8 @@ def build_single_run(config, profiles=None):
     # check plant list:
     check_units(config, plants)
 
-    # Defining the hydro storages:
-    plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
+    # Defining the units with storage:
+    plants_sto = plants[plants.STOCapacity>0]
     # check storage plants:
     check_sto(config, plants_sto)
     
@@ -280,14 +280,14 @@ def build_single_run(config, profiles=None):
                 Plants_merged.loc[u, 'StorageChargingCapacity'] = Plants_merged.loc[u, 'StorageChargingCapacity'] * config['modifiers']['Storage']
 
     # Defining the hydro storages:
-    Plants_sto = Plants_merged[[u in commons['tech_storage'] for u in Plants_merged['Technology']]]
+    Plants_sto = Plants_merged[Plants_merged.StorageCapacity>0]
     # check storage plants:
     check_sto(config, Plants_sto,raw_data=False)
     # Defining the CHPs:
     Plants_chp = Plants_merged[[x.lower() in commons['types_CHP'] for x in Plants_merged['CHPType']]].copy()
     # check chp plants:
     check_chp(config, Plants_chp)
-    # For all the chp plants correct the PowerCapacity, which is defined in cogeneration mode in the inputs and in power generation model in the optimization model
+    # For all the chp plants correct the PowerCapacity, which is defined in cogeneration mode in the inputs and in power generation mode in the optimization model
     for u in Plants_chp.index:
         PowerCapacity = Plants_chp.loc[u, 'PowerCapacity']
 
@@ -384,7 +384,8 @@ def build_single_run(config, profiles=None):
     sets['l'] = Interconnections
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
-    sets['s'] = Plants_sto.index.tolist()
+    sets['s'] = Plants_merged[Plants_merged['Technology'].isin(commons['tech_storage_el'] + commons['tech_storage_h2'])].index.tolist()
+    sets['sto'] = Plants_sto.index.tolist()
     sets['u'] = Plants_merged[Plants_merged['Technology']!='P2HT'].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
     sets['p2h'] = Plants_p2h.index.tolist()
@@ -442,16 +443,16 @@ def build_single_run(config, profiles=None):
     sets_param['RampStartUpMaximum'] = ['au']
     sets_param['RampShutDownMaximum'] = ['au']
     sets_param['Reserve'] = ['t']
-    sets_param['StorageCapacity'] = ['au']
-    sets_param['StorageChargingCapacity'] = ['au']
-    sets_param['StorageChargingEfficiency'] = ['s']
-    sets_param['StorageDischargeEfficiency'] = ['s']
-    sets_param['StorageSelfDischarge'] = ['au']
+    sets_param['StorageCapacity'] = ['sto']
+    sets_param['StorageChargingCapacity'] = ['sto']
+    sets_param['StorageChargingEfficiency'] = ['sto']
+    sets_param['StorageDischargeEfficiency'] = ['sto']
+    sets_param['StorageSelfDischarge'] = ['sto']
     sets_param['StorageInflow'] = ['s', 'h']
-    sets_param['StorageInitial'] = ['s']
-    sets_param['StorageMinimum'] = ['s']
+    sets_param['StorageInitial'] = ['sto']
+    sets_param['StorageMinimum'] = ['sto']
     sets_param['StorageOutflow'] = ['s', 'h']
-    sets_param['StorageProfile'] = ['s', 'h']
+    sets_param['StorageProfile'] = ['sto', 'h']
     sets_param['Technology'] = ['au', 't']
     sets_param['TimeUpMinimum'] = ['au']
     sets_param['TimeDownMinimum'] = ['au']
@@ -478,7 +479,7 @@ def build_single_run(config, profiles=None):
     # %%
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
     for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
-                'CostRampUp','StorageCapacity', 'StorageSelfDischarge', 'StorageChargingCapacity']:
+                'CostRampUp']:
         parameters[var]['val'] = Plants_merged[var].values
 
     # List of parameters whose value is not necessarily specified in the dataframe Plants_merged
@@ -488,10 +489,9 @@ def build_single_run(config, profiles=None):
 
 
     # List of parameters whose value is known, and provided in the dataframe Plants_sto.
-    for var in ['StorageChargingEfficiency']:
+    for var in ['StorageCapacity', 'StorageSelfDischarge', 'StorageChargingCapacity','StorageChargingEfficiency']:
         parameters[var]['val'] = Plants_sto[var].values    
     
-
     # The storage discharge efficiency is actually given by the unit efficiency:
     parameters['StorageDischargeEfficiency']['val'] = Plants_sto['Efficiency'].values
     
@@ -500,12 +500,12 @@ def build_single_run(config, profiles=None):
         parameters[var]['val'] = Plants_chp[var].values
         
     # Storage profile and initial state:
-    for i, s in enumerate(sets['s']):
+    for i, s in enumerate(sets['sto']):
         if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(finalTS['ReservoirLevels'][s] <= 1) :
             # get the time series
              parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
         elif s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and any(finalTS['ReservoirLevels'][s] > 1):
-            logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
+            logging.critical(s + ': The reservoir level for storage plant ' + s + ' is sometimes higher than its capacity (>1) !')
             sys.exit(1)
         else:
             logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Using the provided default initial and final values')
@@ -520,13 +520,13 @@ def build_single_run(config, profiles=None):
         if s in finalTS['ScaledInflows']:
             parameters['StorageInflow']['val'][i, :] = finalTS['ScaledInflows'][s][idx_sim].values * \
                                                        Plants_sto['PowerCapacity'][s]
-    # CHP time series:
+    # Heat demands:
     for i, u in enumerate(sets['n_th']):
         if u in finalTS['HeatDemand']:
             parameters['HeatDemand']['val'][i, :] = finalTS['HeatDemand'][u][idx_sim].values
             parameters['CostHeatSlack']['val'][i, :] = finalTS['CostHeatSlack'][u][idx_sim].values
             
-    # H2 time series:
+    # H2 time series (TODO: the first loop is to be removed):
     for i,u in enumerate(sets['s']):
         if u in finalTS['H2Demand']:
             parameters['StorageOutflow']['val'][i, :] = finalTS['H2Demand'][u][idx_sim].values

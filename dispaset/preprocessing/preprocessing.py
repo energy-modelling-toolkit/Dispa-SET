@@ -105,12 +105,12 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                              end=dt.datetime(*config['StopDate']),
                              freq=pd_timestep(config['SimulationTimeStep'])).tz_localize(None)
 
-    if config['mts_zones'] is None:
+    if isinstance(config['mts_zones'],list) and len(config['mts_zones'])>0:
+        temp_config['zones'] = config['mts_zones']
+    else:
         temp_config['mts_zones'] = config['zones']
         logging.info('MTS Simulation with all zones selected')
-    else:
-        temp_config['zones'] = config['mts_zones']
-
+        
     # remove look ahead:
     temp_config['LookAhead'] = 0
     

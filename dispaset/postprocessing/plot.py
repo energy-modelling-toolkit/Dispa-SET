@@ -433,9 +433,7 @@ def storage_levels(inputs, results):
     :param inputs:      DispaSET inputs
     :param results:     DispaSET results
     """
-    isstorage = pd.Series(index=inputs['units'].index)
-    for u in isstorage.index:
-        isstorage[u] = inputs['units'].Technology[u] in commons['tech_storage']
+    isstorage = inputs['units'].StorageCapacity > 0
     sto_units = inputs['units'][isstorage]
     results['OutputStorageLevel'].plot(figsize=(12, 6), title='Storage levels')
     StorageError = ((inputs['param_df']['StorageProfile'] * sto_units.StorageCapacity).subtract(

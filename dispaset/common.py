@@ -13,8 +13,14 @@ commons['Technologies'] = ['COMC', 'GTUR', 'HDAM', 'HROR', 'HPHS', 'ICEN', 'PHOT
                            'BATS', 'BEVS', 'THMS', 'P2GS','P2HT','SCSP']
 # List of renewable technologies:
 commons['tech_renewables'] = ['WTON', 'WTOF', 'PHOT', 'HROR', 'SCSP']
+# List of electrical storage technologies (SCSP is modeled as if the storage was electrical):
+commons['tech_storage_el'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
+# List of thermal storage technologies:
+commons['tech_storage_th'] = ['THMS','P2HT']
+# List of gas storage technologies:
+commons['tech_storage_h2'] = ['P2GS']
 # List of storage technologies:
-commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS','P2GS','SCSP']
+commons['tech_storage'] = commons['tech_storage_el'] + commons['tech_storage_th'] + commons['tech_storage_h2']
 # List of CHP types:
 commons['types_CHP'] = ['extraction','back-pressure', 'p2h']
 # DispaSET fuels:

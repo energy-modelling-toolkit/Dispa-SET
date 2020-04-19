@@ -72,6 +72,7 @@ The Dispa-SET input distinguishes between the technologies defined in the table 
 	THMS		Thermal storage				N	Y
 	P2GS		Power-to-gas storage			N	Y
 	P2HT		Power-to-heat				N	Y
+	SCSP		Concentrating solar power with storage	N	Y				N	Y
 	=============== ======================================= ======= ========
 
 Fuels

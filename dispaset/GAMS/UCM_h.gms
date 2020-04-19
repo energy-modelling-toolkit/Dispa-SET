@@ -143,12 +143,12 @@ RampStartUpMaximumH(u,h)         [MW\h\u]   Start-up ramp limit - Clustered form
 RampShutDownMaximumH(u,h)        [MW\h\u]   Shut-down ramp limit - Clustered formulation
 RampUpMaximum(u)                 [MW\h\u]   Ramp up limit
 Reserve(t)                       [n.a.]   Reserve technology {1 0}
-StorageCapacity(au)             [MWh\u]    Storage capacity
-StorageDischargeEfficiency(s)   [%]      Discharge efficiency
+StorageCapacity(au)              [MWh\u]    Storage capacity
+StorageDischargeEfficiency(au)   [%]      Discharge efficiency
 StorageOutflow(s,h)              [MWh\u]    Storage outflows
 StorageInflow(s,h)               [MWh\u]    Storage inflows (potential energy)
 StorageInitial(au)               [MWh]    Storage level before initial period
-StorageProfile(s,h)              [MWh]    Storage level to be resepected at the end of each horizon
+StorageProfile(au,h)             [MWh]    Storage level to be resepected at the end of each horizon
 StorageMinimum(au)               [MWh]    Storage minimum
 Technology(u,t)                  [n.a.]   Technology type {1 0}
 TimeDownMinimum(u)               [h]      Minimum down time
@@ -164,7 +164,7 @@ PARAMETERS
 CostLoadShedding(n,h)            [EUR\MW]  Value of lost load
 LoadMaximum(u,h)                 [%]     Maximum load given AF and OF
 PowerMustRun(u,h)                [MW\u]    Minimum power output
-StorageFinalMin(s)               [MWh]   Minimum storage level at the end of the optimization horizon
+StorageFinalMin(au)               [MWh]   Minimum storage level at the end of the optimization horizon
 MaxFlexDemand(n)                 [MW]    Maximum value of the flexible demand parameter
 MaxOverSupply(n,h)               [MWh]   Maximum flexible demand accumultation
 AccumulatedOverSupply_inital(n)  [MWh]   Initial value of the flexible demand accumulation
@@ -485,23 +485,8 @@ EQ_CommittedCalc(u,z)..
 $label skipequation
 
 *Objective function
-$ifthen %MTS% == 1
-EQ_SystemCost(i)..
-         SystemCost(i)
-         =E=
-         sum(u,CostFixed(u)*TimeStep)
-         +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
-         +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
-         +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
-         +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
-         +sum(th,CostHeatSlack(th,i)*HeatSlack(th,i)*TimeStep)
-         +sum(p2h2,CostH2Slack(p2h2,i)*StorageSlack(p2h2,i)*TimeStep)
-         +sum(chp,CostVariable(chp,i)*CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
-         +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep)
-         +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep)
-         +Config("CostOfSpillage","val")*sum(wat,spillage(wat,i));
 
-$elseIf %LPFormulation% == 1
+$Ifthen %LPFormulation% == 1
 EQ_SystemCost(i)..
          SystemCost(i)
          =E=
@@ -510,7 +495,7 @@ EQ_SystemCost(i)..
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
-         +sum(th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
+         +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
          +sum(p2h2, CostH2Slack(p2h2,i)*StorageSlack(p2h2,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
@@ -1071,6 +1056,8 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
 
 *        Defining the minimum level at the end of the horizon :
          StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
+         StorageFinalMin(th) =  sum(i$(ord(i)=card(i)),StorageProfile(th,i)*StorageCapacity(th)*Nunits(th));
+
 
 $If %MTS%==1 $goto skipdisplay1
 $If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
@@ -1098,7 +1085,7 @@ if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, Commi
          PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
 
          StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
-         StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
+         StorageInitial(th) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(th,i));
 
 
 $else

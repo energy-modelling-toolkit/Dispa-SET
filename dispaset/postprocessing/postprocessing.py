@@ -139,7 +139,7 @@ def get_plot_data(inputs, results, z):
 
     if 'OutputStorageInput' in results:
         #onnly take the columns that correspond to storage units (StorageInput is also used for CHP plants):
-        cols = [col for col in results['OutputStorageInput'] if inputs['units'].loc[col,'Technology'] in commons['tech_storage']]
+        cols = [col for col in results['OutputStorageInput'] if inputs['units'].loc[col,'StorageCapacity'] > 0]
         tmp = filter_by_zone(results['OutputStorageInput'][cols], inputs, z)
         bb = pd.DataFrame()
         for tech in commons['tech_storage']:
@@ -319,9 +319,7 @@ def get_result_analysis(inputs, results):
     try:
         StorageData = pd.DataFrame(index=inputs['sets']['n'])
         for z in StorageData.index:
-            isstorage = pd.Series(index=inputs['units'].index)
-            for u in isstorage.index:
-                isstorage[u] = inputs['units'].Technology[u] in commons['tech_storage']
+            isstorage = inputs['units'].StorageCapacity > 0
             sto_units = inputs['units'][(inputs['units'].Zone == z) & isstorage]
             StorageData.loc[z,'Storage Capacity [MWh]'] = (sto_units.Nunits*sto_units.StorageCapacity).sum()
             StorageData.loc[z,'Storage Power [MW]'] = (sto_units.Nunits*sto_units.PowerCapacity).sum()
