@@ -26,7 +26,10 @@ matplotlib.use('agg')
 
 # Sets the __version__ variable
 from pkg_resources import get_distribution
-__release__ = get_distribution('dispaset').version
+try:
+	__release__ = get_distribution('dispaset').version
+except:
+	__release__ = ''
 __version__ = '.'.join(__release__.split('.')[:2])
 
 # -- General configuration ------------------------------------------------

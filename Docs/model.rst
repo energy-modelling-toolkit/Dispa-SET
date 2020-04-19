@@ -37,6 +37,12 @@ Sets
 	z(h)	Subset of every simulated hour
 	======= =================================================================================
 
+The different sets are used for different unit types. Subsets are defined in a tree structure, allowing to define specific equations to more specific units. The unit taxonomy with the corresponding sets and the involved energy vectors are described in the figure hereunder.
+
+.. figure:: figures/taxonomy.png
+       :scale: 50 %
+       :align: center
+
 Parameters
 ----------
 

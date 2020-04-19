@@ -66,7 +66,7 @@ n                Nodes
 n_th             NodesThermal
 l                Lines
 au               All Units
-u(au)           Generation units
+u(au)            Generation units
 t                Generation technologies
 tr(t)            Renewable generation technologies
 f                Fuel types
@@ -74,7 +74,7 @@ p                Pollutants
 s(u)             Storage Units (with reservoir)
 chp(u)           CHP units
 p2h(au)          Power to heat units
-p2h2(u)          power to hydrogen storage technologies
+p2h2(au)         power to hydrogen storage technologies
 th(au)           Units with thermal storage
 h                Hours
 i(h)             Subset of simulated hours for one iteration
