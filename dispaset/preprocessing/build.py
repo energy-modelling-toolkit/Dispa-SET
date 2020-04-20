@@ -174,9 +174,14 @@ def build_single_run(config, profiles=None):
     
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
+        plants_sto.set_index(plants_sto.iloc[:,0], inplace=True, drop = True)
         for key in profiles.columns:
             if key not in ReservoirLevels.columns:
                 logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the ReservoirLevels table')
+            elif key in list(ReservoirLevels.loc[:, plants_sto['Technology'] == 'SCSP'].columns):
+                ReservoirLevels[key] = config['default']['ReservoirLevelInitial']
+                logging.info('The reservoir profile "' + key + '" can not be seleceted for MTS, instead, default value '
+                             'of: ' + str(config['default']['ReservoirLevelInitial']) + ' will be used')
             else:
                 ReservoirLevels[key].update(profiles[key])
                 logging.info('The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
@@ -294,11 +299,8 @@ def build_single_run(config, profiles=None):
     check_h2(config, Plants_h2)
     
     # Water storage
-    Plants_wat = Plants_merged[Plants_merged['Fuel'] == 'WAT'].copy()
-    for plant in Plants_wat.index:
-        if 'HROR' in plant:
-            Plants_wat.drop(index=plant , inplace=True)
-    
+    Plants_wat = Plants_merged[(Plants_merged['Fuel'] == 'WAT') & (Plants_merged['Technology'] != 'HROR')].copy()
+
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
     
@@ -483,8 +485,6 @@ def build_single_run(config, profiles=None):
         
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
-        if 'SCSP' in s:
-            finalTS['ReservoirLevels'][s]=0
         if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(finalTS['ReservoirLevels'][s] <= 1) :
             # get the time series
              parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
