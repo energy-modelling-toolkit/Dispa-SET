@@ -295,6 +295,9 @@ def build_single_run(config, profiles=None):
     
     # Water storage
     Plants_wat = Plants_merged[Plants_merged['Fuel'] == 'WAT'].copy()
+    for plant in Plants_wat.index:
+        if 'HROR' in plant:
+            Plants_wat.drop(index=plant , inplace=True)
     
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
@@ -480,6 +483,8 @@ def build_single_run(config, profiles=None):
         
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
+        if 'SCSP' in s:
+            finalTS['ReservoirLevels'][s]=0
         if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(finalTS['ReservoirLevels'][s] <= 1) :
             # get the time series
              parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
