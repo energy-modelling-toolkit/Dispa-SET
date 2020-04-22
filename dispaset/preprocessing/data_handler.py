@@ -451,7 +451,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
         config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 247, 6)
         config['mts_zones'] = read_truefalse(sheet, 225, 1, 247, 3, 2)
         config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 247, 6, 2)
-        config['ReserveParticipation'] = read_Participation(sheet, 305, 1, 320)# read the true and false values but with a new function (read_Participation)
+        config['ReserveParticipation'] = read_Participation(sheet, 305, 1, 321)# read the true and false values but with a new function (read_Participation)
 
         # Set default values (for backward compatibility):
         for param in DEFAULTS:
