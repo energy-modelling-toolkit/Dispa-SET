@@ -133,7 +133,7 @@ RampStartUpMaximum(au)            [MW\h\u]   Start-up ramp limit
 RampStartUpMaximumH(u,h)         [MW\h\u]   Start-up ramp limit - Clustered formulation
 RampShutDownMaximumH(u,h)        [MW\h\u]   Shut-down ramp limit - Clustered formulation
 RampUpMaximum(u)                 [MW\h\u]   Ramp up limit
-Reserve(t)                       [n.a.]   Reserve technology {1 0}
+Reserve(au)                       [n.a.]   Reserve technology {1 0}
 StorageCapacity(au)             [MWh\u]    Storage capacity
 StorageDischargeEfficiency(au)  [%]      Discharge efficiency
 StorageOutflow(u,h)              [MWh\u]    Storage outflows
@@ -632,7 +632,7 @@ EQ_No_Flexible_Demand(n,i)..
 
 *Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(n,i)..
-         sum((au,t),Reserve_2U(au,i)*Technology(au,t)*Reserve(t)*Location(au,n))
+         sum((au),Reserve_2U(au,i)*Reserve(au)*Location(au,n))
          =G=
          +Demand("2U",n,i)*(1-K_QuickStart(n))
          -LL_2U(n,i)
@@ -640,7 +640,7 @@ EQ_Demand_balance_2U(n,i)..
 
 *Hourly demand balance in the upwards non-spinning reserve market for each node
 EQ_Demand_balance_3U(n,i)..
-         sum((au,t),(Reserve_2U(au,i) + Reserve_3U(au,i))*Technology(au,t)*Reserve(t)*Location(au,n))
+         sum((au),(Reserve_2U(au,i) + Reserve_3U(au,i))*Reserve(au)*Location(au,n))
          =G=
          +Demand("2U",n,i)
          -LL_3U(n,i)
@@ -648,7 +648,7 @@ EQ_Demand_balance_3U(n,i)..
 
 *Hourly demand balance in the downwards reserve market for each node
 EQ_Demand_balance_2D(n,i)..
-         sum((au,t),Reserve_2D(au,i)*Technology(au,t)*Reserve(t)*Location(au,n))
+         sum((au),Reserve_2D(au,i)*Reserve(au)*Location(au,n))
          =G=
          Demand("2D",n,i)
          -LL_2D(n,i)

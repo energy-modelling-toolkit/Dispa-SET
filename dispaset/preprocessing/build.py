@@ -403,7 +403,7 @@ def build_single_run(config, profiles=None):
     sets_param['RampDownMaximum'] = ['au']
     sets_param['RampStartUpMaximum'] = ['au']
     sets_param['RampShutDownMaximum'] = ['au']
-    sets_param['Reserve'] = ['t']
+    sets_param['Reserve'] = ['au']#changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
     sets_param['StorageCapacity'] = ['au']
     sets_param['StorageChargingCapacity'] = ['s']
     sets_param['StorageChargingEfficiency'] = ['s']
@@ -593,7 +593,15 @@ def build_single_run(config, profiles=None):
                 logging.warning('Outages factors not found for unit ' + u + '. Assuming no outages')
 
     # Participation to the reserve market
-    values = np.array([s in config['ReserveParticipation'] for s in sets['t']], dtype='bool')
+    list_of_participating_units = []#new list
+    for unit in Plants_merged.index:
+        tech = Plants_merged.loc[unit,'Technology']
+        if config['ReserveParticipation'][tech][0] == 1 and Plants_merged.loc[unit,'CHPType'] == '':
+            list_of_participating_units.append(unit)    #if unit same technology as allowed without CHP and unit is no CHP then add to list
+        elif config['ReserveParticipation'][tech][1] == 1 and Plants_merged.loc[unit,'CHPType'] != '':
+            list_of_participating_units.append(unit)    #if unit same technology as allowed with CHP and unit is CHP then add to list
+            
+    values = np.array([s in list_of_participating_units for s in sets['au']], dtype='bool')# same as before but with new list
     parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
 
     # Technologies

@@ -391,6 +391,12 @@ def read_truefalse(sheet, rowstart, colstart, rowstop, colstop, colapart=1):
             out.append(sheet.cell_value(i, colstart))
     return out
 
+def read_Participation(sheet,rowstart,colstart,rowstop,colapart=1):# creates dict for each technology and add 0 for false and 1 for true (first value for without CHP second with CHP)
+    Reserveparticipation = {}
+    for i in range(rowstart, rowstop):
+        Reserveparticipation[sheet.cell_value(i, colstart)]=[sheet.cell_value(i,colstart+colapart),sheet.cell_value(i,colstart+colapart+1)]
+    return Reserveparticipation
+
 def load_config_excel(ConfigFile,AbsPath=True):
     """
     Function that loads the DispaSET excel config file and returns a dictionary
@@ -445,7 +451,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
         config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 247, 6)
         config['mts_zones'] = read_truefalse(sheet, 225, 1, 247, 3, 2)
         config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 247, 6, 2)
-        config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 321, 3)
+        config['ReserveParticipation'] = read_Participation(sheet, 305, 1, 320)# read the true and false values but with a new function (read_Participation)
 
         # Set default values (for backward compatibility):
         for param in DEFAULTS:
