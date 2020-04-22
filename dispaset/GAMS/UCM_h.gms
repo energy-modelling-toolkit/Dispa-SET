@@ -687,7 +687,7 @@ EQ_p2h_Reserve_2D_capability(p2h,i)$(StorageCapacity(p2h)>=3*HeatDemand(p2h,i)).
 EQ_p2h_Reserve_3U_capability(p2h,i)$(QuickStartPower(p2h,i) > 0 and StorageCapacity(p2h)>=0.5*3*HeatDemand(p2h,i))..
          Reserve_3U(p2h,i)
          =L=
-         Nunits(p2h)*QuickStartPower(p2h,i)*TimeStep
+         Nunits(p2h)*QuickStartPower(p2h,i)*TimeStep-PowerConsumption(p2h,i)
 ;
 
 *Minimum power output is above the must-run output level for each unit in all periods
@@ -1059,6 +1059,7 @@ LostLoad_WaterSlack(s)
 StorageShadowPrice(au,h)
 OutputReserve_2U(au,h)
 OutputReserve_2D(au,h)
+OutputReserve_3U(au,h)
 
 ;
 
@@ -1093,6 +1094,7 @@ StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
 StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
 OutputReserve_2U(au,z)=Reserve_2U.L(au,z);
 OutputReserve_2D(au,z)=Reserve_2D.L(au,z);
+OutputReserve_3U(au,z)=Reserve_3U.L(au,z);
 
 EXECUTE_UNLOAD "Results.gdx"
 $If %MTS%==0 OutputCommitted,
@@ -1124,6 +1126,7 @@ LostLoad_WaterSlack,
 StorageShadowPrice,
 OutputReserve_2U,
 OutputReserve_2D,
+OutputReserve_3U,
 status
 ;
 
