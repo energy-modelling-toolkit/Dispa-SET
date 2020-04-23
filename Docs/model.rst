@@ -22,7 +22,7 @@ Sets
 	h       Hours
 	i(h)    Time step in the current optimization horizon
 	l       Transmission lines between nodes
-	mk      {DA: Day-Ahead, 2U: Reserve up, 2D: Reserve Down}
+	mk      {DA: Day-Ahead, 2U: Reserve up, 2D: Reserve Down, flex}
 	n       Zones within each country (currently one zone, or node, per country)
 	p       Pollutants
 	p2h(au) Power to heat units
@@ -98,7 +98,7 @@ Parameters
 	StorageInitial(au)                      MWh     Storage level before initial period
 	StorageMinimum(au)                      MWh/u   Minimum storage level
 	StorageOutflow(u,h)                     MWh/u   Storage outflows (spills)
-	StorageProfile(u,h)                     MWh     Storage long-term level profile
+	StorageProfile(u,h)                     %       Storage long-term level profile
 	StorageSelfDischarge(au)		%/day	Self discharge of the storage units
 	Technology(u,t)                         n.a.    Technology type {binary: 1: u belongs to t}
 	TimeDownMinimum(u)                      h       Minimum down time
@@ -261,7 +261,7 @@ The main constraint to be met is the supply-demand balance, for each period and 
 .. math::
 	\begin{align}
 	 \sum _u\left(\mathit{Power}_{u,i} \cdot \mathit{Location}_{u,n}\right) + \sum _l\left(\mathit{Flow}_{l,i} \cdot \mathit{LineNode}_{l,n}\right)\\
- 	 = \mathit{Demand}_{\mathit{DA},n,h} + \sum _r\left(\mathit{StorageInput}_{s,h} \cdot \mathit{Location}_{s,n}\right) -\mathit{ShedLoad}_{n,i} \\
+ 	 = \mathit{Demand}_{\mathit{DA},n,h} + \sum _s\left(\mathit{StorageInput}_{s,h} \cdot \mathit{Location}_{s,n}\right) -\mathit{ShedLoad}_{n,i} \\
 	   + \sum_{p2h} \mathit{PowerConsumption}_{p2h,i} \cdot \mathit{Location}_{p2h,n}  - \mathit{LL_{MaxPower}}_{n,i} + \mathit{LL_{MinPower}}_{n,i} 
 	\end{align}
 
@@ -282,7 +282,7 @@ The secondary reserve capability of committed units is limited by the capacity m
 		& - \mathit{Power}_{u,i}
 	\end{align}
 
-The same applies to the downwards secondary reserve capability, with an additional term to take into account the downard reserve capability of pumping storage units:
+The same applies to the downwards secondary reserve capability, with an additional term to take into account the downard reserve capability of storage units:
 
 .. math::
 	\begin{align}
@@ -667,29 +667,17 @@ In that case, the commitment status variables Commited, StartUp and ShutDown are
 
 Mid Term Scheduling (MTS)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
-In some cases, collecting accurate and reliable historical storage levels and profiles in form of hourly timeseries might be a difficult or close to impossible task. In future scenarios storage levels are usually forecasted based on the historical data. The lack of such data also impacts the accurate modelling of such scenarios. In systems with high shares of hydro dams (HDAM) and pumped hydro storage (HPHS) units, such as Norway and Albania, this might have a huge impact on the overall results of the simulation. In order to avoid this, Dispa-SET’s Midterm Hydro-Thermal Scheduling (MTS) module represents a simplified version of the original MILP unit commitment and power dispatch model. This version is a simplified version of the linear programming formulation which allows perfect foresight and allocation of water resources for the whole optimization period and not only for the tactical horizon of each optimization step. Also h2 level in storage units is optimised. This module enables quick calculation (later also referring as allocation) of reservoir levels which are then used as guidance curves (minimum level constraints) in one of the four main Dispa-SET formulations. The main options are:
-
-* No-MTS, in which historical curves are used,
-* Zonal-MTS, in which MTS is run for each Zone individually, 
-* Regional-MTS, in which MTS is run for two or more Zones from the selected region simultaneously.
-
-It is worthwhile to note that each MTS method and/or modelling formulation can be applied to the same input dataset. This allows comparing the various methods in terms of computational efficiency, but also in terms of accuracy. Graphical summary of MTS options are the following:
-
-.. image:: figures/Graphical_MTS.png 
-
-Important note
---------------
-The MTS optimization (process) is being executed in the preprocessing phase. Here the simplified LP optimization estimates the reservoir levels for the entire year. These newly computed reservoir levels are then imposed as minimum level constraint used in the last time interval of the rolling horizon. As preprocessing includes LP optimization, it might take a while to complete and will be highly dependent on the number of selected zones (the more zones are selected the longer it will take to build the model). Depending on the operating system, command prompt may pop-up and interrupt other processes several times. 
+As will be explained in more details hereunder, MTS allows to pre-define storage levels during the whole year based on a simplified equations.
 
 Model in MTS mode
 -----------------
-When MTS is activated, some equations are dropped/modified. MTS mode is activated by setting parameter MTS to 1. In this configuration, all equations concerning unit commitment are not considered and the binary variables Commited, StartUp and ShutDown are not defined. The following constraints are therefore ignored:
+When MTS is activated, some equations are dropped/modified. MTS mode is activated by setting parameter MTS to 1. In this configuration, all equations concerning unit commitment are not considered and the binary variables Committed, StartUp and ShutDown are not defined. The following constraints are therefore ignored:
  
 * The commitment equations
 * The minimum Up and Down times equations
 * The Ramp up and Ramp down limitation equations
 
-Also, due to the absence of the variable Commitment, some equations are modified.
+Also, due to the absence of the variable Committed, some equations are modified.
 Firstly, the cost equation is modified as follow:
 
 .. math::
@@ -739,11 +727,11 @@ Rolling Horizon
 ^^^^^^^^^^^^^^^
 The mathematical problem described in the previous sections could in principle be solved for a whole year split into time steps, but with all likelihood the problem would become extremely demanding in computational terms when attempting to solve the model with a realistically sized dataset. Therefore, the problem is split into smaller optimization problems that are run recursively throughout the year. 
 
-The following figure shows an example of such approach, in which the optimization horizon is one day, with a look-ahead (or overlap) period of one day. The initial values of the optimization for day j are the final values of the optimization of the previous day. The look-ahead period is modelled to avoid issues related to the end of the optimization period such as emptying the hydro reservoirs, or starting low-cost but non-flexible power plants. In this case, the optimization is performed over 48 hours, but only the first 24 hours are conserved.
+The following figure shows an example of such approach, in which the optimization horizon is two days, including a look-ahead (or overlap) period of one day. The initial values of the optimization for day j are the final values of the optimization of the previous day. The look-ahead period is modelled to avoid issues related to the end of the optimization period such as emptying the hydro reservoirs, or starting low-cost but non-flexible power plants. In this case, the optimization is performed over 48 hours, but only the first 24 hours are conserved.
 
 .. image:: figures/rolling_horizon.png
 
-Although the previous example corresponds to an optimization horizon and an overlap of one day, these two values can be adjusted by the user in the Dispa-SET configuration file. As a rule of thumb, the optimization horizon plus the overlap period should at least be twice the maximum duration of the time-dependent constraints (e.g. the minimum up and down times). In terms of computational efficiency, small power systems can be simulated with longer optimization horizons, while larger systems should reduce this horizon, the minimum being one day.
+The optimization horizon and overlap period can be adjusted by the user in the Dispa-SET configuration file. As a rule of thumb, the optimization horizon plus the overlap period should at least be twice the maximum duration of the time-dependent constraints (e.g. the minimum up and down times). In terms of computational efficiency, small power systems can be simulated with longer optimization horizons, while larger systems should reduce this horizon, the minimum being one day.
 
 
 References

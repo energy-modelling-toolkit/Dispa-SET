@@ -45,7 +45,7 @@ $set InputFileName Inputs.gdx
 * Definition of the equations that will be present in LP or MIP
 * (1 for LP 0 for MIP TC)
 $setglobal LPFormulation 0
-$setglobal MTS 0  
+$setglobal MTS 0
 
 * Flag to retrieve status or not
 * (1 to retrieve 0 to not)
@@ -143,7 +143,7 @@ StorageDischargeEfficiency(s)   [%]      Discharge efficiency
 StorageOutflow(s,h)              [MWh\u]    Storage outflows
 StorageInflow(s,h)               [MWh\u]    Storage inflows (potential energy)
 StorageInitial(au)               [MWh]    Storage level before initial period
-StorageProfile(s,h)              [MWh]    Storage level to be resepected at the end of each horizon
+StorageProfile(s,h)              [%]      Storage level to be resepected at the end of each horizon
 StorageMinimum(au)               [MWh]    Storage minimum
 Technology(u,t)                  [n.a.]   Technology type {1 0}
 TimeDownMinimum(u)               [h]      Minimum down time

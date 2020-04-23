@@ -72,6 +72,7 @@ The Dispa-SET input distinguishes between the technologies defined in the table 
 	THMS		Thermal storage				N	Y
 	P2GS		Power-to-gas storage			N	Y
 	P2HT		Power-to-heat				N	Y
+	SCSP		concentrated Solar Power		Y	Y
 	=============== ======================================= ======= ========
 
 Fuels
@@ -224,7 +225,7 @@ Some parameters must only be defined for the units equipped with storage. They c
 	Description			Field name		Units
 	=============================== =======================	===========
 	Storage capacity 		STOCapacity		MWh
-	Self-discharge rate		STOSelfDischarge	%/h
+	Self-discharge rate		STOSelfDischarge	%/d
 	Maximum charging power 		STOMaxChargingPower	MW
 	Charging efficiency 		STOChargingEfficiency	%
 	=============================== =======================	===========
@@ -247,7 +248,7 @@ Some parameters must only be defined for the units equipped with CHP. They can b
     Power Loss factor                         CHPPowerLossFactor -
     Maximum heat production                   CHPMaxHeat         MW(th)
     Capacity of heat Storage                  STOCapacity        MWh(th)
-    % of storage heat losses per timestep     STOSelfDischarge   %
+    % of storage heat losses per day          STOSelfDischarge   %/d
     ========================================= ================== ===========
 
 In the current version of DispaSet three type of combined heat and power units are supported:
@@ -292,7 +293,7 @@ Some parameters must only be defined for the power-to-heat units (heat pumps, el
     First coefficient                         coef_COP_a         -
     Second coefficient	                      coef_COP_b         - 
     Capacity of heat Storage                  STOCapacity        MWh(th)
-    % of storage heat losses per timestep     STOSelfDischarge   %
+    % of storage heat losses per day	      STOSelfDischarge   %/d
     ========================================= ================== ===========
 
 NB:
@@ -323,7 +324,7 @@ In the database, the time series are provided as column vectors with the technol
 Storage and hydro data
 ----------------------
 
-Storage units are an extension of the regular units, including additional constraints and parameters. In the power plant table, four additional parameters are required: storage capacity (in MWh), self-discharge (in %/h), discharge power (in MW) and discharge efficiency (in %). 
+Storage units are an extension of the regular units, including additional constraints and parameters. In the power plant table, four additional parameters are required: storage capacity (in MWh), self-discharge (in %/d), discharge power (in MW) and discharge efficiency (in %). 
 
 Some other parameters must be introduced in the form of time series in the "HydroData" section of the Dispa-SET database. There are described hereunder.
 
@@ -333,7 +334,7 @@ Inflows
 ^^^^^^^
 The Inflows are defined as the contribution of exogenous sources to the level (or state of charge) or the reservoir. They are expressed in MWh of potential energy. If the inflows are provided as m³/h, they must be converted.
 
-The input to dispaset is defined as "ScaledInflows". It is the normalized values of the inflow with respect to the nominal power of the storage unit (in discharge mode). As an example, if the inflow value at a certain time is 100MWh/h and if the turbining capacity of the hydro plant is 200 MW, the scaled inflow value must be defined as 0.5.
+The input to dispaset is defined as "StorageInflows". It is the normalized values of the inflow with respect to the nominal power of the storage unit (in discharge mode). As an example, if the inflow value at a certain time is 100MWh/h and if the turbining capacity of the hydro plant is 200 MW, the scaled inflow value must be defined as 0.5.
 
 Scaled inflows should be provided in the form of time series with the unit name or the technology as columns header.
 
@@ -364,7 +365,7 @@ The outages are provided in the dedicated section of the Database for each unit.
 Interconnections
 ----------------
 
-Two case should be distinguished when considering interconnections:
+Two cases should be distinguished when considering interconnections:
 
 * Interconnections occuring between the simulated zones
 * Interconnections occuring between the simulated zones and the Rest of the World (RoW)
