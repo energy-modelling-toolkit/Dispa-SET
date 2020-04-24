@@ -432,6 +432,7 @@ EQ_Heat_Demand_balance
 EQ_Heat_Storage_balance
 EQ_Heat_Storage_minimum
 EQ_Heat_Storage_level
+EQ_Heat_Storage_boundaries
 EQ_Commitment
 EQ_MinUpTime
 EQ_MinDownTime
@@ -947,11 +948,12 @@ EQ_Heat_Storage_level(th,i)..
 ;
 
 * Minimum level at the end of the optimization horizon:
-*EQ_Heat_Storage_boundaries(chp,i)$(ord(i) = card(i))..
-*         StorageFinalMin(chp)
-*         =L=
-*         StorageLevel(chp,i)
-*;
+EQ_Heat_Storage_boundaries(th,i)$(ord(i) = card(i))..
+         StorageFinalMin(th)
+         =L=
+         StorageLevel(th,i)
+;
+
 *===============================================================================
 *Definition of models
 *===============================================================================
@@ -961,6 +963,7 @@ EQ_CHP_extraction_Pmax,
 EQ_CHP_extraction,
 EQ_CHP_backpressure,
 EQ_Heat_Demand_balance,
+EQ_Heat_Storage_boundaries,
 EQ_CHP_max_heat,
 EQ_CostRampUp,
 EQ_CostRampDown,
