@@ -153,14 +153,17 @@ def check_sto(config, plants,raw_data=True):
     
     if raw_data:
         key = 'STOCapacity'
+        P_charging = 'STOMaxChargingPower'
     else:
         key = 'StorageCapacity'
+        P_charging = 'StorageChargingCapacity'
     for u in plants.index:
-        if plants.loc[u,key]>plants.loc[u,'PowerCapacity']*8760:
+        maxpower = max(plants.loc[u,'PowerCapacity'],plants.loc[u,P_charging])
+        if plants.loc[u,key]>maxpower*8760:
             logging.error('The Storage capacity for unit ' + plants.loc[u,'Unit'] + ' is prohibitively high. More than one year at full power is required to discharge the reservoir')
-        elif plants.loc[u,key]>plants.loc[u,'PowerCapacity']*3000:
+        elif plants.loc[u,key]>maxpower*3000:
             logging.warning('The Storage capacity for unit ' + plants.loc[u,'Unit'] + ' is very high.')
-        elif (plants.loc[u,key]>plants.loc[u,'PowerCapacity']*24*config['HorizonLength']/config['SimulationTimeStep']) and (config['HydroScheduling'] not in ['Zonal', 'Regional']):
+        elif (plants.loc[u,key]>maxpower*24*config['HorizonLength']/config['SimulationTimeStep']) and (config['HydroScheduling'] not in ['Zonal', 'Regional']):
             logging.warning('The Storage capacity for unit ' + plants.loc[u,'Unit'] + ' is high. Make sure to provide a proper storage level profile')
     
     return True
