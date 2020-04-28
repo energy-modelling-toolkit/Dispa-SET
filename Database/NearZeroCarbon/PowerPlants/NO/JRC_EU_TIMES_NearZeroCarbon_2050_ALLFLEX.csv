@@ -1,6 +1,7 @@
 ,Unit,PowerCapacity,Nunits,Zone,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost_pu,NoLoadCost_pu,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,CHPPowerLossFactor,COP,Tnominal,coef_COP_a,coef_COP_b,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency
 NO_COMC_GAS,NO_COMC_GAS,398.79999999999995,10.0,NO,COMC,GAS,0.51,3,3,0.07,0.07,55,2.9,0.25,0.062171053,0.57,1.0,0.3569,,,,,,,,,,,
 NO_HDAM_WAT,NO_HDAM_WAT,21233.0,1,NO,HDAM,WAT,0.89,0,0,1.0,1.0,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,76191000.0,0.0,0.0,0.89
+NO_HPHS_WAT,NO_HPHS_WAT,4000.0,1,NO,HPHS,WAT,0.89,0,0,1.0,1.0,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,24000.0,0.0,4000.0,0.89
 NO_HROR_WAT,NO_HROR_WAT,5989.0,1,NO,HROR,WAT,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,
 NO_WTON_WIN,NO_WTON_WIN,71741.0,1,NO,WTON,WIN,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,
 NO_PHOT_SUN,NO_PHOT_SUN,30365.0,1,NO,PHOT,SUN,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,

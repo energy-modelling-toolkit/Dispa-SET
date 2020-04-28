@@ -1,6 +1,7 @@
 ,Unit,PowerCapacity,Nunits,Zone,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost_pu,NoLoadCost_pu,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,CHPPowerLossFactor,COP,Tnominal,coef_COP_a,coef_COP_b,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency
 BE_STUR_GEO,BE_STUR_GEO,32.25,4.0,BE,STUR,GEO,0.1,2,2,0.02,0.02,0,0.0,0.0,0.0,0.1,0.0,0.0,,,,,,,,,,,
 BE_COMC_GAS,BE_COMC_GAS,416.7272727272728,66.0,BE,COMC,GAS,0.51,3,3,0.07,0.07,55,2.9,0.25,0.062171053,0.57,1.0,0.3569,,,,,,,,,,,
+BE_HPHS_WAT,BE_HPHS_WAT,1310.0,1,BE,HPHS,WAT,0.89,0,0,1.0,1.0,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,7860.0,0.0,1310.0,0.89
 BE_HROR_WAT,BE_HROR_WAT,141.0,1,BE,HROR,WAT,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,
 BE_WTOF_WIN,BE_WTOF_WIN,3864.0,1,BE,WTOF,WIN,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,
 BE_WTON_WIN,BE_WTON_WIN,18130.0,1,BE,WTON,WIN,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,

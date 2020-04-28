@@ -1,8 +1,8 @@
 ,Unit,PowerCapacity,Nunits,Zone,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost_pu,NoLoadCost_pu,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,CHPPowerLossFactor,COP,Tnominal,coef_COP_a,coef_COP_b,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency
 PT_STUR_GEO,PT_STUR_GEO,37.3,10.0,PT,STUR,GEO,0.1,2,2,0.02,0.02,0,0.0,0.0,0.0,0.1,0.0,0.0,,,,,,,,,,,
 PT_COMC_GAS,PT_COMC_GAS,411.70588235294116,17.0,PT,COMC,GAS,0.51,3,3,0.07,0.07,55,2.9,0.25,0.062171053,0.57,1.0,0.3569,,,,,,,,,,,
-PT_HDAM_WAT,PT_HDAM_WAT,1813.9999999999998,1,PT,HDAM,WAT,0.89,0,0,1.0,1.0,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,2897771.0,0.0,0.0,0.89
-PT_HPHS_WAT,PT_HPHS_WAT,2409.0,1,PT,HPHS,WAT,0.89,0,0,1.0,1.0,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,12045.0,0.0,2409.0,0.89
+PT_HDAM_WAT,PT_HDAM_WAT,4223.0,1,PT,HDAM,WAT,0.89,0,0,1.0,1.0,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,2897771.0,0.0,0.0,0.89
+PT_HPHS_WAT,PT_HPHS_WAT,1093.0,1,PT,HPHS,WAT,0.89,0,0,1.0,1.0,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,6558.0,0.0,1093.0,0.89
 PT_HROR_WAT,PT_HROR_WAT,2203.0,1,PT,HROR,WAT,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,
 PT_WTON_WIN,PT_WTON_WIN,7575.0,1,PT,WTON,WIN,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,
 PT_PHOT_SUN,PT_PHOT_SUN,148018.0,1,PT,PHOT,SUN,1.0,0,0,0.02,0.02,0,0.0,0.0,0.0,1.0,0.0,0.0,,,,,,,,,,,
