@@ -13,6 +13,7 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, check
     check_FlexibleDemand, check_reserves
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
+from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
 
 from .. import __version__
 from ..common import commons
@@ -290,15 +291,27 @@ def build_single_run(config, profiles=None):
     reserve_2U_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
     reserve_2D_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
     for z in Load.columns:
-        if z in Reserve2U:
-            reserve_2U_tot[z] = Reserve2U[z]
+        if config['ReserveCalculation'] == 'Exogenous':
+            if z in Reserve2U and z in Reserve2D:
+                reserve_2U_tot[z] = Reserve2U[z]
+                reserve_2D_tot[z] = Reserve2D[z]
+            else:
+                logging.critical('Exogenous reserve requirements (2D and 2U) not found for zone ' +z)
+                sys.exit(1)
         else:
-            reserve_2U_tot[z] = np.sqrt(10 * PeakLoad[z] + 150 ** 2) - 150
-        if z in Reserve2D:
-            reserve_2D_tot[z] = Reserve2D[z]
-        else:
-            reserve_2D_tot[z] = 0.5 * reserve_2U_tot[z]
-
+            if z in Reserve2U and z in Reserve2D:
+                logging.info('Using exogenous reserve data for zone ' + z)
+                reserve_2U_tot[z] = Reserve2U[z]
+                reserve_2D_tot[z] = Reserve2D[z]            
+            elif config['ReserveCalculation'] == 'Percentage':
+                logging.info('Using percentage-based reserve sizing for zone ' + z)
+                reserve_2U_tot[z], reserve_2D_tot[z] = percentage_reserve(config,plants,Load,AF,z)  
+            elif config['ReserveCalculation'] == 'Probabilistic':
+                logging.info('Using probabilistic reserve sizing for zone ' + z)
+                reserve_2U_tot[z], reserve_2D_tot[z] = probabilistic_reserve(config,plants,Load,AF,z)  
+            else:
+                logging.info('Using generic reserve calculation for zone ' + z)
+                reserve_2U_tot[z], reserve_2D_tot[z] = generic_reserve(Load[z])  
 
     # %% Store all times series and format
 
