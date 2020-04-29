@@ -182,7 +182,7 @@ def build_single_run(config, profiles=None):
 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
-        plants_sto.set_index(plants_sto.iloc[:, 0], inplace=True, drop=True)
+        plants_sto.set_index(plants_sto.loc[:, 'Unit'], inplace=True, drop=True)
         for key in profiles.columns:
             if key not in ReservoirLevels.columns:
                 logging.warning(
