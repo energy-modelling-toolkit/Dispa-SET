@@ -596,9 +596,9 @@ def build_single_run(config, profiles=None):
     list_of_participating_units = []#new list
     for unit in Plants_merged.index:
         tech = Plants_merged.loc[unit,'Technology']
-        if config['ReserveParticipation'][tech][0] == 1 and Plants_merged.loc[unit,'CHPType'] == '':
+        if tech in config['ReserveParticipation'] and Plants_merged.loc[unit,'CHPType'] == '':
             list_of_participating_units.append(unit)    #if unit same technology as allowed without CHP and unit is no CHP then add to list
-        elif config['ReserveParticipation'][tech][1] == 1 and Plants_merged.loc[unit,'CHPType'] != '':
+        elif tech in config['ReserveParticipation_CHP'] and Plants_merged.loc[unit,'CHPType'] != '':
             list_of_participating_units.append(unit)    #if unit same technology as allowed with CHP and unit is CHP then add to list
             
     values = np.array([s in list_of_participating_units for s in sets['au']], dtype='bool')# same as before but with new list

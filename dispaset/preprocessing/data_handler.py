@@ -451,7 +451,8 @@ def load_config_excel(ConfigFile,AbsPath=True):
         config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 247, 6)
         config['mts_zones'] = read_truefalse(sheet, 225, 1, 247, 3, 2)
         config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 247, 6, 2)
-        config['ReserveParticipation'] = read_Participation(sheet, 305, 1, 321)# read the true and false values but with a new function (read_Participation)
+        config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 321, 3)
+        config['ReserveParticipation_CHP'] = read_truefalse(sheet, 342, 1, 345,3)
 
         # Set default values (for backward compatibility):
         for param in DEFAULTS:
@@ -578,6 +579,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
     
         # Read the technologies participating to reserve markets:
         config['ReserveParticipation'] = read_truefalse(sheet, 131, 1, 145, 3)
+        config['ReserveParticipation_CHP'] = []
     
         logging.info("Using config file " + ConfigFile + " to build the simulation environment")
         logging.info("Using " + config['SimulationDirectory'] + " as simulation folder")
@@ -601,7 +603,7 @@ def load_config_yaml(filename, AbsPath=True):
             
     # List of parameters to be added with a default value if not present (for backward compatibility):
     
-    params_to_be_added = {'Temperatures':'','DataTimeStep':1,'SimulationTimeStep':1,'HydroScheduling':'Off','HydroSchedulingHorizon':'Annual','InitialFinalReservoirLevel':True}
+    params_to_be_added = {'Temperatures':'','DataTimeStep':1,'SimulationTimeStep':1,'HydroScheduling':'Off','HydroSchedulingHorizon':'Annual','InitialFinalReservoirLevel':True,'ReserveParticipation_CHP':[]}
     for param in params_to_be_added:
         if param not in config:
             config[param] = params_to_be_added[param]
