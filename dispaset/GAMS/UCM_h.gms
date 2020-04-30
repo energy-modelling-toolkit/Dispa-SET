@@ -1087,7 +1087,7 @@ StorageSlack.L(s,i)$(ord(i)=LastKeptHour-FirstHour+1) = waterslack.L(s);
 $If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
 );
 
-CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n)) + sum(s,spillage.L(s,z));
+CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n)) + sum(s,spillage.L(s,z)* Location(s,n));
 
 $If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
 $If %Verbose% == 1 Display Flow.L,Power.L,ShedLoad.L,CurtailedPower.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L;
