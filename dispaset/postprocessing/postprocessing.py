@@ -334,7 +334,7 @@ def get_result_analysis(inputs, results):
         print('\nZone-Specific storage data')
         print(StorageData)
     except:
-        logging.error('Could compute storage data')
+        logging.error('Couldnt compute storage data')
         StorageData = None
 
     co2 = results['OutputPower'].sum() * inputs['param_df']['EmissionRate'] # MWh * tCO2 / MWh = tCO2
@@ -367,10 +367,23 @@ def get_result_analysis(inputs, results):
                     FuelData[bo][l].loc[f,t] = tmp_data.loc[(tmp_data['Fuel'] == f) &
                                                             (tmp_data['Technology'] == t)][l].sum()
 
+    WaterData = {}
+    WaterData['UnitLevel'] = {}
+    WaterData['ZoneLevel'] = {}
+    WaterData['UnitLevel']['WaterWithdrawal'] = results['OutputPower'] * inputs['units'].loc[:, 'WaterWithdrawal']
+    WaterData['UnitLevel']['WaterConsumption'] = results['OutputPower'] * inputs['units'].loc[:,'WaterConsumption']
+    WaterData['ZoneLevel']['WaterWithdrawal'] = pd.DataFrame()
+    WaterData['ZoneLevel']['WaterConsumption'] = pd.DataFrame()
+    for z in inputs['sets']['n']:
+        WaterData['ZoneLevel']['WaterWithdrawal'][z] = filter_by_zone(WaterData['UnitLevel']['WaterWithdrawal'],
+                                                                      inputs, z).sum(axis=1)
+        WaterData['ZoneLevel']['WaterConsumption'][z] = filter_by_zone(WaterData['UnitLevel']['WaterConsumption'],
+                                                                       inputs, z).sum(axis=1)
+
     return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
             'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt, 'ShedLoad': LoadShedding,'ShiftedLoad':ShiftedLoad_tot,
             'MaxShedLoad': MaxLoadShedding, 'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
-            'UnitData': UnitData, 'FuelData': FuelData}
+            'UnitData': UnitData, 'FuelData': FuelData, 'WaterConsumptionData': WaterData}
 
 
 def get_indicators_powerplant(inputs, results):

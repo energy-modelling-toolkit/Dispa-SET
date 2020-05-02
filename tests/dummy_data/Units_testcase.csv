@@ -1,8 +1,8 @@
 Unit,PowerCapacity,Nunits,Zone,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost,NoLoadCost,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,CHPPowerLossFactor,COP,Tnominal,coef_COP_a,coef_COP_b,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency,WaterWithdrawal,WaterConsumption
 Maasvlakte,500,1,Z2,STUR,HRD,0.395,8,6,0.004672897,0.004672897,117242.17,0,0,0.3,0.395,7,0.95,,,,,,,,,,,,2.5,2.08
-Diemen,430,1,Z2,COMC,GAS,0.525,5,1,0.016330409,0.016330409,112542.12,0,0,0.4,0.525,1,0.45,,,,,,,,,,,,,
-Rijnmond II,427,6,Z2,COMC,GAS,0.525,5,1,0.026159251,0.026159251,112542.12,0,0,0.4,0.525,1,0.45,,,,,,,,,,,,,
-Borssele 12,408,1,Z2,STUR,HRD,0.395,8,6,0.012254902,0.012254902,117242.17,0,0,0.3,0.395,7,0.95,,,,,,,,,,,,,
+Diemen,430,1,Z2,COMC,GAS,0.525,5,1,0.016330409,0.016330409,112542.12,0,0,0.4,0.525,1,0.45,,,,,,,,,,,,2.5,2.08
+Rijnmond II,427,6,Z2,COMC,GAS,0.525,5,1,0.026159251,0.026159251,112542.12,0,0,0.4,0.525,1,0.45,,,,,,,,,,,,100,50
+Borssele 12,408,1,Z2,STUR,HRD,0.395,8,6,0.012254902,0.012254902,117242.17,0,0,0.3,0.395,7,0.95,,,,,,,,,,,,15,3
 PHOT_Z2,400,1,Z2,PHOT,SUN,1,0,0,0.629811057,0.629811057,0,0,0,0,1,0,0,,,,,,,,,,,,,
 WindOff_Z2,200,1,Z2,WTOF,WIN,1,0,0,0.562248996,0.562248996,0,0,0,0,1,0,0,,,,,,,,,,,,,
 WindOn_Z2,300,1,Z2,WTON,WIN,1,0,0,0.044378698,0.044378698,0,0,0,0,1,0,0,,,,,,,,,,,,,
