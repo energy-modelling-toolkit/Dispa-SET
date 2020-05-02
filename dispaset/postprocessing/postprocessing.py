@@ -348,6 +348,8 @@ def get_result_analysis(inputs, results):
     UnitData.loc[:, 'Generation [TWh]'] = results['OutputPower'].sum() / 1e6
     UnitData.loc[:, 'CO2 [t]'] = co2.loc['CO2',:]
     UnitData.loc[:, 'Total Costs [EUR]'] = get_units_operation_cost(inputs, results).sum()
+    UnitData.loc[:, 'WaterWithdrawal'] = results['OutputPower'].sum() * inputs['units'].loc[:,'WaterWithdrawal'].fillna(0)
+    UnitData.loc[:, 'WaterConsumption'] = results['OutputPower'].sum() * inputs['units'].loc[:,'WaterConsumption'].fillna(0)
     print('\nUnit-Specific data')
     print(UnitData)
 
@@ -437,7 +439,7 @@ def CostExPost(inputs,results):
     costs['FixedCosts'] = 0
     for u in results['OutputCommitted']:
         if u in dfin['CostFixed'].index:
-            costs['FixedCosts'] =+ dfin.loc[u,'CostFixed'] * results['OutputCommitted'][u]
+            costs['FixedCosts'] =+ dfin['CostFixed'].loc[u,'CostFixed'] * results['OutputCommitted'][u]
     
             
     #%% Ramping and startup costs:
