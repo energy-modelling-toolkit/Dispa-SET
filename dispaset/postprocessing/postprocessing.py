@@ -600,7 +600,8 @@ def get_units_operation_cost(inputs, results):
 
     Main Author: @AbdullahAlawad
     """
-    datain = ds_to_df(inputs)
+    datain = inputs['param_df']
+    results['OutputCommitted'] = pd.DataFrame(1,index=results['OutputPower'].index,columns=results['OutputPower'].columns)
 
     #DataFrame with startup times for each unit (1 for startup)
     StartUps = results['OutputCommitted'].copy()
@@ -662,3 +663,47 @@ def get_units_operation_cost(inputs, results):
     UnitOperationCost = FiexedCost+StartUpCost+ShutDownCost+RampUpCost+RampDownCost+VariableCost
 
     return UnitOperationCost
+#%%   change when heatdemand per zone
+def shadowprices (results, zone):
+    """
+    this function retrieves the schadowprices of DA, heat, 2U and 2D for 1 zone
+    """
+    schadowprices = pd.DataFrame(0,index = results['OutputPower'].index, colums = ['DA','Heat','2U','2D'])
+    if  zone in results['ShadowPrice'].columns:
+        schadowprices['DA'] = results['ShadowPrice'][zone]
+    if zone in results['ReserveUpShadowPrice'].columns:
+        schadowprices['2U'] = results['ReserveUpShadowPrice'][zone]
+    if zone in results['ReserveDownShadowPrice'].columns:
+        schadowprices['2D'] = results['ReserveDownShadowPrice'][zone]
+#    if zone in results['HeatShadowPrice'].columns:
+#        schadowprices['Heat'] = results['HeatShadowPrice'][zone]
+
+    
+    return schadowprices
+#%% change when heatdemand per zone
+def Cashflows(inputs,results,unit,Plot = True):
+    """
+    This function calculates the different cashflows for one specific unit
+    """
+    zone = inputs['units'].loc[[unit],['Zone']]
+    zone = pd.DataFrame.to_string(zone, header = False, index = False)
+    zone = zone.strip()
+    cashflows = pd.DataFrame(index = inputs['config']['idx'])
+    
+    #positive cashflows
+    if  unit in results['OutputPower'].columns and zone in results['ShadowPrice'].columns:
+        cashflows['DA'] = results['OutputPower'][unit]*results['ShadowPrice'][zone]
+    if unit in results['OutputReserve_2U'].columns and zone in results['ReserveUpShadowPrice'].columns:
+        cashflows['2U'] = results['OutputReserve_2U'][unit]*results['ReserveUpShadowPrice'][zone]
+    if unit in results['OutputReserve_2D'].columns and zone in results['ReserveDownShadowPrice'].columns:
+        cashflows['2D'] = results['OutputReserve_2D'][unit]*results['ReserveDownShadowPrice'][zone]
+    if unit in results['OutputHeat'].columns and unit in results['HeatShadowPrice'].columns:
+        cashflows['heat'] = results['OutputHeat'][unit]*results['HeatShadowPrice'][unit]
+
+    #negative cashflow
+    units_operation_cost = get_units_operation_cost(inputs, results)
+    cashflows['costs'] = units_operation_cost[unit]
+
+    #return dataframe with casflows for one unit
+    cashflows.fillna(0,inplace = True)
+    return cashflows

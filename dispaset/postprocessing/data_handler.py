@@ -33,6 +33,7 @@ col_keys = {'OutputCommitted':('u','h'),
             'ReserveUpShadowPrice':('n','h'),
             'ReserveDownShadowPrice':('n','h'),
             'StorageShadowPrice':('u','h'),
+            'HeatShadowPrice':('u','h'),
             'LostLoad_WaterSlack':('u'),
             'OutputReserve_2U':('u','h'),
             'OutputReserve_2D':('u','h'),
@@ -133,7 +134,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     index = pd.date_range(start=dt.datetime(*StartDate), end=dt.datetime(*StopDate), freq='h')
     index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
 
-    keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
+    keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp','HeatShadowPrice',
             'LostLoad_RampDown', 'LostLoad_2D','ShadowPrice', 'ReserveUpShadowPrice', 'ReserveDownShadowPrice','StorageShadowPrice'] #'status'
 
     keys_sparse = ['OutputPower','OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
@@ -171,6 +172,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
         results['ReserveUpShadowPrice'][results['ReserveUpShadowPrice'] >= 1e300] = 0
         results['ReserveDownShadowPrice'][results['ReserveDownShadowPrice'] >= 1e300] = 0        
         results['StorageShadowPrice'][results['StorageShadowPrice'] >= 1e300] = 0
+        results['HeatShadowPrice'][results['HeatShadowPrice'] >= 1e300] = 0
 
     status = {}
     if "model" in results['status']:
