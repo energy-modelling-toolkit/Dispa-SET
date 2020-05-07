@@ -166,6 +166,10 @@ scalar FirstHour,LastHour,LastKeptHour,day,ndays,failed;
 FirstHour = 1;
 scalar TimeStep;
 
+*Threshold values for p2h partecipation to reserve market as spinning/non-spinning reserves (TO BE IMPLEMENTED IN CONFIGFILE)
+srp = 1;
+nsrp = 3;
+
 *===============================================================================
 *Data import
 *===============================================================================
@@ -672,19 +676,19 @@ EQ_Reserve_3U_capability(u,i)$(QuickStartPower(u,i) > 0)..
          (Nunits(u)-Committed(u,i))*QuickStartPower(u,i)*TimeStep
 ;
 
-EQ_p2h_Reserve_2U_capability(p2h,i)$(StorageCapacity(p2h)>=3*HeatDemand(p2h,i))..
+EQ_p2h_Reserve_2U_capability(p2h,i)$(StorageCapacity(p2h)>=srp*Efficiency(p2h,i)*PowerCapacity(p2h))..
          Reserve_2U(p2h,i)
          =l=
          PowerConsumption(p2h,i)
 ;
 
-EQ_p2h_Reserve_2D_capability(p2h,i)$(StorageCapacity(p2h)>=3*HeatDemand(p2h,i))..
+EQ_p2h_Reserve_2D_capability(p2h,i)$(StorageCapacity(p2h)>=srp*Efficiency(p2h,i)*PowerCapacity(p2h))..
          Reserve_2D(p2h,i)
          =l=
          PowerCapacity(p2h)*Nunits(p2h)*LoadMaximum(p2h,i)-PowerConsumption(p2h,i)
 ;
 
-EQ_p2h_Reserve_3U_capability(p2h,i)$(QuickStartPower(p2h,i) > 0 and StorageCapacity(p2h)>=0.5*3*HeatDemand(p2h,i))..
+EQ_p2h_Reserve_3U_capability(p2h,i)$(QuickStartPower(p2h,i) > 0 and StorageCapacity(p2h)>=trp*Efficiency(p2h,i)*PowerCapacity(p2h))..
          Reserve_3U(p2h,i)
          =L=
          Nunits(p2h)*QuickStartPower(p2h,i)*TimeStep-PowerConsumption(p2h,i)
