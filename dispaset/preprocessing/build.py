@@ -199,7 +199,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
                 ReservoirLevels[key].update(profiles[key])
                 logging.info(
                     'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
-    # Update PtL demand (H2FlexibleDemand with demand from mid term scheduling
+    # Update PtL demand (H2FlexibleDemand with demand from mid term scheduling)
     if PtLDemand is not None and any(H2FlexibleDemand)>0:
         for key in PtLDemand.columns:
             if key not in H2FlexibleDemand.columns:
@@ -514,12 +514,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
         
     # Particular treatment of MaxCapacityPtL that is not a time-series and
     # that is given separetly from the Power plant database 
-    if config['H2FlexibleCapacity'] is not None:
+    if config['H2FlexibleCapacity'] != '':
         MaxCapacityPtL = pd.read_csv(config['H2FlexibleCapacity'], index_col=0)
         for i, u in enumerate(sets['p2h2']):
             for unit in MaxCapacityPtL.index:
                 if unit in u:
                     parameters['MaxCapacityPtL']['val'][i] = MaxCapacityPtL.loc[unit] 
+                    
         
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
@@ -563,11 +564,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
             parameters['CostH2Slack']['val'][i, :] = finalTS['CostH2Slack'][u][idx_sim].values
         if u in finalTS['H2FlexibleDemand']:
             parameters['PtLDemandInput']['val'][i, :] = finalTS['H2FlexibleDemand'][u][idx_sim].values
-            
-    # PtL flexible capacities
-#    for i,u in Plants_merged.index:
-#        if Plants_merged.loc[u,'Technology'] == 'P2GS'
-#    parameters['H2FlexibleCapacity']['val'] = H2FlexibleCapacity
 
     # Ramping rates are reconstructed for the non dimensional value provided (start-up and normal ramping are not differentiated)
     parameters['RampUpMaximum']['val'] = Plants_merged['RampUpRate'].values * Plants_merged['PowerCapacity'].values * 60

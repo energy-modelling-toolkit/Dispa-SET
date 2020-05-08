@@ -45,10 +45,16 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
         logging.info('Simulation without mid therm scheduling')
         SimData = build_single_run(config)
     else:
-        [new_profiles, new_PtLDemand] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
-        # Build simulation data with new profiles
-        logging.info('\n\nBuilding final simulation\n')
-        SimData = build_single_run(config, new_profiles, new_PtLDemand)
+        if config['H2FlexibleDemand'] != '':
+            [new_profiles, new_PtLDemand] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
+            # Build simulation data with new profiles
+            logging.info('\n\nBuilding final simulation\n')
+            SimData = build_single_run(config, new_profiles, new_PtLDemand)
+        else:
+            new_profiles = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
+            # Build simulation data with new profiles
+            logging.info('\n\nBuilding final simulation\n')
+            SimData = build_single_run(config, new_profiles)
         
     # Copy the log to the simulation folder:
     if os.path.isfile(commons['logfile']):
@@ -174,22 +180,23 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                     sys.exit(1)
                 for u_old in units.loc[u,'FormerUnits']:
                     profiles[u_old] = temp_results[c]['OutputStorageLevel'][u].values
-
-            if 'OutputPtLDemand' not in temp_results[c]:
-                logging.critical('PtL demand in zone ' + c + ' was not computed')
-            elif len(temp_results[c]['OutputSPtLDemand']) > len(idx):
-                logging.critical('The number of time steps in the mid-term simulation results (' + str(
-                                 len(temp_results[c]['OutputPtLDemand'])) +
-                                 ') does not match the length of the index (' + str(len(idx)) + ')')
-                sys.exit(0)                            
-            elif len(temp_results[c]['OutputPtLDemand']) < len(idx):
-                temp_results[c]['OutputPtLDemand'] = temp_results[c]['OutputPtLDemand'].reindex(range(1, len(idx) + 1)).fillna(0).values
-            for u in temp_results[c]['OutputPtLDemand']:
-                if u not in units.index:
-                    logging.critical('Unit "' + u + '" is reported in the PtL demand of the result file but does not appear in the units table')
-                    sys.exit(1)
-                for u_old in units.loc[u,'FormerUnits']:
-                    PtLDemand[u_old] = temp_results[c]['OutputPtLDemand'][u].values  
+            if config['H2FlexibleDemand'] != '':
+                if 'OutputPtLDemand' not in temp_results[c]:
+                    logging.critical('PtL demand in zone ' + c + ' was not computed')
+                    sys.exit(0)
+                elif len(temp_results[c]['OutputSPtLDemand']) > len(idx):
+                    logging.critical('The number of time steps in the mid-term simulation results (' + str(
+                                     len(temp_results[c]['OutputPtLDemand'])) +
+                                     ') does not match the length of the index (' + str(len(idx)) + ')')
+                    sys.exit(0)                            
+                elif len(temp_results[c]['OutputPtLDemand']) < len(idx):
+                        temp_results[c]['OutputPtLDemand'] = temp_results[c]['OutputPtLDemand'].reindex(range(1, len(idx) + 1)).fillna(0).values
+                for u in temp_results[c]['OutputPtLDemand']:
+                    if u not in units.index:
+                        logging.critical('Unit "' + u + '" is reported in the PtL demand of the result file but does not appear in the units table')
+                        sys.exit(1)
+                    for u_old in units.loc[u,'FormerUnits']:
+                        PtLDemand[u_old] = temp_results[c]['OutputPtLDemand'][u].values  
                 
     # Solving reservoir levels for all regions simultaneously
     elif config['HydroScheduling'] == 'Regional':
@@ -213,14 +220,15 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             profiles = temp_results['OutputStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
         else:
             profiles = temp_results['OutputStorageLevel'].set_index(idx)
-            
-        if 'OutputPtLDemand' not in temp_results:
-            logging.critical('PtL Demand in the selected region was not computed')
-            sys.exit(0)   
-        if len(temp_results['OutputPtLDemand']) < len(idx):
-            PtLDemand = temp_results['OutputPtLDemand'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
-        else:
-            PtLDemand = temp_results['OutputPtLDemand'].set_index(idx)
+        
+        if config['H2FlexibleDemand'] != '':
+            if 'OutputPtLDemand' not in temp_results:
+                logging.critical('PtL Demand in the selected region was not computed')
+                sys.exit(0)   
+                if len(temp_results['OutputPtLDemand']) < len(idx):
+                    PtLDemand = temp_results['OutputPtLDemand'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
+                else:
+                    PtLDemand = temp_results['OutputPtLDemand'].set_index(idx)
             
         # Updating the profiles table with the original unit names:
         for u in profiles:
@@ -230,20 +238,22 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             for u_old in units.loc[u,'FormerUnits']:
                 profiles[u_old] = profiles[u]
             profiles.drop(u,axis=1,inplace=True)
-        for u in PtLDemand:
-            if u not in units.index:
-                logging.critical('Unit "' + u + '" is reported in the PtL demand of the result file but does not appear in the units table')
-                sys.exit(1)
-            for u_old in units.loc[u,'FormerUnits']:
-                PtLDemand[u_old] = PtLDemand[u]
-            PtLDemand.drop(u,axis=1,inplace=True)            
+        if config['H2FlexibleDemand'] != '':
+            for u in PtLDemand:
+                if u not in units.index:
+                    logging.critical('Unit "' + u + '" is reported in the PtL demand of the result file but does not appear in the units table')
+                    sys.exit(1)
+                    for u_old in units.loc[u,'FormerUnits']:
+                        PtLDemand[u_old] = PtLDemand[u]
+                        PtLDemand.drop(u,axis=1,inplace=True)            
     else:
         logging.error('HydroScheduling parameter should be either "Regional" or "Zonal" (case sensitive). ')
         sys.exit()
     
     # replace all 1.000000e+300 values by nan since they correspond to undefined in GAMS:
     profiles[profiles>=1E300] =  np.nan
-    PtLDemand[PtLDemand>=1E300] =  np.nan
+    if config['H2FlexibleDemand'] != '':
+        PtLDemand[PtLDemand>=1E300] =  np.nan
 
     if mts_plot:
         profiles.plot()
@@ -251,7 +261,11 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     # Re-index to the main simulation time step:
     if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
         profiles = profiles.reindex(idx_orig, method='nearest')
-        PtLDemand = PtLDemand.resample(pd_timestep(config['SimulationTimeStep'])).pad()
-    pickle.dump(profiles.append(PtLDemand), open(os.path.join(config['SimulationDirectory'],"temp_profiles.p"), "wb"))
-    return profiles, PtLDemand
+        if config['H2FlexibleDemand'] != '':
+            PtLDemand = PtLDemand.resample(pd_timestep(config['SimulationTimeStep'])).pad()
+    pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'],"temp_profiles.p"), "wb"))
+    if config['H2FlexibleDemand'] != '':
+        return profiles, PtLDemand
+    else:
+        return profiles
 
