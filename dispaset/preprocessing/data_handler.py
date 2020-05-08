@@ -64,7 +64,6 @@ def NodeBasedTable(varname,config,default=None):
     elif SingleFile:
         # If it is only one file, there is a header with the zone code
         tmp = load_time_series(config,paths['all'])
-           
         if len(tmp.columns) == 1:    # if there is only one column, assign its value to all the zones, whatever the header
             try:    # if the column header is numerical, there was probably no header. Load the file again.
                 float(tmp.columns[0])   # this will fail if the header is not numerical
@@ -405,7 +404,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
     sheet = wb.sheet_by_name('main')
     config = {}
     
-    if sheet.cell_value(0,0) == 'Dispa-SET Configuration File (v20.01)':
+    if sheet.cell_value(0,0) == 'Dispa-SET Configuration File (v20.02)':
         config['Description'] = sheet.cell_value(5, 1)
         config['StartDate'] = xlrd.xldate_as_tuple(sheet.cell_value(56, 2), wb.datemode)
         config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(57, 2), wb.datemode)
@@ -419,18 +418,18 @@ def load_config_excel(ConfigFile,AbsPath=True):
                           'HydroScheduling':98,'HydroSchedulingHorizon':99,'InitialFinalReservoirLevel':100}
         PathParameters={'Demand':124, 'Outages':126, 'PowerPlantData':127, 'RenewablesAF':128, 
                           'LoadShedding':129, 'NTC':130, 'Interconnections':131, 'ReservoirScaledInflows':132, 
-                          'PriceOfNuclear':180, 'PriceOfBlackCoal':181, 'PriceOfGas':182, 
-                          'PriceOfFuelOil':183,'PriceOfBiomass':184, 'PriceOfCO2':166, 
-                          'ReservoirLevels':133, 'PriceOfLignite':185, 'PriceOfPeat':186,
-                          'HeatDemand':134,'CostHeatSlack':165,'CostLoadShedding':168,'ShareOfFlexibleDemand':125,
-                          'Temperatures':135,'PriceTransmission':169,'Reserve2U':160,'Reserve2D':161,
-                          'H2Demand':136,'CostH2Slack':170}
-        modifiers= {'Demand':274,'Wind':275,'Solar':276,'Storage':277}
-        default = {'ReservoirLevelInitial':101,'ReservoirLevelFinal':102,'PriceOfNuclear':180,'PriceOfBlackCoal':181,
-                    'PriceOfGas':182,'PriceOfFuelOil':183,'PriceOfBiomass':184,'PriceOfCO2':166,'PriceOfLignite':185,
+                          'PriceOfNuclear':182, 'PriceOfBlackCoal':183, 'PriceOfGas':184, 
+                          'PriceOfFuelOil':185,'PriceOfBiomass':186, 'PriceOfCO2':168, 
+                          'ReservoirLevels':133, 'PriceOfLignite':187, 'PriceOfPeat':188,
+                          'HeatDemand':134,'CostHeatSlack':167,'CostLoadShedding':170,'ShareOfFlexibleDemand':125,
+                          'Temperatures':135,'PriceTransmission':171,'Reserve2U':162,'Reserve2D':163,
+                          'H2RigidDemand':136,'H2FlexibleDemand':159, 'H2FlexibleCapacity': 160,'CostH2Slack':170}
+        modifiers= {'Demand':276,'Wind':277,'Solar':278,'Storage':279}
+        default = {'ReservoirLevelInitial':101,'ReservoirLevelFinal':102,'PriceOfNuclear':182,'PriceOfBlackCoal':183,
+                    'PriceOfGas':184,'PriceOfFuelOil':185,'PriceOfBiomass':186,'PriceOfCO2':168,'PriceOfLignite':187,
                     'PriceOfPeat':186,'LoadShedding':129,'CostHeatSlack':167,'CostLoadShedding':168,'ValueOfLostLoad':204,
-                    'PriceOfSpillage':205,'WaterValue':206,'ShareOfQuickStartUnits':163,'ShareOfFlexibleDemand':125,
-                    'DemandFlexibility':162,'PriceTransmission':169,'CostH2Slack':170}
+                    'PriceOfSpillage':207,'WaterValue':208,'ShareOfQuickStartUnits':165,'ShareOfFlexibleDemand':125,
+                    'DemandFlexibility':164,'PriceTransmission':171,'CostH2Slack':172}
         for p in StdParameters:
             config[p] = sheet.cell_value(StdParameters[p], 2)
         for p in PathParameters:
@@ -443,11 +442,11 @@ def load_config_excel(ConfigFile,AbsPath=True):
             config['default'][p] = sheet.cell_value(default[p], 5)
             
         #True/Falst values:
-        config['zones'] = read_truefalse(sheet, 225, 1, 247, 3)
-        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 247, 6)
-        config['mts_zones'] = read_truefalse(sheet, 225, 1, 247, 3, 2)
-        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 247, 6, 2)
-        config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 319, 3)
+        config['zones'] = read_truefalse(sheet, 227, 1, 247, 3)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 227, 4, 247, 6)
+        config['mts_zones'] = read_truefalse(sheet, 227, 1, 247, 3, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 227, 4, 247, 6, 2)
+        config['ReserveParticipation'] = read_truefalse(sheet, 307, 1, 319, 3)
 
         # Set default values (for backward compatibility):
         for param in DEFAULTS:

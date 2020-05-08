@@ -21,7 +21,7 @@ from ..misc.gdx_handler import write_variables
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
 
-def build_single_run(config, profiles=None):
+def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
     """
     This function reads the DispaSET config, loads the specified data,
     processes it when needed, and formats it in the proper DispaSET format.
@@ -31,6 +31,8 @@ def build_single_run(config, profiles=None):
                           'LoadConfig' function.
     :param plot_load:     Boolean used to display a plot of the demand curves in the different zones
     :param profiles:      Profiles from mid term scheduling simulations
+    :param MTS:           Boolean, 1 if in MTS
+    :PtLDemand:           PtLDemand from mid term scheduling simulations
     """
     dispa_version = __version__
     logging.info('New build started. DispaSET version: ' + dispa_version)
@@ -176,7 +178,8 @@ def build_single_run(config, profiles=None):
                                    default=config['default']['CostHeatSlack'])
     Temperatures = NodeBasedTable('Temperatures', config)
 
-    H2Demand = UnitBasedTable(plants_h2, 'H2Demand', config, fallbacks=['Unit'], default=0)
+    H2RigidDemand = UnitBasedTable(plants_h2, 'H2RigidDemand', config, fallbacks=['Unit'], default=0)
+    H2FlexibleDemand = UnitBasedTable(plants_h2, 'H2FlexibleDemand', config, fallbacks=['Unit'], default=0)
     CostH2Slack = UnitBasedTable(plants_h2, 'CostH2Slack', config, fallbacks=['Unit', 'Zone'],
                                  default=config['default']['CostH2Slack'])
 
@@ -196,7 +199,15 @@ def build_single_run(config, profiles=None):
                 ReservoirLevels[key].update(profiles[key])
                 logging.info(
                     'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
-
+    # Update PtL demand (H2FlexibleDemand with demand from mid term scheduling
+    if PtLDemand is not None and any(H2FlexibleDemand)>0:
+        for key in PtLDemand.columns:
+            if key not in H2FlexibleDemand.columns:
+                logging.warning(
+                    'The He flexible demand "' + key + '" provided by the MTS is not found in the H2FlexibleDemand table')    
+            else:
+                H2FlexibleDemand[key].update(PtLDemand[key])
+    
     # data checks:
     check_AvailabilityFactors(plants, AF)
     check_heat_demand(plants, HeatDemand)
@@ -347,13 +358,13 @@ def build_single_run(config, profiles=None):
                'Outages': Outages, 'AvailabilityFactors': AF, 'CostHeatSlack': CostHeatSlack,
                'HeatDemand': HeatDemand, 'ShareOfFlexibleDemand': ShareOfFlexibleDemand,
                'PriceTransmission': PriceTransmission, 'CostH2Slack': CostH2Slack,
-               'H2Demand': H2Demand}
+               'H2RigidDemand': H2RigidDemand, 'H2FlexibleDemand': H2FlexibleDemand}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors', 'CostHeatSlack', 'CostH2Slack']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
     # Merge the following time series by summing
-    for key in ['HeatDemand', 'H2Demand']:
+    for key in ['HeatDemand', 'H2RigidDemand', 'H2FlexibleDemand']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='Sum')
     # Merge the following time series by weighted average based on storage capacity
     for key in ['ReservoirLevels']:
@@ -457,7 +468,8 @@ def build_single_run(config, profiles=None):
     sets_param['Technology'] = ['au', 't']
     sets_param['TimeUpMinimum'] = ['au']
     sets_param['TimeDownMinimum'] = ['au']
-    # sets_param['H2Demand'] = ['p2h2','h']
+    sets_param['PtLDemandInput'] = ['p2h2','h']
+    sets_param['MaxCapacityPtL'] = ['p2h2']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -492,13 +504,22 @@ def build_single_run(config, profiles=None):
     for var in ['StorageChargingEfficiency']:
         parameters[var]['val'] = Plants_sto[var].values
 
-        # The storage discharge efficiency is actually given by the unit efficiency:
+    # The storage discharge efficiency is actually given by the unit efficiency:
     parameters['StorageDischargeEfficiency']['val'] = Plants_sto['Efficiency'].values
 
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
     for var in ['CHPPowerToHeat', 'CHPPowerLossFactor', 'CHPMaxHeat']:
         parameters[var]['val'] = Plants_chp[var].values
-
+        
+    # Particular treatment of MaxCapacityPtL that is not a time-series and
+    # that is given separetly from the Power plant database 
+    if config['H2FlexibleCapacity'] is not None:
+        MaxCapacityPtL = pd.read_csv(config['H2FlexibleCapacity'], index_col=0)
+        for i, u in enumerate(sets['p2h2']):
+            for unit in MaxCapacityPtL.index:
+                if unit in u:
+                    parameters['MaxCapacityPtL']['val'][i] = MaxCapacityPtL.loc[unit] 
+        
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
         if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(
@@ -534,11 +555,18 @@ def build_single_run(config, profiles=None):
 
     # H2 time series:
     for i, u in enumerate(sets['s']):
-        if u in finalTS['H2Demand']:
-            parameters['StorageOutflow']['val'][i, :] = finalTS['H2Demand'][u][idx_sim].values
+        if u in finalTS['H2RigidDemand']:
+            parameters['StorageOutflow']['val'][i, :] = finalTS['H2RigidDemand'][u][idx_sim].values
     for i, u in enumerate(sets['p2h2']):
-        if u in finalTS['H2Demand']:
+        if u in finalTS['H2RigidDemand']:
             parameters['CostH2Slack']['val'][i, :] = finalTS['CostH2Slack'][u][idx_sim].values
+        if u in finalTS['H2FlexibleDemand']:
+            parameters['PtLDemandInput']['val'][i, :] = finalTS['H2FlexibleDemand'][u][idx_sim].values
+            
+    # PtL flexible capacities
+#    for i,u in Plants_merged.index:
+#        if Plants_merged.loc[u,'Technology'] == 'P2GS'
+#    parameters['H2FlexibleCapacity']['val'] = H2FlexibleCapacity
 
     # Ramping rates are reconstructed for the non dimensional value provided (start-up and normal ramping are not differentiated)
     parameters['RampUpMaximum']['val'] = Plants_merged['RampUpRate'].values * Plants_merged['PowerCapacity'].values * 60
@@ -716,12 +744,30 @@ def build_single_run(config, profiles=None):
 
     if not os.path.exists(sim):
         os.makedirs(sim)
+        
+    if MTS:
+        if not LP:
+            logging.error('Simulation in MTS must be LP')
+            sys.exit(1) 
+        else:
+            fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
+            fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
+            for line in fin:
+                line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+                line = line.replace('$setglobal MTS 0', '$setglobal MTS 1')
+                fout.write(line)
+            fin.close()
+            fout.close()
+            # additionally allso copy UCM_h_simple.gms
+            shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+                                os.path.join(sim, 'UCM_h_simple.gms'))
 
-    if LP:
+    elif LP:
         fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
         fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
         for line in fin:
-            fout.write(line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1'))
+            line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+            fout.write(line)
         fin.close()
         fout.close()
         # additionally allso copy UCM_h_simple.gms
