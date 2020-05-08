@@ -470,6 +470,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
     sets_param['TimeDownMinimum'] = ['au']
     sets_param['PtLDemandInput'] = ['p2h2','h']
     sets_param['MaxCapacityPtL'] = ['p2h2']
+    sets_param['H2Demand'] = ['s','h']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -556,7 +557,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
     # H2 time series:
     for i, u in enumerate(sets['s']):
         if u in finalTS['H2RigidDemand']:
-            parameters['StorageOutflow']['val'][i, :] = finalTS['H2RigidDemand'][u][idx_sim].values
+            parameters['H2Demand']['val'][i, :] = finalTS['H2RigidDemand'][u][idx_sim].values
     for i, u in enumerate(sets['p2h2']):
         if u in finalTS['H2RigidDemand']:
             parameters['CostH2Slack']['val'][i, :] = finalTS['CostH2Slack'][u][idx_sim].values
