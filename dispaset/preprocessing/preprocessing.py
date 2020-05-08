@@ -225,10 +225,10 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             if 'OutputPtLDemand' not in temp_results:
                 logging.critical('PtL Demand in the selected region was not computed')
                 sys.exit(0)   
-                if len(temp_results['OutputPtLDemand']) < len(idx):
-                    PtLDemand = temp_results['OutputPtLDemand'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
-                else:
-                    PtLDemand = temp_results['OutputPtLDemand'].set_index(idx)
+            if len(temp_results['OutputPtLDemand']) < len(idx):
+                PtLDemand = temp_results['OutputPtLDemand'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
+            else:
+                PtLDemand = temp_results['OutputPtLDemand'].set_index(idx)
             
         # Updating the profiles table with the original unit names:
         for u in profiles:
