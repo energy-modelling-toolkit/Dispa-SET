@@ -108,6 +108,7 @@ CostStartUp(u)                   [EUR\u]    Start-up costs
 CostVariable(u,h)                [EUR\MW]   Variable costs
 CostHeatSlack(th,h)             [EUR\MWh]  Cost of supplying heat via other means
 CostH2Slack(p2h2,h)              [EUR\MWh] Cost of supplying H2 by other means
+H2Demand(p2h2,h)                 [MW]      H2 rigid demand
 CostLoadShedding(n,h)            [EUR\MWh] Cost of load shedding
 Curtailment(n)                   [n.a]    Curtailment allowed or not {1 0} at node n
 Demand(mk,n,h)                   [MW]     Demand
@@ -249,6 +250,7 @@ $LOAD CostRampUp
 $LOAD CostRampDown
 $LOAD PtLDemandInput
 $LOAD MaxCapacityPtL
+$LOAD H2Demand
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
 ;
 
@@ -307,6 +309,7 @@ RampShutDownMaximum,
 RampStartUpMaximum,
 RampUpMaximum,
 Reserve,
+H2Demand,
 StorageCapacity,
 StorageInflow,
 StorageInitial,
@@ -369,6 +372,7 @@ Heat(au,h)                [MW]    Heat output by chp plant
 HeatSlack(au,h)           [MW]    Heat satisfied by other sources
 WaterSlack(s)             [MWh]   Unsatisfied water level constraint at end of optimization period
 StorageSlack(au,h)         [MWh]   Unsatisfied storage level constraint at end of simulation timestep
+H2Output(au,h)             [MWh]  H2 output from H2 storage to fulfill demand
 PtLDemand(au,h)            [MW]   Demand of H2 for PtL at each time step for p2h2 units
 ;
 
@@ -455,6 +459,7 @@ EQ_Storage_input
 EQ_Storage_MaxDischarge
 EQ_Storage_MaxCharge
 EQ_Storage_balance
+EQ_H2_demand
 EQ_Storage_boundaries
 EQ_SystemCost
 EQ_Emission_limits
@@ -741,7 +746,7 @@ EQ_Storage_MaxCharge(s,i)$(StorageCapacity(s)>PowerCapacity(s)*TimeStep)..
          =L=
          (Nunits(s) * StorageCapacity(s)-StorageInitial(s))$(ord(i) = 1)
          + (Nunits(s) * StorageCapacity(s)*AvailabilityFactor(s,i-1) - StorageLevel(s,i-1))$(ord(i) > 1)
-         +StorageOutflow(s,i)*Nunits(s)*TimeStep +(PtLDemand(s,i)*Nunits(s)*TimeStep)$(p2h2(s))
+         + StorageOutflow(s,i)*Nunits(s)*TimeStep + H2Output(s,i)$(p2h2(s))
 ;
 
 *Storage balance
@@ -750,15 +755,19 @@ EQ_Storage_balance(s,i)..
          +StorageLevel(s,i-1)$(ord(i) > 1)
          +StorageInflow(s,i)*Nunits(s)*TimeStep
          +StorageInput(s,i)*StorageChargingEfficiency(s)*TimeStep
-         +StorageSlack(s,i)$(p2h2(s))
          =E=
          StorageLevel(s,i)
          +StorageOutflow(s,i)*Nunits(s)*TimeStep
-         + PtLDemand(s,i)*Nunits(s)*TimeStep$(p2h2(s))
+         +H2Output(s,i)$(p2h2(s))
          +spillage(s,i)
          +Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
 ;
-
+* H2 demand
+EQ_H2_demand(p2h2,i)..
+         H2Demand(p2h2,i) + PtLDemand(p2h2,i)
+         =E=
+         H2Output(p2h2,i) + StorageSlack(p2h2,i)
+;
 * Minimum level at the end of the optimization horizon:
 EQ_Storage_boundaries(s,i)$(ord(i) = card(i))..
          StorageFinalMin(s)
@@ -936,9 +945,10 @@ EQ_Storage_level,
 EQ_Storage_input,
 EQ_Storage_balance,
 EQ_Storage_boundaries,
-EQ_Storage_MaxCharge
-EQ_Storage_MaxDischarge
-EQ_SystemCost
+EQ_H2_demand,
+EQ_Storage_MaxCharge,
+EQ_Storage_MaxDischarge ,
+EQ_SystemCost,
 *EQ_Emission_limits,
 EQ_Flow_limits_lower,
 EQ_Flow_limits_upper,
@@ -1047,6 +1057,7 @@ OutputPowerConsumption(p2h,h)
 OutputStorageInput(au,h)
 OutputStorageLevel(au,h)
 OutputStorageSlack(p2h2,h)
+OutputH2Output(p2h2,h)
 OutputSystemCost(h)
 OutputSpillage(s,h)
 OutputShedLoad(n,h)
