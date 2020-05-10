@@ -1101,7 +1101,7 @@ OutputReserve_2D(au,z)=Reserve_2D.L(au,z);
 OutputReserve_3U(au,z)=Reserve_3U.L(au,z);
 
 EXECUTE_UNLOAD "Results.gdx"
-$If %MTS%==0 OutputCommitted,
+OutputCommitted,
 OutputFlow,
 OutputPower,
 OutputPowerConsumption,
@@ -1133,8 +1133,6 @@ OutputReserve_2D,
 OutputReserve_3U,
 status
 ;
-
-display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L;
 
 $onorder
 * Exit here if the PrintResult option is set to 0:
