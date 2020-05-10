@@ -162,7 +162,7 @@ AccumulatedOverSupply_inital(n)  [MWh]   Initial value of the flexible demand ac
 ;
 
 * Scalar variables necessary to the loop:
-scalar FirstHour,LastHour,LastKeptHour,day,ndays,failed;
+scalar FirstHour,LastHour,LastKeptHour,day,ndays,failed,srp,nsrp;
 FirstHour = 1;
 scalar TimeStep;
 
@@ -688,7 +688,7 @@ EQ_p2h_Reserve_2D_capability(p2h,i)$(StorageCapacity(p2h)>=srp*Efficiency(p2h,i)
          PowerCapacity(p2h)*Nunits(p2h)*LoadMaximum(p2h,i)-PowerConsumption(p2h,i)
 ;
 
-EQ_p2h_Reserve_3U_capability(p2h,i)$(QuickStartPower(p2h,i) > 0 and StorageCapacity(p2h)>=trp*Efficiency(p2h,i)*PowerCapacity(p2h))..
+EQ_p2h_Reserve_3U_capability(p2h,i)$(QuickStartPower(p2h,i) > 0 and StorageCapacity(p2h)>=srp*Efficiency(p2h,i)*PowerCapacity(p2h))..
          Reserve_3U(p2h,i)
          =L=
          Nunits(p2h)*QuickStartPower(p2h,i)*TimeStep-PowerConsumption(p2h,i)
