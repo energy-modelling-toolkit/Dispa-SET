@@ -614,6 +614,14 @@ def check_df(df, StartDate=None, StopDate=None, name=''):
         sys.exit(1)
     return True
 
+def check_PtLDemand(parameters, config):
+    for i, u in enumerate(parameters['MaxCapacityPtL']['val']):
+        TotDemand = parameters['PtLDemandInput']['val'][i,:].sum()*config['SimulationTimeStep']
+        MaxProduction = parameters['MaxCapacityPtL']['val'][i]*len(parameters['PtLDemandInput']['val'][i,:])*config['SimulationTimeStep']
+        if TotDemand > MaxProduction:
+            logging.error('Unit ' + u +' has a higher PtL demand than what the PtL capacity can provide')
+            sys.exit(1)
+    
 
 def check_simulation_environment(SimulationPath, store_type='pickle', firstline=7):
     """

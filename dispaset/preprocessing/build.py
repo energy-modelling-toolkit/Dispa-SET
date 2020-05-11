@@ -10,7 +10,7 @@ from future.builtins import int
 
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
     check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_h2, check_df, check_MinMaxFlows, \
-    check_FlexibleDemand, check_reserves
+    check_FlexibleDemand, check_reserves, check_PtLDemand
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
 
@@ -519,8 +519,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
         for i, u in enumerate(sets['p2h2']):
             for unit in MaxCapacityPtL.index:
                 if unit in u:
-                    parameters['MaxCapacityPtL']['val'][i] = MaxCapacityPtL.loc[unit] 
-                    
+                    parameters['MaxCapacityPtL']['val'][i] = MaxCapacityPtL.loc[unit]            
         
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
@@ -554,7 +553,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
         if u in finalTS['HeatDemand']:
             parameters['HeatDemand']['val'][i, :] = finalTS['HeatDemand'][u][idx_sim].values
             parameters['CostHeatSlack']['val'][i, :] = finalTS['CostHeatSlack'][u][idx_sim].values
-
+            
     # H2 time series:
     for i, u in enumerate(sets['s']):
         if u in finalTS['H2RigidDemand']:
@@ -564,7 +563,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
             parameters['CostH2Slack']['val'][i, :] = finalTS['CostH2Slack'][u][idx_sim].values
         if u in finalTS['H2FlexibleDemand']:
             parameters['PtLDemandInput']['val'][i, :] = finalTS['H2FlexibleDemand'][u][idx_sim].values
-
+    if config['H2FlexibleCapacity'] != '':
+        check_PtLDemand(parameters, config) 
+    
     # Ramping rates are reconstructed for the non dimensional value provided (start-up and normal ramping are not differentiated)
     parameters['RampUpMaximum']['val'] = Plants_merged['RampUpRate'].values * Plants_merged['PowerCapacity'].values * 60
     parameters['RampDownMaximum']['val'] = Plants_merged['RampDownRate'].values * Plants_merged[
