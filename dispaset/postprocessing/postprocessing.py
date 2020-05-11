@@ -563,7 +563,7 @@ def CostExPost(inputs,results):
         FlowToZone = results['OutputFlow'].loc[:, lines]
         ZoneTransmissionPrice = dfin['PriceTransmission'].loc[:,lines]
         # Add possibly missing columns:
-        for key in ['OutputShedLoad','LostLoad_2D','LostLoad_2U','LostLoad_3U','LostLoad_MaxPower','LostLoad_MinPower']:
+        for key in ['OutputShedLoad','LostLoad_2D','LostLoad_2U','LostLoad_3U','LostLoad_MaxPower','LostLoad_MinPower','LostLoad_RampDown','LostLoad_RampUp']:
             if z not in results[key]:
                 results[key][z] = 0
         FixedCosts = 0
@@ -583,7 +583,7 @@ def CostExPost(inputs,results):
                         + filter_by_zone(CostHeat,inputs,z).sum(axis=1).fillna(0)  \
                         + 0.8 * VOLL * TimeStep * (results['LostLoad_2D'][z].reindex(timeindex).fillna(0) + results['LostLoad_2U'][z].reindex(timeindex).fillna(0) + results['LostLoad_3U'][z].reindex(timeindex).fillna(0))  \
                         + VOLL * TimeStep * (results['LostLoad_MaxPower'][z].reindex(timeindex).fillna(0) + results['LostLoad_MinPower'][z].reindex(timeindex).fillna(0)) \
-                        + 0.7 * VOLL * TimeStep * filter_by_zone((results['LostLoad_RampDown'].reindex(timeindex).fillna(0) + results['LostLoad_RampUp'].reindex(timeindex).fillna(0)),inputs,z).sum(axis=1) \
+                        + 0.7 * VOLL * TimeStep * (results['LostLoad_RampDown'][z].reindex(timeindex).fillna(0) + results['LostLoad_RampUp'][z].reindex(timeindex).fillna(0)) \
                         + config['default']['PriceOfSpillage'] * filter_by_zone(results['OutputSpillage'],inputs,z).sum(axis=1).fillna(0)
 
     return costs,sumcost,costs_zone
