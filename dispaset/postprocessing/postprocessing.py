@@ -401,7 +401,7 @@ def get_indicators_powerplant(inputs, results):
     return out
 
 
-def CostExPost(inputs,results):
+def CostExPost(inputs,results, plot=True):
     """
     Ex post computation of the operational costs with plotting. This allows breaking down
     the cost into its different components and check that it matches with the objective
@@ -547,7 +547,8 @@ def CostExPost(inputs,results):
     sumcost = costs.cumsum(axis=1)
     sumcost['OutputSystemCost'] = results['OutputSystemCost']
     
-    sumcost.plot(title='Cumulative sum of the cost components')
+    if plot == True:
+        sumcost.plot(title='Cumulative sum of the cost components')
     
     #%% Warning if significant error:
     diff = (costs.sum(axis=1) - results['OutputSystemCost']).abs()
