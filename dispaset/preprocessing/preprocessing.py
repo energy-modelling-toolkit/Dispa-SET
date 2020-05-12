@@ -93,6 +93,9 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     import pickle
     y_start, m_start, d_start, __, __, __ = config['StartDate']
     y_end, m_end, d_end, _, _, _ = config['StopDate']
+    config['idx'] = pd.date_range(start=dt.datetime(*config['StartDate']),
+                                  end=dt.datetime(*config['StopDate']),
+                                  freq=commons['TimeStep']).tz_localize(None)
 
     # New configuration dictionary, specific to MTS:
     temp_config = dict(config)
@@ -257,12 +260,24 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
 
     if mts_plot:
         profiles.plot()
-
+    
+    # Copy results from pre-processing
+    sim_folder = config['SimulationDirectory']
+    shutil.copyfile(os.path.join(sim_folder, 'Results.gdx'), 
+                    os.path.join(sim_folder, 'Results_MTS.gdx'))
+    shutil.copyfile(os.path.join(sim_folder, 'Inputs.gdx'), 
+                    os.path.join(sim_folder, 'Inputs_MTS.gdx'))
+    
     # Re-index to the main simulation time step:
+    # Indexes including the last look-ahead period
+    enddate_long = config['idx'][-1] + dt.timedelta(days=config['LookAhead'])
+    idx_long = pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep'])
+    
     if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
-        profiles = profiles.reindex(idx_orig, method='nearest')
+        profiles = profiles.reindex(idx_long, method='nearest')
         if config['H2FlexibleDemand'] != '':
             PtLDemand = PtLDemand.resample(pd_timestep(config['SimulationTimeStep'])).pad()
+            PtLDemand = PtLDemand.iloc[0:len(idx_long),:]
     pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'],"temp_profiles.p"), "wb"))
     if config['H2FlexibleDemand'] != '':
         return profiles, PtLDemand
