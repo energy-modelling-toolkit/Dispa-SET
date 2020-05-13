@@ -93,9 +93,13 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     import pickle
     y_start, m_start, d_start, __, __, __ = config['StartDate']
     y_end, m_end, d_end, _, _, _ = config['StopDate']
+    config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
     config['idx'] = pd.date_range(start=dt.datetime(*config['StartDate']),
                                   end=dt.datetime(*config['StopDate']),
                                   freq=commons['TimeStep']).tz_localize(None)
+    # Indexes including the last look-ahead period
+    enddate_long = config['idx'][-1] + dt.timedelta(days=config['LookAhead'])
+    idx_long = pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep'])
 
     # New configuration dictionary, specific to MTS:
     temp_config = dict(config)
@@ -269,9 +273,6 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                     os.path.join(sim_folder, 'Inputs_MTS.gdx'))
     
     # Re-index to the main simulation time step:
-    # Indexes including the last look-ahead period
-    enddate_long = config['idx'][-1] + dt.timedelta(days=config['LookAhead'])
-    idx_long = pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep'])
     
     if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
         profiles = profiles.reindex(idx_long, method='nearest')
