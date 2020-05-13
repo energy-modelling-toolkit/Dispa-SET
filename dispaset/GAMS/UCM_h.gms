@@ -1110,6 +1110,7 @@ StorageShadowPrice(s,z) = 0 ;
 OutputPtLDemand(p2h2,z) = PtLDemand.L(p2h2,z);
 *EQ_Storage_balance.m(s,z);
 StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
+OutputH2Output(p2h2,z) = H2Output.L(p2h2,z);
 
 EXECUTE_UNLOAD "Results.gdx"
 $If %MTS%==0 OutputCommitted,
@@ -1139,6 +1140,7 @@ HeatShadowPrice,
 LostLoad_WaterSlack,
 StorageShadowPrice,
 OutputPtLDemand,
+OutputH2Output,
 status
 ;
 

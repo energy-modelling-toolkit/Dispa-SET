@@ -202,11 +202,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
     # Update PtL demand (H2FlexibleDemand with demand from mid term scheduling)
     if PtLDemand is not None and any(H2FlexibleDemand)>0:
         for key in PtLDemand.columns:
-            if key not in H2FlexibleDemand.columns:
+            key_mod = key.split()[2]
+            if key_mod not in H2FlexibleDemand.columns:
                 logging.warning(
-                    'The He flexible demand "' + key + '" provided by the MTS is not found in the H2FlexibleDemand table')    
+                    'The H2 flexible demand "' + key + '" provided by the MTS is not found in the H2FlexibleDemand table')    
             else:
-                H2FlexibleDemand[key].update(PtLDemand[key])
+                H2FlexibleDemand[key_mod].update(PtLDemand[key])
     
     # data checks:
     check_AvailabilityFactors(plants, AF)
