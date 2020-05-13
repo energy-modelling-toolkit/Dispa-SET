@@ -421,13 +421,13 @@ def load_config_excel(ConfigFile,AbsPath=True):
                           'PriceOfNuclear':182, 'PriceOfBlackCoal':183, 'PriceOfGas':184, 
                           'PriceOfFuelOil':185,'PriceOfBiomass':186, 'PriceOfCO2':168, 
                           'ReservoirLevels':133, 'PriceOfLignite':187, 'PriceOfPeat':188,
-                          'HeatDemand':134,'CostHeatSlack':167,'CostLoadShedding':170,'ShareOfFlexibleDemand':125,
+                          'HeatDemand':134,'CostHeatSlack':169,'CostLoadShedding':170,'ShareOfFlexibleDemand':125,
                           'Temperatures':135,'PriceTransmission':171,'Reserve2U':162,'Reserve2D':163,
-                          'H2RigidDemand':136,'H2FlexibleDemand':159, 'H2FlexibleCapacity': 160,'CostH2Slack':170}
+                          'H2RigidDemand':136,'H2FlexibleDemand':159, 'H2FlexibleCapacity': 160,'CostH2Slack':172}
         modifiers= {'Demand':276,'Wind':277,'Solar':278,'Storage':279}
         default = {'ReservoirLevelInitial':101,'ReservoirLevelFinal':102,'PriceOfNuclear':182,'PriceOfBlackCoal':183,
                     'PriceOfGas':184,'PriceOfFuelOil':185,'PriceOfBiomass':186,'PriceOfCO2':168,'PriceOfLignite':187,
-                    'PriceOfPeat':186,'LoadShedding':129,'CostHeatSlack':167,'CostLoadShedding':168,'ValueOfLostLoad':204,
+                    'PriceOfPeat':190,'LoadShedding':129,'CostHeatSlack':169,'CostLoadShedding':168,'ValueOfLostLoad':206,
                     'PriceOfSpillage':207,'WaterValue':208,'ShareOfQuickStartUnits':165,'ShareOfFlexibleDemand':125,
                     'DemandFlexibility':164,'PriceTransmission':171,'CostH2Slack':172}
         for p in StdParameters:
@@ -442,11 +442,11 @@ def load_config_excel(ConfigFile,AbsPath=True):
             config['default'][p] = sheet.cell_value(default[p], 5)
             
         #True/Falst values:
-        config['zones'] = read_truefalse(sheet, 227, 1, 247, 3)
-        config['zones'] = config['zones'] + read_truefalse(sheet, 227, 4, 247, 6)
-        config['mts_zones'] = read_truefalse(sheet, 227, 1, 247, 3, 2)
-        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 227, 4, 247, 6, 2)
-        config['ReserveParticipation'] = read_truefalse(sheet, 307, 1, 319, 3)
+        config['zones'] = read_truefalse(sheet, 227, 1, 248, 3)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 227, 4, 248, 6)
+        config['mts_zones'] = read_truefalse(sheet, 227, 1, 248, 3, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 227, 4, 248, 6, 2)
+        config['ReserveParticipation'] = read_truefalse(sheet, 307, 1, 321, 3)
 
         # Set default values (for backward compatibility):
         for param in DEFAULTS:
