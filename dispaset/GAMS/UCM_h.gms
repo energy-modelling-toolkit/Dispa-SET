@@ -1153,7 +1153,7 @@ HeatShadowPrice(au,z) = EQ_CHP_demand_satisfaction.m(au,z);
 LostLoad_WaterSlack(s) = WaterSlack.L(s);
 StorageShadowPrice(s,z) = 0 ;
 *EQ_Storage_balance.m(s,z);
-StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
+StorageShadowPrice(th,z) = EQ_Storage_balance.m(s,z);
 
 EXECUTE_UNLOAD "Results.gdx"
 $If %MTS%==0 OutputCommitted,
