@@ -602,7 +602,7 @@ def get_units_operation_cost(inputs, results):
     Main Author: @AbdullahAlawad
     """
     datain = inputs['param_df']
-    results['OutputCommitted'] = pd.DataFrame(1,index=results['OutputPower'].index,columns=results['OutputPower'].columns)
+
 
     #DataFrame with startup times for each unit (1 for startup)
     StartUps = results['OutputCommitted'].copy()
@@ -665,7 +665,7 @@ def get_units_operation_cost(inputs, results):
 
     return UnitOperationCost
 #%%   change when heatdemand per zone
-def shadowprices (results, zone):
+def shadowprices(results, zone):
     """
     this function retrieves the schadowprices of DA, heat, 2U and 2D for 1 zone
     """
@@ -681,7 +681,7 @@ def shadowprices (results, zone):
 
     
     return schadowprices
-#%% change when heatdemand per zone
+#%% change when heatdemand per zone add profit
 def Cashflows(inputs,results,unit,Plot = True):
     """
     This function calculates the different cashflows for one specific unit
@@ -708,3 +708,78 @@ def Cashflows(inputs,results,unit,Plot = True):
     #return dataframe with casflows for one unit
     cashflows.fillna(0,inplace = True)
     return cashflows
+#%%
+def reserve_availability_demand(inputs,results):
+    """
+    this function evaluates the reserve demand and availability of all units
+    returns: hourly_availability : hourly availability over the corresponding hourly reserve demand in [%]
+    returns: availability        : the mean of hourly availability,
+                                   sum hourly availability over sum corresponding hourly reserve demand in [%]
+    returns: reserve_demand        mean demand over peak load
+    """
+    
+    hourly_availability = {}
+    hourly_availability['2U'] = pd.DataFrame()
+    hourly_availability['3U'] = pd.DataFrame()
+    hourly_availability['Down'] = pd.DataFrame()
+    hourly_availability['Up'] = pd.DataFrame()
+    
+    #can 1 powerplant have 2U and 3U available at the same time !!! check this !!!
+    total_up_reserves = pd.concat([results['OutputReserve_2U'],results['OutputReserve_3U']],axis=1)
+    total_up_reserves = total_up_reserves.groupby(level=0, axis=1).sum()
+
+    availability = {}
+    availability['2U'] = pd.DataFrame(0.0,index = results['OutputReserve_2U'].columns, columns = ['mean','sum'])
+    availability['3U'] = pd.DataFrame(0.0,index = results['OutputReserve_3U'].columns, columns = ['mean','sum'])
+    availability['Down'] = pd.DataFrame(0.0,index = results['OutputReserve_2D'].columns, columns = ['mean','sum'])
+    availability['Up'] = pd.DataFrame(0.0,index = total_up_reserves.columns, columns = ['mean','sum'])
+    
+    
+    for unit in results['OutputReserve_2U'].columns:
+        zone = inputs['units'].at[unit,'Zone']
+        hourly_availability['2U'][unit] = results['OutputReserve_2U'][unit]/(inputs['param_df']['Demand']['2U',zone]/2)*100
+        availability['2U'].at[unit,'mean'] = hourly_availability['2U'][unit].mean()
+        availability['2U'].at[unit,'sum'] = results['OutputReserve_2U'][unit].sum()/(inputs['param_df']['Demand']['2U',zone].sum()/2)*100
+        
+    for unit in results['OutputReserve_3U'].columns:
+        zone = inputs['units'].at[unit,'Zone']
+        hourly_availability['3U'][unit] = results['OutputReserve_3U'][unit]/(inputs['param_df']['Demand']['2U',zone]/2)*100
+        availability['3U'].at[unit,'mean'] = hourly_availability['3U'][unit].mean()
+        availability['3U'].at[unit,'sum'] = results['OutputReserve_3U'][unit].sum()/(inputs['param_df']['Demand']['2U',zone].sum()/2)*100
+
+    for unit in results['OutputReserve_2D'].columns:
+        zone = inputs['units'].at[unit,'Zone']
+        hourly_availability['Down'][unit] = results['OutputReserve_2D'][unit]/inputs['param_df']['Demand']['2D',zone]*100
+        availability['Down'].at[unit,'mean'] = hourly_availability['Down'][unit].mean()
+        availability['Down'].at[unit,'sum'] = results['OutputReserve_2D'][unit].sum()/inputs['param_df']['Demand']['2D',zone].sum()*100
+
+    for unit in total_up_reserves.columns:
+        zone = inputs['units'].at[unit,'Zone']
+        hourly_availability['Up'][unit] = total_up_reserves[unit]/inputs['param_df']['Demand']['2U',zone]*100
+        availability['Up'].at[unit,'mean'] = hourly_availability['Up'][unit].mean()
+        availability['Up'].at[unit,'sum'] = total_up_reserves[unit].sum()/inputs['param_df']['Demand']['2U',zone].sum()*100
+    
+    reserve_demand = pd.DataFrame(0.0,index = inputs['config']['zones'], columns = ['upwards','downwards'])
+    for zone in inputs['config']['zones']:
+        reserve_demand.at[zone,'upwards'] = inputs['param_df']['Demand']['2U',zone].mean()/inputs['param_df']['Demand']['DA',zone].max()
+        reserve_demand.at[zone,'downwards'] = inputs['param_df']['Demand']['2D',zone].mean()/inputs['param_df']['Demand']['DA',zone].max()
+        
+    return hourly_availability, availability, reserve_demand
+
+#%%
+def emissions(inputs,results):
+    """
+    function calculates emissions for each zone
+    returns: emissions : dataframe with summed up emissions for each zone
+    """
+    emissions = pd.DataFrame(0,index=inputs['config']['zones'], columns = ['emissions'])
+
+    unit_emissions = results['OutputPower'].sum() * inputs['param_df']['EmissionRate'] # MWh * tCO2 / MWh = tCO2
+    unit_emissions.fillna(0,inplace=True)
+    
+    for zone in inputs['config']['zones']:
+        emissions.at[zone,'emissions'] = filter_by_zone(unit_emissions, inputs, zone).sum(axis=1)
+    
+    return emissions
+    
+
