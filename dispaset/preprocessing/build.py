@@ -529,7 +529,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
             # get the time series
             parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
         elif s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and any(
-                finalTS['ReservoirLevels'][s] -1 > 1e-13):
+                finalTS['ReservoirLevels'][s] -1 > 10e-13):
             logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
             sys.exit(1)
         else:

@@ -746,7 +746,7 @@ EQ_Storage_MaxCharge(s,i)$(StorageCapacity(s)>PowerCapacity(s)*TimeStep)..
          =L=
          (Nunits(s) * StorageCapacity(s)-StorageInitial(s))$(ord(i) = 1)
          + (Nunits(s) * StorageCapacity(s)*AvailabilityFactor(s,i-1) - StorageLevel(s,i-1))$(ord(i) > 1)
-         + StorageOutflow(s,i)*Nunits(s)*TimeStep + H2Output(s,i)$(p2h2(s))
+         + StorageOutflow(s,i)*Nunits(s)*TimeStep + H2Output(s,i)$(p2h2(s))*TimeStep
 ;
 
 *Storage balance
@@ -758,7 +758,7 @@ EQ_Storage_balance(s,i)..
          =E=
          StorageLevel(s,i)
          +StorageOutflow(s,i)*Nunits(s)*TimeStep
-         +H2Output(s,i)$(p2h2(s))
+         +H2Output(s,i)$(p2h2(s))*TimeStep
          +spillage(s,i)
          +Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
 ;
