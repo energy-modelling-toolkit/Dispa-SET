@@ -642,7 +642,8 @@ def get_units_operation_cost(inputs, results):
     RampUpCost = results['OutputCommitted'].copy()
     RampDownCost = results['OutputCommitted'].copy()
     VariableCost = results['OutputCommitted'].copy()
-    UnitOperationCost = results['OutputCommitted'].copy()
+    PowerUnitOperationCost = results['OutputCommitted'].copy()
+    ConsumptionCost = results['OutputPowerConsumption'].copy()
 
     OperatedUnitList = results['OutputCommitted'].columns
     for u in OperatedUnitList:
@@ -661,7 +662,14 @@ def get_units_operation_cost(inputs, results):
         RampDownCost.loc[:,[u]] = np.array(RampDowns.loc[:,[u]])*inputs['parameters']['CostRampDown']['val'][unit_indexNo]
         VariableCost.loc[:,[u]] = np.array(datain['CostVariable'].loc[:,[u]])*np.array(results['OutputPower'][u]).reshape(-1,1)
 
-    UnitOperationCost = FiexedCost+StartUpCost+ShutDownCost+RampUpCost+RampDownCost+VariableCost
+    PowerConsumers = results['OutputPowerConsumption'].columns
+    Shadowprice = results['ShadowPrice'].head(inputs['config']['LookAhead']*-24+1)#reindexing
+    for u in PowerConsumers:#at this moment only variable costs
+        z = inputs['units'].at[u,'Zone']
+        ConsumptionCost.loc[:,[u]] = np.array(Shadowprice.loc[:,[z]])*np.array(results['OutputPowerConsumption'][u]).reshape(-1,1)
+        
+    PowerUnitOperationCost = FiexedCost+StartUpCost+ShutDownCost+RampUpCost+RampDownCost+VariableCost
+    UnitOperationCost = pd.concat([PowerUnitOperationCost, ConsumptionCost], axis=1)
 
     return UnitOperationCost
 #%%   change when heatdemand per zone
