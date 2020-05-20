@@ -554,6 +554,11 @@ def get_units_operation_cost(inputs, results):
     Main Author: @AbdullahAlawad
     """
     datain = ds_to_df(inputs)
+    
+    # make sure that we have the same columns in the committed table and in the power table:
+    for u in results['OutputCommitted']:
+        if u not in results['OutputPower']:
+            results['OutputPower'][u] = 0
 
     #DataFrame with startup times for each unit (1 for startup)
     StartUps = results['OutputCommitted'].copy()
