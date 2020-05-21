@@ -177,10 +177,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
     CostHeatSlack = UnitBasedTable(plants_heat, 'CostHeatSlack', config, fallbacks=['Unit', 'Zone'],
                                    default=config['default']['CostHeatSlack'])
     Temperatures = NodeBasedTable('Temperatures', config)
-
-    H2RigidDemand = UnitBasedTable(plants_h2, 'H2RigidDemand', config, fallbacks=['Unit'], default=0)
-    H2FlexibleDemand = UnitBasedTable(plants_h2, 'H2FlexibleDemand', config, fallbacks=['Unit'], default=0)
-    CostH2Slack = UnitBasedTable(plants_h2, 'CostH2Slack', config, fallbacks=['Unit', 'Zone'],
+    if plants_h2.empty is True:
+        H2RigidDemand = pd.DataFrame(index=config['idx_long'])
+        H2FlexibleDemand = pd.DataFrame(index=config['idx_long'])
+        CostH2Slack = pd.DataFrame(index=config['idx_long'])
+    else:
+        H2RigidDemand = UnitBasedTable(plants_h2, 'H2RigidDemand', config, fallbacks=['Unit'], default=0)
+        H2FlexibleDemand = UnitBasedTable(plants_h2, 'H2FlexibleDemand', config, fallbacks=['Unit'], default=0)
+        CostH2Slack = UnitBasedTable(plants_h2, 'CostH2Slack', config, fallbacks=['Unit', 'Zone'],
                                  default=config['default']['CostH2Slack'])
 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
