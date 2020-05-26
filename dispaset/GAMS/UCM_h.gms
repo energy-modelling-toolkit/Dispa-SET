@@ -776,10 +776,11 @@ EQ_Storage_boundaries(s,i)$(ord(i) = card(i))..
 ;
 
 *Total emissions are capped
-EQ_Emission_limits(n,i,p)..
+EQ_Emission_limits(i,p,n)..
          sum(u,Power(u,i)*EmissionRate(u,p)*TimeStep*Location(u,n))
+         +sum(p2h2, StorageSlack(p2h2,i)*0.21*TimeStep*Location(p2h2,n))
          =L=
-         EmissionMaximum(n,p)
+         EmissionMaximum(n,p)*TimeStep
 ;
 
 *Flows are above minimum values
@@ -1034,7 +1035,7 @@ if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, Commi
 $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),AccumulatedOverSupply.L(n,i));
 
 * Assigning waterslack (one value per optimization horizon) to the last element of storageslack
-StorageSlack.L(s,i)$(ord(i)=LastKeptHour-FirstHour+1) = waterslack.L(s);
+StorageSlack.L(s,i)$(ord(i)=LastKeptHour-FirstHour+1) =StorageSlack.L(s,i)+ Waterslack.L(s);
 
 *Loop variables to display after solving:
 $If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
@@ -1050,13 +1051,13 @@ $If %Verbose% == 1 Display Flow.L,Power.L,ShedLoad.L,CurtailedPower.L,StorageLev
 *===============================================================================
 
 PARAMETER
-$If %MTS%==0 OutputCommitted(u,h)
+OutputCommitted(u,h)
 OutputFlow(l,h)
 OutputPower(u,h)
 OutputPowerConsumption(p2h,h)
 OutputStorageInput(au,h)
 OutputStorageLevel(au,h)
-OutputStorageSlack(p2h2,h)
+OutputStorageSlack(s,h)
 OutputH2Output(p2h2,h)
 OutputSystemCost(h)
 OutputSpillage(s,h)
@@ -1080,7 +1081,7 @@ StorageShadowPrice(au,h)
 OutputPtLDemand(p2h2,h)
 ;
 
-$If %MTS%==0 OutputCommitted(u,z)=Committed.L(u,z);
+OutputCommitted(u,z)=Committed.L(u,z);
 OutputFlow(l,z)=Flow.L(l,z);
 OutputPower(u,z)=Power.L(u,z);
 OutputPowerConsumption(p2h,z)=PowerConsumption.L(p2h,z);
@@ -1090,7 +1091,7 @@ OutputStorageInput(s,z)=StorageInput.L(s,z);
 OutputStorageInput(th,z)=StorageInput.L(th,z);
 OutputStorageLevel(s,z)=StorageLevel.L(s,z)/max(1,StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,z));
 OutputStorageLevel(th,z)=StorageLevel.L(th,z)/max(1,StorageCapacity(th)*Nunits(th));
-OutputStorageSlack(p2h2,z) = StorageSlack.L(p2h2,z);
+OutputStorageSlack(s,z) = StorageSlack.L(s,z);
 OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(s,z)  = Spillage.L(s,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
@@ -1113,7 +1114,7 @@ StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
 OutputH2Output(p2h2,z) = H2Output.L(p2h2,z);
 
 EXECUTE_UNLOAD "Results.gdx"
-$If %MTS%==0 OutputCommitted,
+OutputCommitted,
 OutputFlow,
 OutputPower,
 OutputPowerConsumption,
