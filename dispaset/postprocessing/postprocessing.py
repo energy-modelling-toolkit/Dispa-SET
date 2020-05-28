@@ -672,7 +672,7 @@ def get_units_operation_cost(inputs, results):
     UnitOperationCost = pd.concat([PowerUnitOperationCost, ConsumptionCost], axis=1)
 
     return UnitOperationCost
-#%%   change when heatdemand per zone
+#%%
 def shadowprices(results, zone):
     """
     this function retrieves the schadowprices of DA, heat, 2U and 2D for 1 zone
@@ -691,7 +691,7 @@ def shadowprices(results, zone):
 
     schadowprices.fillna(0)
     return schadowprices
-#%% change when heatdemand per zone add profit
+#%%
 def Cashflows(inputs,results,unit,Plot = True):
     """
     This function calculates the different cashflows (DA,2U,2D,3U,Heat,costs) for one specific unit
@@ -737,7 +737,7 @@ def reserve_availability_demand(inputs,results):
     hourly_availability['Down'] = pd.DataFrame()
     hourly_availability['Up'] = pd.DataFrame()
     
-    #can 1 powerplant have 2U and 3U available at the same time !!! check this !!!
+
     total_up_reserves = pd.concat([results['OutputReserve_2U'],results['OutputReserve_3U']],axis=1)
     total_up_reserves = total_up_reserves.groupby(level=0, axis=1).sum()
 

@@ -15,9 +15,9 @@ from matplotlib import pyplot as plt
 #%% options
 
 LoadData = False
-CalculateVariables = True
-cost = False
-plot = False
+CalculateVariables = False
+cost = True
+plot = True
 # %%Load the inputs and the results of the simulations
 scenarios = ['s1','s2_A','s2_B','s3_A','s3_B','s5','s6_A','s6_B','s7_A','s7_B','s9','s10_A','s10_B','s11_A','s11_B']
 
@@ -266,23 +266,25 @@ if plot == True:
     plot_reservedemand.loc['ProRes1','Reserve Demand'] = 0
     ax = plot_reservedemand.plot.bar(figsize=(18, 6), alpha=0.2, legend = False)
     ax.set_ylabel('Reserve Demand [%]')
+    ax.title.set_text('reserve demand')
     
     #%% total cost between scenarios add participation difference
     totalcosts = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['none','CHP','P2H','CHP+P2H'] )
     totalcosts.loc['RES min','none'] = calculations.at['s1','postsystemcostIT']
     totalcosts.loc['RES mid','none'] = calculations.at['s5','postsystemcostIT']
     totalcosts.loc['RES max','none'] = calculations.at['s9','postsystemcostIT']
-    totalcosts.loc['RES min','CHP'] = 0
-    totalcosts.loc['RES mid','CHP'] = 0
-    totalcosts.loc['RES max','CHP'] = 0
+    totalcosts.loc['RES min','CHP'] = calculations.at['s2_A','postsystemcostIT']
+    totalcosts.loc['RES mid','CHP'] = calculations.at['s6_A','postsystemcostIT']
+    totalcosts.loc['RES max','CHP'] = calculations.at['s10_A','postsystemcostIT']
     totalcosts.loc['RES min','P2H'] = calculations.at['s3_A','postsystemcostIT']
     totalcosts.loc['RES mid','P2H'] = calculations.at['s7_A','postsystemcostIT']
     totalcosts.loc['RES max','P2H'] = calculations.at['s11_A','postsystemcostIT']
     totalcosts.loc['RES min','CHP+P2H'] = 0
     totalcosts.loc['RES mid','CHP+P2H'] = 0
     totalcosts.loc['RES max','CHP+P2H'] = 0
-    ax = totalcosts.plot.bar(figsize=(18, 6), alpha=0.4)
-    ax.set_ylabel('total system costs [euro]')
+    ax = totalcosts.plot.bar(figsize=(18, 6), alpha=0.2)
+    ax.set_ylabel('total Italian system costs [euro]')
+    ax.title.set_text('Italian system cost including heat slack')
     
     #%% total emissions between scenarios with mid RES for now
     none_emissions = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['Power','Heat Slack'])
@@ -294,12 +296,12 @@ if plot == True:
     none_emissions.loc['RES max','Heat Slack'] = calculations.at['s9','co2_heatslack']
     
     CHP_emissions = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['Power','Heat Slack'])
-    CHP_emissions.loc['RES min','Power'] = 0
-    CHP_emissions.loc['RES min','Heat Slack'] = 0
-    CHP_emissions.loc['RES mid','Power'] = 0
-    CHP_emissions.loc['RES mid','Heat Slack'] = 0
-    CHP_emissions.loc['RES max','Power'] = 0
-    CHP_emissions.loc['RES max','Heat Slack'] = 0
+    CHP_emissions.loc['RES min','Power'] = calculations.at['s2_A','co2_power']
+    CHP_emissions.loc['RES min','Heat Slack'] = calculations.at['s2_A','co2_heatslack']
+    CHP_emissions.loc['RES mid','Power'] = calculations.at['s6_A','co2_power']
+    CHP_emissions.loc['RES mid','Heat Slack'] = calculations.at['s6_A','co2_heatslack']
+    CHP_emissions.loc['RES max','Power'] = calculations.at['s10_A','co2_power']
+    CHP_emissions.loc['RES max','Heat Slack'] = calculations.at['s10_A','co2_heatslack']
     
     P2H_emissions = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['Power','Heat Slack'])
     P2H_emissions.loc['RES min','Power'] = calculations.at['s3_A','co2_power']
@@ -320,112 +322,204 @@ if plot == True:
     plot_clustered_stacked([none_emissions, CHP_emissions, P2H_emissions,CHP_P2H_emissions],['none', 'CHP', 'P2H','CHP+P2H'])
     
     
-    #%% curtailment add the first scenarios to the rest of the figures
-    none_curtailment = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['curtailment'] )
-    none_curtailment.loc['RES min','curtailment'] = calculations.at['s1','curtailment']
-    none_curtailment.loc['RES mid','curtailment'] = calculations.at['s5','curtailment']
-    none_curtailment.loc['RES max','curtailment'] = calculations.at['s9','curtailment']
+    #%% curtailment
 
-    CHP_curtailment = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no participation','participation'] )
-    CHP_curtailment.loc['RES min','no participation'] = calculations.at['s2_A','curtailment']
-    CHP_curtailment.loc['RES min','participation'] = calculations.at['s2_B','curtailment']
-    CHP_curtailment.loc['RES mid','no participation'] = calculations.at['s6_A','curtailment']
-    CHP_curtailment.loc['RES mid','participation'] = calculations.at['s6_B','curtailment']
-    CHP_curtailment.loc['RES max','no participation'] = calculations.at['s10_A','curtailment']
-    CHP_curtailment.loc['RES max','participation'] = calculations.at['s10_B','curtailment']
+    CHP_curtailment = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no coupling','no participation','participation'] )
+    CHP_curtailment.loc['RES min','no coupling'] = curtailment.at['s1','sum']
+    CHP_curtailment.loc['RES min','no participation'] = curtailment.at['s2_A','sum']
+    CHP_curtailment.loc['RES min','participation'] = curtailment.at['s2_B','sum']
+    CHP_curtailment.loc['RES mid','no coupling'] = curtailment.at['s5','sum']
+    CHP_curtailment.loc['RES mid','no participation'] = curtailment.at['s6_A','sum']
+    CHP_curtailment.loc['RES mid','participation'] = curtailment.at['s6_B','sum']
+    CHP_curtailment.loc['RES max','no coupling'] = curtailment.at['s9','sum']
+    CHP_curtailment.loc['RES max','no participation'] = curtailment.at['s10_A','sum']
+    CHP_curtailment.loc['RES max','participation'] = curtailment.at['s10_B','sum']
 
-    P2H_curtailment = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no participation','participation'] )
-    P2H_curtailment.loc['RES min','no participation'] = calculations.at['s3_A','curtailment']
-    P2H_curtailment.loc['RES min','participation'] = calculations.at['s3_B','curtailment']
-    P2H_curtailment.loc['RES mid','no participation'] = calculations.at['s7_A','curtailment']
-    P2H_curtailment.loc['RES mid','participation'] = calculations.at['s7_B','curtailment']
-    P2H_curtailment.loc['RES max','no participation'] = calculations.at['s11_A','curtailment']
-    P2H_curtailment.loc['RES max','participation'] = calculations.at['s11_B','curtailment']
+    P2H_curtailment = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no coupling','no participation','participation'] )
+    P2H_curtailment.loc['RES min','no coupling'] = curtailment.at['s1','sum']
+    P2H_curtailment.loc['RES min','no participation'] = curtailment.at['s3_A','sum']
+    P2H_curtailment.loc['RES min','participation'] = curtailment.at['s3_B','sum']
+    P2H_curtailment.loc['RES mid','no coupling'] = curtailment.at['s5','sum']
+    P2H_curtailment.loc['RES mid','no participation'] = curtailment.at['s7_A','sum']
+    P2H_curtailment.loc['RES mid','participation'] = curtailment.at['s7_B','sum']
+    P2H_curtailment.loc['RES max','no coupling'] = curtailment.at['s9','sum']
+    P2H_curtailment.loc['RES max','no participation'] = curtailment.at['s11_A','sum']
+    P2H_curtailment.loc['RES max','participation'] = curtailment.at['s11_B','sum']
 
-    CHP_P2H_curtailment = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no participation','participation'] )
-    CHP_P2H_curtailment.loc['RES min','no participation'] = calculations.at['s4_A','curtailment']
-    CHP_P2H_curtailment.loc['RES min','participation'] = calculations.at['s4_B','curtailment']
-    CHP_P2H_curtailment.loc['RES mid','no participation'] = calculations.at['s8_A','curtailment']
-    CHP_P2H_curtailment.loc['RES mid','participation'] = calculations.at['s8_B','curtailment']
-    CHP_P2H_curtailment.loc['RES max','no participation'] = calculations.at['s12_A','curtailment']
-    CHP_P2H_curtailment.loc['RES max','participation'] = calculations.at['s12_B','curtailment']
-
-    ax = none_curtailment.plot.bar(figsize=(18, 6), alpha=0.2, legend = False)
+    CHP_P2H_curtailment = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no coupling','no participation','participation'] )
+    CHP_P2H_curtailment.loc['RES min','no coupling'] = 0#curtailment.at['s1','sum']
+    CHP_P2H_curtailment.loc['RES min','no participation'] = 0#curtailment.at['s4_A','sum']
+    CHP_P2H_curtailment.loc['RES min','participation'] = 0#curtailment.at['s4_B','sum']
+    CHP_P2H_curtailment.loc['RES mid','no coupling'] = 0#curtailment.at['s5','sum']
+    CHP_P2H_curtailment.loc['RES mid','no participation'] = 0#curtailment.at['s8_A','sum']
+    CHP_P2H_curtailment.loc['RES mid','participation'] = 0#curtailment.at['s8_B','sum']
+    CHP_P2H_curtailment.loc['RES max','no coupling'] = 0#curtailment.at['s9','sum']
+    CHP_P2H_curtailment.loc['RES max','no participation'] = 0#curtailment.at['s12_A','sum']
+    CHP_P2H_curtailment.loc['RES max','participation'] = 0#curtailment.at['s12_B','sum']
+    
+    MAX = max([CHP_curtailment.max().max(),P2H_curtailment.max().max(),CHP_P2H_curtailment.max().max()])*1.05
+    
+    ax = CHP_curtailment.plot.bar(figsize=(18, 6), alpha=0.2,ylim = (0,MAX), legend = False)
     ax.set_ylabel('curtailment [MWh]')
+    ax.legend(['no coupling','no participation','participation'])
     
-    ax = CHP_curtailment.plot.bar(figsize=(18, 6), alpha=0.2, legend = False)
+    ax = P2H_curtailment.plot.bar(figsize=(18, 6), alpha=0.2,ylim = (0,MAX), legend = False)
     ax.set_ylabel('curtailment [MWh]')
-    ax.legend(['no participation','participation'])
+    ax.legend(['no coupling','no participation','participation'])
     
-    ax = P2H_curtailment.plot.bar(figsize=(18, 6), alpha=0.2, legend = False)
+    ax = CHP_P2H_curtailment.plot.bar(figsize=(18, 6), alpha=0.2,ylim = (0,MAX), legend = False)
     ax.set_ylabel('curtailment [MWh]')
-    ax.legend(['no participation','participation'])
-    
-    ax = CHP_P2H_curtailment.plot.bar(figsize=(18, 6), alpha=0.2, legend = False)
-    ax.set_ylabel('curtailment [MWh]')
-    ax.legend(['no participation','participation'])
+    ax.legend(['no coupling','no participation','participation'])
     
     
-    #%% load shedding add the first scenarios to the rest of the figures
-    none_loadshedding = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['loadshedding'] )
-    none_loadshedding.loc['RES min','loadshedding'] = load_shedding['s1'].at['sum','IT']
-    none_loadshedding.loc['RES mid','loadshedding'] = load_shedding['s5'].at['sum','IT']
-    none_loadshedding.loc['RES max','loadshedding'] = load_shedding['s9'].at['sum','IT']
+    
+    
+    #%% load shedding
+    
+    CHP_loadshedding = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no coupling','no participation','participation'] )
+    CHP_loadshedding.loc['RES min','no coupling'] = load_shedding.at['s1','sum']
+    CHP_loadshedding.loc['RES min','no participation'] = load_shedding.at['s2_A','sum']
+    CHP_loadshedding.loc['RES min','participation'] = load_shedding.at['s2_B','sum']
+    CHP_loadshedding.loc['RES mid','no coupling'] = load_shedding.at['s5','sum']
+    CHP_loadshedding.loc['RES mid','no participation'] = load_shedding.at['s6_A','sum']
+    CHP_loadshedding.loc['RES mid','participation'] = load_shedding.at['s6_B','sum']
+    CHP_loadshedding.loc['RES max','no coupling'] = load_shedding.at['s9','sum']
+    CHP_loadshedding.loc['RES max','no participation'] = load_shedding.at['s10_A','sum']
+    CHP_loadshedding.loc['RES max','participation'] = load_shedding.at['s10_B','sum']
 
-    CHP_loadshedding = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no participation','participation'] )
-    CHP_loadshedding.loc['RES min','no participation'] = load_shedding['s2_A'].at['sum','IT']
-    CHP_loadshedding.loc['RES min','participation'] = load_shedding['s2_B'].at['sum','IT']
-    CHP_loadshedding.loc['RES mid','no participation'] = load_shedding['s6_A'].at['sum','IT']
-    CHP_loadshedding.loc['RES mid','participation'] = load_shedding['s6_B'].at['sum','IT']
-    CHP_loadshedding.loc['RES max','no participation'] = load_shedding['s10_A'].at['sum','IT']
-    CHP_loadshedding.loc['RES max','participation'] = load_shedding['s10_B'].at['sum','IT']
+    P2H_loadshedding = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no coupling','no participation','participation'] )
+    P2H_loadshedding.loc['RES min','no coupling'] = load_shedding.at['s1','sum']
+    P2H_loadshedding.loc['RES min','no participation'] = load_shedding.at['s3_A','sum']
+    P2H_loadshedding.loc['RES min','participation'] = load_shedding.at['s3_B','sum']
+    P2H_loadshedding.loc['RES mid','no coupling'] = load_shedding.at['s5','sum']
+    P2H_loadshedding.loc['RES mid','no participation'] = load_shedding.at['s7_A','sum']
+    P2H_loadshedding.loc['RES mid','participation'] = load_shedding.at['s7_B','sum']
+    P2H_loadshedding.loc['RES max','no coupling'] = load_shedding.at['s9','sum']
+    P2H_loadshedding.loc['RES max','no participation'] = load_shedding.at['s11_A','sum']
+    P2H_loadshedding.loc['RES max','participation'] = load_shedding.at['s11_B','sum']
 
-    P2H_loadshedding = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no participation','participation'] )
-    P2H_loadshedding.loc['RES min','no participation'] = load_shedding['s3_A'].at['sum','IT']
-    P2H_loadshedding.loc['RES min','participation'] = load_shedding['s3_B'].at['sum','IT']
-    P2H_loadshedding.loc['RES mid','no participation'] = load_shedding['s7_A'].at['sum','IT']
-    P2H_loadshedding.loc['RES mid','participation'] = load_shedding['s7_B'].at['sum','IT']
-    P2H_loadshedding.loc['RES max','no participation'] = load_shedding['s11_A'].at['sum','IT']
-    P2H_loadshedding.loc['RES max','participation'] = load_shedding['s11_B'].at['sum','IT']
-
-    CHP_P2H_loadshedding = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no participation','participation'] )
-    CHP_P2H_loadshedding.loc['RES min','no participation'] = load_shedding['s4_A'].at['sum','IT']
-    CHP_P2H_loadshedding.loc['RES min','participation'] = load_shedding['s4_B'].at['sum','IT']
-    CHP_P2H_loadshedding.loc['RES mid','no participation'] = load_shedding['s8_A'].at['sum','IT']
-    CHP_P2H_loadshedding.loc['RES mid','participation'] = load_shedding['s8_B'].at['sum','IT']
-    CHP_P2H_loadshedding.loc['RES max','no participation'] = load_shedding['s12_A'].at['sum','IT']
-    CHP_P2H_loadshedding.loc['RES max','participation'] = load_shedding['s12_B'].at['sum','IT']
-
-    ax = none_loadshedding.plot.bar(figsize=(18, 6), alpha=0.2, legend = False)
-    ax.set_ylabel('loadshedding [MWh]')
+    CHP_P2H_loadshedding = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no coupling','no participation','participation'] )
+    CHP_P2H_loadshedding.loc['RES min','no coupling'] = load_shedding.at['s1','sum']
+    CHP_P2H_loadshedding.loc['RES min','no participation'] = 0#load_shedding.at['s4_A','sum']
+    CHP_P2H_loadshedding.loc['RES min','participation'] = 0#load_shedding.at['s4_B','sum']
+    CHP_P2H_loadshedding.loc['RES mid','no coupling'] = load_shedding.at['s5','sum']
+    CHP_P2H_loadshedding.loc['RES mid','no participation'] = 0#load_shedding.at['s8_A','sum']
+    CHP_P2H_loadshedding.loc['RES mid','participation'] = 0#load_shedding.at['s8_B','sum']
+    CHP_P2H_loadshedding.loc['RES max','no coupling'] = load_shedding.at['s9','sum']
+    CHP_P2H_loadshedding.loc['RES max','no participation'] = 0#load_shedding.at['s12_A','sum']
+    CHP_P2H_loadshedding.loc['RES max','participation'] = 0#load_shedding.at['s12_B','sum']
     
-    ax = CHP_loadshedding.plot.bar(figsize=(18, 6), alpha=0.2, legend = False)
-    ax.set_ylabel('loadshedding [MWh]')
-    ax.legend(['no participation','participation'])
+    MAX = max([CHP_loadshedding.max().max(),P2H_loadshedding.max().max(),CHP_P2H_loadshedding.max().max()])*1.05
     
-    ax = P2H_loadshedding.plot.bar(figsize=(18, 6), alpha=0.2, legend = False)
+    ax = CHP_loadshedding.plot.bar(figsize=(18, 6), alpha=0.2,ylim = (0,MAX), legend = False)
     ax.set_ylabel('loadshedding [MWh]')
-    ax.legend(['no participation','participation'])
+    ax.legend(['no coupling','no participation','participation'])
     
-    ax = CHP_P2H_loadshedding.plot.bar(figsize=(18, 6), alpha=0.2, legend = False)
+    ax = P2H_loadshedding.plot.bar(figsize=(18, 6), alpha=0.2,ylim = (0,MAX), legend = False)
     ax.set_ylabel('loadshedding [MWh]')
-    ax.legend(['no participation','participation'])
+    ax.legend(['no coupling','no participation','participation'])
+    
+    ax = CHP_P2H_loadshedding.plot.bar(figsize=(18, 6), alpha=0.2,ylim = (0,MAX), legend = False)
+    ax.set_ylabel('loadshedding [MWh]')
+    ax.legend(['no coupling','no participation','participation'])
+    
 #%% availability
-    
-    plot_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP', 'P2H','CHP+P2H'] )
-    plot_availability.loc['RES min','CHP'] = 0
-    plot_availability.loc['RES min','P2H'] = availability['s3_B']['2U'].at['[21] - IT_P2HT_OTH','sum']
+    # upwards
+    MAX = 300*1.05
+    plot_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP_GAS','CHP_HRD','CHP_OIL','P2H','CHP+P2H'] )
+    plot_availability.loc['RES min','CHP_GAS'] = availability_total['Up'].at[CHP_GAS,'s2_B']
+    plot_availability.loc['RES min','CHP_HRD'] = availability_total['Up'].at[CHP_HRD,'s2_B']
+    plot_availability.loc['RES min','CHP_OIL'] = availability_total['Up'].at[CHP_OIL,'s2_B']
+    plot_availability.loc['RES min','P2H'] = availability_total['Up'].at[P2H_unit,'s3_B']
     plot_availability.loc['RES min','CHP+P2H'] = 0
-    plot_availability.loc['RES mid','CHP'] = 0
-    plot_availability.loc['RES mid','P2H'] = availability['s7_B']['2U'].at['[21] - IT_P2HT_OTH','sum']
+    plot_availability.loc['RES mid','CHP_GAS'] = availability_total['Up'].at[CHP_GAS,'s6_B']
+    plot_availability.loc['RES mid','CHP_HRD'] = availability_total['Up'].at[CHP_HRD,'s6_B']
+    plot_availability.loc['RES mid','CHP_OIL'] = availability_total['Up'].at[CHP_OIL,'s6_B']
+    plot_availability.loc['RES mid','P2H'] = availability_total['Up'].at[P2H_unit,'s7_B']
     plot_availability.loc['RES mid','CHP+P2H'] = 0
-    plot_availability.loc['RES max','CHP'] = 0
-    plot_availability.loc['RES max','P2H'] = availability['s11_B']['2U'].at['[21] - IT_P2HT_OTH','sum']
+    plot_availability.loc['RES max','CHP_GAS'] = availability_total['Up'].at[CHP_GAS,'s10_B']
+    plot_availability.loc['RES max','CHP_HRD'] = availability_total['Up'].at[CHP_HRD,'s10_B']
+    plot_availability.loc['RES max','CHP_OIL'] = availability_total['Up'].at[CHP_OIL,'s10_B']
+    plot_availability.loc['RES max','P2H'] = availability_total['Up'].at[P2H_unit,'s11_B']
     plot_availability.loc['RES max','CHP+P2H'] = 0
 
-    ax = plot_availability.plot.bar(figsize=(18, 6), alpha=0.2, legend = False)
-    ax.set_ylabel('availability [MWh]')
-    ax.legend(['CHP', 'P2H','CHP+P2H'])
+    ax = plot_availability[['CHP_GAS','CHP_HRD','CHP_OIL']].plot.bar(figsize=(18, 6),stacked = True, alpha=0.2, width=0.1, position=1.5,colormap="rainbow",ylim = (0,MAX), legend = True)
+    ax = plot_availability['P2H'].plot.bar(figsize=(18, 6),alpha=0.2, width=0.1, position=0.5,ylim = (0,MAX), legend = True)
+    ax = plot_availability['CHP+P2H'].plot.bar(figsize=(18, 6),alpha=0.2, width=0.1, position=-0.5,ylim = (0,MAX), legend = False)
+    ax.set_ylabel('availability [%]')
+        
+    #downwards
+    MAX = 300*1.05
+    plot_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP_GAS','CHP_HRD','CHP_OIL','P2H','CHP+P2H'] )
+    plot_availability.loc['RES min','CHP_GAS'] = availability_total['Down'].at[CHP_GAS,'s2_B']
+    plot_availability.loc['RES min','CHP_HRD'] = availability_total['Down'].at[CHP_HRD,'s2_B']
+    plot_availability.loc['RES min','CHP_OIL'] = availability_total['Down'].at[CHP_OIL,'s2_B']
+    plot_availability.loc['RES min','P2H'] = availability_total['Down'].at[P2H_unit,'s3_B']
+    plot_availability.loc['RES min','CHP+P2H'] = 0
+    plot_availability.loc['RES mid','CHP_GAS'] = availability_total['Down'].at[CHP_GAS,'s6_B']
+    plot_availability.loc['RES mid','CHP_HRD'] = availability_total['Down'].at[CHP_HRD,'s6_B']
+    plot_availability.loc['RES mid','CHP_OIL'] = availability_total['Down'].at[CHP_OIL,'s6_B']
+    plot_availability.loc['RES mid','P2H'] = availability_total['Down'].at[P2H_unit,'s7_B']
+    plot_availability.loc['RES mid','CHP+P2H'] = 0
+    plot_availability.loc['RES max','CHP_GAS'] = availability_total['Down'].at[CHP_GAS,'s10_B']
+    plot_availability.loc['RES max','CHP_HRD'] = availability_total['Down'].at[CHP_HRD,'s10_B']
+    plot_availability.loc['RES max','CHP_OIL'] = availability_total['Down'].at[CHP_OIL,'s10_B']
+    plot_availability.loc['RES max','P2H'] = availability_total['Down'].at[P2H_unit,'s11_B']
+    plot_availability.loc['RES max','CHP+P2H'] = 0
+
+    ax = plot_availability[['CHP_GAS','CHP_HRD','CHP_OIL']].plot.bar(figsize=(18, 6),stacked = True, alpha=0.2, width=0.1, position=1.5,colormap="rainbow",ylim = (0,MAX), legend = True)
+    ax = plot_availability['P2H'].plot.bar(figsize=(18, 6),alpha=0.2, width=0.1, position=0.5,ylim = (0,MAX), legend = True)
+    ax = plot_availability['CHP+P2H'].plot.bar(figsize=(18, 6),alpha=0.2, width=0.1, position=-0.5,ylim = (0,MAX), legend = False)
+    ax.set_ylabel('availability [%]')
+    
+    # spinning upwards reserves
+    MAX = 300*1.05
+    plot_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP_GAS','CHP_HRD','CHP_OIL','P2H','CHP+P2H'] )
+    plot_availability.loc['RES min','CHP_GAS'] = availability_total['2U'].at[CHP_GAS,'s2_B']
+    plot_availability.loc['RES min','CHP_HRD'] = availability_total['2U'].at[CHP_HRD,'s2_B']
+    plot_availability.loc['RES min','CHP_OIL'] = availability_total['2U'].at[CHP_OIL,'s2_B']
+    plot_availability.loc['RES min','P2H'] = availability_total['2U'].at[P2H_unit,'s3_B']
+    plot_availability.loc['RES min','CHP+P2H'] = 0
+    plot_availability.loc['RES mid','CHP_GAS'] = availability_total['2U'].at[CHP_GAS,'s6_B']
+    plot_availability.loc['RES mid','CHP_HRD'] = availability_total['2U'].at[CHP_HRD,'s6_B']
+    plot_availability.loc['RES mid','CHP_OIL'] = availability_total['2U'].at[CHP_OIL,'s6_B']
+    plot_availability.loc['RES mid','P2H'] = availability_total['2U'].at[P2H_unit,'s7_B']
+    plot_availability.loc['RES mid','CHP+P2H'] = 0
+    plot_availability.loc['RES max','CHP_GAS'] = availability_total['2U'].at[CHP_GAS,'s10_B']
+    plot_availability.loc['RES max','CHP_HRD'] = availability_total['2U'].at[CHP_HRD,'s10_B']
+    plot_availability.loc['RES max','CHP_OIL'] = availability_total['2U'].at[CHP_OIL,'s10_B']
+    plot_availability.loc['RES max','P2H'] = availability_total['2U'].at[P2H_unit,'s11_B']
+    plot_availability.loc['RES max','CHP+P2H'] = 0
+
+    ax = plot_availability[['CHP_GAS','CHP_HRD','CHP_OIL']].plot.bar(figsize=(18, 6),stacked = True, alpha=0.2, width=0.1, position=1.5,colormap="rainbow",ylim = (0,MAX), legend = True)
+    ax = plot_availability['P2H'].plot.bar(figsize=(18, 6),alpha=0.2, width=0.1, position=0.5,ylim = (0,MAX), legend = True)
+    ax = plot_availability['CHP+P2H'].plot.bar(figsize=(18, 6),alpha=0.2, width=0.1, position=-0.5,ylim = (0,MAX), legend = False)
+    ax.set_ylabel('availability [%]')
+    
+    # non spinning reserves
+    MAX = 300*1.05
+    plot_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP_GAS','CHP_HRD','CHP_OIL','P2H','CHP+P2H'] )
+    plot_availability.loc['RES min','CHP_GAS'] = availability_total['3U'].at[CHP_GAS,'s2_B']
+    plot_availability.loc['RES min','CHP_HRD'] = availability_total['3U'].at[CHP_HRD,'s2_B']
+    plot_availability.loc['RES min','CHP_OIL'] = availability_total['3U'].at[CHP_OIL,'s2_B']
+    plot_availability.loc['RES min','P2H'] = availability_total['3U'].at[P2H_unit,'s3_B']
+    plot_availability.loc['RES min','CHP+P2H'] = 0
+    plot_availability.loc['RES mid','CHP_GAS'] = availability_total['3U'].at[CHP_GAS,'s6_B']
+    plot_availability.loc['RES mid','CHP_HRD'] = availability_total['3U'].at[CHP_HRD,'s6_B']
+    plot_availability.loc['RES mid','CHP_OIL'] = availability_total['3U'].at[CHP_OIL,'s6_B']
+    plot_availability.loc['RES mid','P2H'] = availability_total['3U'].at[P2H_unit,'s7_B']
+    plot_availability.loc['RES mid','CHP+P2H'] = 0
+    plot_availability.loc['RES max','CHP_GAS'] = availability_total['3U'].at[CHP_GAS,'s2_B']
+    plot_availability.loc['RES max','CHP_HRD'] = availability_total['3U'].at[CHP_HRD,'s2_B']
+    plot_availability.loc['RES max','CHP_OIL'] = availability_total['3U'].at[CHP_OIL,'s2_B']
+    plot_availability.loc['RES max','P2H'] = availability_total['3U'].at[P2H_unit,'s11_B']
+    plot_availability.loc['RES max','CHP+P2H'] = 0
+
+    ax = plot_availability[['CHP_GAS','CHP_HRD','CHP_OIL']].plot.bar(figsize=(18, 6),stacked = True, alpha=0.2, width=0.1, position=1.5,colormap="rainbow",ylim = (0,MAX), legend = True)
+    ax = plot_availability['P2H'].plot.bar(figsize=(18, 6),alpha=0.2, width=0.1, position=0.5,ylim = (0,MAX), legend = True)
+    ax = plot_availability['CHP+P2H'].plot.bar(figsize=(18, 6),alpha=0.2, width=0.1, position=-0.5,ylim = (0,MAX), legend = False)
+    ax.set_ylabel('availability [%]')
+
     
 #%% shadow prices
     
@@ -439,7 +533,7 @@ if plot == True:
 
 #%% profit wait for more results 
     
-    
+    '''
     plot_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP', 'P2H','CHP+P2H'] )
     plot_availability.loc['RES min','CHP'] = 0
     plot_availability.loc['RES min','P2H'] = availability['s3_B']['2U'].at['[21] - IT_P2HT_OTH','sum']
@@ -456,7 +550,7 @@ if plot == True:
     fig, axes = plt.subplots(nrows=1, ncols=2,figsize=(18, 6))
     plot_availability.plot(ax=axes[0],kind='bar')
     df1.plot(ax=axes[1], kind='bar');
-    
+    '''
 #%% analyzing graph
 
 def analyzinggraph(scenarios_dic,index,scenarios):
