@@ -677,27 +677,31 @@ def shadowprices(results, zone):
     """
     this function retrieves the schadowprices of DA, heat, 2U and 2D for 1 zone
     """
-    schadowprices = pd.DataFrame(0,index = results['OutputPower'].index, colums = ['DA','Heat','2U','2D'])
+    schadowprices = pd.DataFrame(0,index = results['OutputPower'].index, columns = ['DA','Heat','2U','2D'])
+    unit = '[21] - IT_P2HT_OTH'
+    
     if  zone in results['ShadowPrice'].columns:
         schadowprices['DA'] = results['ShadowPrice'][zone]
     if zone in results['ReserveUpShadowPrice'].columns:
         schadowprices['2U'] = results['ReserveUpShadowPrice'][zone]
     if zone in results['ReserveDownShadowPrice'].columns:
         schadowprices['2D'] = results['ReserveDownShadowPrice'][zone]
-#    if zone in results['HeatShadowPrice'].columns:
-#        schadowprices['Heat'] = results['HeatShadowPrice'][zone]
+    if unit in results['HeatShadowPrice'].columns:
+        schadowprices['Heat'] = results['HeatShadowPrice'][unit]
 
-    
+    schadowprices.fillna(0)
     return schadowprices
 #%% change when heatdemand per zone add profit
 def Cashflows(inputs,results,unit,Plot = True):
     """
-    This function calculates the different cashflows for one specific unit
+    This function calculates the different cashflows (DA,2U,2D,3U,Heat,costs) for one specific unit
+    returns: cashflows      :hourly cashflow
+    returns: cashflows_sum  :sum houly cashflow
+    returns: profit         :profit
     """
-    zone = inputs['units'].loc[[unit],['Zone']]
-    zone = pd.DataFrame.to_string(zone, header = False, index = False)
-    zone = zone.strip()
+    zone = inputs['units'].at[unit,'Zone']
     cashflows = pd.DataFrame(index = inputs['config']['idx'])
+    profit = 0.0
     
     #positive cashflows
     if  unit in results['OutputPower'].columns and zone in results['ShadowPrice'].columns:
@@ -711,18 +715,19 @@ def Cashflows(inputs,results,unit,Plot = True):
 
     #negative cashflow
     units_operation_cost = get_units_operation_cost(inputs, results)
-    cashflows['costs'] = units_operation_cost[unit]
+    cashflows['costs'] = -units_operation_cost[unit]
 
-    #return dataframe with casflows for one unit
     cashflows.fillna(0,inplace = True)
-    return cashflows
+    cashflows_sum = cashflows.sum()
+    profit = cashflows_sum.sum()
+    return cashflows,cashflows_sum,profit
 #%%
 def reserve_availability_demand(inputs,results):
     """
     this function evaluates the reserve demand and availability of all units
     returns: hourly_availability : hourly availability over the corresponding hourly reserve demand in [%]
     returns: availability        : the mean of hourly availability,
-                                   sum hourly availability over sum corresponding hourly reserve demand in [%]
+                                   total hourly availability over total corresponding hourly reserve demand in [%]
     returns: reserve_demand        mean demand over peak load
     """
     
@@ -737,35 +742,35 @@ def reserve_availability_demand(inputs,results):
     total_up_reserves = total_up_reserves.groupby(level=0, axis=1).sum()
 
     availability = {}
-    availability['2U'] = pd.DataFrame(0.0,index = results['OutputReserve_2U'].columns, columns = ['mean','sum'])
-    availability['3U'] = pd.DataFrame(0.0,index = results['OutputReserve_3U'].columns, columns = ['mean','sum'])
-    availability['Down'] = pd.DataFrame(0.0,index = results['OutputReserve_2D'].columns, columns = ['mean','sum'])
-    availability['Up'] = pd.DataFrame(0.0,index = total_up_reserves.columns, columns = ['mean','sum'])
+    availability['2U'] = pd.DataFrame(0.0,index = results['OutputReserve_2U'].columns, columns = ['mean','total'])
+    availability['3U'] = pd.DataFrame(0.0,index = results['OutputReserve_3U'].columns, columns = ['mean','total'])
+    availability['Down'] = pd.DataFrame(0.0,index = results['OutputReserve_2D'].columns, columns = ['mean','total'])
+    availability['Up'] = pd.DataFrame(0.0,index = total_up_reserves.columns, columns = ['mean','total'])
     
     
     for unit in results['OutputReserve_2U'].columns:
         zone = inputs['units'].at[unit,'Zone']
         hourly_availability['2U'][unit] = results['OutputReserve_2U'][unit]/(inputs['param_df']['Demand']['2U',zone]/2)*100
         availability['2U'].at[unit,'mean'] = hourly_availability['2U'][unit].mean()
-        availability['2U'].at[unit,'sum'] = results['OutputReserve_2U'][unit].sum()/(inputs['param_df']['Demand']['2U',zone].sum()/2)*100
+        availability['2U'].at[unit,'total'] = results['OutputReserve_2U'][unit].sum()/(inputs['param_df']['Demand']['2U',zone].sum()/2)*100
         
     for unit in results['OutputReserve_3U'].columns:
         zone = inputs['units'].at[unit,'Zone']
         hourly_availability['3U'][unit] = results['OutputReserve_3U'][unit]/(inputs['param_df']['Demand']['2U',zone]/2)*100
         availability['3U'].at[unit,'mean'] = hourly_availability['3U'][unit].mean()
-        availability['3U'].at[unit,'sum'] = results['OutputReserve_3U'][unit].sum()/(inputs['param_df']['Demand']['2U',zone].sum()/2)*100
+        availability['3U'].at[unit,'total'] = results['OutputReserve_3U'][unit].sum()/(inputs['param_df']['Demand']['2U',zone].sum()/2)*100
 
     for unit in results['OutputReserve_2D'].columns:
         zone = inputs['units'].at[unit,'Zone']
         hourly_availability['Down'][unit] = results['OutputReserve_2D'][unit]/inputs['param_df']['Demand']['2D',zone]*100
         availability['Down'].at[unit,'mean'] = hourly_availability['Down'][unit].mean()
-        availability['Down'].at[unit,'sum'] = results['OutputReserve_2D'][unit].sum()/inputs['param_df']['Demand']['2D',zone].sum()*100
+        availability['Down'].at[unit,'total'] = results['OutputReserve_2D'][unit].sum()/inputs['param_df']['Demand']['2D',zone].sum()*100
 
     for unit in total_up_reserves.columns:
         zone = inputs['units'].at[unit,'Zone']
         hourly_availability['Up'][unit] = total_up_reserves[unit]/inputs['param_df']['Demand']['2U',zone]*100
         availability['Up'].at[unit,'mean'] = hourly_availability['Up'][unit].mean()
-        availability['Up'].at[unit,'sum'] = total_up_reserves[unit].sum()/inputs['param_df']['Demand']['2U',zone].sum()*100
+        availability['Up'].at[unit,'total'] = total_up_reserves[unit].sum()/inputs['param_df']['Demand']['2U',zone].sum()*100
     
     reserve_demand = pd.DataFrame(0.0,index = inputs['config']['zones'], columns = ['upwards','downwards'])
     for zone in inputs['config']['zones']:
@@ -790,4 +795,26 @@ def emissions(inputs,results):
     
     return emissions
     
+#%% load shedding
+def load_shedding(inputs,results):
+    loadshedding = pd.DataFrame(0,index = ['max','sum','amount'], columns = inputs['config']['zones'])
+    for z in inputs['config']['zones']:
+        if z in results['OutputShedLoad']:
+            loadshedding.loc['max',z] = results['OutputShedLoad'][z].max()
+            loadshedding.loc['sum',z] = results['OutputShedLoad'][z].sum()
+            loadshedding.loc['amount',z] = (results['OutputShedLoad'][z]!=0).sum()
+
+    return loadshedding
+
+#%% curtailment
+def curtailment(inputs,results):
+    curtailment = pd.DataFrame(0,index = ['max','sum','amount'], columns = inputs['config']['zones'])
+    for z in inputs['config']['zones']:
+        if z in results['OutputCurtailedPower']:
+            curtailment.loc['max',z] = results['OutputCurtailedPower'][z].max()
+            curtailment.loc['sum',z] = results['OutputCurtailedPower'][z].sum()
+            curtailment.loc['amount',z] = (results['OutputCurtailedPower'][z]!=0).sum()
+
+    return curtailment
+
 
