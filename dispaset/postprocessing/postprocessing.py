@@ -417,6 +417,7 @@ def CostExPost(inputs,results):
              +sum(l,PriceTransmission(l,i)*Flow(l,i))
              +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
              +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
+             +sum(p2h2, CostH2Slack(p2h2,i) * StorageSlack(p2h2,i))
              +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
              +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
              +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
@@ -513,13 +514,19 @@ def CostExPost(inputs,results):
             CostHeat[u] = dfin['CostVariable'][u].fillna(0) * results['OutputHeat'][u].fillna(0)
     costs['CostHeat'] = CostHeat.sum(axis=1).fillna(0)
     
+    #%% Cost H2:
+    CostH2 = pd.DataFrame(index = costs.index, columns = dfin['CostH2Slack'].columns)
+    for u in dfin['CostH2Slack'].columns:
+        CostH2[u] = dfin['CostH2Slack'][u].fillna(0) * results['OutputStorageSlack'][u].fillna(0)
+    costs['CostH2Slack'] = CostH2.fillna(0).sum(axis=1)
+    
     #%% Lost loads:
     # NB: the value of lost load is currently hard coded. This will have to be updated
     # Locate prices for LL
     #TODO:
-    costs['LostLoad'] = 80e3* (results['LostLoad_2D'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_2U'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0))  \
+    costs['LostLoad'] = 100e3* (results['LostLoad_2D'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_2U'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0))  \
                        + 100e3*(results['LostLoad_MaxPower'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_MinPower'].reindex(timeindex).sum(axis=1).fillna(0)) \
-                       + 70e3*(results['LostLoad_RampDown'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_RampUp'].reindex(timeindex).sum(axis=1).fillna(0))
+                       + 100e3*(results['LostLoad_RampDown'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_RampUp'].reindex(timeindex).sum(axis=1).fillna(0))
         
     #%% Spillage:
     costs['Spillage'] = 1 * results['OutputSpillage'].sum(axis=1).fillna(0)
@@ -613,3 +620,20 @@ def get_units_operation_cost(inputs, results):
     UnitOperationCost = FiexedCost+StartUpCost+ShutDownCost+RampUpCost+RampDownCost+VariableCost
 
     return UnitOperationCost
+
+def get_EFOH(inputs, results):
+    """
+    Function that computes the "Equivalent Full Load Operating Hours" of the Elyzers
+    :param inputs:      DispaSET inputs
+    :param results:     DispaSET results
+    :returns EFOH:      Dataframe with the EFOH of each country
+    """    
+    EFOH = pd.DataFrame(index = inputs['sets']['p2h2'], columns = ['EFOH'])
+    for i in EFOH.index:
+        for count,j in enumerate(inputs['sets']['au']):
+            if i == j:
+               Cap = inputs['parameters']['StorageChargingCapacity']['val'][count]
+               StoInput = results['OutputStorageInput'].loc[:,j].sum()
+               EFOH.loc[i, 'EFOH'] = StoInput/Cap 
+               
+    return EFOH
