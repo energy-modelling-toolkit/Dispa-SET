@@ -1078,7 +1078,6 @@ OutputHeat(au,h)
 OutputHeatSlack(au,h)
 LostLoad_WaterSlack(s)
 StorageShadowPrice(au,h)
-H2ShadowPrice(p2h2,h)
 OutputPtLDemand(p2h2,h)
 ;
 
@@ -1111,10 +1110,8 @@ LostLoad_WaterSlack(s) = WaterSlack.L(s);
 StorageShadowPrice(s,z) = 0 ;
 OutputPtLDemand(p2h2,z) = PtLDemand.L(p2h2,z);
 *EQ_Storage_balance.m(s,z);
-StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
 StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
 OutputH2Output(p2h2,z) = H2Output.L(p2h2,z);
-H2ShadowPrice(p2h2,z) = EQ_H2_demand.m(p2h2,z);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
@@ -1145,7 +1142,6 @@ LostLoad_WaterSlack,
 StorageShadowPrice,
 OutputPtLDemand,
 OutputH2Output,
-H2ShadowPrice,
 status
 ;
 
