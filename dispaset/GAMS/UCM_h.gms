@@ -676,7 +676,7 @@ EQ_Reserve_3U_capability(u,i)$(QuickStartPower(u,i) > 0)..
          (Nunits(u)-Committed(u,i))*QuickStartPower(u,i)*TimeStep
 ;
 
-EQ_p2h_Reserve_2U_capability(p2h,i)$(StorageCapacity(p2h)>=srp*Efficiency(p2h,i)*PowerCapacity(p2h))..
+EQ_p2h_Reserve_2U_capability(p2h,i)$(StorageCapacity(p2h)>=srp*Efficiency(p2h,i)*PowerCapacity(p2h)and((StorageCapacity(p2h)*Nunits(p2h)-StorageLevel.slacklo(p2h,i))/(Nunits(p2h)*PowerCapacity(p2h)*Efficiency(p2h,i))>=0.25))..
          Reserve_2U(p2h,i)
          =l=
          PowerConsumption(p2h,i)
