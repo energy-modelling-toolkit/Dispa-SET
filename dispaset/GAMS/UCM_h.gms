@@ -416,8 +416,10 @@ EQ_CHP_backpressure
 EQ_CHP_demand_satisfaction
 EQ_CHP_max_heat
 EQ_Heat_Storage_balance
-EQ_Heat_Storage_minimum
-EQ_Heat_Storage_level
+EQ_CHP_Heat_Storage_minimum
+EQ_CHP_Heat_Storage_level
+EQ_P2H_Heat_Storage_minimum
+EQ_P2H_Heat_Storage_level
 EQ_Commitment
 EQ_MinUpTime
 EQ_MinDownTime
@@ -869,19 +871,35 @@ EQ_Heat_Storage_balance(th,i)..
 ;
 * The self-discharge proportional to the charging level is a bold hypothesis, but it avoids keeping self-discharging if the level reaches zero
 
-*Storage level must be above a minimum
-EQ_Heat_Storage_minimum(th,i)..
-         StorageMinimum(th)*Nunits(th)
+*Storage level must be above a minimum    if chp unit in reserve some storage remains empty for reserves
+EQ_CHP_Heat_Storage_minimum(chp,i)..
+         StorageMinimum(chp)*Nunits(chp)+(Nunits(chp)*PowerCapacity(chp)*0.25*Reserve(chp)/CHPPowerToHeat(chp))         
          =L=
-         StorageLevel(th,i)
+         StorageLevel(chp,i)
+
 ;
 
-*Storage level must be below storage capacity
-EQ_Heat_Storage_level(th,i)..
-         StorageLevel(th,i)
+*Storage level must be below storage capacity   if chp unit in reserve some storage remains empty for reserves
+EQ_CHP_Heat_Storage_level(chp,i)..
+         StorageLevel(chp,i)
          =L=
-         StorageCapacity(th)*Nunits(th)
+         StorageCapacity(chp)*Nunits(chp)-(Nunits(chp)*PowerCapacity(chp)*0.25*Reserve(chp)/CHPPowerToHeat(chp))  
+
 ;
+*Storage level must be above a minimum    if chp unit in reserve some storage remains empty for reserves
+EQ_P2H_Heat_Storage_minimum(p2h,i)..
+         StorageMinimum(p2h)*Nunits(p2h)+(Nunits(p2h)*PowerCapacity(p2h)*Efficiency(p2h,i)*0.25*Reserve(p2h))
+         =L=
+         StorageLevel(p2h,i)
+;
+
+*Storage level must be below storage capacity   if chp unit in reserve some storage remains empty for reserves
+EQ_P2H_Heat_Storage_level(p2h,i)..
+         StorageLevel(p2h,i)
+         =L=
+         StorageCapacity(p2h)*Nunits(p2h)-(Nunits(p2h)*PowerCapacity(p2h)*Efficiency(p2h,i)*0.25*Reserve(p2h))
+;
+
 
 * Minimum level at the end of the optimization horizon:
 *EQ_Heat_Storage_boundaries(chp,i)$(ord(i) = card(i))..
@@ -917,8 +935,10 @@ EQ_P2H,
 EQ_Max_P2H,
 EQ_Power_available,
 EQ_Heat_Storage_balance,
-EQ_Heat_Storage_minimum,
-EQ_Heat_Storage_level,
+EQ_CHP_Heat_Storage_minimum,
+EQ_P2H_Heat_Storage_minimum,
+EQ_CHP_Heat_Storage_level,
+EQ_P2H_Heat_Storage_level,
 EQ_Reserve_2U_capability,
 EQ_Reserve_2D_capability,
 EQ_Reserve_3U_capability,
