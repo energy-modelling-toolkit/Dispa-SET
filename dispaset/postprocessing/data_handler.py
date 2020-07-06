@@ -30,8 +30,9 @@ col_keys = {'OutputCommitted':('u','h'),
             'LostLoad_RampUp':('n','h'),
             'LostLoad_RampDown':('n','h'),
             'ShadowPrice':('n','h'),
-            'ReserveUpShadowPrice':('n','h'),
-            'ReserveDownShadowPrice':('n','h'),
+            'ShadowPrice_2U':('n','h'),
+            'ShadowPrice_2D':('n','h'),
+            'ShadowPrice_3U':('n','h'),
             'StorageShadowPrice':('u','h'),
             'HeatShadowPrice':('u','h'),
             'LostLoad_WaterSlack':('u'),
@@ -135,7 +136,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
 
     keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp','HeatShadowPrice',
-            'LostLoad_RampDown', 'LostLoad_2D','ShadowPrice', 'ReserveUpShadowPrice', 'ReserveDownShadowPrice','StorageShadowPrice'] #'status'
+            'LostLoad_RampDown', 'LostLoad_2D','ShadowPrice', 'ShadowPrice_2U', 'ShadowPrice_2D','ShadowPrice_3U','StorageShadowPrice'] #'status'
 
     keys_sparse = ['OutputPower','OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
                    'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput', 'OutputHeat',
@@ -169,8 +170,9 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     # Remove epsilons:
     if 'ShadowPrice' in results:
         results['ShadowPrice'][results['ShadowPrice'] >= 1e300] = 0
-        results['ReserveUpShadowPrice'][results['ReserveUpShadowPrice'] >= 1e300] = 0
-        results['ReserveDownShadowPrice'][results['ReserveDownShadowPrice'] >= 1e300] = 0        
+        results['ShadowPrice_2U'][results['ShadowPrice_2U'] >= 1e300] = 0
+        results['ShadowPrice_2D'][results['ShadowPrice_2D'] >= 1e300] = 0
+        results['ShadowPrice_3U'][results['ShadowPrice_3U'] >= 1e300] = 0
         results['StorageShadowPrice'][results['StorageShadowPrice'] >= 1e300] = 0
         results['HeatShadowPrice'][results['HeatShadowPrice'] >= 1e300] = 0
 
