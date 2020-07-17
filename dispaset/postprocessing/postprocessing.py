@@ -692,16 +692,13 @@ def shadowprices(results, zone):
     schadowprices.fillna(0)
     return schadowprices
 #%%
-def Cashflows(inputs,results,unit,Plot = True):
+def Cashflows(inputs,results,unit):
     """
     This function calculates the different cashflows (DA,2U,2D,3U,Heat,costs) for one specific unit
     returns: cashflows      :hourly cashflow
-    returns: cashflows_sum  :sum houly cashflow
-    returns: profit         :profit
     """
     zone = inputs['units'].at[unit,'Zone']
     cashflows = pd.DataFrame(index = inputs['config']['idx'])
-    profit = 0.0
     
     #positive cashflows
     if  unit in results['OutputPower'].columns and zone in results['ShadowPrice'].columns:
@@ -718,9 +715,7 @@ def Cashflows(inputs,results,unit,Plot = True):
     cashflows['costs'] = -units_operation_cost[unit]
 
     cashflows.fillna(0,inplace = True)
-    cashflows_sum = cashflows.sum()
-    profit = cashflows_sum.sum()
-    return cashflows,cashflows_sum,profit
+    return cashflows
 #%%
 def reserve_availability_demand(inputs,results):
     """
