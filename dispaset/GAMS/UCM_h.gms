@@ -416,10 +416,8 @@ EQ_CHP_backpressure
 EQ_CHP_demand_satisfaction
 EQ_CHP_max_heat
 EQ_Heat_Storage_balance
-EQ_CHP_Heat_Storage_minimum
-EQ_CHP_Heat_Storage_level
-EQ_P2H_Heat_Storage_minimum
-EQ_P2H_Heat_Storage_level
+EQ_Heat_Storage_minimum
+EQ_Heat_Storage_level
 EQ_Commitment
 EQ_MinUpTime
 EQ_MinDownTime
@@ -443,6 +441,12 @@ EQ_Reserve_3U_capability
 EQ_p2h_Reserve_2U_capability
 EQ_p2h_Reserve_2D_capability
 EQ_p2h_Reserve_3U_capability
+EQ_2U_limit_p2h
+EQ_2D_limit_p2h
+EQ_3U_limit_p2h
+EQ_2U_limit_chp
+EQ_2D_limit_chp
+EQ_3U_limit_chp
 EQ_Storage_minimum
 EQ_Storage_level
 EQ_Storage_input
@@ -696,6 +700,47 @@ EQ_p2h_Reserve_3U_capability(p2h,i)$(QuickStartPower(p2h,i) > 0 and StorageCapac
          Nunits(p2h)*QuickStartPower(p2h,i)*TimeStep-PowerConsumption(p2h,i)
 ;
 
+EQ_2U_limit_p2h(p2h,i)..
+         Reserve_2U(p2h,i)
+         =L=
+         StorageLevel(p2h,i)/(0.25*Efficiency(p2h,i))
+
+;
+
+EQ_2D_limit_p2h(p2h,i)..
+         Reserve_2D(p2h,i)
+         =l=
+         (StorageCapacity(p2h)*Nunits(p2h)-StorageLevel(p2h,i))/(0.25*Efficiency(p2h,i))
+
+;
+
+EQ_3U_limit_p2h(p2h,i)..
+         Reserve_3U(p2h,i)
+         =l=
+         StorageLevel(p2h,i)/(Efficiency(p2h,i))
+
+;
+
+EQ_2U_limit_chp(chp,i)..
+         Reserve_2U(chp,i)
+         =l=
+         (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))/(0.25/CHPPowerToHeat(chp))
+
+;
+
+EQ_2D_limit_chp(chp,i)..
+         Reserve_2D(chp,i)
+         =l=
+         StorageLevel(chp,i)/(0.25/CHPPowerToHeat(chp))
+
+;
+
+EQ_3U_limit_chp(chp,i)..
+         Reserve_3U(chp,i)
+         =l=
+         (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))*(CHPPowerToHeat(chp))
+
+;
 *Minimum power output is above the must-run output level for each unit in all periods
 EQ_Power_must_run(u,i)..
          PowerMustRun(u,i) * Committed(u,i) - (StorageInput(u,i) * CHPPowerLossFactor(u) )$(chp(u) and (CHPType(u,'Extraction') or CHPType(u,'P2H')))
@@ -871,35 +916,19 @@ EQ_Heat_Storage_balance(th,i)..
 ;
 * The self-discharge proportional to the charging level is a bold hypothesis, but it avoids keeping self-discharging if the level reaches zero
 
-*Storage level must be above a minimum    if chp unit in reserve some storage remains empty for reserves
-EQ_CHP_Heat_Storage_minimum(chp,i)..
-         StorageMinimum(chp)*Nunits(chp)+(Nunits(chp)*PowerCapacity(chp)*0.25*Reserve(chp)/CHPPowerToHeat(chp))         
+*Storage level must be above a minimum
+EQ_Heat_Storage_minimum(th,i)..
+         StorageMinimum(th)*Nunits(th)
          =L=
-         StorageLevel(chp,i)
-
+         StorageLevel(th,i)
 ;
 
-*Storage level must be below storage capacity   if chp unit in reserve some storage remains empty for reserves
-EQ_CHP_Heat_Storage_level(chp,i)..
-         StorageLevel(chp,i)
+*Storage level must be below a maximum (to make the reserves available)
+EQ_Heat_Storage_level(th,i)..
+         StorageLevel(th,i)
          =L=
-         StorageCapacity(chp)*Nunits(chp)-(Nunits(chp)*PowerCapacity(chp)*0.25*Reserve(chp)/CHPPowerToHeat(chp))  
-
+         StorageCapacity(th)*Nunits(th)
 ;
-*Storage level must be above a minimum    if chp unit in reserve some storage remains empty for reserves
-EQ_P2H_Heat_Storage_minimum(p2h,i)..
-         StorageMinimum(p2h)*Nunits(p2h)+(Nunits(p2h)*PowerCapacity(p2h)*Efficiency(p2h,i)*0.25*Reserve(p2h))
-         =L=
-         StorageLevel(p2h,i)
-;
-
-*Storage level must be below storage capacity   if chp unit in reserve some storage remains empty for reserves
-EQ_P2H_Heat_Storage_level(p2h,i)..
-         StorageLevel(p2h,i)
-         =L=
-         StorageCapacity(p2h)*Nunits(p2h)-(Nunits(p2h)*PowerCapacity(p2h)*Efficiency(p2h,i)*0.25*Reserve(p2h))
-;
-
 
 * Minimum level at the end of the optimization horizon:
 *EQ_Heat_Storage_boundaries(chp,i)$(ord(i) = card(i))..
@@ -935,16 +964,20 @@ EQ_P2H,
 EQ_Max_P2H,
 EQ_Power_available,
 EQ_Heat_Storage_balance,
-EQ_CHP_Heat_Storage_minimum,
-EQ_P2H_Heat_Storage_minimum,
-EQ_CHP_Heat_Storage_level,
-EQ_P2H_Heat_Storage_level,
+EQ_Heat_Storage_minimum,
+EQ_Heat_Storage_level,
 EQ_Reserve_2U_capability,
 EQ_Reserve_2D_capability,
 EQ_Reserve_3U_capability,
 EQ_p2h_Reserve_2U_capability,
 EQ_p2h_Reserve_2D_capability,
 EQ_p2h_Reserve_3U_capability,
+EQ_2U_limit_p2h,
+EQ_2D_limit_p2h,
+EQ_3U_limit_p2h,
+EQ_2U_limit_chp,
+EQ_2D_limit_chp,
+EQ_3U_limit_chp,
 EQ_Storage_minimum,
 EQ_Storage_level,
 EQ_Storage_input,
