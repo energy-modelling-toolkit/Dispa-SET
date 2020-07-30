@@ -19,6 +19,7 @@ from ..common import commons
 from ..misc.gdx_handler import write_variables
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
+DATA_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'DATA')
 
 def build_single_run(config, profiles=None):
     """
@@ -655,6 +656,15 @@ def build_single_run(config, profiles=None):
     # the 1E-5 values are needed to be sure that all sets are written with the config parameter
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
+    # Number of houses
+    Heat = config['Heat']['RunHeat'] == 1
+    sets['heating_system'] = ['HP','WH'] 
+    sets['number_system'] = ['Base', 'Simulated']
+    values_houses =np.array([
+                [config['Heat']['NumberHP'],config['Heat']['NumberSimulatedHP']],
+                [config['Heat']['NumberWH'],config['Heat']['NumberSimulatedWH']]])
+    parameters['NumberHouses'] = {'sets':['heating_system', 'number_system'],'val':values_houses}
+
     # %%#################################################################################################################
     ######################################   Simulation Environment     ################################################
     ####################################################################################################################
@@ -693,6 +703,25 @@ def build_single_run(config, profiles=None):
         # additionally allso copy UCM_h_simple.gms
         shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
                         os.path.join(sim, 'UCM_h_simple.gms'))
+        
+    if Heat:
+        fin = open(os.path.join(GMS_FOLDER, 'DSM.gms'))
+        fout = open(os.path.join(sim,'DSM.gms'), "wt")
+        for line in fin:
+            fout.write(line.replace('$setglobal RunHeat 0', '$setglobal RunHeat 1'))
+        fin.close()
+        fout.close()
+    else:
+        shutil.copyfile(os.path.join(GMS_FOLDER, 'DSM.gms'),
+                        os.path.join(sim, 'DSM.gms'))
+        
+    shutil.copyfile(os.path.join(DATA_FOLDER, 'InputsHeat.gdx'),
+                    os.path.join(sim, 'InputsHeat.gdx'))
+    shutil.copyfile(os.path.join(GMS_FOLDER, 'MarginalCost.gms'),
+                    os.path.join(sim, 'MarginalCost.gms'))
+    shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_HEAT.gms'),
+                    os.path.join(sim, 'UCM_HEAT.gms'))        
+    
     gmsfile = open(os.path.join(sim, 'UCM.gpr'), 'w')
     gmsfile.write(
         '[PROJECT] \n \n[RP:UCM_H] \n1= \n[OPENWINDOW_1] \nFILE0=UCM_h.gms \nFILE1=UCM_h.gms \nMAXIM=1 \nTOP=50 \nLEFT=50 \nHEIGHT=400 \nWIDTH=400')

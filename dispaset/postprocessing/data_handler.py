@@ -190,6 +190,64 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
         return out
 
 
+def get_sim_results_heat(path='.', cache=None, temp_path=None, return_xarray=False, return_status=False):
+    """
+    This function reads the simulation environment folder once it has been solved and loads
+    the input variables together with the results.
+    """
+
+    gams_dir = get_gams_path()
+
+    inputfile = path + '/Inputs.p'
+    resultfile = path + '/Results.gdx'
+    if cache is not None or temp_path is not None:
+        logging.warning('Caching option has been removed. Try to save manually the results, e.g. results.to_netcdf("res.nc")')
+
+    inputs = pd.read_pickle(inputfile)
+
+    results = gdx_to_dataframe(gdx_to_list(gams_dir, resultfile, varname='all', verbose=True),
+                                   fixindex=True, verbose=True)
+
+
+    # Clean power plant names:
+    inputs['sets']['u'] = clean_strings(inputs['sets']['u'])
+    inputs['units'].index = clean_strings(inputs['units'].index.tolist())
+    # inputs['units']['Unit'] = clean_strings(inputs['units']['Unit'].tolist())
+
+    # Set datetime index:
+    StartDate = inputs['config']['StartDate']
+    StopDate = inputs['config']['StopDate']  # last day of the simulation with look-ahead period
+    StopDate_long = pd.datetime(*StopDate) + dt.timedelta(days=inputs['config']['LookAhead'])
+    index = pd.DatetimeIndex(start=pd.datetime(*StartDate), end=pd.datetime(*StopDate), freq='h')
+    index_long = pd.DatetimeIndex(start=pd.datetime(*StartDate), end=StopDate_long, freq='h')
+
+    # Setting the proper index to the result dataframes:
+    for key in ['T_SH', 'T_DHW_HP','T_DHW_WH','T_DHW_cooler_HP','T_DHW_cooler_WH','T_SH_cooler','T_SH_heater','T_relax_tot',
+                'P_tot','P_HP','P_WH','MV_DHW','MV_SH','P_heater','Q_dot_hp_SH','W_dot_hp_DHW','W_dot_hp_SH',
+                'DemandFlex','DemandH','P_diff', 'P_base', 'P_HP_mean', 'P_WH_mean']:
+        if key in results:
+            if len(results[key]) == len(
+                    index_long):  # Case of variables for which the look-ahead period recorded (e.g. the lost loads)
+                results[key].index = index_long
+            elif len(results[key]) == len(
+                    index):  # Case of variables for which the look-ahead is not recorded (standard case)
+                results[key].index = index
+            else:  # Variables whose index is not complete (sparse formulation)
+                results[key].index = index_long[results[key].index - 1]
+                if key in ['T_SH', 'T_DHW_HP','T_DHW_WH','T_DHW_cooler_HP','T_DHW_cooler_WH','T_SH_cooler','T_SH_heater','T_relax_tot',
+                           'P_tot','P_HP','P_WH','MV_DHW','MV_SH','P_heater','Q_dot_hp_SH','W_dot_hp_DHW','W_dot_hp_SH',
+                           'DemandFlex', 'DemandH', 'P_diff', 'P_base', 'P_HP_mean', 'P_WH_mean']:
+                    results[key] = results[key].reindex(index).fillna(0)
+                    # results[key].fillna(0,inplace=True)
+        else:
+            results[key] = pd.DataFrame(index=index)
+
+
+    return results
+
+
+
+
 def results_to_xarray(results):
     #Convert to xarray:
         try:

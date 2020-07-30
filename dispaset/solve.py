@@ -65,10 +65,27 @@ def is_sim_folder_ok(sim_folder):
             'There is no Inputs.gdx file within the specified DispaSET simulation environment folder (' + sim_folder + '). Check that the GDX output is activated in the option file and that no error stated during the pre-processing')
         return False
 
+    if not os.path.exists(os.path.join(sim_folder, 'InputsHeat.gdx')):
+        logging.error('There is no InputsHeat.gdx file within the specified DispaSET simulation environment folder (' + sim_folder + ')')
+        return False
+
     if not os.path.exists(os.path.join(sim_folder, u'UCM_h.gms')):
         logging.error(
             'There is no UCM_h.gms file within the specified DispaSET simulation environment folder (' + sim_folder + ')')
         return False
+
+    if not os.path.exists(os.path.join(sim_folder, 'DSM.gms')):
+        logging.error('There is no DSM.gms file within the specified DispaSET simulation environment folder (' + sim_folder + ')')
+        return False
+    
+    if not os.path.exists(os.path.join(sim_folder, 'MarginalCost.gms')):
+        logging.error('There is no MarginalCost.gms file within the specified DispaSET simulation environment folder (' + sim_folder + ')')
+        return False
+
+    if not os.path.exists(os.path.join(sim_folder, 'UCM_HEAT.gms')):
+        logging.error('There is no UCM_HEAT.gms file within the specified DispaSET simulation environment folder (' + sim_folder + ')')
+        return False
+
     return True
 
 

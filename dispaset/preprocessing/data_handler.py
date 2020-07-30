@@ -377,6 +377,15 @@ def load_config(ConfigFile,AbsPath=True):
     else:
         logging.critical('The extension of the config file should be .xlsx or .yml')
         sys.exit(1)
+        
+    # Hard coding the heat parameters for now:
+    config['Heat']={}
+    config['Heat']['RunHeat'] = 1
+    config['Heat']['NumberSimulatedHP'] = 1440000
+    config['Heat']['NumberSimulatedWH'] = 2400000
+    config['Heat']['NumberHP'] = 0.6
+    config['Heat']['NumberWH'] = 1
+        
     return config
 
 def read_truefalse(sheet, rowstart, colstart, rowstop, colstop, colapart=1):

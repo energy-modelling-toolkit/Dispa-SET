@@ -77,6 +77,8 @@ def check_clustering(plants,plants_merged):
     # First, list all pairs of technology - fuel
     techs = pd.DataFrame( [[plants.Technology[idx],plants.Fuel[idx]] for idx in plants.index] )
     techs.drop_duplicates(inplace=True)
+    if 'Nunits' not in plants:
+        plants['Nunits'] = 1
     for i in techs.index:
         tech = (techs.loc[i,0],techs.loc[i,1])
         units_old = plants[(plants.Technology == tech[0]) & (plants.Fuel == tech[1])]

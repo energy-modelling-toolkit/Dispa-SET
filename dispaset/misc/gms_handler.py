@@ -6,13 +6,18 @@ import shutil
 
 from .str_handler import force_str
 
-def solve_high_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file='Results.gdx', output_lst=False):
+def solve_high_level(gams_folder, sim_folder, gams_file='UCM_HEAT.gms', result_file='Results.gdx', output_lst=False):
     """Use higher level apis to run GAMSy"""
     # create GAMS workspace:
     try:
         from gams import GamsWorkspace
         ws = GamsWorkspace(system_directory=str(gams_folder), debug=3)
         shutil.copy(os.path.join(sim_folder, gams_file), ws.working_directory)
+        shutil.copy(os.path.join(sim_folder, 'UCM_h.gms'), ws.working_directory)
+        shutil.copy(os.path.join(sim_folder,'DSM.gms'),ws.working_directory)
+        shutil.copy(os.path.join(sim_folder,'MarginalCost.gms'),ws.working_directory)
+        shutil.copy(os.path.join(sim_folder,'UCM_HEAT.gms'),ws.working_directory)
+        shutil.copy(os.path.join(sim_folder,'InputsHeat.gdx'),ws.working_directory)
         shutil.copy(os.path.join(sim_folder, 'Inputs.gdx'), ws.working_directory)
         shutil.copy(os.path.join(sim_folder, 'cplex.opt'), ws.working_directory)
         t1 = ws.add_job_from_file(gams_file)
@@ -35,14 +40,14 @@ def solve_high_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file
     # copy the result file to the simulation environment folder:
     shutil.copy(os.path.join(ws.working_directory, result_file), sim_folder)
     gams_file_base = os.path.splitext(gams_file)[0]
-    for filename in [gams_file_base + '.lst', gams_file_base + '.log', 'debug.gdx']:
+    for filename in [gams_file_base + '.lst', gams_file_base + '.log', 'debug.gdx','DSM.gms','MarginalCost.gms','UCM_HEAT.gms','InputsHeat.gdx']:
         if os.path.isfile(os.path.join(ws.working_directory, filename)):
             shutil.copy(os.path.join(ws.working_directory, filename), sim_folder)
     logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
     return status
 
 
-def solve_low_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file='Results.gdx', output_lst=False, logoption=3):
+def solve_low_level(gams_folder, sim_folder, gams_file='UCM_HEAT.gms', result_file='Results.gdx', output_lst=False, logoption=3):
     """Use lower level apis to run GAMS. Based on GAMS xpexample2.py.
      We use the same signature as in solve_high_level for consistency when we call it.
      As we define the working directory to be the simulation directory we do not need to define the output names

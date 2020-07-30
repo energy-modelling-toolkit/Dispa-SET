@@ -70,8 +70,8 @@ s(u)             Storage Units (with reservoir)
 chp(u)           CHP units
 p2h(au)          Power to heat units
 th(au)           Units with thermal storage
-h                Hours
-i(h)             Subset of simulated hours for one iteration
+*h                Hours
+*i(h)             Subset of simulated hours for one iteration
 z(h)             Subset of every simulated hour
 ;
 
@@ -95,7 +95,7 @@ CHPPowerToHeat(u)                [%]      Nominal power-to-heat factor
 CHPMaxHeat(chp)                  [MW\u]     Maximum heat capacity of chp plant
 CHPType
 CommittedInitial(u)              [n.a.]   Initial committment status
-Config
+*Config
 *CostCurtailment(n,h)             [EUR\MW]  Curtailment costs
 CostFixed(u)                     [EUR\h]    Fixed costs
 CostRampUp(u)                    [EUR\MW] Ramp-up costs
@@ -185,14 +185,14 @@ $LOAD s
 $LOAD chp
 $LOAD p2h
 $LOAD th
-$LOAD h
+*$LOAD h
 $LOAD z
 $LOAD AvailabilityFactor
 $LOAD CHPPowerLossFactor
 $LOAD CHPPowerToHeat
 $LOAD CHPMaxHeat
 $LOAD CHPType
-$LOAD Config
+*$LOAD Config
 $LOAD CostFixed
 $LOAD CostHeatSlack
 $LOAD CostLoadShedding
@@ -510,6 +510,7 @@ EQ_Objective_function..
          =E=
          sum(i,SystemCost(i))
          +Config("WaterValue","val")*sum(s,WaterSlack(s))
+         +ModelHeat * sum(i,100E3*T_relax_tot_b(i))
 ;
 
 * 3 binary commitment status
@@ -587,6 +588,8 @@ EQ_Demand_balance_DA(n,i)..
          +sum(p2h,PowerConsumption(p2h,i)*Location(p2h,n))
          -LL_MaxPower(n,i)
          +LL_MinPower(n,i)
+         +1E-6 * P_base_add(i)
+         +ModelHeat * (1E-6 * P_diff_b(i))
 ;
 
 * Energy balance at the level of the flexible demand, considered as a storage capacity
@@ -918,8 +921,14 @@ EQ_Flexible_Demand_Modulation_Max,
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 /
 ;
-UCM_SIMPLE.optcr = 0.01;
+UCM_SIMPLE.optcr = 0.05;
 UCM_SIMPLE.optfile=1;
+
+MODEL UCM /
+UCM_SIMPLE,
+DSM
+/;
+UCM.optcr = 0.01;
 
 *===============================================================================
 *Solving loop
@@ -967,8 +976,8 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
 $If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
 $If %Verbose% == 1   Display PowerInitial,StorageFinalMin;
 
-$If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
-$If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
+$If %LPFormulation% == 1          SOLVE UCM USING LP MINIMIZING SystemCostD;
+$If not %LPFormulation% == 1      SOLVE UCM USING MIP MINIMIZING SystemCostD;
 
 $If %Verbose% == 0 $goto skipdisplay3
 $Ifthen %LPFormulation% == 1             Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
@@ -976,18 +985,23 @@ $else not %LPFormulation% == 1           Display EQ_Objective_function.M, EQ_Cos
 $endIf;
 $label skipdisplay3
 
-         status("model",i) = UCM_SIMPLE.Modelstat;
-         status("solver",i) = UCM_SIMPLE.Solvestat;
+         status("model",i) = UCM.Modelstat;
+         status("solver",i) = UCM.Solvestat;
 
-if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, CommittedInitial_dbg(u) = CommittedInitial(u); PowerInitial_dbg(u) = PowerInitial(u); StorageInitial_dbg(s) = StorageInitial(s);
-                                                                           EXECUTE_UNLOAD "debug.gdx" day, status, CommittedInitial_dbg, PowerInitial_dbg, StorageInitial_dbg;
-                                                                           failed=1;);
+*if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, CommittedInitial_dbg(u) = CommittedInitial(u); PowerInitial_dbg(u) = PowerInitial(u); StorageInitial_dbg(s) = StorageInitial(s);
+*                                                                           EXECUTE_UNLOAD "debug.gdx" day, status, CommittedInitial_dbg, PowerInitial_dbg, StorageInitial_dbg;
+*                                                                           failed=1;);
 
          CommittedInitial(u)=sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(u,i));
          PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
 
          StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
          StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
+
+         T_SH_initial(xx,ind) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),T_SH_b.l(xx,ind,i));
+         T_DHW_HP_initial(ind) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),T_DHW_HP_b.l(ind,i));
+         T_DHW_WH_initial(ind) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),T_DHW_WH_b.l(ind,i));
+
 
 $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),AccumulatedOverSupply.L(n,i));
 
@@ -1090,6 +1104,98 @@ status
 ;
 
 display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L;
+
+*----- Heat results -----
+PARAMETER
+T_SH(ind,z),
+T_SH_cooler(ind,z),
+T_SH_heater(ind,z),
+MV_SH(ind,z),
+P_heater(ind,z),
+Q_dot_hp_SH(ind,z),
+W_dot_hp_SH(ind,z)
+T_DHW_HP(ind,z),
+T_DHW_cooler_HP(ind,z),
+MV_DHW(ind,z),
+W_dot_hp_DHW(ind,z)
+P_HP(ind,z)
+P_HP_mean(n,z)
+T_DHW_WH(ind,z),
+T_DHW_cooler_WH(ind,z),
+P_WH(ind,z)
+P_WH_mean(n,z)
+P_tot(n,z),
+P_diff(n,z),
+T_relax_tot(n,z),
+DemandH(n,z),
+DemandFlex(n,z),
+COP(n);
+;
+
+
+T_SH(ind,z)=T_SH_b.l('1',ind,z);
+T_SH_cooler(ind,z)=T_SH_cooler_b.l(ind,z);
+T_SH_heater(ind,z)=T_SH_heater_b.l(ind,z);
+MV_SH(ind,z)=MV_SH_b.l(ind,z);
+P_heater(ind,z)=P_heater_b.l(ind,z);
+Q_dot_hp_SH(ind,z)= Q_dot_hp_SH_b.l(ind,z);
+W_dot_hp_SH(ind,z)= W_dot_hp_SH_b.l(ind,z);
+T_DHW_HP(ind,z)= T_DHW_HP_b.l(ind,z);
+T_DHW_cooler_HP(ind,z)= T_DHW_cooler_HP_b.l(ind,z);
+MV_DHW(ind,z)= MV_DHW_b.l(ind,z);
+W_dot_hp_DHW(ind,z)= W_dot_hp_DHW_b.l(ind,z);
+P_HP(ind,z)=P_HP_b.l(ind,z);
+P_HP_mean(n,z)=P_HP_mean_b.l(z);
+T_DHW_WH(ind,z)=T_DHW_WH_b.l(ind,z);
+T_DHW_cooler_WH(ind,z)=T_DHW_cooler_WH_b.l(ind,z);
+P_WH(ind,z)=P_WH_b.l(ind,z);
+P_WH_mean(n,z)=P_WH_mean_b.l(z);
+P_tot(n,z) = P_tot_b.l(z);
+P_diff(n,z)=P_diff_b.l(z);
+T_relax_tot(n,z)=T_relax_tot_b.l(z);
+DemandH(n,z) = Demand('DA',n,z) + P_base_add(z)*1E-6;
+DemandFlex(n,z)= DemandH(n,z) + 1E-6 * P_diff_b.l(z);
+
+COP(n) = sum(z$(P_tot(n,z)>0),(NumberHouses("HP","Simulated") * sum(ind, occ_type(ind) * (MV_SH(ind,z) + MV_DHW(ind,z)))
+         +  NumberHouses("WH","Simulated") * P_WH_mean(n,z)) / (P_tot(n,z)+0.0001))
+         / (sum(z$(P_tot(n,z)>0), 1)+0.0001);
+
+EXECUTE_UNLOAD "ResultsHeat.gdx"
+T_SH,
+T_SH_cooler,
+T_SH_heater,
+MV_SH,
+P_heater,
+Q_dot_hp_SH,
+W_dot_hp_SH,
+T_DHW_HP,
+T_DHW_cooler_HP,
+MV_DHW,
+W_dot_hp_DHW,
+P_HP,
+P_HP_mean,
+T_DHW_WH,
+T_DHW_cooler_WH,
+P_WH,
+P_WH_mean,
+P_tot,
+P_diff,
+T_relax_tot,
+DemandFlex,
+DemandH,
+P_base
+COP
+;
+
+*IF(not %RunHeat%,
+
+*DemandH(n,z) = Demand('DA',n,z) + P_base_add(z)*1E-6;
+
+*EXECUTE_UNLOAD "ResultsHeat.gdx"
+*DemandH
+*;);
+
+
 
 $onorder
 * Exit here if the PrintResult option is set to 0:
