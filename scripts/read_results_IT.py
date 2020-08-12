@@ -14,15 +14,23 @@ from matplotlib import pyplot as plt
 
 #%% options
 
-LoadData = False
+LoadData = True
 CalculateVariables = True
 cost = False
 plot = False
 # %%Load the inputs and the results of the simulations 
-#scenarios = ['s1','s2_A','s2_B','s3_A','s3_B','s4_A','s4_B','s5','s6_A','s6_B',
-#             's7_A','s7_B','s8_A','s8_B','s9','s10_A','s10_B','s11_A','s11_B','s12_A','s12_B']
+#all scenarios
+#scenarios = ['s1','s2_A','s2_B','s3_A','s3_B','s4_A','s4_B','s5','s6_A','s6_B','s7_A','s7_B','s8_A','s8_B','s9','s10_A','s10_B','s11_A','s11_B','s12_A','s12_B','s13','s14','s15','s16','s20','s30','s100','s110']
+#what_if_scenarios 
+#scenarios = ['s1','s2_A','s2_B','s3_A','s3_B','s4_A','s4_B','s5','s6_A','s6_B','s7_A','s7_B','s8_A','s8_B','s9','s10_A','s10_B','s11_A','s11_B','s12_A','s12_B']
+#prores1 scenarios
+scenarios = ['s13']#,'s14','s15','s16']
+#technical potential scenarios
+#scenarios = ['s20','s30','s40','s60','s70','s80','s100','s110','s120']
+#no storage constraint_scenarios 
+#scenarios = ['s2_C','s3_C','s4_C']
 
-scenarios = ['s2_B','s4_A','s4_B']
+
 if LoadData == True:
     scenarios_dic = {}
     for SCEN in scenarios:
@@ -37,7 +45,16 @@ if LoadData == True:
         print(SCEN)
 
 #%% index, unit and zone
-index = scenarios_dic['inputs_s4_A']['config']['idx']
+if 's1' in scenarios:
+    index = scenarios_dic['inputs_s1']['config']['idx']
+if 's13' in scenarios:
+    index = scenarios_dic['inputs_s13']['config']['idx']
+    COMC_GAS='[26] - IT_COMC_GAS_CHP'
+    STUR_BIO='[25] - IT_STUR_BIO_CHP'
+    ICEN_GAS='[27] - IT_ICEN_GAS_CHP'
+    
+if 's13' in scenarios:
+    index = scenarios_dic['inputs_s13']['config']['idx']
 CHP_GAS = '[10] - IT_COMC_GAS_CHP'
 CHP_HRD = '[13] - IT_STUR_HRD_CHP'
 CHP_OIL = '[14] - IT_STUR_OIL_CHP'
@@ -45,17 +62,12 @@ P2H_unit = '[21] - IT_P2HT_OTH'
 
 
 unit_list = [P2H_unit,CHP_GAS,CHP_HRD,CHP_OIL]
+if 's13' in scenarios:
+    unit_list = [COMC_GAS,STUR_BIO,ICEN_GAS]
+
 zone = 'IT'
 
 #%% tests
-
-
-less_than_15_min_extra_free_storage_available_df=pd.DataFrame(0,index = scenarios, columns = unit_list)
-less_than_15_min_in_storage_df=pd.DataFrame(0,index = scenarios, columns = unit_list)
-
-
-    
-
 
 #%% calculations
 if CalculateVariables == True:
@@ -73,10 +85,16 @@ if CalculateVariables == True:
     hourly_availability = {}
 # mean availability
     availability_mean = {}
-    availability_mean['2U'] = pd.DataFrame(0,index= unit_list,columns=scenarios)
-    availability_mean['3U'] = pd.DataFrame(0,index= unit_list,columns=scenarios)
-    availability_mean['Up'] = pd.DataFrame(0,index= unit_list,columns=scenarios)
-    availability_mean['Down'] = pd.DataFrame(0,index= unit_list,columns=scenarios)
+    availability_mean['2U'] = pd.DataFrame(0,index= [P2H_unit,CHP_GAS,CHP_HRD,CHP_OIL,'total'],columns=scenarios)
+    availability_mean['3U'] = pd.DataFrame(0,index= [P2H_unit,CHP_GAS,CHP_HRD,CHP_OIL,'total'],columns=scenarios)
+    availability_mean['Up'] = pd.DataFrame(0,index= [P2H_unit,CHP_GAS,CHP_HRD,CHP_OIL,'total'],columns=scenarios)
+    availability_mean['Down'] = pd.DataFrame(0,index= [P2H_unit,CHP_GAS,CHP_HRD,CHP_OIL,'total'],columns=scenarios)
+    
+#availability all units    
+    availability_mean_all={}
+#power output all units
+    poweroutput = {}
+    
 # total availablility
     availability_total = {}
     availability_total['2U'] = pd.DataFrame(0,index= unit_list,columns=scenarios)
@@ -90,14 +108,28 @@ if CalculateVariables == True:
 # heat provision
     heat = pd.DataFrame(0,index= [P2H_unit,CHP_GAS,CHP_HRD,CHP_OIL,'total'],columns=scenarios)
 # shadow prices
-#    shadowprices = {}
-# profit
-#    profit_2U = pd.DataFrame(0,index= scenarios,columns=[P2H_unit,CHP_GAS,CHP_HRD,CHP_OIL])
-#    profit_3U = pd.DataFrame(0,index= scenarios,columns=[P2H_unit,CHP_GAS,CHP_HRD,CHP_OIL])
-#    profit_Up = pd.DataFrame(0,index= scenarios,columns=[P2H_unit,CHP_GAS,CHP_HRD,CHP_OIL])
-#    profit_Down = pd.DataFrame(0,index= scenarios,columns=[P2H_unit,CHP_GAS,CHP_HRD,CHP_OIL])
+    shadowprices_mean = pd.DataFrame(0,index= ['DA','2U','3U','2D'],columns=scenarios)
+    shadowprices_percentages = pd.DataFrame(0,index= ['DA','2U','3U','2D'],columns=scenarios)
+
+    shadowprices_hourly = {}
+    shadowprices_hourly['DA'] = pd.DataFrame(0,index= index,columns=scenarios)
+    shadowprices_hourly['2U'] = pd.DataFrame(0,index= index,columns=scenarios)
+    shadowprices_hourly['3U'] = pd.DataFrame(0,index= index,columns=scenarios)
+    shadowprices_hourly['2D'] = pd.DataFrame(0,index= index,columns=scenarios)
+    
+    hours = pd.DataFrame(0,index= scenarios,columns=['DA','2U','3U','2D'])
+    
+    marketprice = pd.DataFrame(0.0,index= scenarios,columns=['DA','2U','3U','2D'])
+
+# cash flows
+    cash_flow = {}
+    for u in unit_list:
+        cash_flow[u] = pd.DataFrame(0,index= scenarios,columns=['costs','heat','DA','2U','2D','3U','total'])
+# lost load reserves
+    lostloads = pd.DataFrame(0,index= scenarios,columns=['2U','3U','2D','rampup','rampdown','minpower','maxpower'])
     
 # calculations
+    
     for SCEN in scenarios:
         INPUTS = 'inputs_##'
         INPUTS = INPUTS.replace('##', SCEN)
@@ -113,12 +145,64 @@ if CalculateVariables == True:
             if inputs['units'].at[u,'Zone'] == zone:
                 IT_units.append(u)
 
-# lost load
-        for lostload in [results['LostLoad_2D'],results['LostLoad_2U'],results['LostLoad_3U'],
-                         results['LostLoad_MaxPower'],results['LostLoad_MinPower'],
-                         results['LostLoad_RampDown'],results['LostLoad_RampUp']]:
-            if zone in lostload and lostload[zone].sum() != 0:
-                print(lostload)
+# lost load and hours of lost load 
+        if zone in results['LostLoad_2D'] and results['LostLoad_2D'][zone].sum() != 0:
+            print('2D lostload in Italy')
+            
+        if zone in results['LostLoad_2U'] and results['LostLoad_2U'][zone].sum() != 0:
+            print('2U lostload in Italy')
+        if zone in results['LostLoad_3U'] and results['LostLoad_3U'][zone].sum() != 0:
+            print('3U lostload in Italy')
+        if zone in results['LostLoad_MaxPower'] and results['LostLoad_MaxPower'][zone].sum() != 0:
+            print('LostLoad_MaxPower in Italy')
+        if zone in results['LostLoad_MinPower'] and results['LostLoad_MinPower'][zone].sum() != 0:
+            print('LostLoad_MinPower in Italy')
+        if zone in results['LostLoad_RampDown'] and results['LostLoad_RampDown'][zone].sum() != 0:
+            print('LostLoad_RampDown in Italy')
+        if zone in results['LostLoad_RampUp'] and results['LostLoad_RampUp'][zone].sum() != 0:
+            print('LostLoad_RampUp in Italy')
+        
+        if zone in results['LostLoad_2D']:
+            for i in results['LostLoad_2D'].index:
+                if results['LostLoad_2D'].at[i,zone] != 0:
+                    lostloads.loc[SCEN,'2D']=lostloads.loc[SCEN,'2D']+1
+        if zone in results['LostLoad_2U']:
+            for i in results['LostLoad_2U'].index:
+                if results['LostLoad_2U'].at[i,zone] != 0:
+                    lostloads.loc[SCEN,'2U']=lostloads.loc[SCEN,'2U']+1
+        if zone in results['LostLoad_3U']:
+            for i in results['LostLoad_3U'].index:
+                if results['LostLoad_3U'].at[i,zone] != 0:
+                    lostloads.loc[SCEN,'3U']=lostloads.loc[SCEN,'3U']+1
+        if zone in results['LostLoad_MaxPower']:
+            for i in results['LostLoad_MaxPower'].index:
+                if results['LostLoad_MaxPower'].at[i,zone] != 0:
+                    lostloads.loc[SCEN,'maxpower']=lostloads.loc[SCEN,'maxpower']+1
+        if zone in results['LostLoad_MinPower']:
+            for i in results['LostLoad_MinPower'].index:
+                if results['LostLoad_MinPower'].at[i,zone] != 0:
+                    lostloads.loc[SCEN,'minpower']=lostloads.loc[SCEN,'minpower']+1
+        if zone in results['LostLoad_RampUp']:
+            for i in results['LostLoad_RampUp'].index:
+                if results['LostLoad_RampUp'].at[i,zone] != 0:
+                    lostloads.loc[SCEN,'rampup']=lostloads.loc[SCEN,'rampup']+1
+        if zone in results['LostLoad_RampDown']:
+            for i in results['LostLoad_RampDown'].index:
+                if results['LostLoad_RampDown'].at[i,zone] != 0:
+                    lostloads.loc[SCEN,'rampdown']=lostloads.loc[SCEN,'rampdown']+1
+                    
+# power output
+        IT_units=[]
+        for u in inputs['units'].index:
+            if inputs['units'].at[u,'Zone']==zone:
+                IT_units.append(u)
+        poweroutput[SCEN]=pd.DataFrame(0,index= IT_units,columns=['mean'])
+        for u in results['OutputPower'].columns:
+            if u in IT_units:
+                poweroutput[SCEN].loc[u,'mean']=results['OutputPower'][u].mean()
+        
+        
+        
         
 # reserve demand and availability (unit specific)
         TMP1,TMP2,TMP3 = ds.reserve_availability_demand(inputs,results)
@@ -139,15 +223,35 @@ if CalculateVariables == True:
             if unit in TMP2['Down'].index:
                 availability_mean['Down'].loc[unit,SCEN] = TMP2['Down'].at[unit,'mean']
                 availability_total['Down'].loc[unit,SCEN] = TMP2['Down'].at[unit,'total']
+            
+        availability_mean['2U'].loc['total',SCEN] = availability_mean['2U'][SCEN].sum()
+        availability_mean['3U'].loc['total',SCEN] = availability_mean['3U'][SCEN].sum()
+        availability_mean['Down'].loc['total',SCEN] = availability_mean['Down'][SCEN].sum()
 
         hourly_availability[SCEN] = TMP1
         
-# yearly availability
+        availability_mean_all[SCEN]=TMP2
+        for u in availability_mean_all[SCEN]['2U'].index:
+            if u not in IT_units:
+                availability_mean_all[SCEN]['2U'].drop(u,inplace=True)
+
+        for u in availability_mean_all[SCEN]['3U'].index:
+            if u not in IT_units:
+                availability_mean_all[SCEN]['3U'].drop(u,inplace=True)
+
+        for u in availability_mean_all[SCEN]['Down'].index:
+            if u not in IT_units:
+                availability_mean_all[SCEN]['Down'].drop(u,inplace=True)
+
+        for u in availability_mean_all[SCEN]['Up'].index:
+            if u not in IT_units:
+                availability_mean_all[SCEN]['Up'].drop(u,inplace=True)
+
+        
+# yearly availability (up is only the secondary reserves)
         for unit in unit_list:
             if unit in results['OutputReserve_2U']:
-                yearly_availability['Up'].loc[unit,SCEN] = yearly_availability['Up'].loc[unit,SCEN]+results['OutputReserve_2U'][unit].sum()
-            if unit in results['OutputReserve_3U']:
-                yearly_availability['Up'].loc[unit,SCEN] = yearly_availability['Up'].loc[unit,SCEN]+results['OutputReserve_3U'][unit].sum()
+                yearly_availability['Up'].loc[unit,SCEN] = results['OutputReserve_2U'][unit].sum()
             if unit in results['OutputReserve_2D']:
                 yearly_availability['Down'].loc[unit,SCEN] = results['OutputReserve_2D'][unit].sum()
 
@@ -173,6 +277,11 @@ if CalculateVariables == True:
             if unit in results['OutputHeatSlack'].columns:
                 emissionrate_gasboiler = 0.23320 # tCO2 / MWh
                 calculations.loc[SCEN,'co2_heatslack'] = calculations.loc[SCEN,'co2_heatslack']+(results['OutputHeatSlack'][unit].sum() * emissionrate_gasboiler) # MWh * tCO2 / MWh = tCO2
+        if 's13' in scenarios:
+            for unit in ['[25] - IT_STUR_BIO_CHP','[26] - IT_COMC_GAS_CHP','[27] - IT_ICEN_GAS_CHP','[24] - IT_P2HT_OTH']:
+                if unit in results['OutputHeatSlack'].columns:
+                    emissionrate_gasboiler = 0.23320 # tCO2 / MWh
+                    calculations.loc[SCEN,'co2_heatslack'] = calculations.loc[SCEN,'co2_heatslack']+(results['OutputHeatSlack'][unit].sum() * emissionrate_gasboiler) # MWh * tCO2 / MWh = tCO2
             
 # co2 total emissions for Italy
         calculations.loc[SCEN,'co2_total'] = calculations.loc[SCEN,'co2_power']+calculations.loc[SCEN,'co2_heatslack']
@@ -195,73 +304,208 @@ if CalculateVariables == True:
                 heat.loc[unit,SCEN] = results['OutputHeat'][unit].sum()/inputs['param_df']['HeatDemand'][unit].sum()
                 heat.loc['total',SCEN] = heat.loc['total',SCEN] + results['OutputHeat'][unit].sum()
         heat.loc['total',SCEN] = heat.loc['total',SCEN]/97790400.75 # total heat/ total heat demand
+
+# shadowprices
+        TMP = ds.shadowprices(results, zone)
+        shadowprices_hourly['DA'][SCEN]=TMP['DA']
+        shadowprices_hourly['2U'][SCEN]=TMP['2U']
+        shadowprices_hourly['3U'][SCEN]=TMP['3U']
+        shadowprices_hourly['2D'][SCEN]=TMP['2D']
+        TMP1=[]
+        if TMP['DA'].max() > 10000:
+            print('remove lostload index')
+            for i in TMP.index:
+                if TMP.loc[i,'DA']>10000:
+                    TMP.loc[i,'DA']=TMP.at[i-1,'DA']
+            shadowprices_mean.loc['DA',SCEN]=TMP['DA'].mean()
+            for i in TMP.index:
+                if TMP.loc[i,'DA']>0:
+                    TMP1.append(TMP.at[i,'DA'])
+                    marketprice.at[SCEN,'DA']=sum(TMP1)/len(TMP1)
+        else:
+            shadowprices_mean.loc['DA',SCEN]=TMP['DA'].mean()
+            for i in TMP.index:
+                if TMP.loc[i,'DA']>0:
+                    TMP1.append(TMP.at[i,'DA'])
+                    marketprice.at[SCEN,'DA']=sum(TMP1)/len(TMP1)
+
+        TMP1=[]
+        if TMP['2U'].max() > 10000:
+            print('remove lostload index')
+            for i in TMP.index:
+                if TMP.loc[i,'2U']>10000:
+                    TMP.loc[i,'2U']=TMP.at[i-1,'2U']
+            shadowprices_mean.loc['2U',SCEN]=TMP['2U'].mean()
+            for i in TMP.index:
+                if TMP.loc[i,'2U']>0:
+                    TMP1.append(TMP.at[i,'2U'])
+                    marketprice.at[SCEN,'2U']=sum(TMP1)/len(TMP1)
+        else:
+            shadowprices_mean.loc['2U',SCEN]=TMP['2U'].mean()
+            for i in TMP.index:
+                if TMP.loc[i,'2U']>0:
+                    TMP1.append(TMP.at[i,'2U'])
+                    marketprice.at[SCEN,'2U']=sum(TMP1)/len(TMP1)
+
+        TMP1=[]
+        if TMP['3U'].max() > 10000:
+            print('remove lostload index')
+            for i in TMP.index:
+                if TMP.loc[i,'3U']>10000:
+                    TMP.loc[i,'3U']=TMP.at[i-1,'3U']
+            shadowprices_mean.loc['3U',SCEN]=TMP['3U'].mean()
+            for i in TMP.index:
+                if TMP.loc[i,'3U']>0:
+                    TMP1.append(TMP.at[i,'3U'])
+                    marketprice.at[SCEN,'3U']=sum(TMP1)/len(TMP1)
+        else:
+            shadowprices_mean.loc['3U',SCEN]=TMP['3U'].mean()
+            for i in TMP.index:
+                if TMP.loc[i,'3U']>0:
+                    TMP1.append(TMP.at[i,'3U'])
+                    marketprice.at[SCEN,'3U']=sum(TMP1)/len(TMP1)
+
+        TMP1=[]
+        if TMP['2D'].max() > 10000:
+            print('remove lostload index')
+            for i in TMP.index:
+                if TMP.loc[i,'2D']>10000:
+                    TMP.loc[i,'2D']=TMP.at[i-1,'2D']
+            shadowprices_mean.loc['2D',SCEN]=TMP['2D'].mean()
+            for i in TMP.index:
+                if TMP.loc[i,'2D']>0:
+                    TMP1.append(TMP.at[i,'2D'])
+                    marketprice.at[SCEN,'2D']=sum(TMP1)/len(TMP1)
+        else:
+            shadowprices_mean.loc['2D',SCEN]=TMP['2D'].mean()
+            for i in TMP.index:
+                if TMP.loc[i,'2D']>0:
+                    TMP1.append(TMP.at[i,'2D'])
+                    marketprice.at[SCEN,'2D']=sum(TMP1)/len(TMP1)
+        '''
+        if SCEN in ['s1','s2_A','s3_A','s4_A','s5','s6_A','s7_A','s8_A','s9','s10_A','s11_A','s12_A']:
+            shadowprices_percentages.loc['DA',SCEN] = shadowprices_mean.loc['DA',SCEN]
+            shadowprices_percentages.loc['2U',SCEN] = shadowprices_mean.loc['2U',SCEN]
+            shadowprices_percentages.loc['3U',SCEN] = shadowprices_mean.loc['3U',SCEN]
+            shadowprices_percentages.loc['2D',SCEN] = shadowprices_mean.loc['2D',SCEN]
+        elif SCEN == 's2_B':
+            shadowprices_percentages.loc['DA',SCEN] = (shadowprices_mean.loc['DA','s2_B']-shadowprices_mean.loc['DA','s2_A'])/shadowprices_mean.loc['DA','s2_A']*100
+            shadowprices_percentages.loc['2U',SCEN] = (shadowprices_mean.loc['2U','s2_B']-shadowprices_mean.loc['2U','s2_A'])/shadowprices_mean.loc['2U','s2_A']*100
+            shadowprices_percentages.loc['3U',SCEN] = (shadowprices_mean.loc['3U','s2_B']-shadowprices_mean.loc['3U','s2_A'])/shadowprices_mean.loc['3U','s2_A']*100
+            shadowprices_percentages.loc['2D',SCEN] = (shadowprices_mean.loc['2D','s2_B']-shadowprices_mean.loc['2D','s2_A'])/shadowprices_mean.loc['2D','s2_A']*100
+        elif SCEN == 's3_B':
+            shadowprices_percentages.loc['DA',SCEN] = (shadowprices_mean.loc['DA','s3_B']-shadowprices_mean.loc['DA','s3_A'])/shadowprices_mean.loc['DA','s3_A']*100
+            shadowprices_percentages.loc['2U',SCEN] = (shadowprices_mean.loc['2U','s3_B']-shadowprices_mean.loc['2U','s3_A'])/shadowprices_mean.loc['2U','s3_A']*100
+            shadowprices_percentages.loc['3U',SCEN] = (shadowprices_mean.loc['3U','s3_B']-shadowprices_mean.loc['3U','s3_A'])/shadowprices_mean.loc['3U','s3_A']*100
+            shadowprices_percentages.loc['2D',SCEN] = (shadowprices_mean.loc['2D','s3_B']-shadowprices_mean.loc['2D','s3_A'])/shadowprices_mean.loc['2D','s3_A']*100
+        elif SCEN == 's4_B':
+            shadowprices_percentages.loc['DA',SCEN] = (shadowprices_mean.loc['DA','s4_B']-shadowprices_mean.loc['DA','s4_A'])/shadowprices_mean.loc['DA','s4_A']*100
+            shadowprices_percentages.loc['2U',SCEN] = (shadowprices_mean.loc['2U','s4_B']-shadowprices_mean.loc['2U','s4_A'])/shadowprices_mean.loc['2U','s4_A']*100
+            shadowprices_percentages.loc['3U',SCEN] = (shadowprices_mean.loc['3U','s4_B']-shadowprices_mean.loc['3U','s4_A'])/shadowprices_mean.loc['3U','s4_A']*100
+            shadowprices_percentages.loc['2D',SCEN] = (shadowprices_mean.loc['2D','s4_B']-shadowprices_mean.loc['2D','s4_A'])/shadowprices_mean.loc['2D','s4_A']*100
+        elif SCEN == 's6_B':
+            shadowprices_percentages.loc['DA',SCEN] = (shadowprices_mean.loc['DA','s6_B']-shadowprices_mean.loc['DA','s6_A'])/shadowprices_mean.loc['DA','s6_A']*100
+            shadowprices_percentages.loc['2U',SCEN] = (shadowprices_mean.loc['2U','s6_B']-shadowprices_mean.loc['2U','s6_A'])/shadowprices_mean.loc['2U','s6_A']*100
+            shadowprices_percentages.loc['3U',SCEN] = (shadowprices_mean.loc['3U','s6_B']-shadowprices_mean.loc['3U','s6_A'])/shadowprices_mean.loc['3U','s6_A']*100
+            shadowprices_percentages.loc['2D',SCEN] = (shadowprices_mean.loc['2D','s6_B']-shadowprices_mean.loc['2D','s6_A'])/shadowprices_mean.loc['2D','s6_A']*100
+        elif SCEN == 's7_B':
+            shadowprices_percentages.loc['DA',SCEN] = (shadowprices_mean.loc['DA','s7_B']-shadowprices_mean.loc['DA','s7_A'])/shadowprices_mean.loc['DA','s7_A']*100
+            shadowprices_percentages.loc['2U',SCEN] = (shadowprices_mean.loc['2U','s7_B']-shadowprices_mean.loc['2U','s7_A'])/shadowprices_mean.loc['2U','s7_A']*100
+            shadowprices_percentages.loc['3U',SCEN] = (shadowprices_mean.loc['3U','s7_B']-shadowprices_mean.loc['3U','s7_A'])/shadowprices_mean.loc['3U','s7_A']*100
+            shadowprices_percentages.loc['2D',SCEN] = (shadowprices_mean.loc['2D','s7_B']-shadowprices_mean.loc['2D','s7_A'])/shadowprices_mean.loc['2D','s7_A']*100
+        elif SCEN == 's8_B':
+            shadowprices_percentages.loc['DA',SCEN] = (shadowprices_mean.loc['DA','s8_B']-shadowprices_mean.loc['DA','s8_A'])/shadowprices_mean.loc['DA','s8_A']*100
+            shadowprices_percentages.loc['2U',SCEN] = (shadowprices_mean.loc['2U','s8_B']-shadowprices_mean.loc['2U','s8_A'])/shadowprices_mean.loc['2U','s8_A']*100
+            shadowprices_percentages.loc['3U',SCEN] = (shadowprices_mean.loc['3U','s8_B']-shadowprices_mean.loc['3U','s8_A'])/shadowprices_mean.loc['3U','s8_A']*100
+            shadowprices_percentages.loc['2D',SCEN] = (shadowprices_mean.loc['2D','s8_B']-shadowprices_mean.loc['2D','s8_A'])/shadowprices_mean.loc['2D','s8_A']*100
+        elif SCEN == 's10_B':
+            shadowprices_percentages.loc['DA',SCEN] = (shadowprices_mean.loc['DA','s10_B']-shadowprices_mean.loc['DA','s10_A'])/shadowprices_mean.loc['DA','s10_A']*100
+            shadowprices_percentages.loc['2U',SCEN] = (shadowprices_mean.loc['2U','s10_B']-shadowprices_mean.loc['2U','s10_A'])/shadowprices_mean.loc['2U','s10_A']*100
+            shadowprices_percentages.loc['3U',SCEN] = (shadowprices_mean.loc['3U','s10_B']-shadowprices_mean.loc['3U','s10_A'])/shadowprices_mean.loc['3U','s10_A']*100
+            shadowprices_percentages.loc['2D',SCEN] = (shadowprices_mean.loc['2D','s10_B']-shadowprices_mean.loc['2D','s10_A'])/shadowprices_mean.loc['2D','s10_A']*100
+        elif SCEN == 's11_B':
+            shadowprices_percentages.loc['DA',SCEN] = (shadowprices_mean.loc['DA','s11_B']-shadowprices_mean.loc['DA','s11_A'])/shadowprices_mean.loc['DA','s11_A']*100
+            shadowprices_percentages.loc['2U',SCEN] = (shadowprices_mean.loc['2U','s11_B']-shadowprices_mean.loc['2U','s11_A'])/shadowprices_mean.loc['2U','s11_A']*100
+            shadowprices_percentages.loc['3U',SCEN] = (shadowprices_mean.loc['3U','s11_B']-shadowprices_mean.loc['3U','s11_A'])/shadowprices_mean.loc['3U','s11_A']*100
+            shadowprices_percentages.loc['2D',SCEN] = (shadowprices_mean.loc['2D','s11_B']-shadowprices_mean.loc['2D','s11_A'])/shadowprices_mean.loc['2D','s11_A']*100
+        elif SCEN == 's12_B':
+            shadowprices_percentages.loc['DA',SCEN] = (shadowprices_mean.loc['DA','s12_B']-shadowprices_mean.loc['DA','s12_A'])/shadowprices_mean.loc['DA','s12_A']*100
+            shadowprices_percentages.loc['2U',SCEN] = (shadowprices_mean.loc['2U','s12_B']-shadowprices_mean.loc['2U','s12_A'])/shadowprices_mean.loc['2U','s12_A']*100
+            shadowprices_percentages.loc['3U',SCEN] = (shadowprices_mean.loc['3U','s12_B']-shadowprices_mean.loc['3U','s12_A'])/shadowprices_mean.loc['3U','s12_A']*100
+            shadowprices_percentages.loc['2D',SCEN] = (shadowprices_mean.loc['2D','s12_B']-shadowprices_mean.loc['2D','s12_A'])/shadowprices_mean.loc['2D','s12_A']*100
+        '''
+
+        #hours of prices > 0 + marketprices of those hours
+        for i in shadowprices_hourly['2D'].index:
+            if shadowprices_hourly['2D'].at[i,SCEN] > 0:
+                hours.loc[SCEN,'2D']=hours.loc[SCEN,'2D']+1
+        for i in shadowprices_hourly['2U'].index:
+            if shadowprices_hourly['2U'].at[i,SCEN] > 0:
+                hours.loc[SCEN,'2U']=hours.loc[SCEN,'2U']+1
+        for i in shadowprices_hourly['3U'].index:
+            if shadowprices_hourly['3U'].at[i,SCEN] > 0:
+                hours.loc[SCEN,'3U']=hours.loc[SCEN,'3U']+1
+        for i in shadowprices_hourly['DA'].index:
+            if shadowprices_hourly['DA'].at[i,SCEN] > 0:
+                hours.loc[SCEN,'DA']=hours.loc[SCEN,'DA']+1     
         
-# storage availability
-    
+
+        # storage level
+        '''
+        scenarios_dic['results_s2_B']['OutputStorageLevel'][CHP_GAS].mean()
+        scenarios_dic['results_s2_B']['OutputStorageLevel'][CHP_GAS].plot()
+        scenarios_dic['results_s2_B']['OutputStorageLevel'][CHP_HRD].mean()
+        scenarios_dic['results_s2_B']['OutputStorageLevel'][CHP_HRD].plot()
+        scenarios_dic['results_s2_B']['OutputStorageLevel'][CHP_OIL].mean()
+        scenarios_dic['results_s2_B']['OutputStorageLevel'][CHP_OIL].plot()
+       '''
+       
+# cashflow costs and total
         for u in unit_list:
-            if u in results['OutputStorageLevel']:
-                # amount of MWh in the storage of 1 unit type
-                total_storage_level = results['OutputStorageLevel'][u]*inputs['units'].at[u,'StorageCapacity']
-                # total amount of storage capacity in storage of 1 unit type in MWh
-                total_storage_capacity=inputs['units'].at[u,'StorageCapacity']*inputs['units'].at[u,'Nunits']
-                #total availability in MWh
-                total_availability=total_storage_capacity-total_storage_level
-                #availability in MWh for each unit
-                availability_per_unit=total_availability/inputs['units'].at[u,'Nunits']
-                #amount of hours available in 1 storage unit
-
-                
-                if SCEN in ['s3_A', 's7_A', 's11_A','s3_B', 's7_B', 's11_B']:
-                    amount_of_available_storage=availability_per_unit/(inputs['units'].at[u,'PowerCapacity']*inputs['units'].at[u,'COP'])
-                else:
-                    amount_of_available_storage=availability_per_unit/(inputs['units'].at[u,'PowerCapacity']/inputs['units'].at[u,'CHPPowerToHeat'])
-                less_than_15_min_extra_free_storage_available = 0
-                less_than_15_min_in_storage = 0
-                
-                
-                for i in amount_of_available_storage.index:
-                    if amount_of_available_storage[i] > 11.75:
-                        less_than_15_min_extra_free_storage_available=less_than_15_min_extra_free_storage_available+1
-                        
-                    if amount_of_available_storage[i] < 0.25:
-                        less_than_15_min_in_storage = less_than_15_min_in_storage+1
-                        print(amount_of_available_storage[i])
-                less_than_15_min_extra_free_storage_available_df.loc[SCEN,u]=less_than_15_min_extra_free_storage_available
-                less_than_15_min_in_storage_df.loc[SCEN,u]=less_than_15_min_in_storage
-        '''
-            if SCEN in ['s3_A', 's7_A', 's11_A','s3_B', 's7_B', 's11_B']:
-                if u == P2H_unit:
-                    x=0
-                    for i in amount_of_available_storage.index:
-                        if amount_of_available_storage[i] > 11.75 and results['OutputPowerConsumption'][i,P2H_unit]!=0:
-                            x=x+1
-                    print('x')
-                    print(x)
-
-        # amount of MWh in the storage of 1 unit type
-        total_storage_level = scenarios_dic['results_s10_B']['OutputStorageLevel'][CHP_GAS]*scenarios_dic['inputs_s10_B']['units'].at[CHP_GAS,'StorageCapacity']
-        # total amount of storage capacity in storage of 1 unit type in MWh
-        total_storage_capacity=scenarios_dic['inputs_s10_B']['units'].at[CHP_GAS,'StorageCapacity']*scenarios_dic['inputs_s10_B']['units'].at[CHP_GAS,'Nunits']
-        #total availability in MWh (for RES available to use)
-        total_availability=total_storage_capacity-total_storage_level
-        #availability in MWh for each unit
-        availability_per_unit=total_availability/scenarios_dic['inputs_s10_B']['units'].at[CHP_GAS,'Nunits']
-        #amount of hours available in 1 storage unit
-        amount_of_available_storage=availability_per_unit/(scenarios_dic['inputs_s10_B']['units'].at[CHP_GAS,'PowerCapacity']*scenarios_dic['inputs_s10_B']['units'].at[CHP_GAS,'CHPPowerToHeat'])
-        '''
-# shadowprices add the 3U profit
-        #shadowprices[SCEN] = ds.shadowprices(results, zone)
-
-# profit one unit (cost negative and graf with profit not cashflow) add the 3U profit
-        '''
-        for unit in unit_list:
-            if unit in inputs['units'].index:
-                TMP = ds.Cashflows(inputs, results, unit)
-            cashflow =
-        '''
+            if u in inputs['units'].index:
+                TMP = ds.Cashflows(inputs, results, u)
+                cash_flow[u].at[SCEN,'costs'] = TMP['costs'].sum()
+                cash_flow[u].at[SCEN,'heat'] = TMP['heat'].sum()
+                cash_flow[u].at[SCEN,'DA'] = TMP['DA'].sum()
+                cash_flow[u].at[SCEN,'2U'] = TMP['2U'].sum()
+                cash_flow[u].at[SCEN,'2D'] = TMP['2D'].sum()
+                cash_flow[u].at[SCEN,'3U'] = TMP['3U'].sum()
         
 
-    
+    for u in cash_flow:
+        cash_flow[u]['total'] = cash_flow[u].sum(axis=1)
+
+'''
+calculating the costs difference
+
+
+test,TMP2,test2 = ds.CostExPost(scenarios_dic['inputs_s12_A'],scenarios_dic['results_s12_A'],False)
+test1 = (test.sum(axis=1) - scenarios_dic['results_s12_A']['OutputSystemCost']).abs()
+
+'''
+#technical potential
+'''
+CHP_pot=(-63/((234-63)/(0.081-0.054)))+0.054
+P2H_pot=(-2/((721-2)/(0.081-0.054)))+0.054
+CHP_P2H_pot=(-1/((188-1)/(0.081-0.054)))+0.054
+
+tech_pot=pd.DataFrame(0,index= [0.054,0.081,0.112],columns=['CHP','P2H','CHP+P2H'])
+tech_pot.loc[0.054,'CHP']=63
+tech_pot.loc[0.081,'CHP']=234
+tech_pot.loc[0.112,'CHP']=546
+tech_pot.loc[0.054,'P2H']=2
+tech_pot.loc[0.081,'P2H']=721
+tech_pot.loc[0.112,'P2H']=3041
+tech_pot.loc[0.054,'CHP+P2H']=1
+tech_pot.loc[0.081,'CHP+P2H']=188
+tech_pot.loc[0.112,'CHP+P2H']=1008
+tech_pot.loc[CHP_pot,'CHP']=0
+tech_pot.loc[P2H_pot,'P2H']=0
+tech_pot.loc[CHP_P2H_pot,'CHP+P2H']=0
+'''
+
+
+
     
 # %% function to plot data in specified time interval (rng)
 def plot_week(data, rng=index, color='k'):
@@ -345,16 +589,16 @@ july1 = index[4646:4806]
 if plot == True:
     
     #%% reserve demand
-    plot_reservedemand = pd.DataFrame(0,index=['RES min','RES mid','RES max','ProRes1'],columns=['Reserve Demand'])
+    plot_reservedemand = pd.DataFrame(0,index=['RES min','RES mid','RES max'],columns=['Reserve Demand'])
     plot_reservedemand.loc['RES min','Reserve Demand'] = reservedemand.at['s1','upwards']
     plot_reservedemand.loc['RES mid','Reserve Demand'] = reservedemand.at['s5','upwards']
     plot_reservedemand.loc['RES max','Reserve Demand'] = reservedemand.at['s9','upwards']
-    plot_reservedemand.loc['ProRes1','Reserve Demand'] = 0
-    ax = plot_reservedemand.plot.bar(figsize=(18, 6), alpha=0.2, legend = False)
+    ax = plot_reservedemand.plot.bar(figsize=(18, 6), alpha=0.4, legend = False)
     ax.set_ylabel('Reserve Demand [%]')
     ax.title.set_text('reserve demand')
     
     #%% total cost between scenarios add participation difference
+    
     totalcosts = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['none','CHP','P2H','CHP+P2H'] )
     totalcosts.loc['RES min','none'] = calculations.at['s1','postsystemcostIT']
     totalcosts.loc['RES mid','none'] = calculations.at['s5','postsystemcostIT']
@@ -370,7 +614,7 @@ if plot == True:
     totalcosts.loc['RES max','CHP+P2H'] = calculations.at['s12_A','postsystemcostIT']
     ax = totalcosts.plot.bar(figsize=(18, 6), alpha=0.2)
     ax.set_ylabel('total Italian system costs [euro]')
-    ax.title.set_text('Italian system cost including heat slack (without participation)')
+    ax.title.set_text('Italian system cost')#with heat slack and without DHS participation
     
     
     CHP_totalcosts = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no coupling','no participation','participation'] )
@@ -589,7 +833,7 @@ if plot == True:
 
     
     
-    #%% curtailment
+    #%% curtailment @summed up
 
     CHP_curtailment = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no coupling','no participation','participation'] )
     CHP_curtailment.loc['RES min','no coupling'] = curtailment.at['s1','sum']
@@ -629,23 +873,23 @@ if plot == True:
     ax = CHP_curtailment.plot.bar(figsize=(18, 6), alpha=0.2,ylim = (0,MAX), legend = False)
     ax.set_ylabel('curtailment [MWh]')
     ax.legend(['no coupling','no participation','participation'])
-    ax.title.set_text('curtailment for CHP scenarios (sum)')
+    ax.title.set_text('curtailment for CHP scenarios')
     
     ax = P2H_curtailment.plot.bar(figsize=(18, 6), alpha=0.2,ylim = (0,MAX), legend = False)
     ax.set_ylabel('curtailment [MWh]')
     ax.legend(['no coupling','no participation','participation'])
-    ax.title.set_text('curtailment for P2H scenarios (sum)')
+    ax.title.set_text('curtailment for P2H scenarios')
     
     ax = CHP_P2H_curtailment.plot.bar(figsize=(18, 6), alpha=0.2,ylim = (0,MAX), legend = False)
     ax.set_ylabel('curtailment [MWh]')
     ax.legend(['no coupling','no participation','participation'])
-    ax.title.set_text('curtailment for CHP+P2H scenarios (sum)')
+    ax.title.set_text('curtailment for CHP+P2H scenarios')
 
     
     
     
     #%% load shedding (total)
-    
+    '''
     CHP_loadshedding = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['no coupling','no participation','participation'] )
     CHP_loadshedding.loc['RES min','no coupling'] = load_shedding.at['s1','sum']
     CHP_loadshedding.loc['RES min','no participation'] = load_shedding.at['s2_A','sum']
@@ -747,10 +991,11 @@ if plot == True:
     ax.set_ylabel('loadshedding [h]')
     ax.legend(['no coupling','no participation','participation'])
     ax.title.set_text('total amount of load shedding in h for CHP+P2H scenarios')
-
+    '''
 #%% availability
+    '''
     # upwards
-    MAX = 300*1.05
+    MAX = 50
     plot_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP_GAS','CHP_HRD','CHP_OIL','P2H','CHP+P2H'] )
     plot_availability.loc['RES min','CHP_GAS'] = availability_total['Up'].at[CHP_GAS,'s2_B']
     plot_availability.loc['RES min','CHP_HRD'] = availability_total['Up'].at[CHP_HRD,'s2_B']
@@ -784,23 +1029,32 @@ if plot == True:
     ax.title.set_text('upwards availability (2U+3U) [%]')
         
     #downwards
-    MAX = 300*1.05
+    MAX = 100
     plot_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP_GAS','CHP_HRD','CHP_OIL','P2H','CHP+P2H'] )
     plot_availability.loc['RES min','CHP_GAS'] = availability_total['Down'].at[CHP_GAS,'s2_B']
     plot_availability.loc['RES min','CHP_HRD'] = availability_total['Down'].at[CHP_HRD,'s2_B']
     plot_availability.loc['RES min','CHP_OIL'] = availability_total['Down'].at[CHP_OIL,'s2_B']
     plot_availability.loc['RES min','P2H'] = availability_total['Down'].at[P2H_unit,'s3_B']
-    plot_availability.loc['RES min','CHP+P2H'] = 0
+    plot_availability.loc['RES min','CHP+P2H_P2H'] = availability_total['Down'].at[P2H_unit,'s4_B']
+    plot_availability.loc['RES min','CHP+P2H_GAS'] = availability_total['Down'].at[CHP_GAS,'s4_B']
+    plot_availability.loc['RES min','CHP+P2H_HRD'] = availability_total['Down'].at[CHP_HRD,'s4_B']
+    plot_availability.loc['RES min','CHP+P2H_OIL'] = availability_total['Down'].at[CHP_OIL,'s4_B']
     plot_availability.loc['RES mid','CHP_GAS'] = availability_total['Down'].at[CHP_GAS,'s6_B']
     plot_availability.loc['RES mid','CHP_HRD'] = availability_total['Down'].at[CHP_HRD,'s6_B']
     plot_availability.loc['RES mid','CHP_OIL'] = availability_total['Down'].at[CHP_OIL,'s6_B']
     plot_availability.loc['RES mid','P2H'] = availability_total['Down'].at[P2H_unit,'s7_B']
-    plot_availability.loc['RES mid','CHP+P2H'] = 0
+    plot_availability.loc['RES mid','CHP+P2H_P2H'] = availability_total['Down'].at[P2H_unit,'s8_B']
+    plot_availability.loc['RES mid','CHP+P2H_GAS'] = availability_total['Down'].at[CHP_GAS,'s8_B']
+    plot_availability.loc['RES mid','CHP+P2H_HRD'] = availability_total['Down'].at[CHP_HRD,'s8_B']
+    plot_availability.loc['RES mid','CHP+P2H_OIL'] = availability_total['Down'].at[CHP_OIL,'s8_B']
     plot_availability.loc['RES max','CHP_GAS'] = availability_total['Down'].at[CHP_GAS,'s10_B']
     plot_availability.loc['RES max','CHP_HRD'] = availability_total['Down'].at[CHP_HRD,'s10_B']
     plot_availability.loc['RES max','CHP_OIL'] = availability_total['Down'].at[CHP_OIL,'s10_B']
     plot_availability.loc['RES max','P2H'] = availability_total['Down'].at[P2H_unit,'s11_B']
-    plot_availability.loc['RES max','CHP+P2H'] = 0
+    plot_availability.loc['RES max','CHP+P2H_P2H'] = availability_total['Down'].at[P2H_unit,'s12_B']
+    plot_availability.loc['RES max','CHP+P2H_GAS'] = availability_total['Down'].at[CHP_GAS,'s12_B']
+    plot_availability.loc['RES max','CHP+P2H_HRD'] = availability_total['Down'].at[CHP_HRD,'s12_B']
+    plot_availability.loc['RES max','CHP+P2H_OIL'] = availability_total['Down'].at[CHP_OIL,'s12_B']
 
     ax = plot_availability[['CHP_GAS','CHP_HRD','CHP_OIL'],].plot.bar(figsize=(18, 6),stacked = True, alpha=0.2, width=0.1, position=1.5,colormap="rainbow",ylim = (0,MAX), legend = True)
     ax = plot_availability['P2H'].plot.bar(figsize=(18, 6),alpha=0.2, width=0.1, position=0.5,ylim = (0,MAX), legend = True)
@@ -833,7 +1087,7 @@ if plot == True:
     ax.set_ylabel('availability [%]')
     
     # non spinning reserves
-    MAX = 300*1.05
+    MAX = 100*1.05
     plot_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP_GAS','CHP_HRD','CHP_OIL','P2H','CHP+P2H'] )
     plot_availability.loc['RES min','CHP_GAS'] = availability_total['3U'].at[CHP_GAS,'s2_B']
     plot_availability.loc['RES min','CHP_HRD'] = availability_total['3U'].at[CHP_HRD,'s2_B']
@@ -857,7 +1111,7 @@ if plot == True:
     ax.set_ylabel('availability [%]')
 
     # yearly availability up
-    MAX = 70000000
+    MAX = 30000000
     plot_yearly_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP_GAS','CHP_HRD','CHP_OIL','P2H'] )
     plot_yearly_availability.loc['RES min','CHP_GAS'] = yearly_availability['Up'].at[CHP_GAS,'s2_B']
     plot_yearly_availability.loc['RES min','CHP_HRD'] = yearly_availability['Up'].at[CHP_HRD,'s2_B']
@@ -874,28 +1128,108 @@ if plot == True:
     
     ax = plot_yearly_availability[['CHP_GAS','CHP_HRD','CHP_OIL']].plot.bar(figsize=(18, 6),stacked = True, alpha=0.2, width=0.1, position=-0.5,colormap="rainbow", legend = True)
     ax = plot_yearly_availability['P2H'].plot.bar(figsize=(18, 6),alpha=0.2, width=0.1, position=0.5, ylim = (0,MAX),legend = True)
-    ax.title.set_text('total sum availability upwards')
+    ax.title.set_text('total sum 2U availability')
 
     # yearly availability down
-    MAX = 70000000
-    plot_yearly_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP_GAS','CHP_HRD','CHP_OIL','P2H'] )
-    plot_yearly_availability.loc['RES min','CHP_GAS'] = yearly_availability['Down'].at[CHP_GAS,'s2_B']
-    plot_yearly_availability.loc['RES min','CHP_HRD'] = yearly_availability['Down'].at[CHP_HRD,'s2_B']
-    plot_yearly_availability.loc['RES min','CHP_OIL'] = yearly_availability['Down'].at[CHP_OIL,'s2_B']
+    MAX = 3000000
+    plot_yearly_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP','P2H','CHP+P2H','P2H+CHP'] )
+    plot_yearly_availability.loc['RES min','CHP'] = yearly_availability['Down'].at[CHP_GAS,'s2_B']+yearly_availability['Down'].at[CHP_HRD,'s2_B']+yearly_availability['Down'].at[CHP_OIL,'s2_B']
     plot_yearly_availability.loc['RES min','P2H'] = yearly_availability['Down'].at[P2H_unit,'s3_B']
-    plot_yearly_availability.loc['RES mid','CHP_GAS'] = yearly_availability['Down'].at[CHP_GAS,'s6_B']
-    plot_yearly_availability.loc['RES mid','CHP_HRD'] = yearly_availability['Down'].at[CHP_HRD,'s6_B']
-    plot_yearly_availability.loc['RES mid','CHP_OIL'] = yearly_availability['Down'].at[CHP_OIL,'s6_B']
+    plot_yearly_availability.loc['RES min','CHP+P2H'] = yearly_availability['Down'].at[CHP_GAS,'s4_B']+yearly_availability['Down'].at[CHP_HRD,'s4_B']+yearly_availability['Down'].at[CHP_OIL,'s4_B']
+    plot_yearly_availability.loc['RES min','P2H+CHP'] = yearly_availability['Down'].at[P2H_unit,'s4_B']
+    plot_yearly_availability.loc['RES mid','CHP'] = yearly_availability['Down'].at[CHP_GAS,'s6_B']+yearly_availability['Down'].at[CHP_HRD,'s6_B']+yearly_availability['Down'].at[CHP_OIL,'s6_B']
     plot_yearly_availability.loc['RES mid','P2H'] = yearly_availability['Down'].at[P2H_unit,'s7_B']
-    plot_yearly_availability.loc['RES max','CHP_GAS'] = yearly_availability['Down'].at[CHP_GAS,'s10_B']
-    plot_yearly_availability.loc['RES max','CHP_HRD'] = yearly_availability['Down'].at[CHP_HRD,'s10_B']
-    plot_yearly_availability.loc['RES max','CHP_OIL'] = yearly_availability['Down'].at[CHP_OIL,'s10_B']
+    plot_yearly_availability.loc['RES mid','CHP+P2H'] = yearly_availability['Down'].at[CHP_GAS,'s8_B']+yearly_availability['Down'].at[CHP_HRD,'s8_B']+yearly_availability['Down'].at[CHP_OIL,'s8_B']
+    plot_yearly_availability.loc['RES mid','P2H+CHP'] = yearly_availability['Down'].at[P2H_unit,'s8_B']
+    plot_yearly_availability.loc['RES max','CHP'] = yearly_availability['Down'].at[CHP_GAS,'s10_B']+yearly_availability['Down'].at[CHP_HRD,'s10_B']+yearly_availability['Down'].at[CHP_OIL,'s10_B']
     plot_yearly_availability.loc['RES max','P2H'] = yearly_availability['Down'].at[P2H_unit,'s11_B']
+    plot_yearly_availability.loc['RES max','CHP+P2H'] = yearly_availability['Down'].at[CHP_GAS,'s12_B']+yearly_availability['Down'].at[CHP_HRD,'s12_B']+yearly_availability['Down'].at[CHP_OIL,'s12_B']
+    plot_yearly_availability.loc['RES max','P2H+CHP'] = yearly_availability['Down'].at[P2H_unit,'s12_B']
     
-    ax = plot_yearly_availability[['CHP_GAS','CHP_HRD','CHP_OIL']].plot.bar(figsize=(18, 6),stacked = True, alpha=0.2, width=0.1, position=-0.5,colormap="rainbow", legend = True)
-    ax = plot_yearly_availability['P2H'].plot.bar(figsize=(18, 6),alpha=0.2, width=0.1, position=0.5, ylim = (0,MAX),legend = True)
+    ax = plot_yearly_availability[['CHP+P2H','P2H+CHP']].plot.bar(figsize=(18, 6),stacked = True,alpha=0.8, width=0.1, position=-0.5,color=['gray','#b93c46ff'],ylim = (0,MAX), legend = False)
+    ax = plot_yearly_availability['CHP'].plot.bar(figsize=(18, 6),stacked = True, alpha=0.8, width=0.1, position=1.5,color=['#b93c46ff'],ylim = (0,MAX), legend = True)
+    ax = plot_yearly_availability['P2H'].plot.bar(figsize=(18, 6),stacked = True,alpha=0.8, width=0.1, position=0.5,color=['gray'],ylim = (0,MAX), legend = True)
     ax.title.set_text('total sum availability downwards')
+    
+    #'#b93c46ff','#b93c46b2','#b93c4666'
 
+
+    #downwards
+    MAX = 35*1.05
+    plot_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP','P2H','CHP+P2H','P2H+CHP'] )
+    plot_availability.loc['RES min','CHP'] = availability_total['Down'].at[CHP_GAS,'s2_B']+availability_total['Down'].at[CHP_HRD,'s2_B']+availability_total['Down'].at[CHP_OIL,'s2_B']
+    plot_availability.loc['RES min','P2H'] = availability_total['Down'].at[P2H_unit,'s3_B']
+    plot_availability.loc['RES min','CHP+P2H'] = availability_total['Down'].at[CHP_GAS,'s4_B']+availability_total['Down'].at[CHP_HRD,'s4_B']+availability_total['Down'].at[CHP_OIL,'s4_B']
+    plot_availability.loc['RES min','P2H+CHP'] = availability_total['Down'].at[P2H_unit,'s4_B']
+    plot_availability.loc['RES mid','CHP'] = availability_total['Down'].at[CHP_GAS,'s6_B']+availability_total['Down'].at[CHP_HRD,'s6_B']+availability_total['Down'].at[CHP_OIL,'s6_B']
+    plot_availability.loc['RES mid','P2H'] = availability_total['Down'].at[P2H_unit,'s7_B']
+    plot_availability.loc['RES mid','CHP+P2H'] = availability_total['Down'].at[CHP_GAS,'s8_B']+availability_total['Down'].at[CHP_HRD,'s8_B']+availability_total['Down'].at[CHP_OIL,'s8_B']
+    plot_availability.loc['RES mid','P2H+CHP'] = availability_total['Down'].at[P2H_unit,'s8_B']
+    plot_availability.loc['RES max','CHP'] = availability_total['Down'].at[CHP_GAS,'s10_B']+availability_total['Down'].at[CHP_HRD,'s10_B']+availability_total['Down'].at[CHP_OIL,'s10_B']
+    plot_availability.loc['RES max','P2H'] = availability_total['Down'].at[P2H_unit,'s11_B']
+    plot_availability.loc['RES max','CHP+P2H'] = availability_total['Down'].at[CHP_GAS,'s12_B']+availability_total['Down'].at[CHP_HRD,'s12_B']+availability_total['Down'].at[CHP_OIL,'s12_B']
+    plot_availability.loc['RES max','P2H+CHP'] = availability_total['Down'].at[P2H_unit,'s12_B']
+
+    ax = plot_availability[['CHP+P2H','P2H+CHP']].plot.bar(figsize=(18, 6),stacked = True,alpha=0.8, width=0.1, position=-0.5,color=['gray','#b93c46ff'],ylim = (0,MAX), legend = False)
+    ax = plot_availability['CHP'].plot.bar(figsize=(18, 6),stacked = True, alpha=0.8, width=0.1, position=1.5,color=['#b93c46ff'],ylim = (0,MAX), legend = True)
+    ax = plot_availability['P2H'].plot.bar(figsize=(18, 6),stacked = True,alpha=0.8, width=0.1, position=0.5,color=['gray'],ylim = (0,MAX), legend = True)
+    ax.set_ylabel('availability [%]')
+    ax.title.set_text('downwards availability total [%]')
+
+
+    '''
+    
+    #downwards
+    MAX = 35*1.05
+    plot_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP','P2H','CHP+P2H','P2H+CHP'] )
+    plot_availability.loc['RES min','CHP'] = availability_mean['Down'].at[CHP_GAS,'s2_B']+availability_mean['Down'].at[CHP_HRD,'s2_B']+availability_mean['Down'].at[CHP_OIL,'s2_B']
+    plot_availability.loc['RES min','P2H'] = availability_mean['Down'].at[P2H_unit,'s3_B']
+    plot_availability.loc['RES min','CHP+P2H'] = availability_mean['Down'].at[CHP_GAS,'s4_B']+availability_mean['Down'].at[CHP_HRD,'s4_B']+availability_mean['Down'].at[CHP_OIL,'s4_B']
+    plot_availability.loc['RES min','P2H+CHP'] = availability_mean['Down'].at[P2H_unit,'s4_B']
+    plot_availability.loc['RES mid','CHP'] = availability_mean['Down'].at[CHP_GAS,'s6_B']+availability_mean['Down'].at[CHP_HRD,'s6_B']+availability_mean['Down'].at[CHP_OIL,'s6_B']
+    plot_availability.loc['RES mid','P2H'] = availability_mean['Down'].at[P2H_unit,'s7_B']
+    plot_availability.loc['RES mid','CHP+P2H'] = availability_mean['Down'].at[CHP_GAS,'s8_B']+availability_mean['Down'].at[CHP_HRD,'s8_B']+availability_mean['Down'].at[CHP_OIL,'s8_B']
+    plot_availability.loc['RES mid','P2H+CHP'] = availability_mean['Down'].at[P2H_unit,'s8_B']
+    plot_availability.loc['RES max','CHP'] = availability_mean['Down'].at[CHP_GAS,'s10_B']+availability_mean['Down'].at[CHP_HRD,'s10_B']+availability_mean['Down'].at[CHP_OIL,'s10_B']
+    plot_availability.loc['RES max','P2H'] = availability_mean['Down'].at[P2H_unit,'s11_B']
+    plot_availability.loc['RES max','CHP+P2H'] = availability_mean['Down'].at[CHP_GAS,'s12_B']+availability_mean['Down'].at[CHP_HRD,'s12_B']+availability_mean['Down'].at[CHP_OIL,'s12_B']
+    plot_availability.loc['RES max','P2H+CHP'] = availability_mean['Down'].at[P2H_unit,'s12_B']
+
+    ax = plot_availability[['CHP+P2H','P2H+CHP']].plot.bar(figsize=(18, 6),stacked = True,alpha=0.8, width=0.1, position=-0.5,color=['#b93c46ff','gray'],ylim = (0,MAX), legend = False)
+    ax = plot_availability['CHP'].plot.bar(figsize=(18, 6),stacked = True, alpha=0.8, width=0.1, position=1.5,color=['#b93c46ff'],ylim = (0,MAX), legend = True)
+    ax = plot_availability['P2H'].plot.bar(figsize=(18, 6),stacked = True,alpha=0.8, width=0.1, position=0.5,color=['gray'],ylim = (0,MAX), legend = True)
+    ax.set_ylabel('availability [%]')
+    ax.title.set_text('downwards availability mean [%]')
+    
+
+    # spinning upwards reserves
+    MAX = 35*1.05
+    plot_availability = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns = ['CHP','P2H','CHP+P2H','P2H+CHP'] )
+    plot_availability.loc['RES min','CHP'] = availability_mean['2U'].at[CHP_GAS,'s2_B']+availability_mean['2U'].at[CHP_HRD,'s2_B']+availability_mean['2U'].at[CHP_OIL,'s2_B']
+    plot_availability.loc['RES min','P2H'] = availability_mean['2U'].at[P2H_unit,'s3_B']
+    plot_availability.loc['RES min','CHP+P2H'] = availability_mean['2U'].at[CHP_GAS,'s4_B']+availability_mean['2U'].at[CHP_HRD,'s4_B']+availability_mean['2U'].at[CHP_OIL,'s4_B']
+    plot_availability.loc['RES min','P2H+CHP'] = availability_mean['2U'].at[P2H_unit,'s4_B']
+    plot_availability.loc['RES mid','CHP'] = availability_mean['2U'].at[CHP_GAS,'s6_B']+availability_mean['2U'].at[CHP_HRD,'s6_B']+availability_mean['2U'].at[CHP_OIL,'s6_B']
+    plot_availability.loc['RES mid','P2H'] = availability_mean['2U'].at[P2H_unit,'s7_B']
+    plot_availability.loc['RES mid','CHP+P2H'] = availability_mean['2U'].at[CHP_GAS,'s8_B']+availability_mean['2U'].at[CHP_HRD,'s8_B']+availability_mean['2U'].at[CHP_OIL,'s8_B']
+    plot_availability.loc['RES mid','P2H+CHP'] = availability_mean['2U'].at[P2H_unit,'s8_B']
+    plot_availability.loc['RES max','CHP'] = availability_mean['2U'].at[CHP_GAS,'s10_B']+availability_mean['2U'].at[CHP_HRD,'s10_B']+availability_mean['2U'].at[CHP_OIL,'s10_B']
+    plot_availability.loc['RES max','P2H'] = availability_mean['2U'].at[P2H_unit,'s11_B']
+    plot_availability.loc['RES max','CHP+P2H'] = availability_mean['2U'].at[CHP_GAS,'s12_B']+availability_mean['2U'].at[CHP_HRD,'s12_B']+availability_mean['2U'].at[CHP_OIL,'s12_B']
+    plot_availability.loc['RES max','P2H+CHP'] = availability_mean['2U'].at[P2H_unit,'s12_B']
+
+    ax = plot_availability[['CHP+P2H','P2H+CHP']].plot.bar(figsize=(18, 6),stacked = True,alpha=0.8, width=0.1, position=-0.5,color=['#b93c46ff','gray'],ylim = (0,MAX), legend = False)
+    ax = plot_availability['CHP'].plot.bar(figsize=(18, 6),stacked = True, alpha=0.8, width=0.1, position=1.5,color=['#b93c46ff'],ylim = (0,MAX), legend = True)
+    ax = plot_availability['P2H'].plot.bar(figsize=(18, 6),stacked = True,alpha=0.8, width=0.1, position=0.5,color=['gray'],ylim = (0,MAX), legend = True)
+    ax.set_ylabel('availability [%]')
+    ax.title.set_text('2U  availability [%]')
+#%% technical potential
+    ax = tech_pot.plot(figsize=(18, 6),alpha=0.8,color=['#b93c46ff','gray','b'],xlim = (0.05,0.116),ylim = (0,3000*1.05), legend = True)
+    ax.set_ylabel('lost load [h]')
+    ax.title.set_text('Technical potential [%]')
+    
+    
+    
 #%% shadow prices
     
     
@@ -1061,3 +1395,133 @@ def analyzinggraph(scenarios_dic,index,scenarios):
 #ds.plot_zone(scenarios_dic['inputs_s1'],scenarios_dic['results_s1'],'IT',rng=october1)
 #ds.plot_zone(scenarios_dic['inputs_s3_A'],scenarios_dic['results_s3_A'],'IT',rng=october1)
 
+#%% 2050 scenario
+    
+
+
+    #%% availability
+    
+    
+    
+    
+    
+    #%% market prices
+    
+    
+    
+    
+    
+    #%% profit
+    
+    
+    
+    
+    #%% total system cost
+    system_costs_2050 = pd.DataFrame(0, index = ['none','DHS','RES','DHS+RES'], columns =['participation'])
+    system_costs_2050.loc['none','participation'] = calculations.at['s13','postsystemcostIT']
+    system_costs_2050.loc['DHS','participation'] = calculations.at['s14','postsystemcostIT']
+    system_costs_2050.loc['RES','participation'] = calculations.at['s15','postsystemcostIT']
+    system_costs_2050.loc['DHS+RES','participation'] = calculations.at['s16','postsystemcostIT']
+    
+    MAX = system_costs_2050.max().max()*1.05
+    
+    ax = system_costs_2050.plot.bar(figsize=(18, 6), alpha=0.2,ylim = (0,MAX), legend = False)
+    ax.set_ylabel('total Italian system costs [euro]')
+    ax.title.set_text('Italian system cost for the 2050 scenarios')
+    
+    
+    costsdifference = pd.DataFrame(0, index = ['none','DHS','RES','DHS+RES'], columns =['participation'] )
+    costsdifference.loc['DHS','participation'] = (calculations.at['s14','postsystemcostIT']-calculations.at['s13','postsystemcostIT'])/calculations.at['s13','postsystemcostIT']*100
+    costsdifference.loc['RES','participation'] = (calculations.at['s15','postsystemcostIT']-calculations.at['s13','postsystemcostIT'])/calculations.at['s13','postsystemcostIT']*100
+    costsdifference.loc['DHS+RES','participation'] = (calculations.at['s16','postsystemcostIT']-calculations.at['s13','postsystemcostIT'])/calculations.at['s13','postsystemcostIT']*100
+    
+    MAX = costsdifference.max().max()*1.05
+    MIN = costsdifference.min().min()*1.05
+    
+    ax = costsdifference.plot.bar(figsize=(18, 6), alpha=0.2,ylim = (MIN,MAX), legend = False)
+    ax.set_ylabel('[%]')
+    ax.legend(['CHP_participation','P2H_participation','CHP+P2H_participation'])
+    ax.title.set_text('cost savings through participation (negative is a cost reduction)')
+
+
+    #%% curtailment
+    curtailment_2050 = pd.DataFrame(0, index = ['none','DHS','RES','DHS+RES'], columns =['participation'])
+    curtailment_2050.loc['none','participation'] = curtailment.at['s13','sum']
+    curtailment_2050.loc['DHS','participation'] = curtailment.at['s14','sum']
+    curtailment_2050.loc['RES','participation'] = curtailment.at['s15','sum']
+    curtailment_2050.loc['DHS+RES','participation'] = curtailment.at['s16','sum']
+    
+    MAX = curtailment_2050.max().max()*1.05
+    
+    ax = curtailment_2050.plot.bar(figsize=(18, 6), alpha=0.2,ylim = (0,MAX), legend = False)
+    ax.set_ylabel('curtailment [MWh]')
+    ax.title.set_text('curtailment for the 2050 scenarios')
+
+    #%% total emissions
+    
+    plot_emissions = pd.DataFrame(0, index = ['none','DHS','RES','DHS+RES'], columns = [])
+    plot_emissions.loc['none','none power system'] = calculations.at['s13','co2_power']
+    plot_emissions.loc['none','none heat slack'] = calculations.at['s13','co2_heatslack']
+    plot_emissions.loc['DHS','DHS power system'] = calculations.at['s14','co2_power']
+    plot_emissions.loc['DHS','DHS heat slack'] = calculations.at['s14','co2_heatslack']
+    plot_emissions.loc['RES','RES power system'] = calculations.at['s15','co2_power']
+    plot_emissions.loc['RES','RES heat slack'] = calculations.at['s15','co2_heatslack']
+    plot_emissions.loc['DHS+RES','DHS+RES power system'] = calculations.at['s16','co2_power']
+    plot_emissions.loc['DHS+RES','DHS+RES heat slack'] = calculations.at['s16','co2_heatslack']
+
+
+    MAX = 80000000#(plot_emissions.at['RES min','CHP power system']+plot_emissions.at['RES min','CHP heat slack'])*1.05
+    fig, ax = plt.subplots()
+    ax = plot_emissions[['none power system','none heat slack']].plot.bar(figsize=(18, 6),stacked = True, alpha=0.6, width=0.8,colormap="rainbow",ax=ax,ylim = (0,MAX), legend = True)
+    ax = plot_emissions[['DHS power system','DHS heat slack']].plot.bar(figsize=(18, 6),stacked = True,alpha=0.6, width=0.8,colormap="rainbow",ax=ax,ylim = (0,MAX), legend = True)
+    ax = plot_emissions[['RES power system','RES heat slack']].plot.bar(figsize=(18, 6),stacked = True,alpha=0.6, width=0.8,colormap="rainbow",ax=ax,ylim = (0,MAX), legend = True)
+    ax = plot_emissions[['DHS+RES power system','DHS+RES heat slack']].plot.bar(figsize=(18, 6),stacked = True,alpha=0.6, width=0.8,colormap="rainbow",ax=ax,ylim = (0,MAX), legend = True)
+    ax.set_ylabel('emissions [ton co2]')
+    ax.title.set_text('emissions produced in Italy')
+
+    
+    emission_difference = pd.DataFrame(0, index = ['RES min', 'RES mid', 'RES max'], columns =['none','DHS','RES','DHS+RES'] )
+    emission_difference.loc['RES min','CHP_participation'] = (calculations.at['s2_B','co2_total']-calculations.at['s2_A','co2_total'])/calculations.at['s2_A','co2_total']*100
+    emission_difference.loc['RES min','P2H_participation'] = (calculations.at['s3_B','co2_total']-calculations.at['s3_A','co2_total'])/calculations.at['s3_A','co2_total']*100
+    emission_difference.loc['RES min','CHP+P2H_participation'] = (calculations.at['s4_B','co2_total']-calculations.at['s4_A','co2_total'])/calculations.at['s4_A','co2_total']*100
+    emission_difference.loc['RES mid','CHP_participation'] = (calculations.at['s6_B','co2_total']-calculations.at['s6_A','co2_total'])/calculations.at['s6_A','co2_total']*100
+    emission_difference.loc['RES mid','P2H_participation'] = (calculations.at['s7_B','co2_total']-calculations.at['s7_A','co2_total'])/calculations.at['s7_A','co2_total']*100
+    emission_difference.loc['RES mid','CHP+P2H_participation'] = (calculations.at['s8_B','co2_total']-calculations.at['s8_A','co2_total'])/calculations.at['s8_A','co2_total']*100
+    emission_difference.loc['RES max','CHP_participation'] = (calculations.at['s10_B','co2_total']-calculations.at['s10_A','co2_total'])/calculations.at['s10_A','co2_total']*100
+    emission_difference.loc['RES max','P2H_participation'] = (calculations.at['s11_B','co2_total']-calculations.at['s11_A','co2_total'])/calculations.at['s11_A','co2_total']*100
+    emission_difference.loc['RES max','CHP+P2H_participation'] = (calculations.at['s12_B','co2_total']-calculations.at['s12_A','co2_total'])/calculations.at['s12_A','co2_total']*100
+
+    MAX = emission_difference.max().max()*1.05
+    MIN = emission_difference.min().min()*1.05
+    
+    ax = emission_difference.plot.bar(figsize=(18, 6), alpha=0.2,ylim = (MIN,MAX), legend = False)
+    ax.set_ylabel('[%]')
+    ax.legend(['CHP_participation','P2H_participation','CHP+P2H_participation'])
+    ax.title.set_text('emissions saving through participation (negative is a decreasement)')
+
+    #%% 2U availability
+    #CHP unit
+    testgas=(scenarios_dic['results_s2_B']['OutputPower'][CHP_GAS]/511)
+    for x in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]:
+        for i in testgas.index:
+            if testgas.loc[i]>=x and testgas.loc[i]<(x+1):
+                testgas.loc[i]=testgas.at[i]-x        
+    testgas.mean()
+        
+
+    testhrd=(scenarios_dic['results_s4_B']['OutputPower'][CHP_HRD]/1078)
+    for x in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]:
+        for i in testhrd.index:
+            if testhrd.loc[i]>=x and testhrd.loc[i]<(x+1):
+                testhrd.loc[i]=testhrd.at[i]-x
+    testhrd.mean()
+
+    testoil=(scenarios_dic['results_s4_B']['OutputPower'][CHP_OIL]/476)
+    for x in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]:
+        for i in testoil.index:
+            if testoil.loc[i]>=x and testoil.loc[i]<(x+1):
+                testoil.loc[i]=testoil.at[i]-x
+    testoil.mean()
+
+
+    
