@@ -675,43 +675,79 @@ def get_units_operation_cost(inputs, results):
 #%%
 def shadowprices(results, zone):
     """
-    this function retrieves the schadowprices of DA, heat, 2U and 2D for 1 zone
+    this function retrieves the schadowprices of DA, 2U, 2D, 3U for 1 zone
     """
-    schadowprices = pd.DataFrame(0,index = results['OutputPower'].index, columns = ['DA','Heat','2U','2D'])
-    unit = '[21] - IT_P2HT_OTH'
+    shadowprices = pd.DataFrame(0,index = results['OutputPower'].index, columns = ['DA','2U','2D','3U'])
     
     if  zone in results['ShadowPrice'].columns:
-        schadowprices['DA'] = results['ShadowPrice'][zone]
-    if zone in results['ReserveUpShadowPrice'].columns:
-        schadowprices['2U'] = results['ReserveUpShadowPrice'][zone]
-    if zone in results['ReserveDownShadowPrice'].columns:
-        schadowprices['2D'] = results['ReserveDownShadowPrice'][zone]
-    if unit in results['HeatShadowPrice'].columns:
-        schadowprices['Heat'] = results['HeatShadowPrice'][unit]
+        shadowprices['DA'] = results['ShadowPrice'][zone]
+    if zone in results['ShadowPrice_2U'].columns:
+        shadowprices['2U'] = results['ShadowPrice_2U'][zone]
+    if zone in results['ShadowPrice_2D'].columns:
+        shadowprices['2D'] = results['ShadowPrice_2D'][zone]        
+    if zone in results['ShadowPrice_3U'].columns:
+        shadowprices['3U'] = results['ShadowPrice_3U'][zone]
 
-    schadowprices.fillna(0)
-    return schadowprices
+    shadowprices.fillna(0,inplace=True)
+    return shadowprices
 #%%
 def Cashflows(inputs,results,unit):
     """
     This function calculates the different cashflows (DA,2U,2D,3U,Heat,costs) for one specific unit
-    returns: cashflows      :hourly cashflow
+    returns: hourly cashflow
     """
     zone = inputs['units'].at[unit,'Zone']
     cashflows = pd.DataFrame(index = inputs['config']['idx'])
     
+    TMP = shadowprices(results, zone)
+
+    
+    if TMP['DA'].max() > 10000:
+        for i in TMP.index:
+            if TMP.loc[i,'DA']>10000:
+                TMP.loc[i,'DA']=TMP.at[i-1,'DA']
+        
+    if TMP['2U'].max() > 10000:
+        for i in TMP.index:
+            if TMP.loc[i,'2U']>10000:
+                TMP.loc[i,'2U']=TMP.at[i-1,'2U']
+        
+    if TMP['3U'].max() > 10000:
+        for i in TMP.index:
+            if TMP.loc[i,'3U']>10000:
+                TMP.loc[i,'3U']=TMP.at[i-1,'3U']
+        
+    if TMP['2D'].max() > 10000:
+        for i in TMP.index:
+            if TMP.loc[i,'2D']>10000:
+                TMP.loc[i,'2D']=TMP.at[i-1,'2D']
+
+    
     #positive cashflows
     if  unit in results['OutputPower'].columns and zone in results['ShadowPrice'].columns:
-        cashflows['DA'] = results['OutputPower'][unit]*results['ShadowPrice'][zone]
-    if unit in results['OutputReserve_2U'].columns and zone in results['ReserveUpShadowPrice'].columns:
-        cashflows['2U'] = results['OutputReserve_2U'][unit]*results['ReserveUpShadowPrice'][zone]
-    if unit in results['OutputReserve_2D'].columns and zone in results['ReserveDownShadowPrice'].columns:
-        cashflows['2D'] = results['OutputReserve_2D'][unit]*results['ReserveDownShadowPrice'][zone]
+        cashflows['DA'] = results['OutputPower'][unit]*TMP['DA']
+    else:
+        cashflows['DA'] = 0
+    if unit in results['OutputReserve_2U'].columns and zone in results['ShadowPrice_2U'].columns:
+        cashflows['2U'] = results['OutputReserve_2U'][unit]*TMP['2U']
+    else:
+        cashflows['2U'] = 0
+    if unit in results['OutputReserve_2D'].columns and zone in results['ShadowPrice_2D'].columns:
+        cashflows['2D'] = results['OutputReserve_2D'][unit]*TMP['2D']
+    else:
+        cashflows['2D'] = 0
+    if unit in results['OutputReserve_3U'].columns and zone in results['ShadowPrice_3U'].columns:
+        cashflows['3U'] = results['OutputReserve_3U'][unit]*TMP['3U']
+    else:
+        cashflows['3U'] = 0
     if unit in results['OutputHeat'].columns and unit in results['HeatShadowPrice'].columns:
         cashflows['heat'] = results['OutputHeat'][unit]*results['HeatShadowPrice'][unit]
+    else:
+        cashflows['heat'] = 0
 
     #negative cashflow
     units_operation_cost = get_units_operation_cost(inputs, results)
+    
     cashflows['costs'] = -units_operation_cost[unit]
 
     cashflows.fillna(0,inplace = True)
