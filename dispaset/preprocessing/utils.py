@@ -184,14 +184,16 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
                 imports.append(connNames.index(name))
                 logging.info('Detected interconnection ' + name + ', happening between the rest of the world and a simulated zone. The historical flows will be imposed to the model')
 
-        flows_out = pd.concat(df_RoW_temp[connNames[exports[i]]] for i in range(len(exports)))
-        flows_out = flows_out.groupby(flows_out.index).sum()
-        flows_out.name = nameToCompare + ' -> RoW'
-        df_zones_RoW[nameToCompare + ' -> RoW'] = flows_out
-        flows_in = pd.concat(df_RoW_temp[connNames[imports[j]]] for j in range(len(imports)))
-        flows_in = flows_in.groupby(flows_in.index).sum()
-        flows_in.name = 'RoW -> ' + nameToCompare
-        df_zones_RoW['RoW -> ' + nameToCompare] = flows_in
+        if len(exports) > 0:
+            flows_out = pd.concat(df_RoW_temp[connNames[exports[i]]] for i in range(len(exports)))
+            flows_out = flows_out.groupby(flows_out.index).sum()
+            flows_out.name = nameToCompare + ' -> RoW'
+            df_zones_RoW[nameToCompare + ' -> RoW'] = flows_out
+        if len(imports) > 0:
+            flows_in = pd.concat(df_RoW_temp[connNames[imports[j]]] for j in range(len(imports)))
+            flows_in = flows_in.groupby(flows_in.index).sum()
+            flows_in.name = 'RoW -> ' + nameToCompare
+            df_zones_RoW['RoW -> ' + nameToCompare] = flows_in
     interconnections2 = df_zones_RoW.columns
     inter = list(interconnections1) + list(interconnections2)
     return (df_zones_simulated, df_zones_RoW, inter)

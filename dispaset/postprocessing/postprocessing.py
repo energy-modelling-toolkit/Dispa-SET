@@ -608,3 +608,63 @@ def get_units_operation_cost(inputs, results):
     UnitOperationCost = FiexedCost+StartUpCost+ShutDownCost+RampUpCost+RampDownCost+VariableCost
 
     return UnitOperationCost
+
+
+def get_power_flow_tracing(inputs, results, idx=None, type=None):
+    """
+    Up-stream and down-stream (not yet implemented) looking algorithms using Bialek's power flow tracing method
+    (Bialek at al. DOI: 10.1049/ip-gtd:19960461)
+
+    :param inputs:      Dispa-SET inputs
+    :param results:     Dispa-SET results
+    :param idx:         pandas datetime index (can be both a single and multiple time intervals)
+    :return:            NxN matrix of zones (Row -> Excess generation zones, Col -> Lack of generation)
+    """
+    # Extract input data
+    flows = results['OutputFlow']
+    zones = inputs['sets']['n']
+    Demand = inputs['param_df']['Demand']['DA'].copy()
+    ShedLoad = results['OutputShedLoad'].copy()
+
+    # Adjust idx if not specified
+    if idx is None:
+        idx = pd.date_range(Demand.index[0],periods=24,freq='H')
+
+    # Predefine dataframes
+    NetExports = pd.DataFrame(index=flows.index)
+    Generation = pd.DataFrame()
+    for z in zones:
+        Generation.loc[:, z] = filter_by_zone(results['OutputPower'], inputs, z).sum(axis=1)
+        NetExports.loc[:, z] = 0
+        for key in flows:
+            if key[:len(z)] == z:
+                NetExports.loc[:, z] += flows.loc[:, key]
+
+    if ShedLoad.empty:
+        P = Demand.loc[idx].sum() + NetExports.loc[idx].sum()
+    # TODO: Check if lost load and curtailment are messing up the P and resulting in NaN
+    else:
+        ShedLoad = ShedLoad.reindex(columns = zones).fillna(0)
+        P = Demand.loc[idx].sum() + NetExports.loc[idx].sum() - ShedLoad.loc[idx].sum()
+    D = pd.DataFrame(index=zones, columns=zones).fillna(0).astype(float)
+    B = pd.DataFrame(index=zones, columns=zones).fillna(0).astype(float)
+    np.fill_diagonal(D.values, P.values)
+    for l in inputs['sets']['l']:
+        [from_node, to_node] = l.split(' -> ')
+        if (from_node.strip() in zones) and (to_node.strip() in zones):
+            D.loc[from_node, to_node] = -flows.loc[idx,l].sum()
+            B.loc[from_node, to_node] = flows.loc[idx,l].sum()
+    A = D.T / P.values
+    A.fillna(0, inplace=True)
+    A_T = pd.DataFrame(np.linalg.inv(A.values), A.columns, A.index)
+
+    Share = Demand.loc[idx].sum() / P
+    gen = A_T * Generation.loc[idx].sum()
+    Trace = pd.DataFrame(index=zones,columns=zones)
+    for z in zones:
+        tmp = gen.loc[z,:] * Share.loc[z]
+        Trace[z] = tmp
+    Trace = Trace.T
+    # TODO: Implement capability for RoW flows (not sure if curent algorithm is taking it into the account properly)
+
+    return Trace
