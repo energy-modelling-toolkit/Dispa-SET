@@ -623,13 +623,16 @@ def get_power_flow_tracing(inputs, results, idx=None, type=None):
     # Extract input data
     flows = results['OutputFlow']
     zones = inputs['sets']['n']
+    lines = inputs['sets']['l']
     Demand = inputs['param_df']['Demand']['DA'].copy()
     ShedLoad = results['OutputShedLoad'].copy()
 
     # Adjust idx if not specified
     if idx is None:
         idx = pd.date_range(Demand.index[0],periods=24,freq='H')
+        logging.warning('Date range not specified, Power Flow will be traced only for the first day of the simulation')
 
+    flows = flows.reindex(columns=lines).fillna(0)
     # Predefine dataframes
     NetExports = pd.DataFrame(index=flows.index)
     Generation = pd.DataFrame()
@@ -644,16 +647,19 @@ def get_power_flow_tracing(inputs, results, idx=None, type=None):
         P = Demand.loc[idx].sum() + NetExports.loc[idx].sum()
     # TODO: Check if lost load and curtailment are messing up the P and resulting in NaN
     else:
-        ShedLoad = ShedLoad.reindex(columns = zones).fillna(0)
+        ShedLoad = ShedLoad.reindex(columns=zones).fillna(0)
         P = Demand.loc[idx].sum() + NetExports.loc[idx].sum() - ShedLoad.loc[idx].sum()
     D = pd.DataFrame(index=zones, columns=zones).fillna(0).astype(float)
     B = pd.DataFrame(index=zones, columns=zones).fillna(0).astype(float)
     np.fill_diagonal(D.values, P.values)
     for l in inputs['sets']['l']:
-        [from_node, to_node] = l.split(' -> ')
-        if (from_node.strip() in zones) and (to_node.strip() in zones):
-            D.loc[from_node, to_node] = -flows.loc[idx,l].sum()
-            B.loc[from_node, to_node] = flows.loc[idx,l].sum()
+        if l in flows.columns:
+            [from_node, to_node] = l.split(' -> ')
+            if (from_node.strip() in zones) and (to_node.strip() in zones):
+                D.loc[from_node, to_node] = -flows.loc[idx,l].sum()
+                B.loc[from_node, to_node] = flows.loc[idx,l].sum()
+        else:
+            logging.info('Line ' + l + ' was probably not used. Skipping!')
     A = D.T / P.values
     A.fillna(0, inplace=True)
     A_T = pd.DataFrame(np.linalg.inv(A.values), A.columns, A.index)
@@ -665,6 +671,7 @@ def get_power_flow_tracing(inputs, results, idx=None, type=None):
         tmp = gen.loc[z,:] * Share.loc[z]
         Trace[z] = tmp
     Trace = Trace.T
+    Trace_prct = Trace.div(Trace.sum(axis=1), axis=0)
     # TODO: Implement capability for RoW flows (not sure if curent algorithm is taking it into the account properly)
 
-    return Trace
+    return Trace, Trace_prct
