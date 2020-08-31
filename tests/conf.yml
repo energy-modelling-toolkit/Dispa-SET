@@ -41,6 +41,7 @@ ReservoirLevels:  ''
 ReservoirScaledInflows:  ''
 Temperatures: 'tests/dummy_data/Temperatures.csv'
 ShareOfFlexibleDemand: 'tests/dummy_data/ShareFlex.csv'
+GeoData: 'tests/dummy_data/Zones.csv'
 
 #----------------
 zones: [ 'Z1', 'Z2', 'ZZ3']
