@@ -13,9 +13,11 @@ dependencies:
   - netcdf4
   - pyyaml >= 5.1
   - pytest
+  - cartopy
   - pip
   - pip:
     - gdxcc
     - gamsxcc
     - optcc
     - setuptools_scm
+    - networkx

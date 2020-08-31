@@ -20,7 +20,7 @@ from ..misc.str_handler import clean_strings
 from ..common import commons
 
 from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage, \
-    get_power_flow_tracing
+    get_power_flow_tracing, get_from_to_flows, get_net_positions
 
 
 def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None, shiftedload=None, rng=None,
@@ -606,7 +606,7 @@ def get_projection_from_crs(crs):
         return ccrs.PlateCarree()
 
 
-def compute_bbox_with_margins(margin, x, y):
+def compute_bbox_with_margins(x, y, margin_type='Fixed', margin=0):
     """
     'Helper function to compute bounding box for the plot'
 
@@ -618,15 +618,20 @@ def compute_bbox_with_margins(margin, x, y):
     # set margins
     pos = np.asarray((x, y))
     minxy, maxxy = pos.min(axis=1), pos.max(axis=1)
-    xy1 = minxy - margin * (maxxy - minxy)
-    xy2 = maxxy + margin * (maxxy - minxy)
+    if margin_type == 'Fixed':
+        xy1 = minxy - margin
+        xy2 = maxxy + margin
+    else:
+        xy1 = minxy - margin * (maxxy - minxy)
+        xy2 = maxxy + margin * (maxxy - minxy)
 
     return tuple(xy1), tuple(xy2)
 
 
-def draw_map_cartopy(x, y, ax, crs=4326, boundaries=None, margin=0.05, geomap=True, color_geomap=None, terrain=False):
+def draw_map_cartopy(x, y, ax, crs=4326, boundaries=None, margin_type='Fixed', margin=0.05, geomap=True,
+                     color_geomap=None, terrain=False):
     if boundaries is None:
-        (x1, y1), (x2, y2) = compute_bbox_with_margins(margin, x, y)
+        (x1, y1), (x2, y2) = compute_bbox_with_margins(x, y, margin_type, margin)
     else:
         x1, x2, y1, y2 = boundaries
 
@@ -643,9 +648,9 @@ def draw_map_cartopy(x, y, ax, crs=4326, boundaries=None, margin=0.05, geomap=Tr
     ax.add_feature(cartopy.feature.LAND.with_scale(resolution), facecolor=color_geomap['land'])
     ax.add_feature(cartopy.feature.OCEAN.with_scale(resolution), facecolor=color_geomap['ocean'])
 
-    ax.coastlines(linewidth=0.4, zorder=2, resolution=resolution)
+    ax.coastlines(linewidth=1, zorder=2, resolution=resolution)
     border = cartopy.feature.BORDERS.with_scale(resolution)
-    ax.add_feature(border, linewidth=0.4)
+    ax.add_feature(border, linewidth=0.8)
 
     if terrain is True:
         # Create a Stamen terrain background instance.
@@ -656,51 +661,25 @@ def draw_map_cartopy(x, y, ax, crs=4326, boundaries=None, margin=0.05, geomap=Tr
     return axis_transformation
 
 
-def get_from_to_flows(inputs, flows, zones, idx):
-    Flows = pd.DataFrame(columns=['From', 'To', 'Flow'])
-    i = 0
-    for l in inputs['sets']['l']:
-        if l in flows.columns:
-            [from_node, to_node] = l.split(' -> ')
-            if (from_node.strip() in zones) and (to_node.strip() in zones):
-                Flows.loc[i, 'From'] = from_node.strip()
-                Flows.loc[i, 'To'] = to_node.strip()
-                Flows.loc[i, 'Flow'] = flows.loc[idx, l].sum()
-                i = i + 1
-    return Flows
-
-
-def get_net_positions(inputs, results, zones, idx):
-    NetImports = pd.DataFrame(columns=zones)
-    for z in zones:
-        NetImports.loc[0, z] = get_imports(results['OutputFlow'].loc[idx], z)
-
-    Demand = inputs['param_df']['Demand']['DA'].copy()
-    NetExports = -NetImports.copy()
-    NetExports[NetExports < 0] = 0
-    P = Demand.loc[idx].sum() + NetExports.iloc[0]
-    return NetImports, P
-
-
-def plot_net_flows_map(inputs, results, idx, crs=4326, boundaries=None, margin=0.20, geomap=True, color_geomap=None,
-                       terrain=False):
-    # ######### Default arguments for testing
-    # crs = 4326
-    # boundaries = None
-    # margin = 0.20
-    # geomap = True
-    # color_geomap = None
-    # terrain = True
-    # ##########
+def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, margin_type='Fixed', margin=0.20,
+                       geomap=True, color_geomap=None, terrain=False):
 
     # Preprocess input data
     flows = results['OutputFlow'].copy()
     zones = inputs['sets']['n'].copy()
     geo = inputs['geo'].copy()
 
+    # Checking if index was selected
+    if idx is None:
+        idx = inputs['param_df']['Demand'].index
+        logging.info('No datetime range specified, net flows map is printed for the entire optimization')
+    else:
+        idx = idx
+
     Flows = get_from_to_flows(inputs, flows, zones, idx)
     NetImports, P = get_net_positions(inputs, results, zones, idx)
 
+    # Scale net position of the zone TODO: maybe apply some other algorithm instead of scaling based on the highest net position
     P = P / P.max()
 
     # Create a directed graph
@@ -744,7 +723,7 @@ def plot_net_flows_map(inputs, results, idx, crs=4326, boundaries=None, margin=0
 
     # Assign geo coordinates and draw them on a map
     x, y = geo['CapitalLongitude'], geo['CapitalLatitude']
-    transform = draw_map_cartopy(x, y, ax, crs, boundaries, margin, geomap, color_geomap, terrain)
+    transform = draw_map_cartopy(x, y, ax, crs, boundaries, margin_type, margin, geomap, color_geomap, terrain)
     x, y, z = ax.projection.transform_points(transform, x.values, y.values).T
 
     x, y = pd.Series(x, geo.index), pd.Series(y, geo.index)
@@ -761,7 +740,7 @@ def plot_net_flows_map(inputs, results, idx, crs=4326, boundaries=None, margin=0
                      arrows=True, arrowstyle='-|>', arrowsize=20
                      )
 
-    ax.update_datalim(compute_bbox_with_margins(margin, x, y))
+    ax.update_datalim(compute_bbox_with_margins(x, y, margin_type, margin))
     ax.autoscale_view()
 
     if geomap:

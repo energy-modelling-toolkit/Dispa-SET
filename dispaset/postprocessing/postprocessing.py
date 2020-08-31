@@ -675,3 +675,47 @@ def get_power_flow_tracing(inputs, results, idx=None, type=None):
     # TODO: Implement capability for RoW flows (not sure if curent algorithm is taking it into the account properly)
 
     return Trace, Trace_prct
+
+
+def get_from_to_flows(inputs, flows, zones, idx):
+    """
+    Helper function for braking down flows into networkx readable format
+
+    :param inputs:      Dispa-SET inputs
+    :param flows:       Flows from Dispa-SET results
+    :param zones:       List of selected zones
+    :param idx:         datetime index (can be a single hour or a range of hours)
+    :return:
+    """
+    Flows = pd.DataFrame(columns=['From', 'To', 'Flow'])
+    i = 0
+    for l in inputs['sets']['l']:
+        if l in flows.columns:
+            [from_node, to_node] = l.split(' -> ')
+            if (from_node.strip() in zones) and (to_node.strip() in zones):
+                Flows.loc[i, 'From'] = from_node.strip()
+                Flows.loc[i, 'To'] = to_node.strip()
+                Flows.loc[i, 'Flow'] = flows.loc[idx, l].sum()
+                i = i + 1
+    return Flows
+
+
+def get_net_positions(inputs, results, zones, idx):
+    """
+    Helper function for calculating net positions in individual zones
+
+    :param inputs:      Dispa-SET inputs
+    :param results:     Dispa-SET results
+    :param zones:       List of selected zones
+    :param idx:         datetime index (can be a single hour or a range of hours)
+    :return:            NetImports and Net position
+    """
+    NetImports = pd.DataFrame(columns=zones)
+    for z in zones:
+        NetImports.loc[0, z] = get_imports(results['OutputFlow'].loc[idx], z)
+
+    Demand = inputs['param_df']['Demand']['DA'].copy()
+    NetExports = -NetImports.copy()
+    NetExports[NetExports < 0] = 0
+    NetPosition = Demand.loc[idx].sum() + NetExports.iloc[0]
+    return NetImports, NetPosition
