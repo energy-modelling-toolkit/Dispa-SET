@@ -422,7 +422,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
                           'PriceOfFuelOil':183,'PriceOfBiomass':184, 'PriceOfCO2':166, 
                           'ReservoirLevels':133, 'PriceOfLignite':185, 'PriceOfPeat':186,
                           'HeatDemand':134,'CostHeatSlack':165,'CostLoadShedding':168,'ShareOfFlexibleDemand':125,
-                          'Temperatures':135,'PriceTransmission':169,'Reserve2U':160,'Reserve2D':161}
+                          'Temperatures':135,'PriceTransmission':169,'Reserve2U':160,'Reserve2D':161,'GeoData':136}
         modifiers= {'Demand':274,'Wind':275,'Solar':276,'Storage':277}
         default = {'ReservoirLevelInitial':101,'ReservoirLevelFinal':102,'PriceOfNuclear':180,'PriceOfBlackCoal':181,
                     'PriceOfGas':182,'PriceOfFuelOil':183,'PriceOfBiomass':184,'PriceOfCO2':166,'PriceOfLignite':185,
@@ -513,7 +513,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
             config[param] = sheet.cell_value(61 + i, 2)
     
         # List of new parameters for which an external file path must be specified:
-        params2 = ['Temperatures','PriceTransmission','Reserve2D','Reserve2U']
+        params2 = ['Temperatures','PriceTransmission','Reserve2D','Reserve2U','GeoData']
         if sheet.nrows>150:                 # for backward compatibility (old excel sheets had less than 150 rows)
             for i, param in enumerate(params2):
                 config[param] = sheet.cell_value(156 + i, 2)
@@ -648,3 +648,10 @@ def export_yaml_config(ExcelFile, YAMLFile):
     with open(YAMLFile, 'w') as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
     return True
+
+
+def load_geo_data(config, path, header=None):
+
+    data = pd.read_csv(path,index_col=4, header=header)
+
+    return data

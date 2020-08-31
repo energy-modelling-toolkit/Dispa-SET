@@ -5,12 +5,22 @@ import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
+import networkx as nx
+import cartopy
+import cartopy.crs as ccrs
+import cartopy.mpl.geoaxes
+import cartopy.io.img_tiles as cimgt
+import requests
+
+from matplotlib.patches import Wedge, Circle
+from matplotlib.collections import LineCollection, PatchCollection
+from matplotlib.patches import FancyArrow
 
 from ..misc.str_handler import clean_strings
 from ..common import commons
 
 from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage, \
-                            get_power_flow_tracing
+    get_power_flow_tracing
 
 
 def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None, shiftedload=None, rng=None,
@@ -455,7 +465,6 @@ def heatmap(data, row_labels, col_labels, ax=None, cbar_kw={}, cbarlabel="", **k
     """
     Create a heatmap from a numpy array and two lists of labels.
     https://matplotlib.org/3.3.1/gallery/images_contours_and_fields/image_annotated_heatmap.html
-    Parameters
 
     :param data:        A 2D numpy array of shape (N, M).
     :param row_labels:  A list or array of length N with the labels for the rows.
@@ -503,6 +512,7 @@ def heatmap(data, row_labels, col_labels, ax=None, cbar_kw={}, cbarlabel="", **k
 
     return im, cbar
 
+
 def annotate_heatmap(im, data=None, valfmt="{x:.2f}", textcolors=("black", "white"), threshold=None, **textkw):
     """
     A function to annotate a heatmap.
@@ -549,7 +559,7 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}", textcolors=("black", "whit
     return texts
 
 
-def plot_power_flow_tracing_matrix(inputs, results, idx= None, figsize=(10,7), **kwargs):
+def plot_power_flow_tracing_matrix(inputs, results, idx=None, figsize=(10, 7), **kwargs):
     """
     Plot power flow tracing matrix
     :param inputs:      Dispa-SET inputs
@@ -562,10 +572,203 @@ def plot_power_flow_tracing_matrix(inputs, results, idx= None, figsize=(10,7), *
     """
     data, data_prct = get_power_flow_tracing(inputs, results, idx)
     fig, ax = plt.subplots(figsize=figsize)
-    im, cbar = heatmap(data_prct.values,data_prct.index, data_prct.columns,
+    im, cbar = heatmap(data_prct.values, data_prct.index, data_prct.columns,
                        cbarlabel="% of the total demand linked to one zone", **kwargs)
     texts = annotate_heatmap(im, valfmt="{x:.1f}")
     fig.tight_layout()
     plt.show()
 
     return data, data_prct
+
+
+# Insipired by Pypsa geo plot
+def get_projection_from_crs(crs):
+    """
+    EPSG coordinate system, 4326 is the default horizontal component of 3D system. Used by the GPS satellite navigation
+    system and for NATO military geodetic surveying.
+
+    :param crs:     EPSG:4326 (WGS84 Bounds:        -180.0000, -90.0000, 180.0000, 90.0000,
+                               Projected Bounds:    -180.0000, -90.0000, 180.0000, 90.0000,
+                               Area:                World)
+    :return:        map projection
+    """
+    # if data is in lat-lon system, return default map with lat-lon system
+    if crs == 4326:
+        return ccrs.PlateCarree()
+    try:
+        return ccrs.epsg(crs)
+    except requests.RequestException:
+        logging.warning("A connection to http://epsg.io/ is required for a projected coordinate reference system. "
+                        "Falling back to lat-long.")
+    except ValueError:
+        logging.warning("'{crs}' does not define a projected coordinate system. "
+                        "Falling back to lat-long.".format(crs=crs))
+        return ccrs.PlateCarree()
+
+
+def compute_bbox_with_margins(margin, x, y):
+    """
+    'Helper function to compute bounding box for the plot'
+
+    :param margin:  how much percent is box beyond the ploted network
+    :param x:       latitude
+    :param y:       longitude
+    :return:        tuples of 2 coordinates (min, max)
+    """
+    # set margins
+    pos = np.asarray((x, y))
+    minxy, maxxy = pos.min(axis=1), pos.max(axis=1)
+    xy1 = minxy - margin * (maxxy - minxy)
+    xy2 = maxxy + margin * (maxxy - minxy)
+
+    return tuple(xy1), tuple(xy2)
+
+
+def draw_map_cartopy(x, y, ax, crs=4326, boundaries=None, margin=0.05, geomap=True, color_geomap=None, terrain=False):
+    if boundaries is None:
+        (x1, y1), (x2, y2) = compute_bbox_with_margins(margin, x, y)
+    else:
+        x1, x2, y1, y2 = boundaries
+
+    resolution = '50m' if isinstance(geomap, bool) else geomap
+    assert resolution in ['10m', '50m', '110m'], ("Resolution has to be one of '10m', '50m', '110m'")
+    axis_transformation = get_projection_from_crs(crs)
+    ax.set_extent([x1, x2, y1, y2], crs=axis_transformation)
+
+    if color_geomap is None:
+        color_geomap = {'ocean': 'w', 'land': 'w'}
+    elif color_geomap and not isinstance(color_geomap, dict):
+        color_geomap = {'ocean': 'lightblue', 'land': 'whitesmoke'}
+
+    ax.add_feature(cartopy.feature.LAND.with_scale(resolution), facecolor=color_geomap['land'])
+    ax.add_feature(cartopy.feature.OCEAN.with_scale(resolution), facecolor=color_geomap['ocean'])
+
+    ax.coastlines(linewidth=0.4, zorder=2, resolution=resolution)
+    border = cartopy.feature.BORDERS.with_scale(resolution)
+    ax.add_feature(border, linewidth=0.4)
+
+    if terrain is True:
+        # Create a Stamen terrain background instance.
+        stamen_terrain = cimgt.Stamen('terrain-background')
+        # Add the Stamen data at zoom level 8.
+        ax.add_image(stamen_terrain, 8)
+
+    return axis_transformation
+
+
+def get_from_to_flows(inputs, flows, zones, idx):
+    Flows = pd.DataFrame(columns=['From', 'To', 'Flow'])
+    i = 0
+    for l in inputs['sets']['l']:
+        if l in flows.columns:
+            [from_node, to_node] = l.split(' -> ')
+            if (from_node.strip() in zones) and (to_node.strip() in zones):
+                Flows.loc[i, 'From'] = from_node.strip()
+                Flows.loc[i, 'To'] = to_node.strip()
+                Flows.loc[i, 'Flow'] = flows.loc[idx, l].sum()
+                i = i + 1
+    return Flows
+
+
+def get_net_positions(inputs, results, zones, idx):
+    NetImports = pd.DataFrame(columns=zones)
+    for z in zones:
+        NetImports.loc[0, z] = get_imports(results['OutputFlow'].loc[idx], z)
+
+    Demand = inputs['param_df']['Demand']['DA'].copy()
+    NetExports = -NetImports.copy()
+    NetExports[NetExports < 0] = 0
+    P = Demand.loc[idx].sum() + NetExports.iloc[0]
+    return NetImports, P
+
+
+def plot_net_flows_map(inputs, results, idx, crs=4326, boundaries=None, margin=0.20, geomap=True, color_geomap=None,
+                       terrain=False):
+    # ######### Default arguments for testing
+    # crs = 4326
+    # boundaries = None
+    # margin = 0.20
+    # geomap = True
+    # color_geomap = None
+    # terrain = True
+    # ##########
+
+    # Preprocess input data
+    flows = results['OutputFlow'].copy()
+    zones = inputs['sets']['n'].copy()
+    geo = inputs['geo'].copy()
+
+    Flows = get_from_to_flows(inputs, flows, zones, idx)
+    NetImports, P = get_net_positions(inputs, results, zones, idx)
+
+    P = P / P.max()
+
+    # Create a directed graph
+    g = nx.DiGraph()
+    # Add zones
+    g.add_nodes_from(zones)
+    # Define and add edges
+    edges = Flows[['From', 'To']].values
+    g.add_edges_from(edges)
+    # Assign weights (between 0 - 10 seems quite reasonable), weights are sized according to the highest one
+    # TODO: Not sure if this is somethign we are after, maybe there should be another method used for scaling i.e. based on max NTC
+    weights = (10 * Flows['Flow'] / Flows['Flow'].max()).values
+
+    # Define geospatial coordinates
+    pos = {zone: (v['CapitalLongitude'], v['CapitalLatitude']) for zone, v in geo.to_dict('index').items()}
+
+    # Node sizes (Based on the net position of a zone)
+    sizes = [5000 * P[i] for i in g.nodes]
+
+    # Assign colors based on net flows (if importing/exporting/neutral)
+    node_neg = NetImports.columns[(NetImports < 0).any()].tolist()
+    node_pos = NetImports.columns[(NetImports >= 0).any()].tolist()
+    color_map = []
+    for node in g:
+        if node in node_neg:
+            color_map.append('green')
+        elif node in node_pos:
+            color_map.append('red')
+        else:
+            color_map.append('blue')
+
+    # Show labels only in nodes whose size is > 100
+    labels = {i: i if 5000 * P[i] >= 100 else '' for i in g.nodes}
+
+    # Define projection (FIXME: currently only 4326 possible)
+    projection = get_projection_from_crs(4326)
+
+    # Create figure
+    fig, ax = plt.subplots(1, 1, figsize=(12, 8), subplot_kw=dict(projection=projection))
+    title = "Power feed (red=Imports, green=Exports, blue=Neutral)"
+
+    # Assign geo coordinates and draw them on a map
+    x, y = geo['CapitalLongitude'], geo['CapitalLatitude']
+    transform = draw_map_cartopy(x, y, ax, crs, boundaries, margin, geomap, color_geomap, terrain)
+    x, y, z = ax.projection.transform_points(transform, x.values, y.values).T
+
+    x, y = pd.Series(x, geo.index), pd.Series(y, geo.index)
+
+    # Draw networkx graph with nodes and edges
+    nx.draw_networkx(g, ax=ax, font_size=16,
+                     # alpha=.7,
+                     width=weights,
+                     node_size=sizes,
+                     labels=labels,
+                     pos=pos,
+                     node_color=color_map,
+                     cmap=plt.cm.autumn,
+                     arrows=True, arrowstyle='-|>', arrowsize=20
+                     )
+
+    ax.update_datalim(compute_bbox_with_margins(margin, x, y))
+    ax.autoscale_view()
+
+    if geomap:
+        ax.outline_patch.set_visible(False)
+    else:
+        ax.set_aspect('equal')
+    ax.axis('off')
+    ax.set_title(title)
+
+    plt.show()

@@ -11,7 +11,7 @@ from future.builtins import int
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
     check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves
-from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
+from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, load_geo_data
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
 
 from .. import __version__
@@ -106,6 +106,12 @@ def build_single_run(config, profiles=None):
         PriceTransmission_raw = load_time_series(config,config['PriceTransmission'])
     else:
         PriceTransmission_raw = pd.DataFrame(index=config['idx_long'])    
+
+    # Geo data
+    if os.path.isfile(config['GeoData']):
+        geo = load_geo_data(config, config['GeoData'], header=0)
+    else:
+        logging.warning('No geo spatial data available (no valid file provided)')
 
     # Load Shedding:
     LoadShedding = NodeBasedTable('LoadShedding',config,default=config['default']['LoadShedding'])
@@ -663,7 +669,7 @@ def build_single_run(config, profiles=None):
     sim = config['SimulationDirectory']
 
     # Simulation data:
-    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units': Plants_merged, 'version': dispa_version}
+    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units': Plants_merged, 'version': dispa_version, 'geo': geo}
 
     # list_vars = []
     gdx_out = "Inputs.gdx"
