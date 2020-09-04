@@ -661,8 +661,22 @@ def draw_map_cartopy(x, y, ax, crs=4326, boundaries=None, margin_type='Fixed', m
     return axis_transformation
 
 
+def get_congestion(inputs, flows, idx):
+    cols = [ x for x in inputs['sets']['l'] if "RoW" not in x ]
+    cgst = pd.DataFrame(columns=cols)
+    for l in flows:
+        if l[:3] != 'RoW' and l[-3:] != 'RoW':
+            cgst.loc[0, l] = (
+                (flows.loc[idx, l] == inputs['param_df']['FlowMaximum'].loc[idx, l]) & (
+                 inputs['param_df']['FlowMaximum'].loc[idx, l] > 0)).sum()
+
+    cgst.fillna(0, inplace=True)
+    cgst = cgst / inputs['param_df']['Demand'].loc[idx, :].index.size
+    return cgst
+
+
 def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, margin_type='Fixed', margin=0.20,
-                       geomap=True, color_geomap=None, terrain=False):
+                       geomap=True, color_geomap=None, terrain=False, figsize=(12,8)):
 
     # Preprocess input data
     flows = results['OutputFlow'].copy()
@@ -718,7 +732,7 @@ def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, mar
     projection = get_projection_from_crs(4326)
 
     # Create figure
-    fig, ax = plt.subplots(1, 1, figsize=(12, 8), subplot_kw=dict(projection=projection))
+    fig, ax = plt.subplots(1, 1, figsize=figsize, subplot_kw=dict(projection=projection))
     title = "Power feed (red=Imports, green=Exports, blue=Neutral)"
 
     # Assign geo coordinates and draw them on a map
@@ -737,8 +751,107 @@ def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, mar
                      pos=pos,
                      node_color=color_map,
                      cmap=plt.cm.autumn,
-                     arrows=True, arrowstyle='-|>', arrowsize=20
+                     arrows=True, arrowstyle='-|>', arrowsize=20, connectionstyle='arc3, rad=0.1',
                      )
+
+    ax.update_datalim(compute_bbox_with_margins(x, y, margin_type, margin))
+    ax.autoscale_view()
+
+    if geomap:
+        ax.outline_patch.set_visible(False)
+    else:
+        ax.set_aspect('equal')
+    ax.axis('off')
+    ax.set_title(title)
+
+    plt.show()
+
+
+def plot_line_congestion_map(inputs, results, idx=None, crs=4326, boundaries=None, margin_type='Fixed', margin=0.20,
+                             geomap=True, color_geomap=None, terrain=False, figsize=(12,8), edge_width=10):
+
+    # # Testing
+    # crs = 4326
+    # boundaries = None
+    # margin_type = 'Fixed'
+    # margin = 5.5
+    # geomap = True
+    # color_geomap = None
+    # terrain = False
+    # figsize = (12, 8)
+
+    # Preprocess input data
+    zones = inputs['sets']['n'].copy()
+    geo = inputs['geo'].copy()
+    flows = results['OutputFlow'].copy()
+
+    # Checking if index was selected
+    if idx is None:
+        idx = inputs['param_df']['Demand'].index
+        logging.info('No datetime range specified, net flows map is printed for the entire optimization')
+    else:
+        idx = idx
+
+    cgst = get_congestion(inputs, flows, idx)
+
+    Congestion = get_from_to_flows(inputs, cgst, zones)
+
+    # Create a directed graph
+    g = nx.DiGraph()
+    # Add zones
+    g.add_nodes_from(zones)
+    # Define and add edges
+    edges = Congestion[['From', 'To']].values
+    g.add_edges_from(edges)
+    # Assign weights (between 0 - 10 seems quite reasonable), weights are sized according to the highest one
+    # TODO: Not sure if this is somethign we are after, maybe there should be another method used for scaling i.e. based on max NTC
+    weights = (100*Congestion['Flow']).values
+
+    # Define geospatial coordinates
+    pos = {zone: (v['CapitalLongitude'], v['CapitalLatitude']) for zone, v in geo.to_dict('index').items()}
+
+    # Node sizes (Based on the net position of a zone)
+    sizes = [3000 for i in g.nodes]
+
+    # Show labels only in nodes whose size is > 100
+    labels = {i: i for i in g.nodes}
+
+    # Define projection (FIXME: currently only 4326 possible)
+    projection = get_projection_from_crs(4326)
+
+    # Create figure
+    fig, ax = plt.subplots(1, 1, figsize=figsize, subplot_kw=dict(projection=projection))
+    title = "Line Congestion (Congestion levels: dark_red=High, green=Middle, blue=None)"
+
+    # Assign geo coordinates and draw them on a map
+    x, y = geo['CapitalLongitude'], geo['CapitalLatitude']
+    transform = draw_map_cartopy(x, y, ax, crs, boundaries, margin_type, margin, geomap, color_geomap, terrain)
+    x, y, z = ax.projection.transform_points(transform, x.values, y.values).T
+
+    x, y = pd.Series(x, geo.index), pd.Series(y, geo.index)
+
+    edge_cmap = plt.cm.jet
+    edge_vmin = 0.0
+    edge_vmax = 100
+    cmap = plt.cm.autumn
+
+    # Draw networkx graph with nodes and edges
+    nx.draw_networkx(g, ax=ax, font_size=18,
+                     # alpha=.7,
+                     width=edge_width,
+                     node_size=sizes,
+                     labels=labels,
+                     pos=pos,
+                     edge_color=weights,
+                     edge_cmap=edge_cmap,
+                     cmap=cmap,
+                     arrows=True, arrowstyle='-|>', arrowsize=20, connectionstyle='arc3, rad=0.1',
+                     edge_vmin=edge_vmin, edge_vmax=edge_vmax
+                     )
+
+    sm = plt.cm.ScalarMappable(cmap=edge_cmap, norm=plt.Normalize(vmin=edge_vmin, vmax=edge_vmax))
+    sm.set_array([])
+    cbar = plt.colorbar(sm)
 
     ax.update_datalim(compute_bbox_with_margins(x, y, margin_type, margin))
     ax.autoscale_view()

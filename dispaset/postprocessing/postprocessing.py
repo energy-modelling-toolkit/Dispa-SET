@@ -677,7 +677,7 @@ def get_power_flow_tracing(inputs, results, idx=None, type=None):
     return Trace, Trace_prct
 
 
-def get_from_to_flows(inputs, flows, zones, idx):
+def get_from_to_flows(inputs, flows, zones, idx=None):
     """
     Helper function for braking down flows into networkx readable format
 
@@ -695,7 +695,10 @@ def get_from_to_flows(inputs, flows, zones, idx):
             if (from_node.strip() in zones) and (to_node.strip() in zones):
                 Flows.loc[i, 'From'] = from_node.strip()
                 Flows.loc[i, 'To'] = to_node.strip()
-                Flows.loc[i, 'Flow'] = flows.loc[idx, l].sum()
+                if isinstance(idx, pd.DatetimeIndex):
+                    Flows.loc[i, 'Flow'] = flows.loc[idx, l].sum()
+                else:
+                    Flows.loc[i, 'Flow'] = flows.loc[0, l].sum()
                 i = i + 1
     return Flows
 
