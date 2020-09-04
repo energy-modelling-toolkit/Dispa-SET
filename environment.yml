@@ -21,3 +21,5 @@ dependencies:
     - optcc
     - setuptools_scm
     - networkx
+    - pytest-cov
+    - codecov

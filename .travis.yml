@@ -1,43 +1,58 @@
 language: python
 
 python:
-- '2.7'
-- '3.6'
-- '3.7'
+  - '2.7'
+  - '3.6'
+  - '3.7'
 
 env:
   global:
     - GAMS=24.9
     - GAMS_URL=https://d37drm4t2jghv5.cloudfront.net/distributions/24.9.2/linux/linux_x64_64_sfx.exe
-
+    - CC_TEST_REPORTER_ID=4de43419e620692eff68510258e9428a6da4e5dca96ef9deb7744566ad3a7386
 
 before_install:
-- export MINICONDA=$HOME/miniconda
-- export PATH="$MINICONDA/bin:$PATH"
-- hash -r
-- wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-- bash miniconda.sh -b -f -p $MINICONDA
-- conda config --set always_yes yes --set changeps1 no
-- conda update -q conda
-- conda info -a
-# Edit the environment.yml file for the target Python version
-- sed -i -E 's/(python=)(.*)/\1'$TRAVIS_PYTHON_VERSION'/' ./environment.yml
+  - export MINICONDA=$HOME/miniconda
+  - export PATH="$MINICONDA/bin:$PATH"
+  - hash -r
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -f -p $MINICONDA
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+  # Edit the environment.yml file for the target Python version
+  - sed -i -E 's/(python=)(.*)/\1'$TRAVIS_PYTHON_VERSION'/' ./environment.yml
+  # Install GAMS
+  - wget -N $GAMS_URL -O gams.zip
+  - unzip -qu gams.zip -d $HOME
+  - ln -s $HOME/gams${GAMS}_linux_x64_64_sfx $HOME/gams
+  - export GAMSPATH="$HOME/gams"
+  - export PATH="$GAMSPATH:$PATH"
+  - cd $HOME/gams
+  - gamsinst -a
+  - cd -
+  # Add codeclimate test reporter
+  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+  - chmod +x ./cc-test-reporter
 
-# Install GAMS
-- wget -N $GAMS_URL -O gams.zip
-- unzip -qu gams.zip -d $HOME
-- ln -s $HOME/gams${GAMS}_linux_x64_64_sfx $HOME/gams
-- export GAMSPATH="$HOME/gams"
-- export PATH="$GAMSPATH:$PATH"
-- cd $HOME/gams
-- gamsinst -a
-- cd -
-
+# Install required dependencies
 install:
-- conda env create -q -f environment.yml
-- source activate dispaset
-- python setup.py develop
+  - conda env create -q -f environment.yml
+  - source activate dispaset
+  - python setup.py develop
 
+# Before running the scripts
+before_script:
+  - ./cc-test-reporter before-build
+
+# Run the tests
 script:
-- pytest
+  - pytest --cov-report term --cov=dispaset tests/
 
+# After script is carried out
+after_script:
+  - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
+
+# Push the results back to codecov
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
