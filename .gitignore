@@ -114,7 +114,6 @@ dmypy.json
 *~gm
 *.lst
 *.lxi
-*.log
 *.dat
 225a
 
@@ -128,3 +127,6 @@ Docs/_build/*
 Docs/_static/*
 
 .idea/*
+/ARES_APP/
+/.idea/
+/PowerFlowTracing/

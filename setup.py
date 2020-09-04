@@ -47,6 +47,9 @@ setup(
         "gamsxcc",
         "optcc",
         "setuptools_scm",
+        "pytest",
+        "pytest-cov",
+        "codecov",
     ],
     entry_points={
         'console_scripts': [

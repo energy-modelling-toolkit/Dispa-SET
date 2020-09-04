@@ -524,9 +524,9 @@ def CostExPost(inputs,results):
     # NB: the value of lost load is currently hard coded. This will have to be updated
     # Locate prices for LL
     #TODO:
-    costs['LostLoad'] = 100e3* (results['LostLoad_2D'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_2U'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0))  \
+    costs['LostLoad'] = 80e3* (results['LostLoad_2D'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_2U'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0))  \
                        + 100e3*(results['LostLoad_MaxPower'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_MinPower'].reindex(timeindex).sum(axis=1).fillna(0)) \
-                       + 100e3*(results['LostLoad_RampDown'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_RampUp'].reindex(timeindex).sum(axis=1).fillna(0))
+                       + 70e3*(results['LostLoad_RampDown'].reindex(timeindex).sum(axis=1).fillna(0) + results['LostLoad_RampUp'].reindex(timeindex).sum(axis=1).fillna(0))
         
     #%% Spillage:
     costs['Spillage'] = 1 * results['OutputSpillage'].sum(axis=1).fillna(0)
@@ -636,4 +636,116 @@ def get_EFOH(inputs, results):
                StoInput = results['OutputStorageInput'].loc[:,j].sum()
                EFOH.loc[i, 'EFOH'] = StoInput/Cap 
                
-    return EFOH
+
+def get_power_flow_tracing(inputs, results, idx=None, type=None):
+    """
+    Up-stream and down-stream (not yet implemented) looking algorithms using Bialek's power flow tracing method
+    (Bialek at al. DOI: 10.1049/ip-gtd:19960461)
+
+    :param inputs:      Dispa-SET inputs
+    :param results:     Dispa-SET results
+    :param idx:         pandas datetime index (can be both a single and multiple time intervals)
+    :return:            NxN matrix of zones (Row -> Excess generation zones, Col -> Lack of generation)
+    """
+    # Extract input data
+    flows = results['OutputFlow']
+    zones = inputs['sets']['n']
+    lines = inputs['sets']['l']
+    Demand = inputs['param_df']['Demand']['DA'].copy()
+    ShedLoad = results['OutputShedLoad'].copy()
+
+    # Adjust idx if not specified
+    if idx is None:
+        idx = pd.date_range(Demand.index[0],periods=24,freq='H')
+        logging.warning('Date range not specified, Power Flow will be traced only for the first day of the simulation')
+
+    flows = flows.reindex(columns=lines).fillna(0)
+    # Predefine dataframes
+    NetExports = pd.DataFrame(index=flows.index)
+    Generation = pd.DataFrame()
+    for z in zones:
+        Generation.loc[:, z] = filter_by_zone(results['OutputPower'], inputs, z).sum(axis=1)
+        NetExports.loc[:, z] = 0
+        for key in flows:
+            if key[:len(z)] == z:
+                NetExports.loc[:, z] += flows.loc[:, key]
+
+    if ShedLoad.empty:
+        P = Demand.loc[idx].sum() + NetExports.loc[idx].sum()
+    # TODO: Check if lost load and curtailment are messing up the P and resulting in NaN
+    else:
+        ShedLoad = ShedLoad.reindex(columns=zones).fillna(0)
+        P = Demand.loc[idx].sum() + NetExports.loc[idx].sum() - ShedLoad.loc[idx].sum()
+    D = pd.DataFrame(index=zones, columns=zones).fillna(0).astype(float)
+    B = pd.DataFrame(index=zones, columns=zones).fillna(0).astype(float)
+    np.fill_diagonal(D.values, P.values)
+    for l in inputs['sets']['l']:
+        if l in flows.columns:
+            [from_node, to_node] = l.split(' -> ')
+            if (from_node.strip() in zones) and (to_node.strip() in zones):
+                D.loc[from_node, to_node] = -flows.loc[idx,l].sum()
+                B.loc[from_node, to_node] = flows.loc[idx,l].sum()
+        else:
+            logging.info('Line ' + l + ' was probably not used. Skipping!')
+    A = D.T / P.values
+    A.fillna(0, inplace=True)
+    A_T = pd.DataFrame(np.linalg.inv(A.values), A.columns, A.index)
+
+    Share = Demand.loc[idx].sum() / P
+    gen = A_T * Generation.loc[idx].sum()
+    Trace = pd.DataFrame(index=zones,columns=zones)
+    for z in zones:
+        tmp = gen.loc[z,:] * Share.loc[z]
+        Trace[z] = tmp
+    Trace = Trace.T
+    Trace_prct = Trace.div(Trace.sum(axis=1), axis=0)
+    # TODO: Implement capability for RoW flows (not sure if curent algorithm is taking it into the account properly)
+
+    return Trace, Trace_prct
+
+
+def get_from_to_flows(inputs, flows, zones, idx=None):
+    """
+    Helper function for braking down flows into networkx readable format
+
+    :param inputs:      Dispa-SET inputs
+    :param flows:       Flows from Dispa-SET results
+    :param zones:       List of selected zones
+    :param idx:         datetime index (can be a single hour or a range of hours)
+    :return:
+    """
+    Flows = pd.DataFrame(columns=['From', 'To', 'Flow'])
+    i = 0
+    for l in inputs['sets']['l']:
+        if l in flows.columns:
+            [from_node, to_node] = l.split(' -> ')
+            if (from_node.strip() in zones) and (to_node.strip() in zones):
+                Flows.loc[i, 'From'] = from_node.strip()
+                Flows.loc[i, 'To'] = to_node.strip()
+                if isinstance(idx, pd.DatetimeIndex):
+                    Flows.loc[i, 'Flow'] = flows.loc[idx, l].sum()
+                else:
+                    Flows.loc[i, 'Flow'] = flows.loc[0, l].sum()
+                i = i + 1
+    return Flows
+
+
+def get_net_positions(inputs, results, zones, idx):
+    """
+    Helper function for calculating net positions in individual zones
+
+    :param inputs:      Dispa-SET inputs
+    :param results:     Dispa-SET results
+    :param zones:       List of selected zones
+    :param idx:         datetime index (can be a single hour or a range of hours)
+    :return:            NetImports and Net position
+    """
+    NetImports = pd.DataFrame(columns=zones)
+    for z in zones:
+        NetImports.loc[0, z] = get_imports(results['OutputFlow'].loc[idx], z)
+
+    Demand = inputs['param_df']['Demand']['DA'].copy()
+    NetExports = -NetImports.copy()
+    NetExports[NetExports < 0] = 0
+    NetPosition = Demand.loc[idx].sum() + NetExports.iloc[0]
+    return NetImports, NetPosition

@@ -86,8 +86,11 @@ from .preprocessing.utils import adjust_storage, adjust_capacity
 from .solve import solve_GAMS
 
 from .postprocessing.data_handler import get_sim_results, ds_to_df
-from .postprocessing.postprocessing import get_result_analysis, get_indicators_powerplant, aggregate_by_fuel, CostExPost, get_EFOH, get_units_operation_cost
-from .postprocessing.plot import plot_energy_zone_fuel, plot_zone_capacities, plot_zone, storage_levels, plot_storage_levels, plot_EFOH, plot_H2_and_demand, plot_compare_costs, plot_tech_cap, H2_demand_satisfaction, plot_ElyserCap_vs_Utilization
+from .postprocessing.postprocessing import get_result_analysis, get_indicators_powerplant, aggregate_by_fuel, \
+	  								       CostExPost, get_EFOH, get_units_operation_cost, get_power_flow_tracing
+from .postprocessing.plot import plot_energy_zone_fuel, plot_zone_capacities, plot_zone, storage_levels, plot_storage_levels, \
+	  							 plot_EFOH, plot_H2_and_demand, plot_compare_costs, plot_tech_cap, H2_demand_satisfaction, \
+	  							 plot_ElyserCap_vs_Utilization, plot_power_flow_tracing_matrix, plot_net_flows_map, plot_line_congestion_map
 
 from .cli import *
 

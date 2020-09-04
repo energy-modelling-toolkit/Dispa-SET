@@ -3,13 +3,25 @@ import sys
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 import pickle
+import matplotlib
+import matplotlib.pyplot as plt
+import networkx as nx
+import cartopy
+import cartopy.crs as ccrs
+import cartopy.mpl.geoaxes
+import cartopy.io.img_tiles as cimgt
+import requests
+
+from matplotlib.patches import Wedge, Circle
+from matplotlib.collections import LineCollection, PatchCollection
+from matplotlib.patches import FancyArrow
 
 from ..misc.str_handler import clean_strings
 from ..common import commons
 
-from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage, get_EFOH, CostExPost
+from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage, \
+                            get_power_flow_tracing, get_from_to_flows, get_net_positions, get_EFOH, CostExPost
 
 
 def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None, shiftedload=None, rng=None,
@@ -452,10 +464,11 @@ def storage_levels(inputs, results):
 
     return True
 
+    
 def plot_storage_levels(inputs,results, z):
     """
     This function plots the reservoir levels profiles during the year
-    
+    #TODO: Check this function and decide if necessary
     :param inputs:      Dispa-SET inputs
     :param results:     Dispa-SET results
     :param z:           zone considered
@@ -494,11 +507,12 @@ def plot_storage_levels(inputs,results, z):
     
     return True
 
+    
 def plot_EFOH(inputs, results):
     """
     This function plots the equivalent full load operating hours of the electrolysers,
     together with the marginal price
-    
+    #TODO: Check this function and decide if necessary
     :param inputs:      Dispa-SET inputs
     :param results:     Dispa-SET results
     """
@@ -557,7 +571,9 @@ def plot_EFOH(inputs, results):
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
     return True
 
+    
 def plot_ElyserCap_vs_Utilization(inputs, results):
+	#TODO: Check this function and decide if necesarry
     Data = pd.DataFrame(index =inputs['param_df']['sets']['n'], columns = ['Cap', 'Max'] )
     FC = pd.DataFrame(index =inputs['param_df']['sets']['n'], columns = [ 'FC'] )
     Sto = pd.DataFrame(index =inputs['param_df']['sets']['n'], columns = [ 'Sto'] ) 
@@ -589,6 +605,8 @@ def plot_ElyserCap_vs_Utilization(inputs, results):
 
     return True
 
+
+    #TODO: Check this function adn decide if necessary
 def plot_H2_and_demand(inputs, results):
     """
     This function plots the demand and the electrolyser demand as bar chart
@@ -703,7 +721,7 @@ def plot_H2_and_demand(inputs, results):
 def plot_compare_costs(inputs_1, results_1, inputs_2, results_2):
     """
     This function plots bar charts to compare costs components between scenarios
-    
+    #TODO: Check this function
     :param inputs:      list of Dispa-SET inputs
     :param results:     list Dispa-SET results
     """    
@@ -744,8 +762,8 @@ def plot_compare_costs(inputs_1, results_1, inputs_2, results_2):
         
     return True
 
+#TODO: Check this function and decide if neccessary    
 def plot_tech_cap(inputs):
-    
     # # 1 plot production cap
     # Cap = pd.DataFrame(index = ['Elc sto', 'Elyser', 'FC', 'Hydro', 'NUC', 'Thermal', 
     #                             'Solar', 'Wind', 'Other'], columns = ['Cap']).fillna(0)
@@ -883,4 +901,410 @@ def H2_demand_satisfaction(inputs, results):
     return True
     
         
-    
+
+def heatmap(data, row_labels, col_labels, ax=None, cbar_kw={}, cbarlabel="", **kwargs):
+    """
+    Create a heatmap from a numpy array and two lists of labels.
+    https://matplotlib.org/3.3.1/gallery/images_contours_and_fields/image_annotated_heatmap.html
+
+    :param data:        A 2D numpy array of shape (N, M).
+    :param row_labels:  A list or array of length N with the labels for the rows.
+    :param col_labels:  A list or array of length M with the labels for the columns.
+    :param ax:          A `matplotlib.axes.Axes`instance to which the heatmap is plotted. If not provided, use current axes or create a new one.  Optional.
+    :param cbar_kw:     A dictionary with arguments to `matplotlib.Figure.colorbar`.  Optional.
+    :param cbarlabel:   The label for the colorbar.  Optional.
+    :param **kwargs:    All other arguments are forwarded to `imshow`.
+    """
+
+    if not ax:
+        ax = plt.gca()
+
+    # Plot the heatmap
+    im = ax.imshow(data, **kwargs)
+
+    # Create colorbar
+    cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+    cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+
+    # We want to show all ticks...
+    ax.set_xticks(np.arange(data.shape[1]))
+    ax.set_yticks(np.arange(data.shape[0]))
+    # ... and label them with the respective list entries.
+    ax.set_xticklabels(col_labels)
+    ax.set_yticklabels(row_labels)
+
+    # Let the horizontal axes labeling appear on top.
+    ax.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False)
+
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(), rotation=0, ha="right", rotation_mode="anchor")
+
+    # Turn spines off and create white grid.
+    for edge, spine in ax.spines.items():
+        spine.set_visible(False)
+
+    ax.set_xticks(np.arange(data.shape[1] + 1) - .5, minor=True)
+    ax.set_yticks(np.arange(data.shape[0] + 1) - .5, minor=True)
+    ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
+    ax.tick_params(which="minor", bottom=False, left=False)
+    ax.set_title('Power Flow Tracing Matrix')
+    ax.set_ylabel('Supplied zones')
+    ax.set_xlabel('Power Generating zones')
+
+    return im, cbar
+
+
+def annotate_heatmap(im, data=None, valfmt="{x:.2f}", textcolors=("black", "white"), threshold=None, **textkw):
+    """
+    A function to annotate a heatmap.
+    https://matplotlib.org/3.3.1/gallery/images_contours_and_fields/image_annotated_heatmap.html
+    :param im:          The AxesImage to be labeled.
+    :param data:        Data used to annotate.  If None, the image's data is used.  Optional.
+    :param valfmt:      The format of the annotations inside the heatmap. This should either use the string format
+                        method, e.g. "$ {x:.2f}", or be a `matplotlib.ticker.Formatter`.  Optional.
+    :param textcolors:  A pair of colors.  The first is used for values below a threshold, the second for those above.
+                        Optional.
+    :param threshold:   Value in data units according to which the colors from textcolors are applied.
+                        If None (the default) uses the middle of the colormap as separation.  Optional.
+    :param **kwargs:    All other arguments are forwarded to each call to `text` used to create the text labels.
+    """
+
+    if not isinstance(data, (list, np.ndarray)):
+        data = im.get_array()
+
+    # Normalize the threshold to the images color range.
+    if threshold is not None:
+        threshold = im.norm(threshold)
+    else:
+        threshold = im.norm(data.max()) / 2.
+
+    # Set default alignment to center, but allow it to be
+    # overwritten by textkw.
+    kw = dict(horizontalalignment="center",
+              verticalalignment="center")
+    kw.update(textkw)
+
+    # Get the formatter in case a string is supplied
+    if isinstance(valfmt, str):
+        valfmt = matplotlib.ticker.StrMethodFormatter(valfmt)
+
+    # Loop over the data and create a `Text` for each "pixel".
+    # Change the text's color depending on the data.
+    texts = []
+    for i in range(data.shape[0]):
+        for j in range(data.shape[1]):
+            kw.update(color=textcolors[int(im.norm(data[i, j]) > threshold)])
+            text = im.axes.text(j, i, valfmt(data[i, j], None), **kw)
+            texts.append(text)
+
+    return texts
+
+
+def plot_power_flow_tracing_matrix(inputs, results, idx=None, figsize=(10, 7), **kwargs):
+    """
+    Plot power flow tracing matrix
+    :param inputs:      Dispa-SET inputs
+    :param results:     Dispa-SET results
+    :param idx:         datetime index, a range of dates to analyze. By default it looks only at the first day of the
+                        optimization. Optional.
+    :param figsize:     Figure size. Optional.
+    :param kwargs:
+    :return:            Power flow tracing in MW and as a % of the total load in a particular region
+    """
+    data, data_prct = get_power_flow_tracing(inputs, results, idx)
+    fig, ax = plt.subplots(figsize=figsize)
+    im, cbar = heatmap(data_prct.values, data_prct.index, data_prct.columns,
+                       cbarlabel="% of the total demand linked to one zone", **kwargs)
+    texts = annotate_heatmap(im, valfmt="{x:.1f}")
+    fig.tight_layout()
+    plt.show()
+
+    return data, data_prct
+
+
+# Insipired by Pypsa geo plot
+def get_projection_from_crs(crs):
+    """
+    EPSG coordinate system, 4326 is the default horizontal component of 3D system. Used by the GPS satellite navigation
+    system and for NATO military geodetic surveying.
+
+    :param crs:     EPSG:4326 (WGS84 Bounds:        -180.0000, -90.0000, 180.0000, 90.0000,
+                               Projected Bounds:    -180.0000, -90.0000, 180.0000, 90.0000,
+                               Area:                World)
+    :return:        map projection
+    """
+    # if data is in lat-lon system, return default map with lat-lon system
+    if crs == 4326:
+        return ccrs.PlateCarree()
+    try:
+        return ccrs.epsg(crs)
+    except requests.RequestException:
+        logging.warning("A connection to http://epsg.io/ is required for a projected coordinate reference system. "
+                        "Falling back to lat-long.")
+    except ValueError:
+        logging.warning("'{crs}' does not define a projected coordinate system. "
+                        "Falling back to lat-long.".format(crs=crs))
+        return ccrs.PlateCarree()
+
+
+def compute_bbox_with_margins(x, y, margin_type='Fixed', margin=0):
+    """
+    'Helper function to compute bounding box for the plot'
+
+    :param margin:  how much percent is box beyond the ploted network
+    :param x:       latitude
+    :param y:       longitude
+    :return:        tuples of 2 coordinates (min, max)
+    """
+    # set margins
+    pos = np.asarray((x, y))
+    minxy, maxxy = pos.min(axis=1), pos.max(axis=1)
+    if margin_type == 'Fixed':
+        xy1 = minxy - margin
+        xy2 = maxxy + margin
+    else:
+        xy1 = minxy - margin * (maxxy - minxy)
+        xy2 = maxxy + margin * (maxxy - minxy)
+
+    return tuple(xy1), tuple(xy2)
+
+
+#TODO: Check this function and provide descriptions
+def draw_map_cartopy(x, y, ax, crs=4326, boundaries=None, margin_type='Fixed', margin=0.05, geomap=True,
+                     color_geomap=None, terrain=False):
+    if boundaries is None:
+        (x1, y1), (x2, y2) = compute_bbox_with_margins(x, y, margin_type, margin)
+    else:
+        x1, x2, y1, y2 = boundaries
+
+    resolution = '50m' if isinstance(geomap, bool) else geomap
+    assert resolution in ['10m', '50m', '110m'], ("Resolution has to be one of '10m', '50m', '110m'")
+    axis_transformation = get_projection_from_crs(crs)
+    ax.set_extent([x1, x2, y1, y2], crs=axis_transformation)
+
+    if color_geomap is None:
+        color_geomap = {'ocean': 'w', 'land': 'w'}
+    elif color_geomap and not isinstance(color_geomap, dict):
+        color_geomap = {'ocean': 'lightblue', 'land': 'whitesmoke'}
+
+    ax.add_feature(cartopy.feature.LAND.with_scale(resolution), facecolor=color_geomap['land'])
+    ax.add_feature(cartopy.feature.OCEAN.with_scale(resolution), facecolor=color_geomap['ocean'])
+
+    ax.coastlines(linewidth=1, zorder=2, resolution=resolution)
+    border = cartopy.feature.BORDERS.with_scale(resolution)
+    ax.add_feature(border, linewidth=0.8)
+
+    if terrain is True:
+        # Create a Stamen terrain background instance.
+        stamen_terrain = cimgt.Stamen('terrain-background')
+        # Add the Stamen data at zoom level 8.
+        ax.add_image(stamen_terrain, 8)
+
+    return axis_transformation
+
+
+#TODO: Check this function and provide descriptions    
+def get_congestion(inputs, flows, idx):
+    cols = [ x for x in inputs['sets']['l'] if "RoW" not in x ]
+    cgst = pd.DataFrame(columns=cols)
+    for l in flows:
+        if l[:3] != 'RoW' and l[-3:] != 'RoW':
+            cgst.loc[0, l] = (
+                (flows.loc[idx, l] == inputs['param_df']['FlowMaximum'].loc[idx, l]) & (
+                 inputs['param_df']['FlowMaximum'].loc[idx, l] > 0)).sum()
+
+    cgst.fillna(0, inplace=True)
+    cgst = cgst / inputs['param_df']['Demand'].loc[idx, :].index.size
+    return cgst
+
+
+#TODO: Generalize this function and provide descriptions    
+def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, margin_type='Fixed', margin=0.20,
+                       geomap=True, color_geomap=None, terrain=False, figsize=(12,8)):
+
+    # Preprocess input data
+    flows = results['OutputFlow'].copy()
+    zones = inputs['sets']['n'].copy()
+    geo = inputs['geo'].copy()
+
+    # Checking if index was selected
+    if idx is None:
+        idx = inputs['param_df']['Demand'].index
+        logging.info('No datetime range specified, net flows map is printed for the entire optimization')
+    else:
+        idx = idx
+
+    Flows = get_from_to_flows(inputs, flows, zones, idx)
+    NetImports, P = get_net_positions(inputs, results, zones, idx)
+
+    # Scale net position of the zone TODO: maybe apply some other algorithm instead of scaling based on the highest net position
+    P = P / P.max()
+
+    # Create a directed graph
+    g = nx.DiGraph()
+    # Add zones
+    g.add_nodes_from(zones)
+    # Define and add edges
+    edges = Flows[['From', 'To']].values
+    g.add_edges_from(edges)
+    # Assign weights (between 0 - 10 seems quite reasonable), weights are sized according to the highest one
+    # TODO: Not sure if this is somethign we are after, maybe there should be another method used for scaling i.e. based on max NTC
+    weights = (10 * Flows['Flow'] / Flows['Flow'].max()).values
+
+    # Define geospatial coordinates
+    pos = {zone: (v['CapitalLongitude'], v['CapitalLatitude']) for zone, v in geo.to_dict('index').items()}
+
+    # Node sizes (Based on the net position of a zone)
+    sizes = [5000 * P[i] for i in g.nodes]
+
+    # Assign colors based on net flows (if importing/exporting/neutral)
+    node_neg = NetImports.columns[(NetImports < 0).any()].tolist()
+    node_pos = NetImports.columns[(NetImports >= 0).any()].tolist()
+    color_map = []
+    for node in g:
+        if node in node_neg:
+            color_map.append('green')
+        elif node in node_pos:
+            color_map.append('red')
+        else:
+            color_map.append('blue')
+
+    # Show labels only in nodes whose size is > 100
+    labels = {i: i if 5000 * P[i] >= 100 else '' for i in g.nodes}
+
+    # Define projection (FIXME: currently only 4326 possible)
+    projection = get_projection_from_crs(4326)
+
+    # Create figure
+    fig, ax = plt.subplots(1, 1, figsize=figsize, subplot_kw=dict(projection=projection))
+    title = "Power feed (red=Imports, green=Exports, blue=Neutral)"
+
+    # Assign geo coordinates and draw them on a map
+    x, y = geo['CapitalLongitude'], geo['CapitalLatitude']
+    transform = draw_map_cartopy(x, y, ax, crs, boundaries, margin_type, margin, geomap, color_geomap, terrain)
+    x, y, z = ax.projection.transform_points(transform, x.values, y.values).T
+
+    x, y = pd.Series(x, geo.index), pd.Series(y, geo.index)
+
+    # Draw networkx graph with nodes and edges
+    nx.draw_networkx(g, ax=ax, font_size=16,
+                     # alpha=.7,
+                     width=weights,
+                     node_size=sizes,
+                     labels=labels,
+                     pos=pos,
+                     node_color=color_map,
+                     cmap=plt.cm.autumn,
+                     arrows=True, arrowstyle='-|>', arrowsize=20, connectionstyle='arc3, rad=0.1',
+                     )
+
+    ax.update_datalim(compute_bbox_with_margins(x, y, margin_type, margin))
+    ax.autoscale_view()
+
+    if geomap:
+        ax.outline_patch.set_visible(False)
+    else:
+        ax.set_aspect('equal')
+    ax.axis('off')
+    ax.set_title(title)
+
+    plt.show()
+
+#TODO: Generalize this function and provide descriptions
+def plot_line_congestion_map(inputs, results, idx=None, crs=4326, boundaries=None, margin_type='Fixed', margin=0.20,
+                             geomap=True, color_geomap=None, terrain=False, figsize=(12,8), edge_width=10):
+
+    # # Testing
+    # crs = 4326
+    # boundaries = None
+    # margin_type = 'Fixed'
+    # margin = 5.5
+    # geomap = True
+    # color_geomap = None
+    # terrain = False
+    # figsize = (12, 8)
+
+    # Preprocess input data
+    zones = inputs['sets']['n'].copy()
+    geo = inputs['geo'].copy()
+    flows = results['OutputFlow'].copy()
+
+    # Checking if index was selected
+    if idx is None:
+        idx = inputs['param_df']['Demand'].index
+        logging.info('No datetime range specified, net flows map is printed for the entire optimization')
+    else:
+        idx = idx
+
+    cgst = get_congestion(inputs, flows, idx)
+
+    Congestion = get_from_to_flows(inputs, cgst, zones)
+
+    # Create a directed graph
+    g = nx.DiGraph()
+    # Add zones
+    g.add_nodes_from(zones)
+    # Define and add edges
+    edges = Congestion[['From', 'To']].values
+    g.add_edges_from(edges)
+    # Assign weights (between 0 - 10 seems quite reasonable), weights are sized according to the highest one
+    # TODO: Not sure if this is somethign we are after, maybe there should be another method used for scaling i.e. based on max NTC
+    weights = (100*Congestion['Flow']).values
+
+    # Define geospatial coordinates
+    pos = {zone: (v['CapitalLongitude'], v['CapitalLatitude']) for zone, v in geo.to_dict('index').items()}
+
+    # Node sizes (Based on the net position of a zone)
+    sizes = [3000 for i in g.nodes]
+
+    # Show labels only in nodes whose size is > 100
+    labels = {i: i for i in g.nodes}
+
+    # Define projection (FIXME: currently only 4326 possible)
+    projection = get_projection_from_crs(4326)
+
+    # Create figure
+    fig, ax = plt.subplots(1, 1, figsize=figsize, subplot_kw=dict(projection=projection))
+    title = "Line Congestion (Congestion levels: dark_red=High, green=Middle, blue=None)"
+
+    # Assign geo coordinates and draw them on a map
+    x, y = geo['CapitalLongitude'], geo['CapitalLatitude']
+    transform = draw_map_cartopy(x, y, ax, crs, boundaries, margin_type, margin, geomap, color_geomap, terrain)
+    x, y, z = ax.projection.transform_points(transform, x.values, y.values).T
+
+    x, y = pd.Series(x, geo.index), pd.Series(y, geo.index)
+
+    edge_cmap = plt.cm.jet
+    edge_vmin = 0.0
+    edge_vmax = 100
+    cmap = plt.cm.autumn
+
+    # Draw networkx graph with nodes and edges
+    nx.draw_networkx(g, ax=ax, font_size=18,
+                     # alpha=.7,
+                     width=edge_width,
+                     node_size=sizes,
+                     labels=labels,
+                     pos=pos,
+                     edge_color=weights,
+                     edge_cmap=edge_cmap,
+                     cmap=cmap,
+                     arrows=True, arrowstyle='-|>', arrowsize=20, connectionstyle='arc3, rad=0.1',
+                     edge_vmin=edge_vmin, edge_vmax=edge_vmax
+                     )
+
+    sm = plt.cm.ScalarMappable(cmap=edge_cmap, norm=plt.Normalize(vmin=edge_vmin, vmax=edge_vmax))
+    sm.set_array([])
+    cbar = plt.colorbar(sm)
+
+    ax.update_datalim(compute_bbox_with_margins(x, y, margin_type, margin))
+    ax.autoscale_view()
+
+    if geomap:
+        ax.outline_patch.set_visible(False)
+    else:
+        ax.set_aspect('equal')
+    ax.axis('off')
+    ax.set_title(title)
+
+    plt.show()
