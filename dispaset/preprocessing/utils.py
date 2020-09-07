@@ -357,7 +357,9 @@ def create_agg_dict(df_, method="Standard"):
                         'COP',
                         'TNominal',
                         'coef_COP_a',
-                        'coef_COP_b'  
+                        'coef_COP_b',
+                        'WaterConsumption',
+                        'WaterWithdrawal'
                     ]
         min_cols = ["StartUpTime"]
         ramping_cost = ["RampingCost"]
@@ -391,7 +393,9 @@ def create_agg_dict(df_, method="Standard"):
                                 'COP',
                                 'TNominal',
                                 'coef_COP_a',
-                                'coef_COP_b'  
+                                'coef_COP_b',
+                                'WaterConsumption',
+                                'WaterWithdrawal'
                             ]
         min_cols = ["StartUpTime"]
         ramping_cost = ["RampingCost"]
@@ -410,10 +414,32 @@ def create_agg_dict(df_, method="Standard"):
     elif method == "Integer clustering":
         sum_cols = ["Nunits"]
 
-        weighted_avg_cols = ['PowerCapacity','RampUpRate', 'RampDownRate', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'Efficiency',
-                               'MinEfficiency', 'STOChargingEfficiency', 'CO2Intensity', 'STOSelfDischarge', 
-                               'STOCapacity', 'STOMaxChargingPower','PartLoadMin', 'StartUpTime','RampingCost',
-                               'CHPPowerToHeat','CHPPowerLossFactor','CHPMaxHeat', 'COP', 'TNominal', 'coef_COP_a', 'coef_COP_b'  ]
+        weighted_avg_cols = ['PowerCapacity',
+                             'RampUpRate',
+                             'RampDownRate',
+                             'MinUpTime',
+                             'MinDownTime',
+                             'NoLoadCost',
+                             'Efficiency',
+                             'MinEfficiency',
+                             'STOChargingEfficiency',
+                             'CO2Intensity',
+                             'STOSelfDischarge',
+                             'STOCapacity',
+                             'STOMaxChargingPower',
+                             'PartLoadMin',
+                             'StartUpTime',
+                             'RampingCost',
+                             'CHPPowerToHeat',
+                             'CHPPowerLossFactor',
+                             'CHPMaxHeat',
+                             'COP',
+                             'TNominal',
+                             'coef_COP_a',
+                             'coef_COP_b',
+                             'WaterConsumption',
+                             'WaterWithdrawal'
+                        ]
     
         # Define aggregators
 
@@ -512,6 +538,8 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
                 "NoLoadCost": np.linspace(0, 50, Nslices),
                 "StartUpCost": np.linspace(0, 500, Nslices),
                 "Efficiency": np.linspace(0, 1, Nslices),
+                "WaterWithdrawal": np.linspace(0, 200, 250),
+                "WaterConsumption": np.linspace(0, 20, Nslices),
             }
 
             fingerprints = []
@@ -527,6 +555,8 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
                         _find_nearest(bounds["NoLoadCost"], first_cluster["NoLoadCost"][i]),
                         _find_nearest(bounds["StartUpCost"], first_cluster["StartUpCost"][i]),
                         _find_nearest(bounds["Efficiency"], first_cluster["Efficiency"][i]),
+                        _find_nearest(bounds["WaterConsumption"], first_cluster["WaterConsumption"][i]),
+                        _find_nearest(bounds["WaterWithdrawal"], first_cluster["WaterWithdrawal"][i]),
                     ]
                 )
 

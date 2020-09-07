@@ -50,6 +50,8 @@ setup(
         "pytest",
         "pytest-cov",
         "codecov",
+        "networkx",
+        "cartopy"
     ],
     entry_points={
         'console_scripts': [

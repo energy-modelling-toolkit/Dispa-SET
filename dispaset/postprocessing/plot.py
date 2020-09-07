@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import logging
 import sys
 
@@ -13,15 +15,11 @@ import cartopy.mpl.geoaxes
 import cartopy.io.img_tiles as cimgt
 import requests
 
-from matplotlib.patches import Wedge, Circle
-from matplotlib.collections import LineCollection, PatchCollection
-from matplotlib.patches import FancyArrow
-
 from ..misc.str_handler import clean_strings
 from ..common import commons
 
 from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage, \
-                            get_power_flow_tracing, get_from_to_flows, get_net_positions, get_EFOH, CostExPost
+    get_power_flow_tracing, get_from_to_flows, get_net_positions, get_EFOH, CostExPost
 
 
 def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None, shiftedload=None, rng=None,
@@ -30,8 +28,9 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None,
     Function that plots the dispatch data and the reservoir level as a cumulative sum
 
     :param demand:      Pandas Series with the demand curve
-    :param plotdata:    Pandas Dataframe with the data to be plotted. Negative columns should be at the beginning. Output of the function GetPlotData
-    :param level:       Optional pandas series/dataframe with an (dis)aggregated reservoir level for the considered zone.
+    :param plotdata:    Pandas Dataframe with the data to be plotted. Negative columns should be at the beginning.
+                        Output of the function GetPlotData
+    :param level:       Optional pandas series/dataframe with an (dis)aggregated reservoir level for the considered zone
     :param curtailment: Optional pandas series with the value of the curtailment
     :param shedload:    Optional pandas series with the value of the shed load
     :param rng:         Indexes of the values to be plotted. If undefined, the first week is plotted
@@ -82,7 +81,6 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None,
                              gridspec_kw={'height_ratios': [2.7, .8], 'hspace': 0.04})
 
     # Create left axis:
-    #    ax.set_ylim([-10000,15000])
     axes[0].plot(pdrng, demand[pdrng], color='k')
     axes[0].set_xlim(pdrng[0], pdrng[-1])
 
@@ -199,18 +197,19 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None,
 
 
 def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=False):
-    """Create multiaxis rug plot from pandas Dataframe
+    """
+    Create multiaxis rug plot from pandas Dataframe
 
-    Arguments:
-        df_series (pd.DataFrame): 2D pandas with timed index
-        on_off (bool): if True all points that are above 0 will be plotted as one color. If False all values will be colored based on their value.
-        cmap (str): palette name (from colorbrewer, matplotlib etc.)
-        fig_title (str): Figure title
-        normalized (bool): if True, all series colormaps will be normalized based on the maximum value of the dataframe
-    Returns:
-        plot
+    :param df_series (pd.DataFrame):    2D pandas with timed index
+    :param on_off (bool):               if True all points that are above 0 will be plotted as one color. If False all
+                                        values will be colored based on their value.
+    :param cmap (str):                  palette name (from colorbrewer, matplotlib etc.)
+    :param fig_title (str):             Figure title
+    :param normalized (bool):           if True, all series colormaps will be normalized based on the maximum value
+                                        of the dataframe
+    :return plot:
 
-    Function copied from enlopy v0.1 www.github.com/kavvkon/enlopy. Install with `pip install enlopy` for latest version.
+    Function copied from enlopy v0.1 www.github.com/kavvkon/enlopy. Install with `pip install enlopy` for latest version
     """
 
     def format_axis(iax):
@@ -375,9 +374,9 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
             if 'BEVS' in col:
                 lev[col] = lev[col] * inputs['param_df']['AvailabilityFactor'][col]
         level = filter_by_storage(lev, inputs, StorageSubset='s')
-        levels = pd.DataFrame(index=results['OutputStorageLevel'].index,columns=inputs['sets']['t'])
-        for t in ['HDAM','HPHS','BEVS','BATS','SCSP', 'P2GS']:
-            temp = filter_by_tech(level,inputs,t)
+        levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
+        for t in ['HDAM', 'HPHS', 'BEVS', 'BATS', 'SCSP', 'P2GS']:
+            temp = filter_by_tech(level, inputs, t)
             levels[t] = temp.sum(axis=1)
         levels.dropna(axis=1, inplace=True)
         for col in levels.columns:
@@ -464,8 +463,8 @@ def storage_levels(inputs, results):
 
     return True
 
-    
-def plot_storage_levels(inputs,results, z):
+
+def plot_storage_levels(inputs, results, z):
     """
     This function plots the reservoir levels profiles during the year
     #TODO: Check this function and decide if necessary
@@ -473,150 +472,132 @@ def plot_storage_levels(inputs,results, z):
     :param results:     Dispa-SET results
     :param z:           zone considered
     """
-    BATS_unit = [ u for u in inputs['units'].index if (inputs['units'].loc[u,'Zone'] == z and inputs['units'].loc[u,'Technology'] == 'BATS')]
-    H2_unit =  [ u for u in inputs['units'].index if inputs['units'].loc[u,'Zone'] == z and inputs['units'].loc[u,'Technology'] == 'P2GS']
-    HDAM_unit = [ u for u in inputs['units'].index if inputs['units'].loc[u,'Zone'] == z and inputs['units'].loc[u,'Technology'] == 'HDAM']
-        
+    BATS_unit = [u for u in inputs['units'].index if
+                 (inputs['units'].loc[u, 'Zone'] == z and inputs['units'].loc[u, 'Technology'] == 'BATS')]
+    H2_unit = [u for u in inputs['units'].index if
+               inputs['units'].loc[u, 'Zone'] == z and inputs['units'].loc[u, 'Technology'] == 'P2GS']
+    HDAM_unit = [u for u in inputs['units'].index if
+                 inputs['units'].loc[u, 'Zone'] == z and inputs['units'].loc[u, 'Technology'] == 'HDAM']
+
     BATS_level = results['OutputStorageLevel'][BATS_unit]
     H2_level = results['OutputStorageLevel'][H2_unit]
     HDAM_level = results['OutputStorageLevel'][HDAM_unit]
-    
+
     # plot
     index_plot = np.arange(len(BATS_level.index))
     plt.rcParams.update({'font.size': 10})
     fig, (ax, ax1, ax2) = plt.subplots(3, 1, sharex=True)
-    #plt.rcParams.update({'font.size': 10})
-    #for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
-    #         ax.get_xticklabels() + ax.get_yticklabels()):
-    #    item.set_fontsize(10)
-    ax.fill_between(index_plot,0, BATS_level.iloc[:,0], color = ('#41A317ff'))
+
+    ax.fill_between(index_plot, 0, BATS_level.iloc[:, 0], color=('#41A317ff'))
     ax.set_ylabel('SOC - BATS [%]')
     ax.set_xlim(0, len(index_plot))
 
-    ax1.fill_between(index_plot,0, H2_level.iloc[:,0], color = ('#A0522D'))
+    ax1.fill_between(index_plot, 0, H2_level.iloc[:, 0], color=('#A0522D'))
     ax1.set_ylabel('SOC - H2[%]')
-    
-    ax2.fill_between(index_plot,0, HDAM_level.iloc[:,0], color = ('#00a0e1ff'))
+
+    ax2.fill_between(index_plot, 0, HDAM_level.iloc[:, 0], color=('#00a0e1ff'))
     ax2.set_ylabel('SOC - HDAM [%]')
-    month_num = [360,1056, 1800, 2544, 3264, 4008, 4728, 5472, 6216, 6936, 7680, 8400]
-    month_name = ['Jan', 'Feb', 'Mar', 'Apr','May', 'Jun', 'Jul',
-                          'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    month_num = [360, 1056, 1800, 2544, 3264, 4008, 4728, 5472, 6216, 6936, 7680, 8400]
+    month_name = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul',
+                  'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     ax2.set_xticks(month_num)
     ax2.set_xticklabels(month_name)
-    #plt.savefig('../../Manuscrit/figures/SOC_H2FLEX_UK.pdf',bbox_inches='tight' )
-    
+    plt.show()
     return True
 
-    
+
 def plot_EFOH(inputs, results):
     """
-    This function plots the equivalent full load operating hours of the electrolysers,
-    together with the marginal price
+    This function plots the equivalent full load operating hours of the electrolysers, together with the marginal price
     #TODO: Check this function and decide if necessary
     :param inputs:      Dispa-SET inputs
     :param results:     Dispa-SET results
     """
     EFOH = {}
-    for i,s in enumerate(list(inputs.keys())):
+    for i, s in enumerate(list(inputs.keys())):
         EFOH[i] = get_EFOH(inputs[s], results[s])
         EFOH[i] = EFOH[i].sort_values(by=['EFOH'], ascending=False)
-    
+
     ind = np.arange(len(EFOH[0].index))
     labels = list(EFOH[0].index)
     for count, i in enumerate(labels):
         labels[count] = i.split()[2].split("_")[0]
-        
-    # mean_shadow = pd.DataFrame(index = labels, columns = ['cost'])
-    # for i in mean_shadow.index:
-    #     mean_shadow.loc[i,'cost'] = results_1['ShadowPrice'].loc[:,i].mean()
-        
-    x = np.arange(len(labels))  # the label locations
-    width = 0.6/ len(list(inputs.keys())) # the width of the bars
 
-    fig, ax = plt.subplots(figsize=(16,6))
+    x = np.arange(len(labels))  # the label locations
+    width = 0.6 / len(list(inputs.keys()))  # the width of the bars
+
+    fig, ax = plt.subplots(figsize=(16, 6))
     plt.rcParams.update({'font.size': 15})
     for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
-             ax.get_xticklabels() + ax.get_yticklabels()):
+                 ax.get_xticklabels() + ax.get_yticklabels()):
         item.set_fontsize(15)
     if len(list(inputs.keys())) == 2:
-        ax.bar(x - width/2,EFOH[0].iloc[:,0] , width, label=list(inputs.keys())[0], color = (1, 0.5, 0, 1))
-        ax.bar(x + width/2, EFOH[1].iloc[:,0], width, label=list(inputs.keys())[1], color = (0.192, 0.549, 0.905))
+        ax.bar(x - width / 2, EFOH[0].iloc[:, 0], width, label=list(inputs.keys())[0], color=(1, 0.5, 0, 1))
+        ax.bar(x + width / 2, EFOH[1].iloc[:, 0], width, label=list(inputs.keys())[1], color=(0.192, 0.549, 0.905))
     elif len(list(inputs.keys())) == 3:
-        ax.bar(x-0.2,EFOH[0].iloc[:,0] , width, label=list(inputs.keys())[0], color = (1, 0.5, 0, 1))
-        ax.bar(x, EFOH[1].iloc[:,0], width, label=list(inputs.keys())[1], color = (0.192, 0.549, 0.905))
-        ax.bar(x+0.2, EFOH[2].iloc[:,0], width, label=list(inputs.keys())[2], color = (0.192, 0.549, 0.3))
+        ax.bar(x - 0.2, EFOH[0].iloc[:, 0], width, label=list(inputs.keys())[0], color=(1, 0.5, 0, 1))
+        ax.bar(x, EFOH[1].iloc[:, 0], width, label=list(inputs.keys())[1], color=(0.192, 0.549, 0.905))
+        ax.bar(x + 0.2, EFOH[2].iloc[:, 0], width, label=list(inputs.keys())[2], color=(0.192, 0.549, 0.3))
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel('EFOH [h]')
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.legend()
-    #plt.savefig('../../Manuscrit/figures/2_EFOH.pdf',bbox_inches='tight' )
-    
-    
-    # fig, ax1 = plt.subplots(figsize=(13,5))
-
-    # ax1.set_ylabel('EFOH [h]')
-    # ax1.bar(ind, EFOH.iloc[:,0],0.3, color=(0.5, 0.5, 0.5, 1))
-    # ax1.tick_params(axis='y')
-    # ax1.grid(axis='y', linestyle='--')
-    # ax1.set_xticks(ind)
-    # ax1.set_xticklabels(label)
-    #ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-
-    #ax2.set_ylabel('Average marginal price', color=(0.192, 0.549, 0.905))  # we already handled the x-label with ax1
-    #ax2.plot(label, mean_shadow, color=(0.192, 0.549, 0.905))
-    #ax2.tick_params(axis='y', labelcolor=(0.192, 0.449, 0.99))
 
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    plt.show()
+
     return True
 
-    
+
 def plot_ElyserCap_vs_Utilization(inputs, results):
-	#TODO: Check this function and decide if necesarry
-    Data = pd.DataFrame(index =inputs['param_df']['sets']['n'], columns = ['Cap', 'Max'] )
-    FC = pd.DataFrame(index =inputs['param_df']['sets']['n'], columns = [ 'FC'] )
-    Sto = pd.DataFrame(index =inputs['param_df']['sets']['n'], columns = [ 'Sto'] ) 
+    # TODO: Check this function and decide if necesarry
+    Data = pd.DataFrame(index=inputs['param_df']['sets']['n'], columns=['Cap', 'Max'])
+    FC = pd.DataFrame(index=inputs['param_df']['sets']['n'], columns=['FC'])
+    Sto = pd.DataFrame(index=inputs['param_df']['sets']['n'], columns=['Sto'])
     for u in inputs['param_df']['sets']['p2h2']:
         for z in inputs['param_df']['sets']['n']:
-            if inputs['param_df']['Location'].loc[z,u]:
-                Data.loc[z, 'Cap'] = inputs['param_df']['StorageChargingCapacity'].loc[u, 'StorageChargingCapacity']/1e3
-                Data.loc[z,'Max'] = results['OutputStorageInput'].loc[:,u].max()/1e3
-                FC.loc[z,'FC'] = inputs['param_df']['PowerCapacity'].loc[u, 'PowerCapacity']/1e3
-                Sto.loc[z, 'Sto'] = inputs['param_df']['StorageCapacity'].loc[u, 'StorageCapacity']/1e3
-                
-    
+            if inputs['param_df']['Location'].loc[z, u]:
+                Data.loc[z, 'Cap'] = inputs['param_df']['StorageChargingCapacity'].loc[
+                                         u, 'StorageChargingCapacity'] / 1e3
+                Data.loc[z, 'Max'] = results['OutputStorageInput'].loc[:, u].max() / 1e3
+                FC.loc[z, 'FC'] = inputs['param_df']['PowerCapacity'].loc[u, 'PowerCapacity'] / 1e3
+                Sto.loc[z, 'Sto'] = inputs['param_df']['StorageCapacity'].loc[u, 'StorageCapacity'] / 1e3
+
     labels = Data.index
     x = np.arange(len(labels))  # the label locations
-    width = 0.35 # the width of the bars
-    ax = Data.loc[:,'Cap'].plot(kind="bar", figsize=(12, 8), stacked=True,
-                                alpha=0.8, fontsize = 'medium')
+    width = 0.35  # the width of the bars
+    ax = Data.loc[:, 'Cap'].plot(kind="bar", figsize=(12, 8), stacked=True,
+                                 alpha=0.8, fontsize='medium')
     ax.set_ylabel('Capacity [GW]')
-    ax.barh(Data.loc[:,'Max'], left=ax.get_xticks() - 0.4, width=0.8, height=ax.get_ylim()[1] * 0.005,
+    ax.barh(Data.loc[:, 'Max'], left=ax.get_xticks() - 0.4, width=0.8, height=ax.get_ylim()[1] * 0.005,
             linewidth=2,
             color='k')
-    ax2 = FC.loc[:,'FC'].plot(kind="bar", figsize=(12, 8), stacked=True,
-                                alpha=0.8, fontsize = 'medium')
-    ax2.set_ylabel('Capacity [GW]')    
-    
-    ax3 = Sto.loc[:,'Sto'].plot(kind="bar", figsize=(12, 8), stacked=True,
-                                alpha=0.8, fontsize = 'medium')
+    ax2 = FC.loc[:, 'FC'].plot(kind="bar", figsize=(12, 8), stacked=True,
+                               alpha=0.8, fontsize='medium')
+    ax2.set_ylabel('Capacity [GW]')
+
+    ax3 = Sto.loc[:, 'Sto'].plot(kind="bar", figsize=(12, 8), stacked=True,
+                                 alpha=0.8, fontsize='medium')
     ax3.set_ylabel('Capacity [GWh]')
 
+    plt.show()
     return True
 
 
-    #TODO: Check this function adn decide if necessary
 def plot_H2_and_demand(inputs, results):
+    # TODO: Check this function adn decide if necessary
     """
     This function plots the demand and the electrolyser demand as bar chart
     
     :param inputs:      Dispa-SET inputs
     :param results:     Dispa-SET results
     """
+
     # Get demand
     def get_demand(inputs, results):
-        Demand = pd.DataFrame(index = ['0'], columns = inputs['sets']['n'])
+        Demand = pd.DataFrame(index=['0'], columns=inputs['sets']['n'])
         for z in inputs['sets']['n']:
             plotdata = get_plot_data(inputs, results, z) / 1000  # GW
 
@@ -628,9 +609,9 @@ def plot_H2_and_demand(inputs, results):
                     if 'BEVS' in col:
                         lev[col] = lev[col] * inputs['param_df']['AvailabilityFactor'][col]
                 level = filter_by_storage(lev, inputs, StorageSubset='s')
-                levels = pd.DataFrame(index=results['OutputStorageLevel'].index,columns=inputs['sets']['t'])
-                for t in ['HDAM','HPHS','BEVS','BATS','SCSP', 'P2GS']:
-                    temp = filter_by_tech(level,inputs,t)
+                levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
+                for t in ['HDAM', 'HPHS', 'BEVS', 'BATS', 'SCSP', 'P2GS']:
+                    temp = filter_by_tech(level, inputs, t)
                     levels[t] = temp.sum(axis=1)
                 levels.dropna(axis=1, inplace=True)
                 for col in levels.columns:
@@ -656,251 +637,140 @@ def plot_H2_and_demand(inputs, results):
             demand_da = inputs['param_df']['Demand'][('DA', z)] / 1e6  # TWh
             demand = pd.DataFrame(demand_da + demand_p2h + demand_flex, columns=[('DA', z)])
             demand = demand[('DA', z)]
-            Demand[z] = demand.sum() 
-        # Get elyser consumption
-        Elyser_consumption = pd.DataFrame( index = ['0'], columns = inputs['sets']['n'])
+            Demand[z] = demand.sum()
+            # Get elyser consumption
+        Elyser_consumption = pd.DataFrame(index=['0'], columns=inputs['sets']['n'])
         for u in results['OutputStorageInput'].columns:
             if 'P2GS' in u:
                 c = u.split()[2].split('_')[0]
-                Elyser_consumption[c] = results['OutputStorageInput'][u].sum()/1e6 #TWh
+                Elyser_consumption[c] = results['OutputStorageInput'][u].sum() / 1e6  # TWh
                 Elyser_consumption[c].fillna(0)
-        
+
         return Demand, Elyser_consumption
-    
+
     Demand = {}
     Elyser_consumption = {}
     scenarios = list(inputs.keys())
     for s in scenarios:
-        Demand[s] ,Elyser_consumption[s] = get_demand(inputs[s], results[s])
-    
+        Demand[s], Elyser_consumption[s] = get_demand(inputs[s], results[s])
+
     labels = inputs[scenarios[0]]['sets']['n']
-    
+
     x = np.arange(len(labels))  # the label locations
     if len(scenarios) == 2:
         width = 0.3
     else:
-        width=0.2
+        width = 0.2
 
-    fig, ax = plt.subplots(figsize=(13,5))
+    fig, ax = plt.subplots(figsize=(13, 5))
     plt.rcParams.update({'font.size': 15})
     for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
-             ax.get_xticklabels() + ax.get_yticklabels()):
+                 ax.get_xticklabels() + ax.get_yticklabels()):
         item.set_fontsize(15)
     if len(scenarios) == 2:
-        ax.bar(x - width/2 -0.03, Demand[scenarios[0]].iloc[0,:]+Elyser_consumption[scenarios[0]].iloc[0,:], width, color = (1, 0.5, 0, 0.7))
-        ax.bar(x - width/2 -0.03, Demand[scenarios[0]].iloc[0,:], width, color = (1, 0.5, 0, 1), label=str(scenarios[0]))
-        ax.bar(x + width/2 +0.03, Demand[scenarios[1]].iloc[0,:]+Elyser_consumption[scenarios[1]].iloc[0,:], width, color = (0.192, 0.549, 0.905, 0.7))
-        ax.bar(x + width/2 +0.03, Demand[scenarios[1]].iloc[0,:], width, color = (0.192, 0.549, 0.905), label=str(scenarios[1]))
+        ax.bar(x - width / 2 - 0.03, Demand[scenarios[0]].iloc[0, :] + Elyser_consumption[scenarios[0]].iloc[0, :],
+               width, color=(1, 0.5, 0, 0.7))
+        ax.bar(x - width / 2 - 0.03, Demand[scenarios[0]].iloc[0, :], width, color=(1, 0.5, 0, 1),
+               label=str(scenarios[0]))
+        ax.bar(x + width / 2 + 0.03, Demand[scenarios[1]].iloc[0, :] + Elyser_consumption[scenarios[1]].iloc[0, :],
+               width, color=(0.192, 0.549, 0.905, 0.7))
+        ax.bar(x + width / 2 + 0.03, Demand[scenarios[1]].iloc[0, :], width, color=(0.192, 0.549, 0.905),
+               label=str(scenarios[1]))
     elif len(scenarios) == 3:
-        ax.bar(x - 0.22, Demand[scenarios[0]].iloc[0,:]+Elyser_consumption[scenarios[0]].iloc[0,:], width, label=str(scenarios[0]), color = (1, 0.5, 0, 0.7))
-        ax.bar(x - 0.22, Demand[scenarios[0]].iloc[0,:], width, color = (1, 0.5, 0, 1))
-        ax.bar(x , Demand[scenarios[1]].iloc[0,:]+Elyser_consumption[scenarios[1]].iloc[0,:], width, label=str(scenarios[1]), color = (0.192, 0.549, 0.905, 0.7))
-        ax.bar(x , Demand[scenarios[1]].iloc[0,:], width, color = (0.192, 0.549, 0.905))
-        ax.bar(x + 0.22, Demand[scenarios[2]].iloc[0,:]+Elyser_consumption[scenarios[2]].iloc[0,:], width, label=str(scenarios[2]), color = (0.192, 0.549, 0.3, 0.7))
-        ax.bar(x + 0.22, Demand[scenarios[2]].iloc[0,:], width, color = (0.192, 0.549, 0.3))
-    
+        ax.bar(x - 0.22, Demand[scenarios[0]].iloc[0, :] + Elyser_consumption[scenarios[0]].iloc[0, :], width,
+               label=str(scenarios[0]), color=(1, 0.5, 0, 0.7))
+        ax.bar(x - 0.22, Demand[scenarios[0]].iloc[0, :], width, color=(1, 0.5, 0, 1))
+        ax.bar(x, Demand[scenarios[1]].iloc[0, :] + Elyser_consumption[scenarios[1]].iloc[0, :], width,
+               label=str(scenarios[1]), color=(0.192, 0.549, 0.905, 0.7))
+        ax.bar(x, Demand[scenarios[1]].iloc[0, :], width, color=(0.192, 0.549, 0.905))
+        ax.bar(x + 0.22, Demand[scenarios[2]].iloc[0, :] + Elyser_consumption[scenarios[2]].iloc[0, :], width,
+               label=str(scenarios[2]), color=(0.192, 0.549, 0.3, 0.7))
+        ax.bar(x + 0.22, Demand[scenarios[2]].iloc[0, :], width, color=(0.192, 0.549, 0.3))
+
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel('[GWh]')
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.legend()
-    #plt.savefig('../../Manuscrit/figures/1_H2_and_Demand.pdf',bbox_inches='tight' )
-    
-    #fig1=plt.figure(1,figsize=(13,5))
-    # ind = np.arange(len(inputs['sets']['n']))
-    # p1 = plt.bar(ind, Demand.iloc[0,:]+Elyser_consumption.iloc[0,:], 0.3, color=(0.5, 0.5, 0.5, 1))
-    # p2 = plt.bar(ind, Elyser_consumption.iloc[0,:], 0.3, color=(1, 0.5, 0, 1))
-    
-    # plt.ylabel('[GWh]')
-    # plt.xticks(ind, inputs['sets']['n'])
-    # plt.legend((p1[0], p2[0]), ('Demand', 'Elyser consumption'))
-    # plt.rcParams.update({'font.size': 11})
-    # plt.rc('xtick', labelsize=10)
+
+    plt.show()
+
     return True
 
-def plot_compare_costs(inputs_1, results_1, inputs_2, results_2):
-    """
-    This function plots bar charts to compare costs components between scenarios
-    #TODO: Check this function
-    :param inputs:      list of Dispa-SET inputs
-    :param results:     list Dispa-SET results
-    """    
 
-    pkl_file = r"C:\Users\Eva\Downloads\MASTER\TFE\Dispa-SET\Simulations\JRC_EU_TIMES\NearZeroCarbon\ALLFLEX/ALLFLEX_costs.p"
-    with open(pkl_file, "rb") as f:
-        costs_1 = pickle.load(f)
-    pkl_file = r"C:\Users\Eva\Downloads\MASTER\TFE\Dispa-SET\Simulations\JRC_EU_TIMES\NearZeroCarbon\NOCO2/NOCO2_costs.p"
-    with open(pkl_file, "rb") as f:
-        costs_2 = pickle.load(f)  
-    
-    Cost_1 = costs_1.sum()
-    Cost_1 = Cost_1/1e6 #M€
-    Cost_2 = costs_2.sum()
-    Cost_2 = Cost_2/1e6
-        
-    for i in Cost_1.index:
-        if Cost_1[i] == 0:
-            if Cost_2[i] == 0:
-                Cost_1.drop(i, inplace=True)
-                Cost_2.drop(i, inplace=True)
-            
-            
-    labels = ['CO2TAX_200', 'CO2TAX_0']
-
-    x = [0,1]  # the label locations
-    width = 0.35  # the width of the bars
-    color = ['#566573', '#CCD1D1', '#85C1E9', '#F5B041', '#1D8348', '#0B5345', '#2471A3', '#5DADE2', '#AF7AC5']
-    fig, ax = plt.subplots(figsize=(7,10))
-    for i,c in enumerate(Cost_1.index):
-        p1 = ax.bar(x[0] ,Cost_1[i:].sum()  , width, label=c, color = color[i])
-        p2 = ax.bar(x[1] ,Cost_2[i:].sum() , width, color = color[i])
-    # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel('Cost [M€]')
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.legend()
-        
-    return True
-
-#TODO: Check this function and decide if neccessary    
+# TODO: Check this function and decide if neccessary
 def plot_tech_cap(inputs):
-    # # 1 plot production cap
-    # Cap = pd.DataFrame(index = ['Elc sto', 'Elyser', 'FC', 'Hydro', 'NUC', 'Thermal', 
-    #                             'Solar', 'Wind', 'Other'], columns = ['Cap']).fillna(0)
-    # for u in inputs['param_df']['sets']['u']:
-    #     if inputs['param_df']['Fuel'].loc['GAS',u] or inputs['param_df']['Fuel'].loc['OIL',u]:
-    #         Cap.loc['Thermal', 'Cap'] += inputs['param_df']['PowerCapacity'].loc[u, 'PowerCapacity']
-    #     elif inputs['param_df']['Fuel'].loc['LIG',u]:
-    #         Cap.loc['Thermal', 'Cap'] += inputs['param_df']['PowerCapacity'].loc[u, 'PowerCapacity']
-    #     elif inputs['param_df']['Fuel'].loc['HRD',u] or inputs['param_df']['Fuel'].loc['PEA',u]:
-    #         Cap.loc['Thermal', 'Cap'] += inputs['param_df']['PowerCapacity'].loc[u, 'PowerCapacity']
-    #     elif inputs['param_df']['Fuel'].loc['NUC',u]:
-    #         Cap.loc['NUC', 'Cap'] += inputs['param_df']['PowerCapacity'].loc[u, 'PowerCapacity']
-    #     elif inputs['param_df']['Technology'].loc['BATS',u]:
-    #         Cap.loc['Elc sto', 'Cap'] += inputs['param_df']['PowerCapacity'].loc[u, 'PowerCapacity']
-    #     elif inputs['param_df']['Technology'].loc['BEVS',u]:
-    #         Cap.loc['Elc sto', 'Cap'] += inputs['param_df']['PowerCapacity'].loc[u, 'PowerCapacity']
-    #     elif inputs['param_df']['Fuel'].loc['HYD',u]:
-    #         Cap.loc['FC', 'Cap'] += inputs['param_df']['PowerCapacity'].loc[u, 'PowerCapacity']
-    #         Cap.loc['Elyser', 'Cap'] += inputs['param_df']['StorageChargingCapacity'].loc[u, 'StorageChargingCapacity']
-    #     elif inputs['param_df']['Fuel'].loc['WAT',u]:
-    #         Cap.loc['Hydro', 'Cap'] += inputs['param_df']['PowerCapacity'].loc[u, 'PowerCapacity']
-    #     elif inputs['param_df']['Fuel'].loc['WIN',u]:
-    #         Cap.loc['Wind', 'Cap'] += inputs['param_df']['PowerCapacity'].loc[u, 'PowerCapacity']
-    #     elif inputs['param_df']['Fuel'].loc['SUN',u]:
-    #         Cap.loc['Solar', 'Cap'] += inputs['param_df']['PowerCapacity'].loc[u, 'PowerCapacity']
-    #     elif inputs['param_df']['Fuel'].loc['GEO',u] or inputs['param_df']['Fuel'].loc['BIO',u]:
-    #         Cap.loc['Other', 'Cap'] += inputs['param_df']['PowerCapacity'].loc[u, 'PowerCapacity']
-        
-    # colors = ['#41A317ff', '#A0522D', '#b9c33799', '#0f056b', '#466eb4ff', '#d7642dff', '#e6a532ff',
-    #          '#41afaaff', '#57D53B']
-    
-    # added_cap = 0
-    # for zone in inputs['sets']['n']:
-    #     cap_before = pd.read_csv(r"C:\Users\Eva\Downloads\MASTER\TFE\Dispa-SET\Database\NearZeroCarbon\PowerPlants - before increase cap/"+ zone + "/JRC_EU_TIMES_NearZeroCarbon_2050_ALLFLEX.csv", header = 0)
-    #     cap_after = pd.read_csv(r"C:\Users\Eva\Downloads\MASTER\TFE\Dispa-SET\Database\NearZeroCarbon\PowerPlants/"+ zone + "/JRC_EU_TIMES_NearZeroCarbon_2050_ALLFLEX.csv", header = 0)
-    #     unit = [i for i in cap_before.index if cap_before.loc[i, 'Unit'] == zone+'_COMC_GAS']
-    #     if unit == []:
-    #         unit = [i for i in cap_before.index if cap_before.loc[i, 'Unit'] == zone+'_COMC_CCS_GAS']
-    #     Nunits = cap_before.loc[unit, 'Nunits']
-    #     before = cap_before.loc[unit, 'PowerCapacity'] *Nunits
-    #     after = cap_after.loc[unit, 'PowerCapacity']*Nunits
-    #     addition = (after - before)
-    #     added_cap += addition.values[0]
 
-    # x = [i for i in range(len(Cap.index))] # the label locations
-    # width = 0.35  # the width of the bars
-    # fig, ax = plt.subplots(figsize=(12,8))
-    # for i,c in enumerate(Cap.index):
-    #     if c == 'Thermal':
-    #         p1 = ax.bar(x[i] ,(Cap.loc['Thermal', 'Cap']+added_cap)/1000  , width, color = colors[i], hatch = '//')
-    #         p2 = ax.bar(x[i] ,Cap.loc['Thermal', 'Cap']/1000 , width, color = colors[i])
-    #     else:
-    #         p3 = ax.bar(x[i] ,Cap.iloc[i,0]/1000  , width, color = colors[i])
-    # # Add some text for labels, title and custom x-axis tick labels, etc.
-    # ax.set_ylabel('Capacity [GW]')
-    # ax.set_xticks(x)
-    # ax.set_xticklabels(Cap.index)
-    # ax.grid(axis='y', linestyle='--')
-    # #plt.savefig('../../Manuscrit/figures/Bar_plot_Capacities_prod.pdf',bbox_inches='tight' )
-    
     # 2 plot storage cap
-    Cap = pd.DataFrame(columns = [ 'BEVS', 'H2', 'Hydro', 'Thermal', 'BATS'], index = inputs['sets']['n']).fillna(0)
-    for i,u in enumerate(inputs['param_df']['StorageCapacity'].index):
+    Cap = pd.DataFrame(columns=['BEVS', 'H2', 'Hydro', 'Thermal', 'BATS'], index=inputs['sets']['n']).fillna(0)
+    for i, u in enumerate(inputs['param_df']['StorageCapacity'].index):
         for z in inputs['sets']['n']:
-            if inputs['param_df']['Location'].loc[z,u]:
-                if inputs['param_df']['Fuel'].loc['WAT',u] :
-                    Cap.loc[z,'Hydro'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i,0]*inputs['param_df']['Nunits'].iloc[i,0]
-                elif inputs['param_df']['Fuel'].loc['HYD',u]:
-                    Cap.loc[z,'H2'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i,0]*inputs['param_df']['Nunits'].iloc[i,0]
-                elif inputs['param_df']['Technology'].loc['BEVS',u]:
-                    Cap.loc[z,'BEVS'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i,0]*inputs['param_df']['Nunits'].iloc[i,0]
-                elif inputs['param_df']['Technology'].loc['BATS',u]:
-                    Cap.loc[z,'BATS'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i,0]*inputs['param_df']['Nunits'].iloc[i,0]
-                elif u in inputs['param_df']['sets']['p2h'] or u in inputs['param_df']['sets']['chp'] or inputs['param_df']['Technology'].loc['SCSP',u]:
-                    Cap.loc[z,'Thermal'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i,0]*inputs['param_df']['Nunits'].iloc[i,0]
-    
-    Cap = Cap/1000
-    x = [i for i in range(len(Cap.index))] # the label locations
+            if inputs['param_df']['Location'].loc[z, u]:
+                if inputs['param_df']['Fuel'].loc['WAT', u]:
+                    Cap.loc[z, 'Hydro'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i, 0] * \
+                                           inputs['param_df']['Nunits'].iloc[i, 0]
+                elif inputs['param_df']['Fuel'].loc['HYD', u]:
+                    Cap.loc[z, 'H2'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i, 0] * \
+                                        inputs['param_df']['Nunits'].iloc[i, 0]
+                elif inputs['param_df']['Technology'].loc['BEVS', u]:
+                    Cap.loc[z, 'BEVS'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i, 0] * \
+                                          inputs['param_df']['Nunits'].iloc[i, 0]
+                elif inputs['param_df']['Technology'].loc['BATS', u]:
+                    Cap.loc[z, 'BATS'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i, 0] * \
+                                          inputs['param_df']['Nunits'].iloc[i, 0]
+                elif u in inputs['param_df']['sets']['p2h'] or u in inputs['param_df']['sets']['chp'] or \
+                        inputs['param_df']['Technology'].loc['SCSP', u]:
+                    Cap.loc[z, 'Thermal'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i, 0] * \
+                                             inputs['param_df']['Nunits'].iloc[i, 0]
+
+    Cap = Cap / 1000
+    x = [i for i in range(len(Cap.index))]  # the label locations
     width = 0.35  # the width of the bars
     colors = ['#57D53B', '#A0522D', '#00a0e1ff', '#C04000ff', 'black']
-    fig, ax = plt.subplots(figsize=(12,8))
-    
-    
+    fig, ax = plt.subplots(figsize=(12, 8))
+
     ax = Cap.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors,
-                                alpha=0.8, legend='reverse')
-    ax.set_ylabel('Capacity [GWh]')    
-    
-    
-    # for i,c in enumerate(Cap.index):
-    #     p3 = ax.bar(x[i] ,Cap.iloc[i,0]/1000  , width, color = colors[i])
-    #     if c == 'Hydro':
-    #         ax.text(i-0.15, Cap.iloc[i,0]/1000 +3000, str(int(round(Cap.iloc[i,0]/1000, 0))),va = 'center', color = colors[i], fontweight='bold')
-    #     else:
-    #         ax.text(i-0.1, Cap.iloc[i,0]/1000 +3000, str(int(round(Cap.iloc[i,0]/1000, 0))),va = 'center', color = colors[i], fontweight='bold')
-    # # Add some text for labels, title and custom x-axis tick labels, etc.
-    # ax.set_ylabel('Storage capacity [GWh]')
-    # ax.set_xticks(x)
-    # ax.set_xticklabels(Cap.index)
-    # ax.grid(axis='y', linestyle='--')  
-    #plt.savefig('../../Manuscrit/figures/Bar_plot_Capacities_sto.png',bbox_inches='tight' )        
+                  alpha=0.8, legend='reverse')
+    ax.set_ylabel('Capacity [GWh]')
+
     return True
+
+
 def H2_demand_satisfaction(inputs, results):
     H2Demand = [0]
     OutputH2 = [0]
-    for i in range(len(inputs.keys()) -1):
+    for i in range(len(inputs.keys()) - 1):
         H2Demand.append(0)
         OutputH2.append(0)
-    for i,s in enumerate(list(inputs.keys())):
+    for i, s in enumerate(list(inputs.keys())):
         for u in inputs[s]['param_df']['sets']['p2h2']:
-            H2Demand[i] += (inputs[s]['param_df']['H2Demand'].loc[:,u].sum()
-                           + inputs[s]['param_df']['PtLDemandInput'].loc[:,u].sum())
-            OutputH2[i] += results[s]['OutputH2Output'].loc[:,u].sum()
-    
+            H2Demand[i] += (inputs[s]['param_df']['H2Demand'].loc[:, u].sum()
+                            + inputs[s]['param_df']['PtLDemandInput'].loc[:, u].sum())
+            OutputH2[i] += results[s]['OutputH2Output'].loc[:, u].sum()
+
     labels = list(inputs.keys())
-    x = [i for i in range(len(labels))] # the label locations
+    x = [i for i in range(len(labels))]  # the label locations
     width = 0.2  # the width of the bars
     colors = ['#41afaaff']
-    fig, ax = plt.subplots(figsize=(3*len(labels),6))
-    for i,s in enumerate(list(inputs.keys())):
-        if i==0:
-            ax.bar(x[i] ,H2Demand[i]/1e6 , width, color = colors, hatch = '//', label = 'H2 slack')
-            ax.bar(x[i] ,OutputH2[i]/1e6 , width, color = colors, label = 'H2 produced by elysers')
+    fig, ax = plt.subplots(figsize=(3 * len(labels), 6))
+    for i, s in enumerate(list(inputs.keys())):
+        if i == 0:
+            ax.bar(x[i], H2Demand[i] / 1e6, width, color=colors, hatch='//', label='H2 slack')
+            ax.bar(x[i], OutputH2[i] / 1e6, width, color=colors, label='H2 produced by elysers')
         else:
-            ax.bar(x[i] ,H2Demand[i]/1e6 , width, color = colors, hatch = '//')
-            ax.bar(x[i] ,OutputH2[i]/1e6 , width, color = colors)
-   
+            ax.bar(x[i], H2Demand[i] / 1e6, width, color=colors, hatch='//')
+            ax.bar(x[i], OutputH2[i] / 1e6, width, color=colors)
+
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel('H2 demand [TWh]')
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
-    ax.grid(axis='y', linestyle='--')  
+    ax.grid(axis='y', linestyle='--')
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1),
-          ncol=2)
-    #plt.savefig('../../Manuscrit/figures/2_H2Demand.pdf',bbox_inches='tight' )
+              ncol=2)
+
     return True
-    
-        
+
 
 def heatmap(data, row_labels, col_labels, ax=None, cbar_kw={}, cbarlabel="", **kwargs):
     """
@@ -1069,7 +939,7 @@ def compute_bbox_with_margins(x, y, margin_type='Fixed', margin=0):
     return tuple(xy1), tuple(xy2)
 
 
-#TODO: Check this function and provide descriptions
+# TODO: Check this function and provide descriptions
 def draw_map_cartopy(x, y, ax, crs=4326, boundaries=None, margin_type='Fixed', margin=0.05, geomap=True,
                      color_geomap=None, terrain=False):
     if boundaries is None:
@@ -1103,25 +973,24 @@ def draw_map_cartopy(x, y, ax, crs=4326, boundaries=None, margin_type='Fixed', m
     return axis_transformation
 
 
-#TODO: Check this function and provide descriptions    
+# TODO: Check this function and provide descriptions
 def get_congestion(inputs, flows, idx):
-    cols = [ x for x in inputs['sets']['l'] if "RoW" not in x ]
+    cols = [x for x in inputs['sets']['l'] if "RoW" not in x]
     cgst = pd.DataFrame(columns=cols)
     for l in flows:
         if l[:3] != 'RoW' and l[-3:] != 'RoW':
             cgst.loc[0, l] = (
-                (flows.loc[idx, l] == inputs['param_df']['FlowMaximum'].loc[idx, l]) & (
-                 inputs['param_df']['FlowMaximum'].loc[idx, l] > 0)).sum()
+                    (flows.loc[idx, l] == inputs['param_df']['FlowMaximum'].loc[idx, l]) & (
+                    inputs['param_df']['FlowMaximum'].loc[idx, l] > 0)).sum()
 
     cgst.fillna(0, inplace=True)
     cgst = cgst / inputs['param_df']['Demand'].loc[idx, :].index.size
     return cgst
 
 
-#TODO: Generalize this function and provide descriptions    
+# TODO: Generalize this function and provide descriptions
 def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, margin_type='Fixed', margin=0.20,
-                       geomap=True, color_geomap=None, terrain=False, figsize=(12,8)):
-
+                       geomap=True, color_geomap=None, terrain=False, figsize=(12, 8)):
     # Preprocess input data
     flows = results['OutputFlow'].copy()
     zones = inputs['sets']['n'].copy()
@@ -1210,19 +1079,10 @@ def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, mar
 
     plt.show()
 
-#TODO: Generalize this function and provide descriptions
-def plot_line_congestion_map(inputs, results, idx=None, crs=4326, boundaries=None, margin_type='Fixed', margin=0.20,
-                             geomap=True, color_geomap=None, terrain=False, figsize=(12,8), edge_width=10):
 
-    # # Testing
-    # crs = 4326
-    # boundaries = None
-    # margin_type = 'Fixed'
-    # margin = 5.5
-    # geomap = True
-    # color_geomap = None
-    # terrain = False
-    # figsize = (12, 8)
+# TODO: Generalize this function and provide descriptions
+def plot_line_congestion_map(inputs, results, idx=None, crs=4326, boundaries=None, margin_type='Fixed', margin=0.20,
+                             geomap=True, color_geomap=None, terrain=False, figsize=(12, 8), edge_width=10):
 
     # Preprocess input data
     zones = inputs['sets']['n'].copy()
@@ -1249,7 +1109,7 @@ def plot_line_congestion_map(inputs, results, idx=None, crs=4326, boundaries=Non
     g.add_edges_from(edges)
     # Assign weights (between 0 - 10 seems quite reasonable), weights are sized according to the highest one
     # TODO: Not sure if this is somethign we are after, maybe there should be another method used for scaling i.e. based on max NTC
-    weights = (100*Congestion['Flow']).values
+    weights = (100 * Congestion['Flow']).values
 
     # Define geospatial coordinates
     pos = {zone: (v['CapitalLongitude'], v['CapitalLatitude']) for zone, v in geo.to_dict('index').items()}

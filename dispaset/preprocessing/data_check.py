@@ -387,7 +387,8 @@ def check_units(config, plants):
     """
 
     keys = ['Unit', 'Fuel', 'Zone', 'Technology', 'PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate',
-            'StartUpTime', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost', 'Efficiency', 'CO2Intensity']
+            'StartUpTime', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost', 'Efficiency', 'CO2Intensity',
+            'WaterWithdrawal','WaterConsumption']
     NonNaNKeys = ['PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate', 'Efficiency', 'RampingCost',
                   'CO2Intensity']
     StrKeys = ['Unit', 'Zone', 'Fuel', 'Technology']
@@ -428,7 +429,7 @@ def check_units(config, plants):
                 sys.exit(1)
 
     lower = {'PowerCapacity': 0, 'PartLoadMin': 0, 'StartUpTime': 0, 'MinUpTime': 0, 'MinDownTime': 0, 'NoLoadCost': 0,
-             'StartUpCost': 0}
+             'StartUpCost': 0, 'WaterWithdrawal': 0, 'WaterConsumption': 0}
     strictly_lower = {'RampUpRate': 0, 'RampDownRate': 0, 'Efficiency': 0}
     higher = {'PartLoadMin': 1, 'Efficiency': 1}
     higher_time = {'MinUpTime': 0, 'MinDownTime': 0}  # 'StartUpTime':0,
@@ -468,7 +469,6 @@ def check_units(config, plants):
                 'The value of ' + key + ' should be lower or equal to one. A higher value has been found for units ' + str(
                     plantlist))
             sys.exit(1)
-
 
     for key in higher_time:
         if any(plants[key] >= config['HorizonLength'] * 24):
