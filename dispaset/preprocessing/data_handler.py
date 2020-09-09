@@ -2,7 +2,6 @@ import datetime as dt
 import logging
 import os
 import sys
-
 import numpy as np
 import pandas as pd
 
@@ -22,18 +21,15 @@ DEFAULTS = {'ReservoirLevelInitial': 0.5, 'ReservoirLevelFinal': 0.5, 'ValueOfLo
 
 
 def NodeBasedTable(varname, config, default=None):
-    '''
-    This function loads the tabular data stored in csv files relative to each
-    zone of the simulation.
+    """
+    This function loads the tabular data stored in csv files relative to each zone of the simulation.
 
     :param varname:             Variable name (as defined in config)
-    :param idx:                 Pandas datetime index to be used for the output
-    :param zones:               List with the zone codes to be considered
-    :param fallback:            List with the order of data source.
+    :param config:              Dispa-SET config data
     :param default:             Default value to be applied if no data is found
 
     :return:           Dataframe with the time series for each unit
-    '''
+    """
 
     path = config[varname]
     zones = config['zones']
@@ -48,7 +44,8 @@ def NodeBasedTable(varname, config, default=None):
                 paths[str(z)] = path_c
             else:
                 logging.critical(
-                    'No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c + ' does not exist')
+                    'No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c +
+                    ' does not exist')
                 sys.exit(1)
         SingleFile = False
     elif path != '':
@@ -101,9 +98,9 @@ def NodeBasedTable(varname, config, default=None):
 
 
 def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, RestrictWarning=None):
-    '''
+    """
     This function loads the tabular data stored in csv files and assigns the
-    proper values to each unit of the plants dataframe. If the unit-specific 
+    proper values to each unit of the plants dataframe. If the unit-specific
     value is not found in the data, the script can fallback on more generic
     data (e.g. fuel-based, technology-based, zone-based) or to the default value.
     The order in which the data should be loaded is specified in the fallback
@@ -114,14 +111,14 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
 
     :param plants:              Dataframe with the units for which data is required
     :param varname:             Variable name (as defined in config)
-    :param idx:                 Pandas datetime index to be used for the output
-    :param zones:           List with the zone codes to be considered
-    :param fallback:            List with the order of data source. 
+    :param config:              Dispa-SET config file
+    :param fallbacks:           List with the order of data source.
     :param default:             Default value to be applied if no data is found
-    :param RestrictWarning:     Only display the warnings if the unit belongs to the list of technologies provided in this parameter
-    
+    :param RestrictWarning:     Only display the warnings if the unit belongs to the list of technologies provided in
+                                this parameter
+
     :return:           Dataframe with the time series for each unit
-    '''
+    """
     path = config[varname]
     zones = config['zones']
     paths = {}
@@ -135,7 +132,8 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
                 paths[str(z)] = path_c
             else:
                 logging.error(
-                    'No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c + ' does not exist')
+                    'No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c +
+                    ' does not exist')
         #                sys.exit(1)
         SingleFile = False
     elif path != '':
@@ -170,7 +168,7 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
         out = pd.DataFrame(index=config['idx_long'])
         for j in plants.index:
             warning = True
-            if not RestrictWarning is None:
+            if RestrictWarning is not None:
                 warning = False
                 if plants.loc[j, 'Technology'] in RestrictWarning:
                     warning = True
@@ -186,20 +184,20 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
                     found = True
                     if i > 0 and warning:
                         logging.warning(
-                            'No specific information was found for unit ' + u + ' in table ' + varname + '. The generic information for ' + str(
-                                header) + ' has been used')
+                            'No specific information was found for unit ' + u + ' in table ' + varname +
+                            '. The generic information for ' + str(header) + ' has been used')
                     break
             if not found:
                 if warning:
                     logging.info(
-                        'No specific information was found for unit ' + u + ' in table ' + varname + '. Using default value ' + str(
-                            default))
-                if not default is None:
+                        'No specific information was found for unit ' + u + ' in table ' + varname +
+                        '. Using default value ' + str(default))
+                if default is not None:
                     out[u] = default
     if not out.columns.is_unique:
         logging.critical(
-            'The column headers of table "' + varname + '" are not unique!. The following headers are duplicated: ' + str(
-                out.columns.get_duplicates()))
+            'The column headers of table "' + varname + '" are not unique!. The following headers are duplicated: ' +
+            str(out.columns.get_duplicates()))
         sys.exit(1)
     return out
 
@@ -213,6 +211,7 @@ def merge_series(plants, oldplants, data, method='WeightedAverage', tablename=''
     :param data:        Pandas dataframe with the time series and the original unit names as column header
     :param method:      Select the merging method ('WeightedAverage'/'Sum')
     :param tablename:   Name of the table being processed (e.g. 'Outages'), used in the warnings
+
     :return merged:     Pandas dataframe with the merged time series when necessary
     """
     # backward compatibility:
@@ -242,7 +241,8 @@ def merge_series(plants, oldplants, data, method='WeightedAverage', tablename=''
     for key in data:
         if key in units:
             newunit = units[key]
-            if newunit not in merged:  # if the columns name is in the mapping and the new unit has not been processed yet
+            if newunit not in merged:
+                # if the columns name is in the mapping and the new unit has not been processed yet
                 oldnames = plants.loc[newunit, 'FormerUnits']
                 if all([name in data for name in oldnames]):
                     subunits = data[oldnames]
@@ -273,15 +273,15 @@ def merge_series(plants, oldplants, data, method='WeightedAverage', tablename=''
                     logging.critical('Method "' + str(method) + '" unknown in function MergeSeries')
                     sys.exit(1)
         elif key in oldplants['Unit']:
-            if not isinstance(key,
-                              tuple):  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
-                logging.warning('Column ' + str(
-                    key) + ' present in the table "' + tablename + '" not found in the mapping between original and clustered units. Skipping')
+            if not isinstance(key, tuple):
+                # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
+                logging.warning('Column ' + str(key) + ' present in the table "' + tablename +
+                                '" not found in the mapping between original and clustered units. Skipping')
         else:
-            if not isinstance(key,
-                              tuple):  # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
-                logging.warning('Column ' + str(
-                    key) + ' present in the table "' + tablename + '" not found in the table of power plants. Skipping')
+            if not isinstance(key, tuple):
+                # if the columns header is a tuple, it does not come from the data and has been added by Dispa-SET
+                logging.warning('Column ' + str(key) + ' present in the table "' + tablename +
+                                '" not found in the table of power plants. Skipping')
     return merged
 
 
@@ -318,12 +318,12 @@ def load_time_series(config, path, header='infer'):
         sys.exit(1)
 
     if not data.index.is_monotonic_increasing:
-        logging.error(
-            'The index of data file ' + path + ' is not monotoneously increasing. Trying to check if it can be parsed with a "day first" format ')
+        logging.error('The index of data file ' + path + ' is not monotonously increasing. '
+                      'Trying to check if it can be parsed with a "day first" format ')
         data = pd.read_csv(path, index_col=0, parse_dates=True, header=header, dayfirst=True)
         if not data.index.is_monotonic_increasing:
-            logging.critical(
-                'Could not parse index of ' + path + '. To avoid problems make sure that you use the proper american date format (yyyy-mm-dd hh:mm:ss)')
+            logging.critical('Could not parse index of ' + path + '. To avoid problems make sure that '
+                             'you use the proper american date format (yyyy-mm-dd hh:mm:ss)')
             sys.exit(1)
 
     # First convert numerical indexes into datetimeindex:
@@ -339,8 +339,8 @@ def load_time_series(config, path, header='infer'):
                                        end=dt.datetime(*(config['idx'][0].year, 12, 31, 23, 59, 59)),
                                        freq=commons['TimeStep'])
         else:
-            logging.critical('A numerical index has been found for file ' + path +
-                             '. However, its length does not allow guessing its timestamps. Please use a 8760 elements time series')
+            logging.critical('A numerical index has been found for file ' + path + '. However, its length does not '
+                             'allow guessing its timestamps. Please use a 8760 elements time series')
             sys.exit(1)
 
     if data.index.is_all_dates:
@@ -361,7 +361,8 @@ def load_time_series(config, path, header='infer'):
                                 ' is used instead of year ' + str(config['idx'][0].year) +
                                 '. Leap year date is removed from the original DataFrame.')
                 data.index = data.index.map(lambda t: t.replace(year=config['idx'][0].year))
-            # check if original year is not a leap year and destination year is a leap year (add leap date and take average hourly values between 28.02. and 1.3.
+            # check if original year is not a leap year and destination year is a leap year
+            # (add leap date and take average hourly values between 28.02. and 1.3.
             elif (data.index[0].is_leap_year is False) and (config['idx'][0].is_leap_year is True):
                 logging.warning('File ' + path + ': data for year ' + str(data.index[0].year) +
                                 ' is used instead of year ' + str(config['idx'][0].year) +
@@ -380,15 +381,16 @@ def load_time_series(config, path, header='infer'):
                 config['idx'][0]) + ' to ' + str(config['idx'][-1]) + ')')
             sys.exit(1)
         elif len(common) == len(config['idx']) - 1:  # there is only one data point missing. This is deemed acceptable
-            logging.warning(
-                'File ' + path + ': there is one data point missing in the time series. It will be filled with the nearest data')
+            logging.warning('File ' + path + ': there is one data point missing in the time series. '
+                                             'It will be filled with the nearest data')
         else:
             pass  # the defined simulation index is found within the data. No action required
     else:
         logging.critical('Index for file ' + path + ' is not valid')
         sys.exit(1)
 
-    # re-indexing with the longer index (including look-ahead) and filling possibly missing data at the beginning and at the end::
+    # re-indexing with the longer index (including look-ahead) and filling possibly missing data at the beginning and
+    # at the end:
     return data.reindex(config['idx_long'], method='nearest').fillna(method='bfill')
 
 
@@ -441,54 +443,54 @@ def load_config_excel(ConfigFile, AbsPath=True):
 
         # Defning the input locations in the config file:
         StdParameters = {
-                         # Scenario options
-                         'SimulationDirectory': 33, 'WriteGDX': 34, 'WritePickle': 35, 'GAMS_folder': 36,
-                         'cplex_path': 37,
-                         # Horizon Settings
-                         'DataTimeStep': 60, 'SimulationTimeStep': 61,
-                         # Simulation Options
-                         'SimulationType': 76, 'ReserveCalculation': 77, 'AllowCurtailment': 78,
-                         # Mid-term scheduling related
-                         'HydroScheduling': 98, 'HydroSchedulingHorizon': 99, 'InitialFinalReservoirLevel': 100
-                         }
+            # Scenario options
+            'SimulationDirectory': 33, 'WriteGDX': 34, 'WritePickle': 35, 'GAMS_folder': 36,
+            'cplex_path': 37,
+            # Horizon Settings
+            'DataTimeStep': 60, 'SimulationTimeStep': 61,
+            # Simulation Options
+            'SimulationType': 76, 'ReserveCalculation': 77, 'AllowCurtailment': 78,
+            # Mid-term scheduling related
+            'HydroScheduling': 98, 'HydroSchedulingHorizon': 99, 'InitialFinalReservoirLevel': 100
+        }
         PathParameters = {
-                          # Power system data
-                          'Demand': 124, 'ShareOfFlexibleDemand': 125, 'Outages': 126, 'PowerPlantData': 127,
-                          'RenewablesAF': 128, 'LoadShedding': 129,
-                          # Interconnection data
-                          'NTC': 130, 'Interconnections': 131,
-                          # Hydro data
-                          'ReservoirScaledInflows': 132, 'ReservoirLevels': 133,
-                          # Heat data
-                          'HeatDemand': 134, 'Temperatures': 135,
-                          # Geo data
-                          'GeoData': 136,
-                          # Hydrogen data
-                          'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
-                          # Reserves input data
-                          'Reserve2U': 160, 'Reserve2D': 161,
-                          # Other costs related data
-                          'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169,
-                          'CostH2Slack': 170,
-                          # Fuel price related data
-                          'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
-                          'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186
-                          }
+            # Power system data
+            'Demand': 124, 'ShareOfFlexibleDemand': 125, 'Outages': 126, 'PowerPlantData': 127,
+            'RenewablesAF': 128, 'LoadShedding': 129,
+            # Interconnection data
+            'NTC': 130, 'Interconnections': 131,
+            # Hydro data
+            'ReservoirScaledInflows': 132, 'ReservoirLevels': 133,
+            # Heat data
+            'HeatDemand': 134, 'Temperatures': 135,
+            # Geo data
+            'GeoData': 136,
+            # Hydrogen data
+            'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
+            # Reserves input data
+            'Reserve2U': 160, 'Reserve2D': 161,
+            # Other costs related data
+            'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169,
+            'CostH2Slack': 170,
+            # Fuel price related data
+            'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
+            'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186
+        }
         modifiers = {'Demand': 274, 'Wind': 275, 'Solar': 276, 'Storage': 277}
         default = {
-                   # Hydro scheduling defaults
-                   'ReservoirLevelInitial': 101, 'ReservoirLevelFinal': 102,
-                   # Fuel price defaults
-                   'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
-                   'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186,
-                   # Other price defaults
-                   'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169,
-                   'CostH2Slack': 170,
-                   # Optimization and infeasibility cost data
-                   'ShareOfFlexibleDemand': 125, 'LoadShedding': 129,
-                   'DemandFlexibility': 162, 'ShareOfQuickStartUnits': 163,
-                   'ValueOfLostLoad': 204, 'PriceOfSpillage': 205, 'WaterValue': 206
-                    }
+            # Hydro scheduling defaults
+            'ReservoirLevelInitial': 101, 'ReservoirLevelFinal': 102,
+            # Fuel price defaults
+            'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
+            'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186,
+            # Other price defaults
+            'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169,
+            'CostH2Slack': 170,
+            # Optimization and infeasibility cost data
+            'ShareOfFlexibleDemand': 125, 'LoadShedding': 129,
+            'DemandFlexibility': 162, 'ShareOfQuickStartUnits': 163,
+            'ValueOfLostLoad': 204, 'PriceOfSpillage': 205, 'WaterValue': 206
+        }
         for p in StdParameters:
             config[p] = sheet.cell_value(StdParameters[p], 2)
         for p in PathParameters:
@@ -533,7 +535,6 @@ def load_config_excel(ConfigFile, AbsPath=True):
         logging.info("Description of the simulation: " + config['Description'])
 
         return config
-
 
     elif sheet.cell_value(0, 0) == 'Dispa-SET Configuration File':
         config['Description'] = sheet.cell_value(5, 1)
@@ -716,7 +717,12 @@ def export_yaml_config(ExcelFile, YAMLFile):
     return True
 
 
-def load_geo_data(config, path, header=None):
-    data = pd.read_csv(path, index_col=4, header=header)
+def load_geo_data(path, header=None):
+    """
+    Load geo data for individual zones.
 
+    :param path:    absolute path to the geo data file
+    :param header:  load header
+    """
+    data = pd.read_csv(path, index_col=4, header=header)
     return data

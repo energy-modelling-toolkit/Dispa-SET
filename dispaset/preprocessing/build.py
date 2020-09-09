@@ -114,7 +114,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
 
     # Geo data
     if os.path.isfile(config['GeoData']):
-        geo = load_geo_data(config, config['GeoData'], header=0)
+        geo = load_geo_data(config['GeoData'], header=0)
     else:
         logging.warning('No geo spatial data available (no valid file provided)')
 
