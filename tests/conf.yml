@@ -8,7 +8,7 @@ cplex_path:  ''
 
 #-----------------
 StartDate: !!python/tuple [2015, 1, 1, 0, 0, 0]
-StopDate: !!python/tuple [2015, 1, 31, 0, 0, 0]
+StopDate: !!python/tuple [2015, 1, 8, 0, 0, 0]
 HorizonLength: 3
 LookAhead: 1
 
@@ -59,9 +59,9 @@ default: {CostHeatSlack: 51.0, CostLoadShedding: 400.0, LoadShedding: 0.05, Pric
   PriceOfLignite: 8.0, PriceOfNuclear: 3.0, PriceOfPeat: 0.0, PriceTransmission: 1}
 
 #----------------
-modifiers: {Demand: 1.01, Solar: 1.05, Storage: 1.01, Wind: 0.99}
+modifiers: {Demand: 0.12, Solar: 1.05, Storage: 1.01, Wind: 0.99}
 
 #------------------
 HydroScheduling: 'Regional'
-HydroSchedulingHorizon: 'Annual'
+HydroSchedulingHorizon: 'StopDateDriven'
 mts_zones: ['Z1', 'Z2']
