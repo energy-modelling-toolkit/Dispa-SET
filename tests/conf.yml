@@ -28,6 +28,7 @@ LoadShedding:  ''
 NTC:  'tests/dummy_data/NTCs.csv'
 Outages:  'tests/dummy_data/Outages.csv'
 PowerPlantData: 'tests/dummy_data/Units_testcase.csv'
+PriceTransmission: 'tests/dummy_data/PriceTransmission.csv'
 PriceOfBiomass:  'Database/FuelPrices/Biomass/2015.csv'
 PriceOfBlackCoal:  'Database/FuelPrices/Coal/2015.csv'
 PriceOfCO2:  ''
@@ -55,7 +56,12 @@ ReserveParticipation: [ 'GTUR',  'HDAM',  'HPHS', 'ICEN',  'CAES',  'BATS',  'BE
 #----------------
 default: {CostHeatSlack: 51.0, CostLoadShedding: 400.0, LoadShedding: 0.05, PriceOfBiomass: 37.0,
   PriceOfBlackCoal: 10.62, PriceOfCO2: 7.5, PriceOfFuelOil: 35.0, PriceOfGas: 25.0,
-  PriceOfLignite: 8.0, PriceOfNuclear: 3.0, PriceOfPeat: 0.0}
+  PriceOfLignite: 8.0, PriceOfNuclear: 3.0, PriceOfPeat: 0.0, PriceTransmission: 1}
 
 #----------------
-modifiers: {Demand: 1.0, Solar: 1.0, Storage: 1.0, Wind: 1.0}
+modifiers: {Demand: 1.01, Solar: 1.05, Storage: 1.01, Wind: 0.99}
+
+#------------------
+HydroScheduling: 'Regional'
+HydroSchedulingHorizon: 'Annual'
+mts_zones: ['Z1', 'Z2']
