@@ -161,15 +161,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
 
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
+    check_chp(config, plants_chp)
 
     # Defining the P2H units:
     plants_p2h = plants[plants['Technology'] == 'P2HT']
+    check_p2h(config, plants_p2h)
 
     # All heating units:
     plants_heat = plants_chp.append(plants_p2h)
 
     # Defining the P2H units:
     plants_h2 = plants[plants['Technology'] == 'P2GS']
+    check_h2(config, plants_h2)
 
     Outages = UnitBasedTable(plants, 'Outages', config, fallbacks=['Unit', 'Technology'])
     AF = UnitBasedTable(plants, 'RenewablesAF', config, fallbacks=['Unit', 'Technology'], default=1,

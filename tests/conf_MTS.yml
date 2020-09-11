@@ -60,3 +60,8 @@ default: {CostHeatSlack: 51.0, CostLoadShedding: 400.0, LoadShedding: 0.05, Pric
 
 #----------------
 modifiers: {Demand: 0.12, Solar: 1.05, Storage: 1.01, Wind: 0.99}
+
+#------------------
+HydroScheduling: 'Regional'
+HydroSchedulingHorizon: 'StopDateDriven'
+mts_zones: ['Z1', 'Z2']
