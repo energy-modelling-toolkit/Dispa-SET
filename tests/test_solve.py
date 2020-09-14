@@ -3,6 +3,27 @@ import os
 import pytest
 import dispaset as ds
 
+
+from dispaset.preprocessing.preprocessing import mid_term_scheduling
+# Config file to be tested and scenario definitions
+conf_file_mts = os.path.abspath('./tests/conf_MTS.yml')
+cartesian_MTS = [elem for elem in itertools.product(*[['Zonal', 'Regional'], [24]])]
+
+
+@pytest.fixture(name='config_mts', params=cartesian_MTS)
+def config_mts(request):
+    config_mts = ds.load_config_yaml(conf_file_mts)
+    config_mts['HydroScheduling'] = request.param[0]
+    TimeStep = request.param[1]
+    if request.param[0] == 'Zonal':
+        config_mts['mts_zones'] = ['Z1']
+    return config_mts, TimeStep
+
+
+def test_mts(config_mts):
+    SimData_MTS = mid_term_scheduling(config_mts[0], TimeStep=config_mts[1])
+
+
 # Config file for testing
 conf_file = os.path.abspath('./tests/conf.yml')
 # Input data
