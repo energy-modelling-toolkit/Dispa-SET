@@ -4,7 +4,7 @@ import pytest
 import dispaset as ds
 
 
-LocalTesting = True
+LocalTesting = False
 if LocalTesting is True:
     from dispaset.preprocessing.preprocessing import mid_term_scheduling
     # Config file to be tested and scenario definitions
