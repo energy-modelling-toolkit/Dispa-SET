@@ -474,7 +474,7 @@ def create_agg_dict(df_, method="Standard"):
 
     else:
         logging.critical('Clustering method not properly specified. Should be one of the following options:'
-                         ' LP clustered', 'MILP', 'Standard', 'Integer clustering')
+                         ' LP clustered, MILP, Standard, Integer clustering')
         sys.exit(1)
 
 
