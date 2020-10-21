@@ -11,7 +11,8 @@ from future.builtins import int
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
     check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_h2, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves, check_PtLDemand
-from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, load_geo_data
+from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
+    load_geo_data
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
 
 from .. import __version__
@@ -21,7 +22,7 @@ from ..misc.gdx_handler import write_variables
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
 
-def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
+def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     """
     This function reads the DispaSET config, loads the specified data,
     processes it when needed, and formats it in the proper DispaSET format.
@@ -129,13 +130,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
     # Power plants:
     plants = pd.DataFrame()
     if os.path.isfile(config['PowerPlantData']):
-        plants = pd.read_csv(config['PowerPlantData'])
+        plants = pd.read_csv(config['PowerPlantData'],
+                             na_values=['', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan',
+                                        '1.#IND', '1.#QNAN', 'N/A', 'NULL', 'NaN', 'nan'],
+                             keep_default_na=False, index_col=0)
     elif '##' in config['PowerPlantData']:
         for z in config['zones']:
             path = config['PowerPlantData'].replace('##', str(z))
-            tmp = pd.read_csv(path)
+            tmp = pd.read_csv(path, na_values=['', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan',
+                                               '1.#IND', '1.#QNAN', 'N/A', 'NULL', 'NaN', 'nan'],
+                              keep_default_na=False, index_col=0)
             plants = plants.append(tmp, ignore_index=True, sort=False)
     # remove invalid power plants:
+    plants['Unit'] = plants.index
     plants = select_units(plants, config)
 
     # Some columns can be in two format (absolute or per unit). If not specified, they are set to zero:
@@ -177,6 +184,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
     Outages = UnitBasedTable(plants, 'Outages', config, fallbacks=['Unit', 'Technology'])
     AF = UnitBasedTable(plants, 'RenewablesAF', config, fallbacks=['Unit', 'Technology'], default=1,
                         RestrictWarning=commons['tech_renewables'])
+    AF = AF.apply(pd.to_numeric)
 
     ReservoirLevels = UnitBasedTable(plants_sto, 'ReservoirLevels', config, fallbacks=['Unit', 'Technology', 'Zone'],
                                      default=0)
@@ -194,33 +202,32 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
         H2RigidDemand = UnitBasedTable(plants_h2, 'H2RigidDemand', config, fallbacks=['Unit'], default=0)
         H2FlexibleDemand = UnitBasedTable(plants_h2, 'H2FlexibleDemand', config, fallbacks=['Unit'], default=0)
         CostH2Slack = UnitBasedTable(plants_h2, 'CostH2Slack', config, fallbacks=['Unit', 'Zone'],
-                                 default=config['default']['CostH2Slack'])
+                                     default=config['default']['CostH2Slack'])
 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
         plants_sto.set_index(plants_sto.loc[:, 'Unit'], inplace=True, drop=True)
         for key in profiles.columns:
             if key not in ReservoirLevels.columns:
-                logging.warning(
-                    'The reservoir profile "' + key + '" provided by the MTS is not found in the ReservoirLevels table')
+                logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the '
+                                'ReservoirLevels table')
             elif key in list(ReservoirLevels.loc[:, plants_sto['Technology'] == 'SCSP'].columns):
                 ReservoirLevels[key] = config['default']['ReservoirLevelInitial']
                 logging.info('The reservoir profile "' + key + '" can not be seleceted for MTS, instead, default value '
-                                                               'of: ' + str(
-                    config['default']['ReservoirLevelInitial']) + ' will be used')
+                             'of: ' + str(config['default']['ReservoirLevelInitial']) + ' will be used')
             else:
                 ReservoirLevels[key].update(profiles[key])
                 logging.info(
                     'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
     # Update PtL demand (H2FlexibleDemand with demand from mid term scheduling)
-    if PtLDemand is not None and any(H2FlexibleDemand)>0:
+    if PtLDemand is not None and any(H2FlexibleDemand) > 0:
         for key in PtLDemand.columns:
             if key not in H2FlexibleDemand.columns:
-                logging.warning(
-                    'The H2 flexible demand "' + key + '" provided by the MTS is not found in the H2FlexibleDemand table')    
+                logging.warning('The H2 flexible demand "' + key + '" provided by the MTS is not found in the '
+                                'H2FlexibleDemand table')
             else:
                 H2FlexibleDemand[key].update(PtLDemand[key])
-    
+
     # data checks:
     check_AvailabilityFactors(plants, AF)
     check_heat_demand(plants, HeatDemand)
@@ -250,9 +257,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
         else:
             PriceTransmission[l] = config['default']['PriceTransmission']
             if config['default']['PriceTransmission'] > 0:
-                logging.warning(
-                    'No detailed values were found the transmission prices of line ' + l + '. Using default value ' + \
-                    str(config['default']['PriceTransmission']))
+                logging.warning('No detailed values were found the transmission prices of line ' + l +
+                                '. Using default value ' + str(config['default']['PriceTransmission']))
 
     # Clustering of the plants:
     Plants_merged, mapping = clustering(plants, method=config['SimulationType'])
@@ -314,22 +320,23 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
     Plants_chp = Plants_merged[[x.lower() in commons['types_CHP'] for x in Plants_merged['CHPType']]].copy()
     # check chp plants:
     check_chp(config, Plants_chp)
-    # For all the chp plants correct the PowerCapacity, which is defined in cogeneration mode in the inputs and in power generation model in the optimization model
+    # For all the chp plants correct the PowerCapacity, which is defined in cogeneration mode in the inputs and
+    # in power generation model in the optimization model
     for u in Plants_chp.index:
         PowerCapacity = Plants_chp.loc[u, 'PowerCapacity']
 
         if Plants_chp.loc[u, 'CHPType'].lower() == 'p2h':
             PurePowerCapacity = PowerCapacity
         else:
-            if pd.isnull(Plants_chp.loc[
-                             u, 'CHPMaxHeat']):  # If maximum heat is not defined, then it is defined as the intersection between two lines
+            # If maximum heat is not defined, then it is defined as the intersection between two lines
+            if pd.isnull(Plants_chp.loc[u, 'CHPMaxHeat']):
                 MaxHeat = PowerCapacity / Plants_chp.loc[u, 'CHPPowerToHeat']
                 Plants_chp.loc[u, 'CHPMaxHeat'] = 'inf'
             else:
                 MaxHeat = Plants_chp.loc[u, 'CHPMaxHeat']
             PurePowerCapacity = PowerCapacity + Plants_chp.loc[u, 'CHPPowerLossFactor'] * MaxHeat
-        Plants_merged.loc[u, 'PartLoadMin'] = Plants_merged.loc[
-                                                  u, 'PartLoadMin'] * PowerCapacity / PurePowerCapacity  # FIXME: Is this correct?
+        # FIXME: Is this correct?
+        Plants_merged.loc[u, 'PartLoadMin'] = Plants_merged.loc[u, 'PartLoadMin'] * PowerCapacity / PurePowerCapacity
         Plants_merged.loc[u, 'PowerCapacity'] = PurePowerCapacity
 
     Plants_p2h = Plants_merged[Plants_merged['Technology'] == 'P2HT'].copy()
@@ -481,9 +488,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
     sets_param['Technology'] = ['au', 't']
     sets_param['TimeUpMinimum'] = ['au']
     sets_param['TimeDownMinimum'] = ['au']
-    sets_param['PtLDemandInput'] = ['p2h2','h']
+    sets_param['PtLDemandInput'] = ['p2h2', 'h']
     sets_param['MaxCapacityPtL'] = ['p2h2']
-    sets_param['H2Demand'] = ['s','h']
+    sets_param['H2Demand'] = ['s', 'h']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -524,24 +531,24 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
     for var in ['CHPPowerToHeat', 'CHPPowerLossFactor', 'CHPMaxHeat']:
         parameters[var]['val'] = Plants_chp[var].values
-        
+
     # Particular treatment of MaxCapacityPtL that is not a time-series and
     # that is given separetly from the Power plant database 
     if config['H2FlexibleCapacity'] != '':
-        MaxCapacityPtL = pd.read_csv(config['H2FlexibleCapacity'], index_col=0)
+        MaxCapacityPtL = pd.read_csv(config['H2FlexibleCapacity'], index_col=0, keep_default_na=False)
         for i, u in enumerate(sets['p2h2']):
             for unit in MaxCapacityPtL.index:
                 if unit in u:
-                    parameters['MaxCapacityPtL']['val'][i] = MaxCapacityPtL.loc[unit]            
-        
-    # Storage profile and initial state:
+                    parameters['MaxCapacityPtL']['val'][i] = MaxCapacityPtL.loc[unit]
+
+                    # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
         if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(
-                finalTS['ReservoirLevels'][s] -1 <= 1e-11):
+                finalTS['ReservoirLevels'][s] - 1 <= 1e-11):
             # get the time series
             parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
         elif s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and any(
-                finalTS['ReservoirLevels'][s] -1 > 1e-11):
+                finalTS['ReservoirLevels'][s] - 1 > 1e-11):
             logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
             sys.exit(1)
         else:
@@ -566,7 +573,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
         if u in finalTS['HeatDemand']:
             parameters['HeatDemand']['val'][i, :] = finalTS['HeatDemand'][u][idx_sim].values
             parameters['CostHeatSlack']['val'][i, :] = finalTS['CostHeatSlack'][u][idx_sim].values
-            
+
     # H2 time series:
     for i, u in enumerate(sets['s']):
         if u in finalTS['H2RigidDemand']:
@@ -577,9 +584,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
         if u in finalTS['H2FlexibleDemand']:
             parameters['PtLDemandInput']['val'][i, :] = finalTS['H2FlexibleDemand'][u][idx_sim].values
     if config['H2FlexibleCapacity'] != '':
-        check_PtLDemand(parameters, config) 
-    
-    # Ramping rates are reconstructed for the non dimensional value provided (start-up and normal ramping are not differentiated)
+        check_PtLDemand(parameters, config)
+
+    # Ramping rates are reconstructed for the non dimensional value provided
+    # (start-up and normal ramping are not differentiated)
     parameters['RampUpMaximum']['val'] = Plants_merged['RampUpRate'].values * Plants_merged['PowerCapacity'].values * 60
     parameters['RampDownMaximum']['val'] = Plants_merged['RampDownRate'].values * Plants_merged[
         'PowerCapacity'].values * 60
@@ -740,7 +748,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
     sim = config['SimulationDirectory']
 
     # Simulation data:
-    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units': Plants_merged, 'version': dispa_version, 'geo': geo}
+    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units': Plants_merged,
+               'version': dispa_version, 'geo': geo}
 
     # list_vars = []
     gdx_out = "Inputs.gdx"
@@ -754,11 +763,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
 
     if not os.path.exists(sim):
         os.makedirs(sim)
-        
+
     if MTS:
         if not LP:
             logging.error('Simulation in MTS must be LP')
-            sys.exit(1) 
+            sys.exit(1)
         else:
             fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
             fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
@@ -770,7 +779,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
             fout.close()
             # additionally allso copy UCM_h_simple.gms
             shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-                                os.path.join(sim, 'UCM_h_simple.gms'))
+                            os.path.join(sim, 'UCM_h_simple.gms'))
 
     elif LP:
         fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
@@ -796,13 +805,16 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS = 0):
     shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
                     os.path.join(sim, 'writeresults.gms'))
     # Create cplex option file
-    cplex_options = {'epgap': 0.05,  # TODO: For the moment hardcoded, it has to be moved to a config file
+    cplex_options = {'epgap': 0.0001,  # TODO: For the moment hardcoded, it has to be moved to a config file
                      'numericalemphasis': 0,
                      'scaind': 1,
                      'lpmethod': 0,
                      'relaxfixedinfeas': 0,
                      'mipstart': 1,
-                     'epint': 0}
+                     'epint': 0,
+                     'heuristiceffort': 2,
+                     'lbheur': 1,
+                     'probe': 1}
 
     lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
     with open(os.path.join(sim, 'cplex.opt'), 'w') as f:

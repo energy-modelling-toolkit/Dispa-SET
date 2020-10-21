@@ -333,6 +333,9 @@ def group_plants(plants, method, df_grouped=False, group_list=None):
     grouped = plants.groupby(group_list, as_index=False)
     agg_dict = create_agg_dict(plants, method=method)
     plants_merged = plants_merged.append(grouped.agg(agg_dict))
+    if method == "Integer clustering":
+        plants_merged['StartUpCost'] = plants_merged['StartUpCost'] / plants_merged['Nunits']
+        plants_merged['NoLoadCost'] = plants_merged['NoLoadCost'] / plants_merged['Nunits']
     idx = [list(i.values) for i in list(grouped.groups.values())]
     if not df_grouped:
         plants_merged['FormerIndexes'] = [list(plants.loc[i]['index'].values) for i in idx]
@@ -354,6 +357,7 @@ def create_agg_dict(df_, method="Standard"):
     Author: Matthias Zech
     """
 
+
     # lambda functions for other aggregations than standard aggregators like min/max,...
     wm_pcap = lambda x: np.average(x.astype(float),
                                    weights=df_.loc[x.index, "PowerCapacity"])  # weighted mean with weight=PowerCapacity
@@ -370,6 +374,7 @@ def create_agg_dict(df_, method="Standard"):
                             "RampDownRate",
                             "MinUpTime",
                             "MinDownTime",
+                            "StartUpCost",
                             "NoLoadCost",
                             "Efficiency",
                             "MinEfficiency",
@@ -383,7 +388,8 @@ def create_agg_dict(df_, method="Standard"):
                             'coef_COP_a',
                             'coef_COP_b',
                             'WaterConsumption',
-                            'WaterWithdrawal'
+                            'WaterWithdrawal',
+                            'RampingCost'
                             ]
         min_cols = ["StartUpTime"]
         ramping_cost = ["RampingCost"]
@@ -394,7 +400,7 @@ def create_agg_dict(df_, method="Standard"):
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(weighted_avg_cols, wm_pcap))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(min_cols, 'min'))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(['PartLoadMin'], min_load))
-        agg_dict = _merge_two_dicts(agg_dict, _list2dict(ramping_cost, get_ramping_cost))
+        # agg_dict = _merge_two_dicts(agg_dict, _list2dict(ramping_cost, get_ramping_cost))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(nunits, lambda x: 1))
         agg_dict = dict((k, v) for k, v in agg_dict.items() if k in df_.columns)  # remove unnecesary columns
         return agg_dict
@@ -406,6 +412,7 @@ def create_agg_dict(df_, method="Standard"):
                             "RampDownRate",
                             "MinUpTime",
                             "MinDownTime",
+                            "StartUpCost",
                             "NoLoadCost",
                             "Efficiency",
                             "MinEfficiency",
@@ -419,10 +426,11 @@ def create_agg_dict(df_, method="Standard"):
                             'coef_COP_a',
                             'coef_COP_b',
                             'WaterConsumption',
-                            'WaterWithdrawal'
+                            'WaterWithdrawal',
+                            'RampingCost'
                             ]
         min_cols = ["StartUpTime"]
-        ramping_cost = ["RampingCost"]
+        # ramping_cost = ["RampingCost"]
         nunits = ["Nunits"]
 
         # Define aggregators
@@ -430,20 +438,19 @@ def create_agg_dict(df_, method="Standard"):
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(weighted_avg_cols, wm_pcap))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(min_cols, 'min'))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(['PartLoadMin'], lambda x: 0))
-        agg_dict = _merge_two_dicts(agg_dict, _list2dict(ramping_cost, get_ramping_cost))
+        # agg_dict = _merge_two_dicts(agg_dict, _list2dict(ramping_cost, get_ramping_cost))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(nunits, lambda x: 1))
         agg_dict = dict((k, v) for k, v in agg_dict.items() if k in df_.columns)  # remove unnecesary columns
         return agg_dict
 
     elif method == "Integer clustering":
-        sum_cols = ["Nunits"]
+        sum_cols = ["Nunits", "StartUpCost",'NoLoadCost',]
 
         weighted_avg_cols = ['PowerCapacity',
                              'RampUpRate',
                              'RampDownRate',
                              'MinUpTime',
                              'MinDownTime',
-                             'NoLoadCost',
                              'Efficiency',
                              'MinEfficiency',
                              'STOChargingEfficiency',
@@ -482,7 +489,7 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
     """
     Merge excessively disaggregated power Units.
 
-    :param plants_in:        Pandas dataframe with each power plant and their characteristics
+    :param plants_in:       Pandas dataframe with each power plant and their characteristics
                             (following the DispaSET format)
     :param method:          Select clustering method ('Standard'/'LP'/None)
     :param Nslices:         Number of slices used to fingerprint each power plant characteristics.

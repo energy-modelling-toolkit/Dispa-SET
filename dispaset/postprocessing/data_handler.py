@@ -35,6 +35,23 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'OutputH2Output': ('u', 'h'),
             'OutputStorageSlack': ('u', 'h'),
             'OutputPtLDemand': ('u', 'h'),
+            'HeatShadowPrice': ('u', 'h'),
+            'H2ShadowPrice': ('u', 'h'),
+            'ShadowPrice_2U': ('u', 'h'),
+            'ShadowPrice_2D': ('u', 'h'),
+            'ShadowPrice_3U': ('u', 'h'),
+            'OutputReserve_2U': ('u', 'h'),
+            'OutputReserve_2D': ('u', 'h'),
+            'OutputReserve_3U': ('u', 'h'),
+            'ShadowPrice_RampUp_TC': ('u', 'h'),
+            'ShadowPrice_RampDown_TC': ('u', 'h'),
+            'OutputRampRate': ('u', 'h'),
+            'OutputStartUp': ('u', 'h'),
+            'OutputShutDown': ('u', 'h'),
+            'OutputPowerMustRun': ('u', 'h'),
+            'OutputCostStartUpH': ('u', 'h'),
+            'OutputCostRampUpH': ('u', 'h'),
+            'OutputCostRampDownH': ('u', 'h'),
             'status': tuple(),
             '*': tuple()
             }
@@ -133,12 +150,15 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
 
     keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
-            'LostLoad_RampDown', 'LostLoad_2D', 'ShadowPrice', 'StorageShadowPrice']  # 'status'
+            'LostLoad_RampDown', 'LostLoad_2D', 'ShadowPrice', 'StorageShadowPrice',
+            'OutputCostStartUpH', 'OutputCostRampUpH', 'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U']  # 'status'
 
     keys_sparse = ['OutputPower', 'OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted',
                    'OutputCurtailedPower', 'OutputFlow', 'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel',
                    'OutputStorageInput', 'OutputHeat', 'OutputHeatSlack', 'OutputDemandModulation',
-                   'OutputStorageSlack', 'OutputPtLDemand', 'OutputH2Output']
+                   'OutputStorageSlack', 'OutputPtLDemand', 'OutputH2Output', 'OutputPowerMustRun',
+                   'OutputReserve_2U', 'OutputReserve_2D', 'OutputReserve_3U', 'ShadowPrice_RampUp_TC',
+                   'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown']
 
     # Setting the proper index to the result dataframes:
     from itertools import chain
@@ -169,6 +189,9 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     if 'ShadowPrice' in results:
         results['ShadowPrice'][results['ShadowPrice'] >= 1e300] = 0
         results['StorageShadowPrice'][results['StorageShadowPrice'] >= 1e300] = 0
+        results['ShadowPrice_2D'][results['ShadowPrice_2D'] >= 1e300] = 0
+        results['ShadowPrice_2U'][results['ShadowPrice_2U'] >= 1e300] = 0
+        results['ShadowPrice_3U'][results['ShadowPrice_3U'] >= 1e300] = 0
 
     status = {}
     if "model" in results['status']:

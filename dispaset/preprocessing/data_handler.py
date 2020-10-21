@@ -311,7 +311,7 @@ def load_time_series(config, path, header='infer'):
     present
     """
 
-    data = pd.read_csv(path, index_col=0, parse_dates=True, header=header)
+    data = pd.read_csv(path, index_col=0, parse_dates=True, header=header, keep_default_na=False)
 
     if not data.index.is_unique:
         logging.critical('The index of data file ' + path + ' is not unique. Please check the data')
@@ -320,7 +320,7 @@ def load_time_series(config, path, header='infer'):
     if not data.index.is_monotonic_increasing:
         logging.error('The index of data file ' + path + ' is not monotonously increasing. '
                       'Trying to check if it can be parsed with a "day first" format ')
-        data = pd.read_csv(path, index_col=0, parse_dates=True, header=header, dayfirst=True)
+        data = pd.read_csv(path, index_col=0, parse_dates=True, header=header, dayfirst=True, keep_default_na=False)
         if not data.index.is_monotonic_increasing:
             logging.critical('Could not parse index of ' + path + '. To avoid problems make sure that '
                              'you use the proper american date format (yyyy-mm-dd hh:mm:ss)')
@@ -503,11 +503,11 @@ def load_config_excel(ConfigFile, AbsPath=True):
             config['default'][p] = sheet.cell_value(default[p], 5)
 
         # True/Falst values:
-        config['zones'] = read_truefalse(sheet, 225, 1, 246, 3)
-        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 246, 6)
-        config['mts_zones'] = read_truefalse(sheet, 225, 1, 246, 3, 2)
-        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 246, 6, 2)
-        config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 319, 3)
+        config['zones'] = read_truefalse(sheet, 225, 1, 250, 3)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 250, 6)
+        config['mts_zones'] = read_truefalse(sheet, 225, 1, 250, 3, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 250, 6, 2)
+        config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 321, 3)
 
         # Set default values (for backward compatibility):
         for param in DEFAULTS:
@@ -724,5 +724,5 @@ def load_geo_data(path, header=None):
     :param path:    absolute path to the geo data file
     :param header:  load header
     """
-    data = pd.read_csv(path, index_col=4, header=header)
+    data = pd.read_csv(path, index_col=4, header=header, keep_default_na=False)
     return data
