@@ -14,7 +14,7 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'OutputPower': ('u', 'h'),
             'OutputPowerConsumption': ('u', 'h'),
             'OutputHeat': ('u', 'h'),
-            'OutputHeatSlack': ('u', 'h'),
+            'OutputHeatSlack': ('n_th', 'h'),
             'OutputStorageInput': ('u', 'h'),
             'OutputStorageLevel': ('u', 'h'),
             'OutputSystemCost': ('h'),
@@ -35,7 +35,7 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'OutputH2Output': ('u', 'h'),
             'OutputStorageSlack': ('u', 'h'),
             'OutputPtLDemand': ('u', 'h'),
-            'HeatShadowPrice': ('u', 'h'),
+            'HeatShadowPrice': ('n_th', 'h'),
             'H2ShadowPrice': ('u', 'h'),
             'ShadowPrice_2U': ('u', 'h'),
             'ShadowPrice_2D': ('u', 'h'),
@@ -158,7 +158,8 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
                    'OutputStorageInput', 'OutputHeat', 'OutputHeatSlack', 'OutputDemandModulation',
                    'OutputStorageSlack', 'OutputPtLDemand', 'OutputH2Output', 'OutputPowerMustRun',
                    'OutputReserve_2U', 'OutputReserve_2D', 'OutputReserve_3U', 'ShadowPrice_RampUp_TC',
-                   'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown','HeatShadowPrice']
+                   'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown','HeatShadowPrice',
+                   'H2ShadowPrice']
 
     # Setting the proper index to the result dataframes:
     from itertools import chain
@@ -192,6 +193,8 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
         results['ShadowPrice_2D'][results['ShadowPrice_2D'] >= 1e300] = 0
         results['ShadowPrice_2U'][results['ShadowPrice_2U'] >= 1e300] = 0
         results['ShadowPrice_3U'][results['ShadowPrice_3U'] >= 1e300] = 0
+        results['HeatShadowPrice'][results['HeatShadowPrice'] >= 1e300] = 0
+        results['H2ShadowPrice'][results['H2ShadowPrice'] >= 1e300] = 0
 
     status = {}
     if "model" in results['status']:
