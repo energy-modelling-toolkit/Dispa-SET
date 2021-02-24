@@ -12,7 +12,7 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, check
     check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_h2, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves, check_PtLDemand
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
-    load_geo_data
+    load_geo_data, GenericTable
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
 
 from .. import __version__
@@ -142,7 +142,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                               keep_default_na=False, index_col=0)
             plants = plants.append(tmp, ignore_index=True, sort=False)
     # remove invalid power plants:
-    plants['Unit'] = plants.index
+    # plants['Unit'] = plants.index
     plants = select_units(plants, config)
 
     # Some columns can be in two format (absolute or per unit). If not specified, they are set to zero:
@@ -153,13 +153,24 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
             plants[key] = plants[key + '_pu'] * plants['PowerCapacity']
         else:
             plants[key] = 0
-    # check plant list:
-    check_units(config, plants)
+
     # If not present, add the non-compulsory fields to the units table:
     for key in ['CHPPowerLossFactor', 'CHPPowerToHeat', 'CHPType', 'STOCapacity', 'STOSelfDischarge',
                 'STOMaxChargingPower', 'STOChargingEfficiency', 'CHPMaxHeat']:
         if key not in plants.columns:
             plants[key] = np.nan
+
+    # If the thermal and h2 zones are not defined in the units table, define one individual zone per power plant:
+    for key in ['Zone_th','Zone_h2']:
+        if key in plants.columns:
+            plants[key] = plants[key].fillna('')
+        else:
+            plants[key] = plants['Unit']
+            logging.info('No "' + key + '" header was found in the units table. One individual zone is defined per '
+                                        'power plant')
+
+    # check plant list:
+    check_units(config, plants)
 
     # Defining the hydro storages:
     plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
@@ -190,10 +201,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                                      default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_sto, 'ReservoirScaledInflows', config,
                                             fallbacks=['Unit', 'Technology', 'Zone'], default=0)
-    HeatDemand = UnitBasedTable(plants_heat, 'HeatDemand', config, fallbacks=['Unit'], default=0)
-    CostHeatSlack = UnitBasedTable(plants_heat, 'CostHeatSlack', config, fallbacks=['Unit', 'Zone'],
-                                   default=config['default']['CostHeatSlack'])
+    # HeatDemand = UnitBasedTable(plants_heat, 'HeatDemand', config, fallbacks=['Unit'], default=0)
+    # CostHeatSlack = UnitBasedTable(plants_heat, 'CostHeatSlack', config, fallbacks=['Unit', 'Zone'],
+    #                                default=config['default']['CostHeatSlack'])
     Temperatures = NodeBasedTable('Temperatures', config)
+
     if plants_h2.empty is True:
         H2RigidDemand = pd.DataFrame(index=config['idx_long'])
         H2FlexibleDemand = pd.DataFrame(index=config['idx_long'])
@@ -203,6 +215,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         H2FlexibleDemand = UnitBasedTable(plants_h2, 'H2FlexibleDemand', config, fallbacks=['Unit'], default=0)
         CostH2Slack = UnitBasedTable(plants_h2, 'CostH2Slack', config, fallbacks=['Unit', 'Zone'],
                                      default=config['default']['CostH2Slack'])
+
+    # Detecting thermal zones:
+    zones_th = plants_heat['Zone_th'].unique().tolist()
+    if '' in zones_th:
+        zones_th.remove('')
+
+    HeatDemand = GenericTable(zones_th, 'HeatDemand', config, default=0)
+    CostHeatSlack = GenericTable(zones_th,'CostHeatSlack', config, default=config['default']['CostHeatSlack'])
 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
@@ -230,7 +250,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # data checks:
     check_AvailabilityFactors(plants, AF)
-    check_heat_demand(plants, HeatDemand)
+    check_heat_demand(plants, HeatDemand,zones_th)
     check_temperatures(plants, Temperatures)
     check_FlexibleDemand(ShareOfFlexibleDemand)
     check_reserves(Reserve2D, Reserve2U, Load)
@@ -381,10 +401,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                'H2RigidDemand': H2RigidDemand, 'H2FlexibleDemand': H2FlexibleDemand}
 
     # Merge the following time series with weighted averages
-    for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors', 'CostHeatSlack', 'CostH2Slack']:
+    for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors', 'CostH2Slack']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
     # Merge the following time series by summing
-    for key in ['HeatDemand', 'H2RigidDemand', 'H2FlexibleDemand']:
+    for key in ['H2RigidDemand', 'H2FlexibleDemand']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='Sum')
     # Merge the following time series by weighted average based on storage capacity
     for key in ['ReservoirLevels']:
@@ -415,6 +435,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets['z'] = [str(x + 1) for x in range(int(Nsim - config['LookAhead'] * 24 / config['SimulationTimeStep']))]
     sets['mk'] = ['DA', '2U', '2D', 'Flex']
     sets['n'] = config['zones']
+    sets['n_th'] = zones_th
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['f'] = commons['Fuels']
@@ -443,7 +464,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['CHPPowerLossFactor'] = ['chp']
     sets_param['CHPMaxHeat'] = ['chp']
     sets_param['CostFixed'] = ['au']
-    sets_param['CostHeatSlack'] = ['th', 'h']
+    sets_param['CostHeatSlack'] = ['n_th', 'h']
     sets_param['CostH2Slack'] = ['p2h2', 'h']
     sets_param['CostLoadShedding'] = ['n', 'h']
     sets_param['CostRampUp'] = ['au']
@@ -459,10 +480,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['FlowMaximum'] = ['l', 'h']
     sets_param['FlowMinimum'] = ['l', 'h']
     sets_param['Fuel'] = ['au', 'f']
-    sets_param['HeatDemand'] = ['th', 'h']
+    sets_param['HeatDemand'] = ['n_th', 'h']
     sets_param['LineNode'] = ['l', 'n']
     sets_param['LoadShedding'] = ['n', 'h']
     sets_param['Location'] = ['au', 'n']
+    sets_param['Location_th'] = ['au', 'n_th']
     sets_param['Markup'] = ['au', 'h']
     sets_param['Nunits'] = ['au']
     sets_param['OutageFactor'] = ['au', 'h']
@@ -507,7 +529,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         parameters[var] = define_parameter(sets_param[var], sets, value=1e7)
 
     # Boolean parameters:
-    for var in ['Technology', 'Fuel', 'Reserve', 'Location']:
+    for var in ['Technology', 'Fuel', 'Reserve', 'Location', 'Location_th']:
         parameters[var] = define_parameter(sets_param[var], sets, value='bool')
 
     # %%
@@ -568,8 +590,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         if s in finalTS['ScaledInflows']:
             parameters['StorageInflow']['val'][i, :] = finalTS['ScaledInflows'][s][idx_sim].values * \
                                                        Plants_sto['PowerCapacity'][s]
-    # CHP time series:
-    for i, u in enumerate(sets['th']):
+
+    # Heat demands:
+    for i, u in enumerate(sets['n_th']):
         if u in finalTS['HeatDemand']:
             parameters['HeatDemand']['val'][i, :] = finalTS['HeatDemand'][u][idx_sim].values
             parameters['CostHeatSlack']['val'][i, :] = finalTS['CostHeatSlack'][u][idx_sim].values
@@ -692,6 +715,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # Location
     for i in range(len(sets['n'])):
         parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['zones'][i]).values
+    for i in range(len(sets['n_th'])):
+        parameters['Location_th']['val'][:, i] = (Plants_merged['Zone_th'] == zones_th[i]).values
 
     # CHPType parameter:
     sets['chp_type'] = ['Extraction', 'Back-Pressure', 'P2H']
@@ -805,7 +830,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
                     os.path.join(sim, 'writeresults.gms'))
     # Create cplex option file
-    cplex_options = {'epgap': 0.0001,  # TODO: For the moment hardcoded, it has to be moved to a config file
+    cplex_options = {'epgap': 0.005,  # TODO: For the moment hardcoded, it has to be moved to a config file
                      'numericalemphasis': 0,
                      'scaind': 1,
                      'lpmethod': 0,

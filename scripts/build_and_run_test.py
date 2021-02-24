@@ -18,20 +18,25 @@ sys.path.append(os.path.abspath('..'))
 import dispaset as ds
 
 # Load the configuration file
-config = ds.load_config('../ConfigFiles/ConfigTest.xlsx')
+config = ds.load_config('../ConfigFiles/ConfigTest_backup.xlsx')
 
 # Limit the simulation period (for testing purposes, comment the line to run the whole year)
 # config['StartDate'] = (2016, 1, 1, 0, 0, 0)
 # config['StopDate'] = (2016, 1, 7, 0, 0, 0)
 
-# Build the simulation environment:
+# # Build the simulation environment:
 SimData = ds.build_simulation(config)
-
-# Solve using GAMS:
+#
+# # Solve using GAMS:
 _ = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
 
 # Load the simulation results:
 inputs,results = ds.get_sim_results(config['SimulationDirectory'],cache=False)
+
+# import pandas as pd
+# rng = pd.date_range('2018-1-01','2018-12-31',freq='H')
+# # Generate country-specific plots
+# ds.plot_zone(inputs,results,z='GW',rng=rng)
 
 # Generate country-specific plots
 ds.plot_zone(inputs,results)
@@ -46,10 +51,14 @@ ds.plot_energy_zone_fuel(inputs,results,ds.get_indicators_powerplant(inputs,resu
 r = ds.get_result_analysis(inputs,results)
 
 # Analyze power flow tracing
-pft, pft_prct = ds.plot_power_flow_tracing_matrix(inputs, results, cmap="magma_r")
+pft, pft_prct = ds.plot_power_flow_tracing_matrix(inputs, results, cmap="magma_r", figsize=(15,10), idx=rng)
 
 # Plot net flows on a map
-ds.plot_net_flows_map(inputs, results, terrain=True, margin=3)
+# inputs['geo'] = pd.read_csv('E:\\Projects\\Github\\Dispa-SET\\Database\\ZonalData/Capitals_Africa.csv',
+#                             na_values=['', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan',
+#                                        '1.#IND', '1.#QNAN', 'N/A', 'NULL', 'NaN', 'nan'],
+#                             keep_default_na=False, index_col=0)
+ds.plot_net_flows_map(inputs, results, terrain=True, margin=3, bublesize=6000, figsize=(8,7))
 
 # Plot congestion in the interconnection lines on a map
-ds.plot_line_congestion_map(inputs, results, terrain=True, margin=3, figsize=(10,4), edge_width=6)
+ds.plot_line_congestion_map(inputs, results, terrain=True, margin=3, figsize=(9,7), edge_width=3.5, bublesize=100)

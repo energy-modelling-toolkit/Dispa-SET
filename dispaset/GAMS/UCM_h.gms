@@ -60,6 +60,7 @@ $setglobal ActivateFlexibleDemand 1
 SETS
 mk               Markets
 n                Nodes
+n_th             Thermal nodes
 l                Lines
 au               All Units
 u(au)            Generation units
@@ -106,7 +107,7 @@ CostRampDown(u)                  [EUR\MW]        Ramp-down costs
 CostShutDown(u)                  [EUR\u]         Shut-down costs
 CostStartUp(u)                   [EUR\u]         Start-up costs
 CostVariable(u,h)                [EUR\MW]        Variable costs
-CostHeatSlack(th,h)              [EUR\MWh]       Cost of supplying heat via other means
+CostHeatSlack(n_th,h)              [EUR\MWh]       Cost of supplying heat via other means
 CostH2Slack(p2h2,h)              [EUR\MWh]       Cost of supplying H2 by other means
 H2Demand(p2h2,h)                 [MW]            H2 rigid demand
 CostLoadShedding(n,h)            [EUR\MWh]       Cost of load shedding
@@ -118,10 +119,11 @@ EmissionRate(u,p)                [tP\MWh]        P emission rate
 FlowMaximum(l,h)                 [MW]            Line limits
 FlowMinimum(l,h)                 [MW]            Minimum flow
 Fuel(u,f)                        [n.a.]          Fuel type {1 0}
-HeatDemand(au,h)                 [MWh\u]         Heat demand profile for chp units
+HeatDemand(n_th,h)                 [MWh\u]         Heat demand profile for chp units
 LineNode(l,n)                    [n.a.]          Incidence matrix {-1 +1}
 LoadShedding(n,h)                [MW]            Load shedding capacity
 Location(au,n)                   [n.a.]          Location {1 0}
+Location_th(au,n_th)                   [n.a.]          Location {1 0}
 Markup(u,h)                      [EUR\MW]        Markup
 OutageFactor(u,h)                [%]             Outage Factor (100% = full outage)
 PartLoadMin(au)                  [%]             Minimum part load
@@ -181,6 +183,7 @@ $gdxin %inputfilename%
 
 $LOAD mk
 $LOAD n
+$LOAD n_th
 $LOAD l
 $LOAD au
 $LOAD u
@@ -222,6 +225,7 @@ $LOAD HeatDemand
 $LOAD LineNode
 $LOAD LoadShedding
 $LOAD Location
+$LOAD Location_th
 $LOAD Markup
 $LOAD Nunits
 $LOAD OutageFactor
@@ -260,6 +264,7 @@ $If %Verbose% == 0 $goto skipdisplay
 Display
 mk,
 n,
+n_th,
 l,
 u,
 t,
@@ -294,7 +299,8 @@ Fuel,
 HeatDemand,
 LineNode,
 Location,
-LoadShedding
+Location_th,
+LoadShedding,
 Markup,
 OutageFactor,
 PartLoadMin,
@@ -369,7 +375,7 @@ Reserve_2U(u,h)            [MW]    Spinning reserve up
 Reserve_2D(u,h)            [MW]    Spinning reserve down
 Reserve_3U(u,h)            [MW]    Non spinning quick start reserve up
 Heat(au,h)                 [MW]    Heat output by chp plant
-HeatSlack(au,h)            [MW]    Heat satisfied by other sources
+HeatSlack(n_th,h)            [MW]    Heat satisfied by other sources
 WaterSlack(s)              [MWh]   Unsatisfied water level constraint at end of optimization period
 StorageSlack(au,h)         [MWh]   Unsatisfied storage level constraint at end of simulation timestep
 H2Output(au,h)             [MWh]   H2 output from H2 storage to fulfill demand
@@ -428,7 +434,8 @@ EQ_Objective_function
 EQ_CHP_extraction_Pmax
 EQ_CHP_extraction
 EQ_CHP_backpressure
-EQ_CHP_demand_satisfaction
+*EQ_CHP_demand_satisfaction
+EQ_Heat_Demand_balance
 EQ_CHP_max_heat
 EQ_Heat_Storage_balance
 EQ_Heat_Storage_minimum
@@ -499,7 +506,7 @@ EQ_SystemCost(i)..
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
-         +sum(th, CostHeatSlack(th,i) * HeatSlack(th,i)*TimeStep)
+         +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
          +sum(p2h2, CostH2Slack(p2h2,i)*StorageSlack(p2h2,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
@@ -517,7 +524,7 @@ EQ_SystemCost(i)..
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
-         +sum(th, CostHeatSlack(th,i) * HeatSlack(th,i)*TimeStep)
+         +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
          +sum(p2h2, CostH2Slack(p2h2,i)*StorageSlack(p2h2,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
@@ -859,10 +866,17 @@ EQ_Max_P2H(p2h,i)..
          PowerCapacity(p2h) * Nunits(p2h)
 ;
 
-EQ_CHP_demand_satisfaction(th,i)..
-         Heat(th,i) + HeatSlack(th,i)
+*EQ_CHP_demand_satisfaction(th,i)..
+*         Heat(th,i) + HeatSlack(th,i)
+*         =E=
+*         HeatDemand(th,i)
+*;
+
+EQ_Heat_Demand_balance(n_th,i)..
+         sum(chp, Heat(chp,i)*Location_th(chp,n_th)) + sum(p2h, Heat(p2h,i)*Location_th(p2h,n_th))
          =E=
-         HeatDemand(th,i)
+         HeatDemand(n_th, i)
+         - HeatSlack(n_th,i)
 ;
 
 *Heat Storage balance
@@ -917,7 +931,8 @@ EQ_Objective_function,
 EQ_CHP_extraction_Pmax,
 EQ_CHP_extraction,
 EQ_CHP_backpressure,
-EQ_CHP_demand_satisfaction,
+*EQ_CHP_demand_satisfaction,
+EQ_Heat_Demand_balance,
 EQ_CHP_max_heat,
 EQ_CostRampUp,
 EQ_CostRampDown,
@@ -1066,7 +1081,7 @@ OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 ShadowPrice(n,h)
-HeatShadowPrice(au,h)
+HeatShadowPrice(n_th,h)
 LostLoad_MaxPower(n,h)
 LostLoad_MinPower(n,h)
 LostLoad_2D(n,h)
@@ -1076,7 +1091,7 @@ $If %MTS%==0 LostLoad_RampUp(n,h)
 $If %MTS%==0 LostLoad_RampDown(n,h)
 OutputGenMargin(n,h)
 OutputHeat(au,h)
-OutputHeatSlack(au,h)
+OutputHeatSlack(n_th,h)
 LostLoad_WaterSlack(s)
 StorageShadowPrice(au,h)
 H2ShadowPrice(p2h2,h)
@@ -1104,7 +1119,7 @@ OutputFlow(l,z)=Flow.L(l,z);
 OutputPower(u,z)=Power.L(u,z);
 OutputPowerConsumption(p2h,z)=PowerConsumption.L(p2h,z);
 OutputHeat(au,z)=Heat.L(au,z);
-OutputHeatSlack(au,z)=HeatSlack.L(au,z);
+OutputHeatSlack(n_th,z)=HeatSlack.L(n_th,z);
 OutputStorageInput(s,z)=StorageInput.L(s,z);
 OutputStorageInput(th,z)=StorageInput.L(th,z);
 OutputStorageLevel(s,z)=StorageLevel.L(s,z)/max(1,StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,z));
@@ -1123,7 +1138,8 @@ LostLoad_3U(n,z) = LL_3U.L(n,z);
 $If %MTS%==0 LostLoad_RampUp(n,z)    = sum(u,LL_RampUp.L(u,z)*Location(u,n));
 $If %MTS%==0 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
-HeatShadowPrice(au,z) = EQ_CHP_demand_satisfaction.m(au,z);
+*HeatShadowPrice(au,z) = EQ_CHP_demand_satisfaction.m(au,z);
+HeatShadowPrice(n_th,z) = EQ_Heat_Demand_balance.m(n_th,z);
 LostLoad_WaterSlack(s) = WaterSlack.L(s);
 StorageShadowPrice(s,z) = 0 ;
 OutputPtLDemand(p2h2,z) = PtLDemand.L(p2h2,z);

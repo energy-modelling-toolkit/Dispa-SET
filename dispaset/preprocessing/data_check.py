@@ -463,31 +463,28 @@ def check_units(config, plants):
     return True
 
 
-def check_heat_demand(plants, data):
+def check_heat_demand(plants, data, zones_th):
     """
     Function that checks the validity of the heat demand profiles
-
-    :param plants:  List of CHP plants
-    :param data:
+    :param     plants:  List of plants
+    :param     data: Dataframe with the heat demand time series
+    :param     zones_th: list with the heating zones
     """
     plants.index = plants['Unit']
-    plants_heating = plants[[str(plants['CHPType'][u]).lower() in commons['types_CHP'] or
-                            plants.loc[u, 'Technology'] == 'P2HT' for u in plants.index]]
+    plants_heating = plants[
+        [str(plants['CHPType'][u]).lower() in commons['types_CHP'] or plants.loc[u, 'Technology'] == 'P2HT' for u in
+         plants.index]]
     plants_chp = plants[[str(plants['CHPType'][u]).lower() in commons['types_CHP'] for u in plants.index]]
 
-    Nunits = 1
-    for u in data:
-        if u in plants_heating.index:
-            if 'Nunits' in plants_heating:
-                Nunits = plants.loc[u, 'Nunits']
-            else:
-                Nunits = 1
-            if (data[u] == 0).all():
-                logging.critical('Heat demand data for CHP unit "' + u + '" is either no found or always equal to zero')
-        else:
-            logging.warning('The heat demand profile with header "' + str(
-                u) + '" does not correspond to any CHP plant. It will be ignored.')
-        if u in plants_chp.index:
+    for z in data:  # for each heating zone in the heating demand data
+        if z not in zones_th:
+            logging.error('The heat demand profile with header "' + str(
+                z) + '" does not correspond to any heating zone. It will be ignored.')
+        elif (data[z] == 0).all():
+            logging.error('Heat demand data for zone "' + z + '" is either no found or always equal to zero')
+        if z in plants_chp.index:  # special case in which the heating zone corresponds to a single CHP unit
+            u = z
+            Nunits = plants.loc[u, 'Nunits']
             plant_CHP_type = plants.loc[u, 'CHPType'].lower()
             if pd.isnull(plants.loc[u, 'CHPMaxHeat']):
                 plant_Qmax = +np.inf
@@ -504,23 +501,22 @@ def check_heat_demand(plants, data):
                 Qmax = plant_Qmax * Nunits
             else:
                 logging.error('The CHP type for unit ' + u + ' is not valid.')
-                sys.exit(1)
             if np.isnan(Qmax) and plant_CHP_type != 'p2h':
-                logging.error('CHPPowerToHeat is not defined for unit ' + str(u) +
-                              ' appearing in the heat demand profiles')
+                logging.error(
+                    'CHPPowerToHeat is not defined for unit ' + str(u) + ' appearing in the heat demand profiles')
                 sys.exit(1)
             elif data[u].max() > Qmax:
-                logging.warning('The maximum thermal demand for unit ' + str(u) + ' (' + str(data[u].max()) +
-                                ') is higher than its thermal capacity (' + str(Qmax) + '). '
-                                'Slack heat will be used to cover that.')
+                logging.warning('The maximum thermal demand for unit ' + str(u) + ' (' + str(
+                    data[u].max()) + ') is higher than its thermal capacity (' + str(
+                    Qmax) + '). Slack heat will be used to cover that.')
             if data[u].min() < Qmin:
-                logging.warning('The minimum thermal demand for unit ' + str(u) + ' (' + str(data[u].min()) +
-                                ') is lower than its minimum thermal generation (' + str(Qmin) + ' MWth)')
+                logging.warning('The minimum thermal demand for unit ' + str(u) + ' (' + str(
+                    data[u].min()) + ') is lower than its minimum thermal generation (' + str(Qmin) + ' MWth)')
 
-    # check that a heating demand has been provided for all heating technologies
-    for u in plants_heating.index:
-        if u not in data:
-            logging.critical('No heat demand data was found for unit ' + u)
+    # check that a heating demand has been provided for all heating zones
+    for z in zones_th:
+        if z not in data:
+            logging.critical('No heat demand data was found for thermal zone ' + z)
             sys.exit(1)
 
     return True

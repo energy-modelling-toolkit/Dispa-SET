@@ -18,11 +18,12 @@ import dispaset as ds
 import pickle
 
 # Load the configuration file
-config = ds.load_config('../ConfigFiles/Config_ARES_ALLPP.xlsx')
+config = ds.load_config('../ConfigFiles/Config_Africa_TN.xlsx')
 
 scenarios = ['Baseline_', 'Baseline_NTC_', 'TEMBA_Reference_', 'TEMBA_1.5deg_', 'TEMBA_2.0deg_']
 
 scenario = 'Baseline_'
+selected_years = range(2009,2019,1)
 
 # define scenario name
 def run_scenarios(scenario):
@@ -34,7 +35,7 @@ def run_scenarios(scenario):
         config['NTC'] = config['NTC'][:-8] + '2025.csv'
 
     if (scenario == 'Baseline_') or (scenario == 'Baseline_NTC_'):
-        for year in range(2009, 2010, 1):
+        for year in selected_years:
             # adjust simmulation year
             start_date = [year, 1, 1, 0, 0, 0]
             stop_date = [year, 12, 31, 23, 59, 0]
@@ -99,40 +100,40 @@ def run_scenarios(scenario):
 
 # run_scenarios(scenario)
 
-# Load the simulation results:
-def load_all_results(scenarios):
-    all_inputs = {}
-    all_results = {}
-    all_r = {}
-    all_c = {}
-    all_operation = {}
-    old_path = config['SimulationDirectory']
-    for scenario in scenarios:
-        config['SimulationDirectory'] = old_path[:-8] + scenario + str('2015')
-        for year in range(1985, 2010, 24):
-            config['SimulationDirectory'] = config['SimulationDirectory'][:-4] + str(year)
-            inputs, results = ds.get_sim_results(config['SimulationDirectory'],cache=False)
-            all_inputs[scenario + str(year)], all_results[scenario + str(year)] = inputs, results
-            all_r[scenario + str(year)] = ds.get_result_analysis(inputs, results)
-            all_c[scenario + str(year)] = ds.CostExPost(inputs, results)
-            all_operation[scenario + str(year)] = ds.get_units_operation_cost(inputs, results)
-    with open('E:\Projects\Github\DispaSET-SideTools\Inputs\ARES_Africa/JRC/' + 'JRC_WaterValue_results' + '.p', 'wb') as handle:
-        pickle.dump(all_inputs, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        pickle.dump(all_results, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        pickle.dump(all_r, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        pickle.dump(all_c, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        pickle.dump(all_operation, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    return all_inputs, all_results, all_r, all_c, all_operation
-
-# aa = load_all_results(['Baseline_'])
+# # Load the simulation results:
+# def load_all_results(scenarios):
+#     all_inputs = {}
+#     all_results = {}
+#     all_r = {}
+#     all_c = {}
+#     all_operation = {}
+#     old_path = config['SimulationDirectory']
+#     for scenario in scenarios:
+#         config['SimulationDirectory'] = old_path[:-8] + scenario + str('2015')
+#         for year in range(1985, 2010, 24):
+#             config['SimulationDirectory'] = config['SimulationDirectory'][:-4] + str(year)
+#             inputs, results = ds.get_sim_results(config['SimulationDirectory'],cache=False)
+#             all_inputs[scenario + str(year)], all_results[scenario + str(year)] = inputs, results
+#             all_r[scenario + str(year)] = ds.get_result_analysis(inputs, results)
+#             all_c[scenario + str(year)] = ds.CostExPost(inputs, results)
+#             all_operation[scenario + str(year)] = ds.get_units_operation_cost(inputs, results)
+#     with open('E:\Projects\Github\DispaSET-SideTools\Inputs\ARES_Africa/JRC/' + 'JRC_WaterValue_results' + '.p', 'wb') as handle:
+#         pickle.dump(all_inputs, handle, protocol=pickle.HIGHEST_PROTOCOL)
+#         pickle.dump(all_results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+#         pickle.dump(all_r, handle, protocol=pickle.HIGHEST_PROTOCOL)
+#         pickle.dump(all_c, handle, protocol=pickle.HIGHEST_PROTOCOL)
+#         pickle.dump(all_operation, handle, protocol=pickle.HIGHEST_PROTOCOL)
+#     return all_inputs, all_results, all_r, all_c, all_operation
 #
-scenario = 'Baseline_'
-config['SimulationDirectory'] = config['SimulationDirectory'][:-8] + scenario + str(2015)
-inputs, results = ds.get_sim_results(config['SimulationDirectory'],cache=False)
-import pandas as pd
-rng = pd.date_range('2015-1-1','2015-1-8',freq='H')
-# Generate country-specific plots
-ds.plot_zone(inputs,results,z='CM',rng=rng)
+# # aa = load_all_results(['Baseline_'])
+# #
+# scenario = 'Baseline_'
+# config['SimulationDirectory'] = config['SimulationDirectory'][:-8] + scenario + str(2015)
+# inputs, results = ds.get_sim_results(config['SimulationDirectory'],cache=False)
+# import pandas as pd
+# rng = pd.date_range('2015-1-1','2015-1-8',freq='H')
+# # Generate country-specific plots
+# ds.plot_zone(inputs,results,z='CM',rng=rng)
 # ds.plot_zone(inputs,results,z='TZ')
 #
 # # Bar plot with the installed capacities in all countries:

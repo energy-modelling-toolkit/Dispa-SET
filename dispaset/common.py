@@ -45,7 +45,7 @@ commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': 'darkviolet'
                      'NUC': '#466eb4ff',
                      'SUN': '#e6a532ff',
                      'WIN': '#41afaaff',
-                     'WAT': '#0f056b',
+                     'WAT': '#00a0e1ff',
                      'HYD': '#A0522D',
                      'BIO': '#7daf4bff', 'GEO': '#7daf4bbf',
                      'Storage': '#b93c46ff', 'FlowIn': '#b93c46b2', 'FlowOut': '#b93c4666',
@@ -56,7 +56,8 @@ commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': 'darkviolet'
                      'BATS': '#41A317ff',
                      'BEVS': '#b9c33799',
                      'SCSP': '#e6a532ff',
-                     'P2GS' : '#A0522D'}
+                     'P2GS' : '#A0522D',
+                     'ShedLoad': '#ffffffff'}
 
 commons['colors']['curtailment'] = 'red'
 # Hatches associated with each fuel:

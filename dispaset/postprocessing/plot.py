@@ -308,9 +308,34 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
                          title='Generation per zone (the horizontal lines indicate the demand)')
     ax.set_ylabel('Generation [TWh]')
     demand = inputs['param_df']['Demand']['DA'].sum() / 1E6
+    demand.sort_index(inplace=True)
     ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005, linewidth=2,
             color='k')
+    ZonePosition = GenPerZone.copy()
+    ZonePosition['ShedLoad'] = results['OutputShedLoad'].sum() / 1E6
+    ShedLoad = ZonePosition.loc[:, 'ShedLoad']
+    ax.bar(range(0, ShedLoad.index.size), ShedLoad.values, bottom=GenPerZone.sum(axis=1).values,
+            edgecolor='black', hatch='X', color='w', width=[0.4])
+    handles, labels = ax.get_legend_handles_labels()  # get the handles
+    ax.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.15, 0.25))
     plt.show()
+
+    GenPerZone_prct = GenPerZone.div(ZonePosition.sum(axis=1), axis=0)
+    ShedLoad = ZonePosition.loc[:,'ShedLoad'] / ZonePosition.sum(axis=1)
+    demand_prct = demand/ZonePosition.sum(axis=1)
+    colors2 = [commons['colors'][tech] for tech in GenPerZone_prct.columns]
+
+    ax2 = GenPerZone_prct.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors2, alpha=0.8, legend='reverse',
+                         title='Generation share per zone (the horizontal lines indicate the demand)')
+    ax2.set_ylabel('Generation share [%]')
+    ax2.bar(range(0, ShedLoad.index.size), ShedLoad.values, bottom=GenPerZone_prct.sum(axis=1).values,
+            edgecolor='black', hatch='X', color='w', width=[0.4])
+    ax2.barh(demand_prct, left=ax2.get_xticks() - 0.4, width=[0.8] * len(demand_prct), height=ax2.get_ylim()[1] * 0.005,
+             linewidth=2, color='k')
+    handles, labels = ax2.get_legend_handles_labels()  # get the handles
+    ax2.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.15, 0.25))
+    plt.show()
+
     return GenPerZone
 
 
@@ -343,6 +368,7 @@ def plot_zone_capacities(inputs, plot=True):
         ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005,
                 linewidth=2,
                 color='k')
+    plt.show()
     return {'PowerCapacity': PowerCapacity, 'StorageCapacity': StorageCapacity}
 
 
@@ -990,7 +1016,7 @@ def get_congestion(inputs, flows, idx):
 
 # TODO: Generalize this function and provide descriptions
 def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, margin_type='Fixed', margin=0.20,
-                       geomap=True, color_geomap=None, terrain=False, figsize=(12, 8)):
+                       geomap=True, color_geomap=None, terrain=False, figsize=(12, 8), bublesize=5000):
     # Preprocess input data
     flows = results['OutputFlow'].copy()
     zones = inputs['sets']['n'].copy()
@@ -1021,10 +1047,10 @@ def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, mar
     weights = (10 * Flows['Flow'] / Flows['Flow'].max()).values
 
     # Define geospatial coordinates
-    pos = {zone: (v['CapitalLongitude'], v['CapitalLatitude']) for zone, v in geo.to_dict('index').items()}
+    pos = {zone: (v['Longitude'], v['Latitude']) for zone, v in geo.to_dict('index').items()}
 
     # Node sizes (Based on the net position of a zone)
-    sizes = [5000 * P[i] for i in g.nodes]
+    sizes = [bublesize * P[i] for i in g.nodes]
 
     # Assign colors based on net flows (if importing/exporting/neutral)
     node_neg = NetImports.columns[(NetImports < 0).any()].tolist()
@@ -1039,7 +1065,7 @@ def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, mar
             color_map.append('blue')
 
     # Show labels only in nodes whose size is > 100
-    labels = {i: i if 5000 * P[i] >= 100 else '' for i in g.nodes}
+    labels = {i: i if bublesize * P[i] >= 150 else '' for i in g.nodes}
 
     # Define projection (FIXME: currently only 4326 possible)
     projection = get_projection_from_crs(4326)
@@ -1049,7 +1075,7 @@ def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, mar
     title = "Power feed (red=Imports, green=Exports, blue=Neutral)"
 
     # Assign geo coordinates and draw them on a map
-    x, y = geo['CapitalLongitude'], geo['CapitalLatitude']
+    x, y = geo['Longitude'], geo['Latitude']
     transform = draw_map_cartopy(x, y, ax, crs, boundaries, margin_type, margin, geomap, color_geomap, terrain)
     x, y, z = ax.projection.transform_points(transform, x.values, y.values).T
 
@@ -1082,7 +1108,7 @@ def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, mar
 
 # TODO: Generalize this function and provide descriptions
 def plot_line_congestion_map(inputs, results, idx=None, crs=4326, boundaries=None, margin_type='Fixed', margin=0.20,
-                             geomap=True, color_geomap=None, terrain=False, figsize=(12, 8), edge_width=10):
+                             geomap=True, color_geomap=None, terrain=False, figsize=(12, 8), edge_width=10, bublesize=5000):
 
     # Preprocess input data
     zones = inputs['sets']['n'].copy()
@@ -1112,13 +1138,13 @@ def plot_line_congestion_map(inputs, results, idx=None, crs=4326, boundaries=Non
     weights = (100 * Congestion['Flow']).values
 
     # Define geospatial coordinates
-    pos = {zone: (v['CapitalLongitude'], v['CapitalLatitude']) for zone, v in geo.to_dict('index').items()}
+    pos = {zone: (v['Longitude'], v['Latitude']) for zone, v in geo.to_dict('index').items()}
 
     # Node sizes (Based on the net position of a zone)
-    sizes = [3000 for i in g.nodes]
+    sizes = [bublesize for i in g.nodes]
 
     # Show labels only in nodes whose size is > 100
-    labels = {i: i for i in g.nodes}
+    labels = {i: i if bublesize >= 500 else '' for i in g.nodes}
 
     # Define projection (FIXME: currently only 4326 possible)
     projection = get_projection_from_crs(4326)
@@ -1128,7 +1154,7 @@ def plot_line_congestion_map(inputs, results, idx=None, crs=4326, boundaries=Non
     title = "Line Congestion (Congestion levels: dark_red=High, green=Middle, blue=None)"
 
     # Assign geo coordinates and draw them on a map
-    x, y = geo['CapitalLongitude'], geo['CapitalLatitude']
+    x, y = geo['Longitude'], geo['Latitude']
     transform = draw_map_cartopy(x, y, ax, crs, boundaries, margin_type, margin, geomap, color_geomap, terrain)
     x, y, z = ax.projection.transform_points(transform, x.values, y.values).T
 
@@ -1144,6 +1170,7 @@ def plot_line_congestion_map(inputs, results, idx=None, crs=4326, boundaries=Non
                      # alpha=.7,
                      width=edge_width,
                      node_size=sizes,
+                     node_color='black',
                      labels=labels,
                      pos=pos,
                      edge_color=weights,
