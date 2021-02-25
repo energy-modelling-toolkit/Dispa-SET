@@ -4,26 +4,34 @@ This file defines a dictionary with global variables to be used in Dispa-SET suc
 """
 import datetime
 
-commons={}
+commons = {}
 # Timestep
 commons['TimeStep'] = '1h'
 
 # DispaSET technologies:
-commons['Technologies'] = ['COMC', 'GTUR', 'HDAM', 'HROR', 'HPHS', 'ICEN', 'PHOT', 'STUR', 'WTOF', 'WTON', 'CAES',
-                           'BATS', 'BEVS', 'THMS', 'P2GS','P2HT','SCSP', 'COMC_CCS']
+commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF', 'WTON',
+                           'COMC', 'GTUR', 'ICEN', 'SCSP', 'STUR',
+                           'BATS', 'BEVS', 'CAES', 'P2GS', 'THMS',
+                           'ABHP', 'ASHP', 'GETH', 'GSHP', 'HOBO', 'HYHP', 'P2HT', 'REHE', 'SOTH', 'WSHP']
 # List of VRES technologies:
-commons['tech_renewables'] = ['WTON', 'WTOF', 'PHOT', 'HROR']
+commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 # List of storage technologies:
-commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS','P2GS','SCSP']
+commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS', 'P2GS', 'SCSP']
+# List of power to heat technologies:
+commons['tech_p2ht'] = ['P2HT', 'ABHP', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
+# List of heat only technologies:
+commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH']
 # List of CHP types:
-commons['types_CHP'] = ['extraction','back-pressure', 'p2h']
+commons['types_CHP'] = ['extraction', 'back-pressure', 'p2h']
 # DispaSET fuels:
-commons['Fuels'] = ['BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH', 'GEO','HYD']
+commons['Fuels'] = ['AIR', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH', 'GEO',
+                    'HYD', 'WHT']
 # Ordered list of fuels for plotting (the first ones are negative):
-# commons['MeritOrder'] = ['Storage','FlowOut','GEO','NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT']
-commons['MeritOrder'] = ['THMS', 'SCSP', 'BATS', 'BEVS', 'HDAM', 'HPHS','P2GS', 'FlowOut', 'GEO', 'NUC', 'LIG',
+commons['MeritOrder'] = ['THMS', 'SCSP', 'BATS', 'BEVS', 'HDAM', 'HPHS', 'P2GS', 'FlowOut', 'GEO', 'NUC', 'LIG',
                          'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT',
                          'HYD']
+commons['MeritOrderHeat'] = ['AIR', 'GEO', 'NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN',
+                             'WAT', 'HYD', 'WHT']
 
 # Colors associated with each fuel:
 # commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': '#af4b91b2', 'OIL': '#af4b91ff',
@@ -48,7 +56,9 @@ commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': 'darkviolet'
                      'WAT': '#00a0e1ff',
                      'HYD': '#A0522D',
                      'BIO': '#7daf4bff', 'GEO': '#7daf4bbf',
-                     'Storage': '#b93c46ff', 'FlowIn': '#b93c46b2', 'FlowOut': '#b93c4666',
+                     'Storage': '#b93c46ff',
+                     'FlowIn': '#b93c46b2',
+                     'FlowOut': '#b93c4666',
                      'OTH': '#57D53B', 'WST': '#b9c337ff',
                      'HDAM': '#00a0e1ff',
                      'HPHS': 'blue',
@@ -56,15 +66,15 @@ commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': 'darkviolet'
                      'BATS': '#41A317ff',
                      'BEVS': '#b9c33799',
                      'SCSP': '#e6a532ff',
-                     'P2GS' : '#A0522D',
+                     'P2GS': '#A0522D',
                      'ShedLoad': '#ffffffff'}
 
 commons['colors']['curtailment'] = 'red'
 # Hatches associated with each fuel:
 commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '', 'GAS': '', 'NUC': '', 'SUN': '', 'WIN': '', 'WAT': '',
                       'BIO': '', 'GEO': '', 'Storage': '', 'WST': '', 'OTH': '', 'HYD': '',
-                      'FlowIn': '/', 'FlowOut': '\\', 'HDAM': '/','HPHS': '/','SCSP': '/', 'THMS': '','BATS': '/','BEVS': '/',
-                      'P2GS': '/'
+                      'FlowIn': '/', 'FlowOut': '\\', 'HDAM': '/', 'HPHS': '/', 'SCSP': '/', 'THMS': '', 'BATS': '/',
+                      'BEVS': '/', 'P2GS': '/'
                       }
 
-commons['logfile'] = str(datetime.datetime.now()).replace(':','-').replace(' ','_') + '.dispa.log'
+commons['logfile'] = str(datetime.datetime.now()).replace(':', '-').replace(' ', '_') + '.dispa.log'

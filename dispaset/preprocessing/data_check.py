@@ -260,6 +260,11 @@ def check_p2h(config, plants):
         return True
 
     check_keys(plants, keys, 'P2HT')
+    check_keys(plants, keys, 'ABHP')
+    check_keys(plants, keys, 'ASHP')
+    check_keys(plants, keys, 'GSHP')
+    check_keys(plants, keys, 'HYHP')
+    check_keys(plants, keys, 'WSHP')
     check_NonNaNKeys(plants, NonNaNKeys)
     check_StrKeys(plants, StrKeys)
 
@@ -269,6 +274,26 @@ def check_p2h(config, plants):
             logging.critical('The COP value of p2h units must be comprised between 0 and 20. '
                              'The provided value for unit ' + u + ' is "' + str(plants.loc[u, 'COP'] + '"'))
             sys.exit(1)
+
+    return True
+
+
+def check_heat(config, plants):
+    """
+    Function that checks the heat only unit characteristics
+    """
+    keys = ['PowerCapacity', 'Efficiency']
+    NonNaNKeys = []
+    StrKeys = []
+
+    if len(plants) == 0:  # If there are no P2HT units, exit the check
+        return True
+
+    check_keys(plants, keys, 'HOBO')
+    check_keys(plants, keys, 'GETH')
+    check_keys(plants, keys, 'SOTH')
+    check_NonNaNKeys(plants, NonNaNKeys)
+    check_StrKeys(plants, StrKeys)
 
     return True
 

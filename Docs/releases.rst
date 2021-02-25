@@ -5,7 +5,7 @@ Releases
 
 Major stable releases:
 
-* Dispa-SET v2.4
+*  Dispa-SET v2.4
 
 * `Dispa-SET v2.3`_ 
 

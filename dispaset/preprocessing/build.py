@@ -10,7 +10,7 @@ from future.builtins import int
 
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
     check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_h2, check_df, check_MinMaxFlows, \
-    check_FlexibleDemand, check_reserves, check_PtLDemand
+    check_FlexibleDemand, check_reserves, check_PtLDemand, check_heat
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
@@ -174,19 +174,23 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # Defining the hydro storages:
     plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
-    # check storage plants:
     check_sto(config, plants_sto)
+
+    # Defining the heat only units:
+    plants_heat = plants[[u in commons['tech_heat'] for u in plants['Technology']]]
+    check_heat(config, plants_heat)
 
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
     check_chp(config, plants_chp)
 
     # Defining the P2H units:
-    plants_p2h = plants[plants['Technology'] == 'P2HT']
+    plants_p2h = plants[[u in commons['tech_p2ht'] for u in plants['Technology']]]
     check_p2h(config, plants_p2h)
 
     # All heating units:
-    plants_heat = plants_chp.append(plants_p2h)
+    plants_heat = plants_heat.append(plants_chp)
+    plants_heat = plants_heat.append(plants_p2h)
 
     # Defining the P2H units:
     plants_h2 = plants[plants['Technology'] == 'P2GS']
@@ -315,6 +319,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
             if Plants_merged.Technology[u] == 'PHOT':
                 Plants_merged.loc[u, 'PowerCapacity'] = Plants_merged.loc[u, 'PowerCapacity'] * config['modifiers'][
                     'Solar']
+            if Plants_merged.Technology[u] == 'SOTH':
+                Plants_merged.loc[u, 'PowerCapacity'] = Plants_merged.loc[u, 'PowerCapacity'] * config['modifiers'][
+                    'Solar']
     if config['modifiers']['Wind'] != 1:
         logging.info('Scaling Wind Capacity by a factor ' + str(config['modifiers']['Wind']))
         for u in Plants_merged.index:
@@ -359,11 +366,20 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         Plants_merged.loc[u, 'PartLoadMin'] = Plants_merged.loc[u, 'PartLoadMin'] * PowerCapacity / PurePowerCapacity
         Plants_merged.loc[u, 'PowerCapacity'] = PurePowerCapacity
 
-    Plants_p2h = Plants_merged[Plants_merged['Technology'] == 'P2HT'].copy()
-    # check chp plants:
+    # Filter power to heat units
+    Plants_p2h = Plants_merged[[u in commons['tech_p2ht'] for u in Plants_merged['Technology']]].copy()
+    # check power to heat plants:
     check_p2h(config, Plants_p2h)
+
+    # Filter heat only plants
+    Plants_heat_only = Plants_merged[[u in commons['tech_heat'] for u in Plants_merged['Technology']]].copy()
+    # Check heat only units
+    check_heat(config, Plants_heat_only)
+
     # All heating plants:
-    Plants_heat = Plants_chp.append(Plants_p2h)
+    Plants_heat = Plants_heat_only.copy()
+    Plants_heat = Plants_heat.append(Plants_chp)
+    Plants_heat = Plants_heat.append(Plants_p2h)
 
     Plants_h2 = Plants_merged[Plants_merged['Technology'] == 'P2GS'].copy()
     # check chp plants:
@@ -449,6 +465,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets['t'] = commons['Technologies']
     sets['tr'] = commons['tech_renewables']
     sets['wat'] = Plants_wat.index.tolist()
+    sets['hu'] = Plants_heat_only.index.tolist()
 
     ###################################################################################################################
     ############################################   Parameters    ######################################################

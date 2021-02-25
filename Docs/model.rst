@@ -17,18 +17,20 @@ Sets
 	======= =================================================================================
 	Name	Description
 	======= =================================================================================
-	au	All units
+	au		All units
 	f       Fuel types
 	h       Hours
 	i(h)    Time step in the current optimization horizon
 	l       Transmission lines between nodes
 	mk      {DA: Day-Ahead, 2U: Reserve up, 2D: Reserve Down, flex}
 	n       Zones within each country (currently one zone, or node, per country)
+	nth     District heating zones (Multiple units can supply heat)
 	p       Pollutants
 	p2h(au) Power to heat units
 	p2h2(s) Power to H2 storage units
 	t       Power generation technologies
 	th(au)  Units with thermal storage
+	hu(au)  Heat only units
 	tr(t)   Renewable power generation technologies
 	u(au)   Generation units (all units minus P2HT units)
 	s(u)    Storage units (including hydro reservoirs)
@@ -45,7 +47,7 @@ Parameters
 	======================================= ======= =============================================================
 	Name                                    Units   Description
 	======================================= ======= =============================================================
-	AvailabilityFactor(u,h)                 %       Percentage of nominal capacity available
+	AvailabilityFactor(au,h)                %       Percentage of nominal capacity available
 	CHPPowerLossFactor(u)                   %       Power loss when generating heat
 	CHPPowerToHeat(u)                       %       Nominal power-to-heat factor
 	CHPMaxHeat(chp)                         MW      Maximum heat capacity of chp plant
@@ -57,34 +59,36 @@ Parameters
 	CostRampUp(u)                           EUR/MW  Ramp-up costs
 	CostShutDown(u)                         EUR/u   Shut-down costs for one unit
 	CostStartUp(u)                          EUR/u   Start-up costs for one unit
-	CostVariable(u,h)                       EUR/MWh Variable costs
-	CostHeatSlack(th,h)              	EUR/MWh Cost of supplying heat via other means
-	CostH2Slack(p2h2,h)			EUR/MWh Cost of supplying H2 by other means
+	CostVariable(au,h)                      EUR/MWh Variable costs
+	CostHeatSlack(nth,h)                    EUR/MWh Cost of supplying heat via other means
+	CostH2Slack(p2h2,h)                     EUR/MWh Cost of supplying H2 by other means
 	Curtailment(n)                          n.a.    Curtailment {binary: 1 allowed}
 	Demand(mk,n,h)                          MW      Hourly demand in each zone
 	Efficiency(p2h,h)                       %       Power plant efficiency
 	EmissionMaximum(n,p)                    tP      Emission limit per zone for pollutant p
 	EmissionRate(u,p)                       tP/MWh  Emission rate of pollutant p from unit u
-	FlowMaximum(l,h)			MW	Maximum flow in line
-	FlowMinimum(l,h)			MW	Minimum flow in line
+	FlowMaximum(l,h)                        MW      Maximum flow in line
+	FlowMinimum(l,h)                        MW      Minimum flow in line
 	Fuel(u,f)                               n.a.    Fuel type used by unit u {binary: 1 u uses f}
-	HeatDemand(au,h)                	MWh/u   Heat demand profile for chp units
+	HeatDemand(nth,h)                       MWh/u   Heat demand profile for chp units
 	K_QuickStart(n)                      	n.a.	Part of the reserve that can be provided by offline quickstart units
 	LineNode(l,n)                           n.a.    Line-zone incidence matrix {-1,+1}
+	LoadMaximum(au,h)                       %       Maximum load given AF and OF
 	LoadShedding(n,h)                       MW      Load that may be shed per zone in 1 hour
 	Location(au,n)                          n.a.    Location {binary: 1 u located in n}
-	LPFormulation				n.a.	Defines the equation that will be present: 1 for LP and 0 for MIP
-	Markup					EUR/MW	Markup
-	MTS					n.a.	Defines the equation that will be present: 1 for MidTermScheduling, 0 for normal optimization
-	Nunits(u)                        	n.a.    Number of units inside the cluster
-	OutageFactor(u,h)                       %       Outage factor (100 % = full outage) per hour
+	LocationTH(au,nth)                      n.a.    Location {binary: 1 u located in nth)
+	LPFormulation                           n.a.    Defines the equation that will be present: 1 for LP and 0 for MIP
+	Markup                                  EUR/MW  Markup
+	MTS                                     n.a.    Defines the equation that will be present: 1 for MidTermScheduling, 0 for normal optimization
+	Nunits(u)                               n.a.    Number of units inside the cluster
+	OutageFactor(au,h)                      %       Outage factor (100 % = full outage) per hour
 	PartLoadMin(u)                          %       Percentage of minimum nominal capacity
 	PowerCapacity(au)                       MW/u    Installed capacity
 	PowerInitial(u)                         MW/u    Power output before initial period
 	PowerMinStable(au)                      MW/u    Minimum power for stable generation
 	PowerMustRun(u)                         MW      Minimum power output
 	PriceTransmission(l,h)                  EUR/MWh	Price of transmission between zones
-	QuickStartPower(u,h)            	MW/h/u  Available max capacity for tertiary reserve
+	QuickStartPower(u,h)                    MW/h/u  Available max capacity for tertiary reserve
 	RampDownMaximum(u)                      MW/h/u  Ramp down limit
 	RampShutDownMaximum(u,h)                MW/h/u  Shut-down ramp limit
 	RampStartUpMaximum(u,h)                 MW/h/u  Start-up ramp limit
@@ -99,10 +103,10 @@ Parameters
 	StorageMinimum(au)                      MWh/u   Minimum storage level
 	StorageOutflow(u,h)                     MWh/u   Storage outflows (spills)
 	StorageProfile(u,h)                     %       Storage long-term level profile
-	StorageSelfDischarge(au)		%/day	Self discharge of the storage units
-	Technology(u,t)                         n.a.    Technology type {binary: 1: u belongs to t}
+	StorageSelfDischarge(au)                %/day   Self discharge of the storage units
+	Technology(au,t)                        n.a.    Technology type {binary: 1: u belongs to t}
 	TimeDownMinimum(u)                      h       Minimum down time
-	TimeStep				h	Duration of a timestep of optimization
+	TimeStep                                h       Duration of a timestep of optimization
 	TimeUpMinimum(u)                        h       Minimum up time
 	VOLL()                                  EUR/MWh	Value of lost load
 	======================================= ======= =============================================================
@@ -114,40 +118,58 @@ Optimization Variables
 
 .. table::
 
-    ======================= ======= =============================================================
-    Name                    Units   Description
-    ======================= ======= =============================================================
-    Committed(u,h)          n.a.    Unit committed at hour h {1,0}
-    CostStartUpH(u,h)       EUR     Cost of starting up
-    CostShutDownH(u,h)      EUR     Cost of shutting down
-    CostRampUpH(u,h)        EUR     Ramping cost
-    CostRampDownH(u,h)	    EUR     Ramping cost
-    CurtailedPower(n,h)	    MW	    Curtailed power at node n
-    Flow(l,h)               MW      Flow through lines
-    Heat(au,h)              MW      Heat output by chp plant
-    HeatSlack(au,h)         MW      Heat satisfied by other sources
-    Power(u,h)              MW      Power output
-    PowerConsumption(p2h,h) MW	    Power consumption by P2H
-    PowerMaximum(u,h)       MW      Power output
-    PowerMinimum(u,h)       MW      Power output
-    Reserve_2U(u,h)         MW      Spinning reserve up
-    Reserve_2D(u,h)         MW      Spinning reserve down
-    Reserve_3U(u,h)         MW      Non spinning quick start reserve up
-    ShedLoad(n,h)           MW      Shed load
-    StorageInput(au,h)      MWh     Charging input for storage units
-    StorageLevel(au,h)      MWh     Storage level of charge
-    StorageSlack(s,i)	    MWh     Unsatisfied storage level
-    Spillage(s,h)           MWh     Spillage from water reservoirs
-    SystemCost(h)           EUR     Total system cost
-    LL_MaxPower(n,h)        MW      Deficit in terms of maximum power
-    LL_RampUp(u,h)          MW      Deficit in terms of ramping up for each plant
-    LL_RampDown(u,h)        MW      Deficit in terms of ramping down
-    LL_MinPower(n,h)        MW      Power exceeding the demand
-    LL_2U(n,h)              MW      Deficit in reserve up
-    LL_3U(n,h)              MW      Deficit in reserve up - non spinning
-    LL_2D(n,h)              MW      Deficit in reserve down
-    WaterSlack(s)	    MWh     Unsatisfied water level at end of optimization period
-    ======================= ======= =============================================================
+    ========================== ======= =============================================================
+    Name                       Units   Description
+    ========================== ======= =============================================================
+    AccumulatedOverSupply(n,h) MWh     Accumulated oversupply due to the flexible demand  
+    Committed(u,h)             n.a.    Unit committed at hour h {1,0}
+    CostStartUpH(u,h)          EUR     Cost of starting up
+    CostShutDownH(u,h)         EUR     Cost of shutting down
+    CostRampUpH(u,h)           EUR     Ramping cost
+    CostRampDownH(u,h)	       EUR     Ramping cost
+    CurtailedPower(n,h)	       MW      Curtailed power at node n
+    CurtailedHeat(n_th,h)      MW      Curtailed heat at node nth
+    Flow(l,h)                  MW      Flow through lines
+    H2Output(au,h)             MWh     H2 output from H2 storage to fulfill the demand
+    Heat(au,h)                 MW      Heat output by chp plant
+    HeatSlack(nth,h)           MW      Heat satisfied by other sources
+    Power(u,h)                 MW      Power output
+    PowerConsumption(p2h,h)    MW	    Power consumption by P2H
+    PowerMaximum(u,h)          MW      Power output
+    PowerMinimum(u,h)          MW      Power output
+    PtLDemand(au,h)            MW      Demand of H2 for PtL at each time step for P2HT units
+    Reserve_2U(u,h)            MW      Spinning reserve up
+    Reserve_2D(u,h)            MW      Spinning reserve down
+    Reserve_3U(u,h)            MW      Non spinning quick start reserve up
+    ShedLoad(n,h)              MW      Shed load
+    StorageInput(au,h)         MWh     Charging input for storage units
+    StorageLevel(au,h)         MWh     Storage level of charge
+    StorageSlack(au,h)	       MWh     Unsatisfied storage level
+    Spillage(s,h)              MWh     Spillage from water reservoirs
+    SystemCost(h)              EUR     Total system cost
+    LL_MaxPower(n,h)           MW      Deficit in terms of maximum power
+    LL_RampUp(u,h)             MW      Deficit in terms of ramping up for each plant
+    LL_RampDown(u,h)           MW      Deficit in terms of ramping down
+    LL_MinPower(n,h)           MW      Power exceeding the demand
+    LL_2U(n,h)                 MW      Deficit in reserve up
+    LL_3U(n,h)                 MW      Deficit in reserve up - non spinning
+    LL_2D(n,h)                 MW      Deficit in reserve down
+    WaterSlack(s)	           MWh     Unsatisfied water level at end of optimization period
+    ========================== ======= =============================================================
+
+
+Free Variables
+--------------
+
+.. table::
+
+    ========================== ======= =============================================================
+    Name                       Units   Description
+    ========================== ======= =============================================================
+    SystemCostD                EUR     Total system cost for one optimization period
+	DemandModulation           MW      Difference between the flexible demand and the baseline
+    ========================== ======= =============================================================
+
 
 Integer Variables
 -----------------
@@ -186,11 +208,12 @@ The goal of the unit commitment problem is to minimize the total power system co
 	& + \sum_{u,i} ( CostStartUpH_{u,i} + CostShutDownH_{u,i})   \\
 	& + \sum_{u,i} (CostRampUpH_{u,i} + CostRampDownH_{u,i})  \\
 	& + \sum_{u,i} CostVariable_{u,i} \cdot Power_{u,i} \cdot TimeStep    \\
+	& + \sum_{hu,i} CostVariable_{hu,i} \cdot Heat_{hu,i} \cdot TimeStep     \\
 	& + \sum_{l,i} PriceTransimission_{l,i} \cdot Flow_{l,i} \cdot TimeStep \\ 
 	& + \sum_{n,i} CostLoadShedding_{i,n} \cdot ShedLoad_{i,n} \cdot TimeStep  \\
-	& + \sum_{th,i} CostHeatSlack_{th,i} \cdot  HeatSlack_{th,i} \cdot TimeStep) \\
+	& + \sum_{th,i} CostHeatSlack_{nth,i} \cdot  HeatSlack_{nth,i} \cdot TimeStep) \\
 	& + \sum_{p2h2,i} CostH2Slack_{p2h2,i} \cdot StorageSlack_{p2h2,i} \cdot TimeStep \\
-	& + \sum _{chp,i} CostVariable_{chp,i} \cdot CHPPowerLossFactor_{chp} \cdot Heat_{chp,i} \cdot TimeStep) \\
+	& + \sum_{chp,i} CostVariable_{chp,i} \cdot CHPPowerLossFactor_{chp} \cdot Heat_{chp,i} \cdot TimeStep) \\
 	& + \sum_{i,n} VOLL_{Power} \cdot \left( \mathit{LL}_{MaxPower,i,n} + \mathit{LL}_{MinPower,i,n} \right) \cdot TimeStep \\
 	& + \sum_{i,n} 0.8 \cdot VOLL_{Reserve} \cdot \left( LL_{2U,i,n} + LL_{2D,i,n}+ LL_{3U,i,n} \right) \cdot TimeStep \\
 	& + \sum_{u,i} 0.7 \cdot VOLL_{Ramp} \cdot \left( LL_{RampUp,u,i} + LL_{RampDown,u,i} \right)\cdot TimeStep \\
@@ -217,8 +240,8 @@ The variable production costs (in EUR/MWh), are determined by fuel and emission 
 
 .. math::
 	\begin{align}
-	 \mathit{CostVariable}_{u,h}= &\mathit{Markup}_{u,h} + \sum _{n,f}\left(\frac{\mathit{Fuel}_{u,f} \cdot \mathit{FuelPrice}_{n,f,h} \cdot \mathit{Location}_{u,n}}{\mathit{Efficiency}_u}\right)\\
-				      & + \sum _p\left(\mathit{EmissionRate}_{u,p} \cdot \mathit{PermitPrice}_p\right)
+	 \mathit{CostVariable}_{au,h}= &\mathit{Markup}_{au,h} + \sum _{n,f}\left(\frac{\mathit{Fuel}_{au,f} \cdot \mathit{FuelPrice}_{n,f,h} \cdot \mathit{Location}_{au,n}}{\mathit{Efficiency}_u}\right)\\
+				      & + \sum _p\left(\mathit{EmissionRate}_{au,p} \cdot \mathit{PermitPrice}_p\right)
 	\end{align}
 
 The variable cost includes an additional mark-up parameter that can be used for calibration and validation purposes.
@@ -352,9 +375,7 @@ The power output is limited by the available capacity, if the unit is committed:
 
 	\mathit{Power}_{u,i}
 
-	 \leq \mathit{PowerCapacity}_u \cdot \mathit{AvailabilityFactor}_{u,i}
-
-	 \cdot (1-\mathit{OutageFactor}_{u,i}) \cdot \mathit{Committed}_{u,i}
+	 \leq \mathit{PowerCapacity}_u \cdot \mathit{AvailabilityFactor}_{u,i} \cdot (1-\mathit{OutageFactor}_{u,i}) \cdot \mathit{Committed}_{u,i}
 
 The availability factor is used for renewable technologies to set the maximum time-dependent generation level. It is set to one for the traditional power plants. The outage factor accounts for the share of unavailable power due to planned or unplanned outages.
 
@@ -505,25 +526,44 @@ Some storage units are equiped with large reservoirs, whose capacity at full loa
 
 where N is the last period of the optimization horizon, StorageProfile is a non-dimensional minimum storage level provided as an exogenous input and WaterSlack is a variable defining the unsatified water level. The price associated to that water is very high.
 
-Heat production constraints (CHP plants only)
----------------------------------------------
 
-In DispaSET Power plants can be indicated as CHP satisfying one heat demand.  Heat Demand can be covered either by a CHP plant or by alternative heat supply options (Heat Slack).
+Heat balance
+------------
 
-.. image:: figures/CHP_flows.png
-
-The following two heat balance constraints are used for any CHP and P2H plant types.
+In Dispa-SET heat demand is specified for individual heating zones (nth). It can be covered either by a CHP plant, P2HT unit or by alternative heat supply options (Heat Slack) or a combination of all three types of units.
 
 .. math::
 
-    Heat(th,i) + HeatSlack(th,i)
-    = HeatDemand(th,i)
+    \sum _{chp} Heat_{chp,i} \cdot LocationTH_{chp,nth} \\
+	+ \sum _{p2h} (Heat_{p2h,i} \cdot LocationTH_{p2h, nth}) \\
+	+ \sum _{hu} (Heat_{hu,i} \cdot LocationTH_{hu, nth}) \\
+	= HeatDemand_{nth,i} - HeatSlack_{nth,i}
+	
+
+Heat output cosntraints
+-----------------------
+
+Simmilarly to Power output constraints, Heat output must be below maximum generation capacity. 
+
+.. math::
+    
+	Heat_{hu,i} \leq PowerCapacity_{hu} \cdot \mathit{AvailabilityFactor}_{hu,i} \cdot (1-\mathit{OutageFactor}_{hu,i})
+
+
+Heat production constraints (CHP plants only)
+---------------------------------------------
+
+In DispaSET Power plants can be indicated as CHP which gives them the possibility to satisfy heat demand.
+
+.. image:: figures/CHP_flows_v2.png
+
+The following heat balance constraints are used for any CHP and P2H plant types.
 
 .. math::
 
     StorageInput_{chp,i} \leq CHPMaxHeat_{chp} \cdot \mathit{Nunits}_{chp} 
 
-The constraints between heat and power production differ for each plant design and explained within the following subsections.
+The constraints between heat and power production differ for each plant design and are explained within the following subsections.
 
 Steam plants with Backpressure turbine
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -590,6 +630,26 @@ The vertical dotted line corresponds to the heat pump (or resistance heater) the
     Power_{chp,i}
     \geq
     PowerMustRun_{chp,i} - StorageInput_{chp,i} \cdot CHPPowerLossFactor_{chp}
+
+Power to heat units (labeled as P2HT technology)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Oposite to power plants coupled with any power to heat option, individual power to heat units (technology = P2HT) have only one mode of operation. They consume power to generate heat. In Dispa-SET these units are 
+either small scale residential heat pumps or electric heaters or large industrial or district heating devices power by electricity. A shematic overview of these units is shown below:  
+
+.. figure:: figures/P2HT_flows.png
+       :align: center
+
+They are subjet to the following set of constraints:
+
+.. math::
+
+   StorageInput_{p2h,i} = PowerConsumption_{p2h,i} \cdot Efficiency_{p2h,i}
+   
+.. math::
+
+   PowerConsumption_{p2h,i} \leq PowerCapacity_{p2h} \cdot Nunits_{p2h}
+
 
 Heat Storage
 ~~~~~~~~~~~~
@@ -686,6 +746,7 @@ Firstly, the cost equation is modified as follow:
 	& + \sum_{u,i} ( CostStartUpH_{u,i} + CostShutDownH_{u,i})   \\
 	& + \sum_{u,i} (CostRampUpH_{u,i} + CostRampDownH_{u,i})  \\
 	& + \sum_{u,i} CostVariable_{u,i} \cdot Power_{u,i} \cdot TimeStep    \\
+	& + \sum_{hu,i} CostVariable_{hu,i} \cdot Heat_{hu,i} \cdot TimeStep    \\
 	& + \sum_{l,i} PriceTransimission_{l,i} \cdot Flow_{l,i} \cdot TimeStep \\ 
 	& + \sum_{n,i} CostLoadShedding_{i,n} \cdot ShedLoad_{i,n} \cdot TimeStep  \\
 	& + \sum_{th,i} CostHeatSlack_{th,i} \cdot  HeatSlack_{th,i} \cdot TimeStep) \\

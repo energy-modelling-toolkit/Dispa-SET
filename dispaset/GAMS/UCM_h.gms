@@ -73,6 +73,7 @@ chp(u)           CHP units
 p2h(au)          Power to heat units
 p2h2(u)          power to hydrogen storage technologies
 th(au)           Units with thermal storage
+hu(au)           Heat only units
 h                Hours
 i(h)             Subset of simulated hours for one iteration
 wat(s)           hydro technologies
@@ -93,7 +94,7 @@ Alias(i,ii);
 *Parameters as defined in the input file
 * \u indicate that the value is provided for one single unit
 PARAMETERS
-AvailabilityFactor(u,h)          [%]             Availability factor
+AvailabilityFactor(au,h)          [%]             Availability factor
 CHPPowerLossFactor(u)            [%]             Power loss when generating heat
 CHPPowerToHeat(u)                [%]             Nominal power-to-heat factor
 CHPMaxHeat(chp)                  [MW\u]          Maximum heat capacity of chp plant
@@ -106,7 +107,7 @@ CostRampUp(u)                    [EUR\MW]        Ramp-up costs
 CostRampDown(u)                  [EUR\MW]        Ramp-down costs
 CostShutDown(u)                  [EUR\u]         Shut-down costs
 CostStartUp(u)                   [EUR\u]         Start-up costs
-CostVariable(u,h)                [EUR\MW]        Variable costs
+CostVariable(au,h)                [EUR\MW]        Variable costs
 CostHeatSlack(n_th,h)              [EUR\MWh]       Cost of supplying heat via other means
 CostH2Slack(p2h2,h)              [EUR\MWh]       Cost of supplying H2 by other means
 H2Demand(p2h2,h)                 [MW]            H2 rigid demand
@@ -125,7 +126,7 @@ LoadShedding(n,h)                [MW]            Load shedding capacity
 Location(au,n)                   [n.a.]          Location {1 0}
 Location_th(au,n_th)                   [n.a.]          Location {1 0}
 Markup(u,h)                      [EUR\MW]        Markup
-OutageFactor(u,h)                [%]             Outage Factor (100% = full outage)
+OutageFactor(au,h)                [%]             Outage Factor (100% = full outage)
 PartLoadMin(au)                  [%]             Minimum part load
 PowerCapacity(au)                [MW\u]          Installed capacity
 PowerInitial(u)                  [MW\u]          Power output before initial period
@@ -148,7 +149,7 @@ StorageInflow(s,h)               [MW\u]          Storage inflows (potential ener
 StorageInitial(au)               [MWh]           Storage level before initial period
 StorageProfile(s,h)              [%]             Storage level to be resepected at the end of each horizon
 StorageMinimum(au)               [MWh]           Storage minimum
-Technology(u,t)                  [n.a.]          Technology type {1 0}
+Technology(au,t)                  [n.a.]          Technology type {1 0}
 TimeDownMinimum(u)               [h]             Minimum down time
 TimeUpMinimum(u)                 [h]             Minimum up time
 PtLDemandInput(p2h2,h)           [MWh]           Demand of H2 for PtL at each timestep (useless for MTS)
@@ -162,7 +163,7 @@ QuickStartPower(u,h)             [MW\h\u]        Available max capacity in terti
 *Parameters as used within the loop
 PARAMETERS
 CostLoadShedding(n,h)            [EUR\MW]        Value of lost load
-LoadMaximum(u,h)                 [%]             Maximum load given AF and OF
+LoadMaximum(au,h)                 [%]             Maximum load given AF and OF
 PowerMustRun(u,h)                [MW\u]          Minimum power output
 StorageFinalMin(s)               [MWh]           Minimum storage level at the end of the optimization horizon
 MaxFlexDemand(n)                 [MW]            Maximum value of the flexible demand parameter
@@ -197,6 +198,7 @@ $LOAD p2h2
 $LOAD chp
 $LOAD p2h
 $LOAD th
+$LOAD hu
 $LOAD h
 $LOAD z
 $LOAD AvailabilityFactor
@@ -276,6 +278,8 @@ p2h2,
 wat,
 chp,
 p2h,
+th,
+hu,
 h,
 AvailabilityFactor,
 CHPPowerLossFactor,
@@ -354,6 +358,7 @@ CostShutDownH(u,h)         [EUR]   cost of shutting down
 CostRampUpH(u,h)           [EUR]   Ramping cost
 CostRampDownH(u,h)         [EUR]   Ramping cost
 CurtailedPower(n,h)        [MW]    Curtailed power at node n
+CurtailedHeat(n_th,h)      [MW]    Curtailed heat at node n_th
 Flow(l,h)                  [MW]    Flow through lines
 Power(u,h)                 [MW]    Power output
 PowerConsumption(p2h,h)    [MW]    Power consumption by P2H units
@@ -399,7 +404,7 @@ CommittedInitial(u)$(PowerInitial(u)>0)=1;
 * Definition of the minimum stable load:
 PowerMinStable(au) = PartLoadMin(au)*PowerCapacity(au);
 
-LoadMaximum(u,h)= AvailabilityFactor(u,h)*(1-OutageFactor(u,h));
+LoadMaximum(au,h)= AvailabilityFactor(au,h)*(1-OutageFactor(au,h));
 
 * parameters for clustered formulation (quickstart is defined as the capability to go to minimum power in 15 min)
 QuickStartPower(u,h) = 0;
@@ -457,6 +462,7 @@ EQ_P2H
 EQ_Max_P2H
 EQ_Power_must_run
 EQ_Power_available
+EQ_Heat_available
 EQ_Reserve_2U_capability
 EQ_Reserve_2D_capability
 EQ_Reserve_3U_capability
@@ -504,6 +510,7 @@ EQ_SystemCost(i)..
          sum(u,CostFixed(u)*TimeStep*Committed(u,i))
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
+         +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
@@ -522,6 +529,7 @@ EQ_SystemCost(i)..
          +sum(u,CostStartUpH(u,i) + CostShutDownH(u,i))
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
+         +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
@@ -717,6 +725,15 @@ EQ_Power_available(u,i)..
                         *Committed(u,i)
 ;
 
+* Maximum heat output is below the available capacity
+EQ_Heat_available(hu,i)..
+         Heat(hu,i)
+         =L=
+         PowerCapacity(hu)
+                 *LoadMaximum(hu,i)
+*                        *Committed(u,i)
+;
+
 *Storage level must be above a minimum
 EQ_Storage_minimum(s,i)..
          StorageMinimum(s)
@@ -873,7 +890,9 @@ EQ_Max_P2H(p2h,i)..
 *;
 
 EQ_Heat_Demand_balance(n_th,i)..
-         sum(chp, Heat(chp,i)*Location_th(chp,n_th)) + sum(p2h, Heat(p2h,i)*Location_th(p2h,n_th))
+         sum(chp, Heat(chp,i)*Location_th(chp,n_th))
+         + sum(p2h, Heat(p2h,i)*Location_th(p2h,n_th))
+         + sum(hu, Heat(hu,i)*Location_th(hu,n_th))
          =E=
          HeatDemand(n_th, i)
          - HeatSlack(n_th,i)
@@ -951,6 +970,7 @@ $If not %LPFormulation% == 1 EQ_Power_must_run,
 EQ_P2H,
 EQ_Max_P2H,
 EQ_Power_available,
+EQ_Heat_available,
 EQ_Heat_Storage_balance,
 EQ_Heat_Storage_minimum,
 EQ_Heat_Storage_level,
@@ -1058,9 +1078,11 @@ $If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
 );
 
 CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n)) + sum(s,spillage.L(s,z)* Location(s,n));
+CurtailedHeat.L(n_th,z)=sum(hu,(Nunits(hu)*PowerCapacity(hu)*LoadMaximum(hu,z)-Heat.L(hu,z))$(sum(tr,Technology(hu,tr))>=1) * Location_th(hu,n_th));
 
-$If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
-$If %Verbose% == 1 Display Flow.L,Power.L,ShedLoad.L,CurtailedPower.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L;
+
+$If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
+$If %Verbose% == 1 Display Flow.L,Power.L,ShedLoad.L,CurtailedPower.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L;
 
 *===============================================================================
 *Result export
@@ -1079,6 +1101,7 @@ OutputSystemCost(h)
 OutputSpillage(s,h)
 OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
+OutputCurtailedHeat(n_th,h)
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 ShadowPrice(n,h)
 HeatShadowPrice(n_th,h)
@@ -1129,6 +1152,7 @@ OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(s,z)  = Spillage.L(s,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
+OutputCurtailedHeat(n_th,z)=CurtailedHeat.L(n_th,z);
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
 LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
 LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
@@ -1183,6 +1207,7 @@ OutputSystemCost,
 OutputSpillage,
 OutputShedLoad,
 OutputCurtailedPower,
+OutputCurtailedHeat,
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation,
 OutputGenMargin,
 LostLoad_MaxPower,
