@@ -29,9 +29,9 @@ commons['Fuels'] = ['AIR', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN
 # Ordered list of fuels for plotting (the first ones are negative):
 commons['MeritOrder'] = ['THMS', 'SCSP', 'BATS', 'BEVS', 'HDAM', 'HPHS', 'P2GS', 'FlowOut', 'GEO', 'NUC', 'LIG',
                          'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT',
-                         'HYD']
-commons['MeritOrderHeat'] = ['AIR', 'GEO', 'NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN',
-                             'WAT', 'HYD', 'WHT']
+                         'HYD', 'AIR', 'WHT']
+commons['MeritOrderHeat'] = ['GEO', 'NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'WAT',
+                             'HYD', 'AIR', 'WHT', 'HeatSlack']
 
 # Colors associated with each fuel:
 # commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': '#af4b91b2', 'OIL': '#af4b91ff',
@@ -48,18 +48,23 @@ commons['MeritOrderHeat'] = ['AIR', 'GEO', 'NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'O
 # #                      'THMS': '#C04000ff',
 # #                      'BATS': '#41A317ff',
 # #                      'BEVS': '#CC80FFff'}
-commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': 'darkviolet', 'OIL': 'magenta',
+commons['colors'] = {'LIG': '#af4b9180',
+                     'PEA': '#af4b9199',
+                     'HRD': 'darkviolet',
+                     'OIL': 'magenta',
                      'GAS': '#d7642dff',
                      'NUC': '#466eb4ff',
                      'SUN': '#e6a532ff',
                      'WIN': '#41afaaff',
                      'WAT': '#00a0e1ff',
                      'HYD': '#A0522D',
-                     'BIO': '#7daf4bff', 'GEO': '#7daf4bbf',
+                     'BIO': '#7daf4bff',
+                     'GEO': '#7daf4bbf',
                      'Storage': '#b93c46ff',
                      'FlowIn': '#b93c46b2',
                      'FlowOut': '#b93c4666',
-                     'OTH': '#57D53B', 'WST': '#b9c337ff',
+                     'OTH': '#57D53B',
+                     'WST': '#b9c337ff',
                      'HDAM': '#00a0e1ff',
                      'HPHS': 'blue',
                      'THMS': '#C04000ff',
@@ -67,14 +72,17 @@ commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': 'darkviolet'
                      'BEVS': '#b9c33799',
                      'SCSP': '#e6a532ff',
                      'P2GS': '#A0522D',
-                     'ShedLoad': '#ffffffff'}
+                     'ShedLoad': '#ffffffff',
+                     'AIR': '#aed6f1ff',
+                     'WHT': '#a93226ff',
+                     'HeatSlack': '#943126ff'}
 
 commons['colors']['curtailment'] = 'red'
 # Hatches associated with each fuel:
 commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '', 'GAS': '', 'NUC': '', 'SUN': '', 'WIN': '', 'WAT': '',
                       'BIO': '', 'GEO': '', 'Storage': '', 'WST': '', 'OTH': '', 'HYD': '',
                       'FlowIn': '/', 'FlowOut': '\\', 'HDAM': '/', 'HPHS': '/', 'SCSP': '/', 'THMS': '', 'BATS': '/',
-                      'BEVS': '/', 'P2GS': '/'
+                      'BEVS': '/', 'P2GS': '/', 'AIR': '', 'WHT': '', 'HeatSlack': '/'
                       }
 
 commons['logfile'] = str(datetime.datetime.now()).replace(':', '-').replace(' ', '_') + '.dispa.log'
