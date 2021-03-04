@@ -574,7 +574,12 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
     heat_demand = heat_demand[(z_th)]
     heat_plotdata = get_heat_plot_data(inputs, results, z_th) / 1000
 
-    plot_dispatch(heat_demand, heat_plotdata, y_ax='Heat', rng=rng, alpha=0.5)
+    if 'OutputCurtailedHeat' in results and z_th in results['OutputCurtailedHeat']:
+        heat_curtailment = results['OutputCurtailedHeat'][z_th] / 1000  # GW
+    else:
+        heat_curtailment = None
+
+    plot_dispatch(heat_demand, heat_plotdata, y_ax='Heat', curtailment=heat_curtailment,rng=rng, alpha=0.5)
 
     # Generation plot:
     if rug_plot:

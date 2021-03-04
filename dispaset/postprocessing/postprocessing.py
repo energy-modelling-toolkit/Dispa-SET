@@ -203,7 +203,11 @@ def get_heat_plot_data(inputs, results, z_th):
     tmp = filter_by_heating_zone(results['OutputHeat'], inputs, z_th)
     plotdata = aggregate_by_fuel(tmp, inputs)
 
-    plotdata.loc[:, 'HeatSlack'] = results['OutputHeatSlack'].loc[:,z_th]
+
+    if z_th not in results['OutputHeatSlack'].columns:
+        plotdata.loc[:, 'HeatSlack'] = 0
+    else:
+        plotdata.loc[:, 'HeatSlack'] = results['OutputHeatSlack'].loc[:, z_th]
     # if 'OutputStorageInput' in results:
     #     # onnly take the columns that correspond to storage units (StorageInput is also used for CHP plants):
     #     cols = [col for col in results['OutputStorageInput'] if
