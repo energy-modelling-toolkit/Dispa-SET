@@ -86,3 +86,7 @@ commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '', 'GAS': '', 'NU
                       }
 
 commons['logfile'] = str(datetime.datetime.now()).replace(':', '-').replace(' ', '_') + '.dispa.log'
+
+# Specifying the na value is required to avoid configusion with the 'NA' (Namibia) country code
+commons['na_values']=['', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan',
+                                        '1.#IND', '1.#QNAN', 'N/A', 'NULL', 'NaN', 'nan']

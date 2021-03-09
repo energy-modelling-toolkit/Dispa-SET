@@ -118,6 +118,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         geo = load_geo_data(config['GeoData'], header=0)
     else:
         logging.warning('No geo spatial data available')
+        geo = None
 
     # Load Shedding:
     LoadShedding = NodeBasedTable('LoadShedding', config, default=config['default']['LoadShedding'])
@@ -131,18 +132,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     plants = pd.DataFrame()
     if os.path.isfile(config['PowerPlantData']):
         plants = pd.read_csv(config['PowerPlantData'],
-                             na_values=['', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan',
-                                        '1.#IND', '1.#QNAN', 'N/A', 'NULL', 'NaN', 'nan'],
-                             keep_default_na=False, index_col=0)
+                             na_values=commons['na_values'],
+                             keep_default_na=False)
     elif '##' in config['PowerPlantData']:
         for z in config['zones']:
             path = config['PowerPlantData'].replace('##', str(z))
-            tmp = pd.read_csv(path, na_values=['', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan',
-                                               '1.#IND', '1.#QNAN', 'N/A', 'NULL', 'NaN', 'nan'],
-                              keep_default_na=False, index_col=0)
+            tmp = pd.read_csv(path, na_values=commons['na_values'],
+                              keep_default_na=False)
             plants = plants.append(tmp, ignore_index=True, sort=False)
     # remove invalid power plants:
-    # plants['Unit'] = plants.index
     plants = select_units(plants, config)
 
     # Some columns can be in two format (absolute or per unit). If not specified, they are set to zero:
@@ -156,7 +154,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # If not present, add the non-compulsory fields to the units table:
     for key in ['CHPPowerLossFactor', 'CHPPowerToHeat', 'CHPType', 'STOCapacity', 'STOSelfDischarge',
-                'STOMaxChargingPower', 'STOChargingEfficiency', 'CHPMaxHeat']:
+                'STOMaxChargingPower', 'STOChargingEfficiency', 'CHPMaxHeat','WaterWithdrawal',
+                'WaterConsumption']:
         if key not in plants.columns:
             plants[key] = np.nan
 
@@ -574,7 +573,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # Particular treatment of MaxCapacityPtL that is not a time-series and
     # that is given separetly from the Power plant database 
-    if config['H2FlexibleCapacity'] != '':
+    if 'H2FlexibleCapacity' in config and config['H2FlexibleCapacity'] != '':
         MaxCapacityPtL = pd.read_csv(config['H2FlexibleCapacity'], index_col=0, keep_default_na=False)
         for i, u in enumerate(sets['p2h2']):
             for unit in MaxCapacityPtL.index:
@@ -624,7 +623,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
             parameters['CostH2Slack']['val'][i, :] = finalTS['CostH2Slack'][u][idx_sim].values
         if u in finalTS['H2FlexibleDemand']:
             parameters['PtLDemandInput']['val'][i, :] = finalTS['H2FlexibleDemand'][u][idx_sim].values
-    if config['H2FlexibleCapacity'] != '':
+    if 'H2FlexibleCapacity' in config and config['H2FlexibleCapacity'] != '':
         check_PtLDemand(parameters, config)
 
     # Ramping rates are reconstructed for the non dimensional value provided
@@ -792,7 +791,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # Simulation data:
     SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units': Plants_merged,
-               'version': dispa_version, 'geo': geo}
+               'geo': geo, 'version': dispa_version}
 
     # list_vars = []
     gdx_out = "Inputs.gdx"
