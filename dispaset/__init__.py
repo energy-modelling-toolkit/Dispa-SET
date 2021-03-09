@@ -1,6 +1,7 @@
 import logging.config
 import logging
 import os
+import importlib
 
 from .common import commons
 
@@ -98,7 +99,11 @@ from .postprocessing.postprocessing import get_result_analysis, get_indicators_p
 
 from .postprocessing.plot import plot_energy_zone_fuel, plot_zone_capacities, plot_zone, storage_levels, \
     plot_storage_levels, plot_EFOH, plot_H2_and_demand, plot_tech_cap, \
-    H2_demand_satisfaction, plot_ElyserCap_vs_Utilization, plot_power_flow_tracing_matrix, \
-    plot_net_flows_map, plot_line_congestion_map
+    H2_demand_satisfaction, plot_ElyserCap_vs_Utilization, plot_power_flow_tracing_matrix
+
+if importlib.util.find_spec("cartopy"):
+    from .postprocessing.geoplot import plot_net_flows_map, plot_line_congestion_map
+else:
+    logging.warning("Cartopy module not found. The geoplot functions will not be available")
 
 from .cli import *

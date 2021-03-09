@@ -114,10 +114,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         PriceTransmission_raw = pd.DataFrame(index=config['idx_long'])
 
     # Geo data
-    if os.path.isfile(config['GeoData']):
+    if 'GeoData' in config and os.path.isfile(config['GeoData']):
         geo = load_geo_data(config['GeoData'], header=0)
     else:
-        logging.warning('No geo spatial data available (no valid file provided)')
+        logging.warning('No geo spatial data available')
 
     # Load Shedding:
     LoadShedding = NodeBasedTable('LoadShedding', config, default=config['default']['LoadShedding'])
