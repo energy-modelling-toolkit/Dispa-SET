@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from setuptools import setup, find_packages
 import codecs
@@ -35,8 +35,10 @@ setup(
         'local_scheme': lambda version: version.format_choice("" if version.exact else "+{node}", "+dirty"),
         'fallback_version': FINAL_RELEASE,
     },
+    python_requires='>=3.7',
     setup_requires=["setuptools_scm"],
     install_requires=[
+        "setuptools_scm",
         "future >= 0.15",
         "click >= 3.3",
         "numpy >= 1.12",
@@ -45,13 +47,7 @@ setup(
         "matplotlib >= 1.5.1",
         "gdxcc >= 7",
         "gamsxcc",
-        "optcc",
-        "setuptools_scm",
-        "pytest",
-        "pytest-cov",
-        "codecov",
-        "networkx",
-        "cartopy"
+        "optcc"
     ],
     entry_points={
         'console_scripts': [

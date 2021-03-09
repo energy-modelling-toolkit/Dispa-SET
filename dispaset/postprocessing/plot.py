@@ -5,7 +5,6 @@ import sys
 
 import numpy as np
 import pandas as pd
-import pickle
 import matplotlib
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -15,14 +14,14 @@ import cartopy.mpl.geoaxes
 import cartopy.io.img_tiles as cimgt
 import requests
 
-from ..misc.str_handler import clean_strings
+from matplotlib.patches import Patch
 from ..common import commons
 
 from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage, \
-    get_power_flow_tracing, get_from_to_flows, get_net_positions, get_EFOH, CostExPost
+    get_power_flow_tracing, get_from_to_flows, get_net_positions, get_EFOH, get_heat_plot_data
 
 
-def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None, shiftedload=None, rng=None,
+def plot_dispatch(demand, plotdata, y_ax = '',level=None, curtailment=None, shedload=None, shiftedload=None, rng=None,
                   alpha=None, figsize=(13, 6)):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
@@ -84,7 +83,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None,
     axes[0].plot(pdrng, demand[pdrng], color='k')
     axes[0].set_xlim(pdrng[0], pdrng[-1])
 
-    fig.suptitle('Power dispatch for zone ' + demand.name[1])
+    fig.suptitle(y_ax + ' dispatch for zone ' + demand.name)
 
     # Define labels, patches and colors
     labels = []
@@ -154,7 +153,7 @@ def plot_dispatch(demand, plotdata, level=None, curtailment=None, shedload=None,
         labels.append('Curtailment')
         patches.append(mpatches.Patch(facecolor=commons['colors']['curtailment'], label='Curtailment'))
 
-    axes[0].set_ylabel('Power [GW]')
+    axes[0].set_ylabel(y_ax + ' [GW]')
     axes[0].yaxis.label.set_fontsize(12)
 
     load_change = pd.Series(0, index=demand.index)
@@ -276,6 +275,7 @@ def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=Fal
     axes.ravel()[0].set_title(fig_title)
     axes.ravel()[-1].spines['bottom'].set_visible(True)
     axes.ravel()[-1].set_xlim(np.min(x), np.max(x))
+    plt.show()
 
 
 def plot_energy_zone_fuel(inputs, results, PPindicators):
@@ -285,14 +285,17 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
     :param results:         Dictionnary with the outputs of the model (output of the function GetResults)
     :param PPindicators:    Por powerplant statistics (output of the function get_indicators_powerplant)
     """
-    fuels = PPindicators.Fuel.unique()
+    fuels = PPindicators[[u in [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
+                                   commons['tech_p2ht']] for u in PPindicators['Technology']]].Fuel.unique()
     zones = PPindicators.Zone.unique()
-
     GenPerZone = pd.DataFrame(index=zones, columns=fuels)
+
     # First make sure that all fuels are present. If not, initialize an empty series
     for f in commons['Fuels'] + ['FlowIn']:
         if f not in GenPerZone:
             GenPerZone[f] = 0
+
+    # Assign generation
     for z in zones:
         for f in fuels:
             tmp = PPindicators[(PPindicators.Fuel == f) & (PPindicators.Zone == z)]
@@ -333,10 +336,58 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
     ax2.barh(demand_prct, left=ax2.get_xticks() - 0.4, width=[0.8] * len(demand_prct), height=ax2.get_ylim()[1] * 0.005,
              linewidth=2, color='k')
     handles, labels = ax2.get_legend_handles_labels()  # get the handles
-    ax2.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.15, 0.25))
+    ax2.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.14, 0.25))
     plt.show()
 
-    return GenPerZone
+    # Heat generation bar chart
+    fuels_heat = PPindicators[[u in [x for x in commons['Technologies'] if x in commons['tech_heat'] +
+                                   commons['tech_p2ht']] for u in PPindicators['Technology']]].Fuel.unique()
+    zones_heat = PPindicators['Zone_th'].unique()
+    zones_heat = np.array([i for i in zones_heat if i])
+
+    if zones_heat.size != 0:
+        HeatPerZone_th = pd.DataFrame(index=zones_heat, columns=fuels_heat)
+        for fuel in commons['Fuels']:
+            if fuel not in HeatPerZone_th:
+                HeatPerZone_th[fuel] = 0
+
+        for z in zones_heat:
+            for f in fuels_heat:
+                tmp = PPindicators[(PPindicators.Fuel == f) & (PPindicators.Zone_th == z)]
+                HeatPerZone_th.loc[z, f] = tmp.HeatGeneration.sum()
+            # HeatSlack = results['OutputHeatSlack'].loc[:,z].sum()
+            # if HeatSlack > 0:
+            #     HeatPerZone_th.loc[z, 'HeatSlack'] = HeatSlack
+
+        cols_heat = [col for col in commons['MeritOrderHeat'] if col in HeatPerZone_th]
+        HeatPerZone_th = HeatPerZone_th[cols_heat] / 1e6
+        HeatPerZone_th.sort_index(inplace=True)
+        colors = [commons['colors'][tech] for tech in HeatPerZone_th.columns]
+        ax = HeatPerZone_th.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
+                             title='Heat generation per heating zone (the horizontal lines indicate the demand)')
+        ax.set_ylabel('Generation [TWh]')
+
+        # Identify heat demand and plot it
+        demand = inputs['param_df']['HeatDemand'].sum() / 1E6
+        demand.sort_index(inplace=True)
+        ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005,
+                linewidth=2, color='k')
+
+        # Check for heat slack and plot it
+        Slack = results['OutputHeatSlack'].sum() / 1e6
+        Slack = Slack.reindex(inputs['sets']['n_th']).fillna(0)
+        Slack.sort_index(inplace=True)
+        ax.bar(range(0, Slack.index.size), Slack.values, bottom=HeatPerZone_th.sum(axis=1).values,
+               edgecolor='black', hatch='X', color='#943126ff', width=[0.4])
+        handles, labels = ax.get_legend_handles_labels()  # get the handles
+        handles.append(Patch(facecolor='#943126ff', hatch='X'))
+        labels.append('HeatSlack')
+        ax.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.14, 0.25))
+        plt.show()
+
+        return GenPerZone, HeatPerZone_th
+    else:
+        return GenPerZone
 
 
 def plot_zone_capacities(inputs, plot=True):
@@ -345,17 +396,49 @@ def plot_zone_capacities(inputs, plot=True):
 
     :param inputs:         Dictionnary with the inputs of the model (output of the function GetResults)
     """
-    units = inputs['units']
+
+    units = inputs['units'][[u in [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
+                                   commons['tech_p2ht']] for u in inputs['units']['Technology']]]
+    units_heat = inputs['units'][[u in [x for x in commons['Technologies'] if x in commons['tech_heat'] +
+                                   commons['tech_p2ht']] for u in inputs['units']['Technology']]]
+    units_chp = inputs['units'][[x.lower() in commons['types_CHP'] for x in inputs['units']['CHPType']]]
+
+    for u in units_chp.index:
+        PowerCapacity = units_chp.loc[u, 'PowerCapacity']
+
+        if units_chp.loc[u, 'CHPType'].lower() == 'p2h':
+            PurePowerCapacity = PowerCapacity
+        else:
+            # If maximum heat is not defined, then it is defined as the intersection between two lines
+            if pd.isnull(units_chp.loc[u, 'CHPMaxHeat']):
+                MaxHeat = PowerCapacity / units_chp.loc[u, 'CHPPowerToHeat']
+                units_chp.loc[u, 'CHPMaxHeat'] = 'inf'
+            else:
+                MaxHeat = units_chp.loc[u, 'CHPMaxHeat']
+            PurePowerCapacity = PowerCapacity + units_chp.loc[u, 'CHPPowerLossFactor'] * MaxHeat
+        units.loc[u, 'PowerCapacity'] = PurePowerCapacity
+        units_chp.loc[u, 'PowerCapacity'] = MaxHeat
+
+    units_heat = units_heat.append(units_chp)
+
     ZoneFuels = {}
+    ZoneFuelsHT = {}
     for u in units.index:
         ZoneFuels[(units.Zone[u], units.Fuel[u])] = (units.Zone[u], units.Fuel[u])
+    for u in units_heat.index:
+        ZoneFuelsHT[(units_heat.Zone_th[u], units_heat.Fuel[u])] = (units_heat.Zone_th[u], units_heat.Fuel[u])
 
     PowerCapacity = pd.DataFrame(columns=inputs['sets']['f'], index=inputs['sets']['n'])
     StorageCapacity = pd.DataFrame(columns=inputs['sets']['f'], index=inputs['sets']['n'])
+    HeatCapacity = pd.DataFrame(columns=inputs['sets']['f'], index=inputs['sets']['n_th'])
     for n, f in ZoneFuels:
         idx = ((units.Zone == n) & (units.Fuel == f))
         PowerCapacity.loc[n, f] = (units.PowerCapacity[idx] * units.Nunits[idx]).sum()
         StorageCapacity.loc[n, f] = (units.StorageCapacity[idx] * units.Nunits[idx]).sum()
+
+    for n_th, f in ZoneFuelsHT:
+        idx = ((units_heat.Zone_th == n_th) & (units_heat.Fuel == f))
+        HeatCapacity.loc[n_th, f] = (units_heat.PowerCapacity[idx] * units_heat.Nunits[idx]).sum()
 
     cols = [col for col in commons['MeritOrder'] if col in PowerCapacity]
     PowerCapacity = PowerCapacity[cols]
@@ -369,10 +452,27 @@ def plot_zone_capacities(inputs, plot=True):
                 linewidth=2,
                 color='k')
     plt.show()
-    return {'PowerCapacity': PowerCapacity, 'StorageCapacity': StorageCapacity}
+
+    cols_heat = [col for col in commons['MeritOrderHeat'] if col in HeatCapacity]
+    HeatCapacity = HeatCapacity[cols_heat]
+    HeatCapacity.sort_index(inplace=True)
+    if plot:
+        colors = [commons['colors'][tech] for tech in HeatCapacity.columns]
+        ax = HeatCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
+                                title='Installed heat capacity per zone ' +
+                                      '(the horizontal lines indicate the peak heating demand)')
+        ax.set_ylabel('Capacity [MW]')
+        demand = inputs['param_df']['HeatDemand'].max()
+        demand.sort_index(inplace=True)
+        ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005,
+                linewidth=2,
+                color='k')
+    plt.show()
+
+    return {'PowerCapacity': PowerCapacity, 'StorageCapacity': StorageCapacity, 'HeatCapacity': HeatCapacity}
 
 
-def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
+def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
     """
     Generates plots from the dispa-SET results for one specific zone
 
@@ -452,8 +552,34 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True):
     else:
         curtailment = None
 
-    plot_dispatch(demand, plotdata, level, curtailment=curtailment, shedload=shed_load, shiftedload=shifted_load,
+    # Plot power dispatch
+    demand.rename(z, inplace=True)
+    plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load, shiftedload=shifted_load,
                   rng=rng, alpha=0.5)
+
+    # Plot heat dispatch
+    if z_th is None:
+        Nzones = len(inputs['sets']['n_th'])
+        z_th = inputs['sets']['n_th'][np.random.randint(Nzones)]
+        print('Randomly selected zone for the detailed analysis: ' + z_th)
+    elif z_th not in inputs['sets']['n_th']:
+        logging.critical('Zone ' + z_th + ' is not in the results')
+        Nzones = len(inputs['sets']['n_th'])
+        z_th = inputs['sets']['n_th'][np.random.randint(Nzones)]
+        logging.critical('Randomly selected zone: ' + z_th)
+
+
+    heat_demand = inputs['param_df']['HeatDemand'][z_th] / 1000
+    heat_demand = pd.DataFrame(heat_demand, columns=[(z_th)])
+    heat_demand = heat_demand[(z_th)]
+    heat_plotdata = get_heat_plot_data(inputs, results, z_th) / 1000
+
+    if 'OutputCurtailedHeat' in results and z_th in results['OutputCurtailedHeat']:
+        heat_curtailment = results['OutputCurtailedHeat'][z_th] / 1000  # GW
+    else:
+        heat_curtailment = None
+
+    plot_dispatch(heat_demand, heat_plotdata, y_ax='Heat', curtailment=heat_curtailment,rng=rng, alpha=0.5)
 
     # Generation plot:
     if rug_plot:
@@ -798,7 +924,7 @@ def H2_demand_satisfaction(inputs, results):
     return True
 
 
-def heatmap(data, row_labels, col_labels, ax=None, cbar_kw={}, cbarlabel="", **kwargs):
+def heatmap(data, row_labels, col_labels, ax=None, cbar_kw=None, cbarlabel="", **kwargs):
     """
     Create a heatmap from a numpy array and two lists of labels.
     https://matplotlib.org/3.3.1/gallery/images_contours_and_fields/image_annotated_heatmap.html
@@ -812,6 +938,8 @@ def heatmap(data, row_labels, col_labels, ax=None, cbar_kw={}, cbarlabel="", **k
     :param **kwargs:    All other arguments are forwarded to `imshow`.
     """
 
+    if cbar_kw is None:
+        cbar_kw = {}
     if not ax:
         ax = plt.gca()
 

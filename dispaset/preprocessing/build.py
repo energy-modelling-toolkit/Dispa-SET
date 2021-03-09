@@ -457,7 +457,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
-    sets['u'] = Plants_merged[Plants_merged['Technology'] != 'P2HT'].index.tolist()
+    sets['u'] = Plants_merged[[u in [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
+                                   commons['tech_p2ht']] for u in Plants_merged['Technology']]].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
     sets['p2h'] = Plants_p2h.index.tolist()
     sets['p2h2'] = Plants_h2.index.tolist()
