@@ -209,18 +209,16 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
             for i in errors.index:
                 errors.loc[i, 'Error Message'] = GAMSstatus('model', errors['model'][i])
             status['errors'] = errors
-    status['*'] = results.pop('*')
-    status['status'] = results.pop('status')
 
     if return_xarray:
         results = results_to_xarray(results)
         inputs = inputs_to_xarray(inputs)
-    out = (inputs, results)
-
-    if return_status:
+        status['*'] = results.pop('*')
+        status['status'] = results.pop('status')
+        out = (inputs, results)
         return out + (status,)
     else:
-        return out
+        return (inputs, results)
 
 
 def results_to_xarray(results):
