@@ -339,7 +339,7 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
     zones_heat = PPindicators['Zone_th'].unique()
     zones_heat = np.array([i for i in zones_heat if i])
 
-    if zones_heat.size != 0:
+    if zones_heat.size != 0 and fuels_heat.size != 0:
         HeatPerZone_th = pd.DataFrame(index=zones_heat, columns=fuels_heat)
         for fuel in commons['Fuels']:
             if fuel not in HeatPerZone_th:
@@ -450,7 +450,7 @@ def plot_zone_capacities(inputs, plot=True):
     cols_heat = [col for col in commons['MeritOrderHeat'] if col in HeatCapacity]
     HeatCapacity = HeatCapacity[cols_heat]
     HeatCapacity.sort_index(inplace=True)
-    if plot:
+    if len(HeatCapacity) > 0 and plot:
         colors = [commons['colors'][tech] for tech in HeatCapacity.columns]
         ax = HeatCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
                                 title='Installed heat capacity per zone ' +
@@ -461,7 +461,7 @@ def plot_zone_capacities(inputs, plot=True):
         ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005,
                 linewidth=2,
                 color='k')
-    plt.show()
+        plt.show()
 
     return {'PowerCapacity': PowerCapacity, 'StorageCapacity': StorageCapacity, 'HeatCapacity': HeatCapacity}
 
@@ -552,28 +552,23 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
                   rng=rng, alpha=0.5)
 
     # Plot heat dispatch
-    if z_th is None:
-        Nzones = len(inputs['sets']['n_th'])
-        z_th = inputs['sets']['n_th'][np.random.randint(Nzones)]
-        print('Randomly selected zone for the detailed analysis: ' + z_th)
-    elif z_th not in inputs['sets']['n_th']:
-        logging.critical('Zone ' + z_th + ' is not in the results')
-        Nzones = len(inputs['sets']['n_th'])
-        z_th = inputs['sets']['n_th'][np.random.randint(Nzones)]
-        logging.critical('Randomly selected zone: ' + z_th)
+    Nzones_th = len(inputs['sets']['n_th'])
+    if Nzones_th > 0 and (z_th is None or (z_th not in inputs['sets']['n_th'])):
+        z_th = inputs['sets']['n_th'][np.random.randint(Nzones_th)]
+        logging.info('Randomly selected thermal zone: ' + z_th)
 
+    if Nzones_th > 0:
+        heat_demand = inputs['param_df']['HeatDemand'][z_th] / 1000
+        heat_demand = pd.DataFrame(heat_demand, columns=[(z_th)])
+        heat_demand = heat_demand[(z_th)]
+        heat_plotdata = get_heat_plot_data(inputs, results, z_th) / 1000
+    
+        if 'OutputCurtailedHeat' in results and z_th in results['OutputCurtailedHeat']:
+            heat_curtailment = results['OutputCurtailedHeat'][z_th] / 1000  # GW
+        else:
+            heat_curtailment = None
 
-    heat_demand = inputs['param_df']['HeatDemand'][z_th] / 1000
-    heat_demand = pd.DataFrame(heat_demand, columns=[(z_th)])
-    heat_demand = heat_demand[(z_th)]
-    heat_plotdata = get_heat_plot_data(inputs, results, z_th) / 1000
-
-    if 'OutputCurtailedHeat' in results and z_th in results['OutputCurtailedHeat']:
-        heat_curtailment = results['OutputCurtailedHeat'][z_th] / 1000  # GW
-    else:
-        heat_curtailment = None
-
-    plot_dispatch(heat_demand, heat_plotdata, y_ax='Heat', curtailment=heat_curtailment,rng=rng, alpha=0.5)
+        plot_dispatch(heat_demand, heat_plotdata, y_ax='Heat', curtailment=heat_curtailment,rng=rng, alpha=0.5)
 
     # Generation plot:
     if rug_plot:
