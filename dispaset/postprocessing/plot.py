@@ -334,8 +334,8 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
     plt.show()
 
     # Heat generation bar chart
-    fuels_heat = PPindicators[[u in [x for x in commons['Technologies'] if x in commons['tech_heat'] +
-                                   commons['tech_p2ht']] for u in PPindicators['Technology']]].Fuel.unique()
+    fuels_heat = PPindicators[[u in [x for x in commons['Technologies']]
+                               for u in PPindicators['Technology']]].Fuel.unique()
     zones_heat = PPindicators['Zone_th'].unique()
     zones_heat = np.array([i for i in zones_heat if i])
 
