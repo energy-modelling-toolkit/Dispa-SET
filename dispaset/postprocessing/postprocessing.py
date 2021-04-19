@@ -84,7 +84,7 @@ def aggregate_by_fuel(PowerOutput, Inputs, SpecifyFuels=None):
     return PowerByFuel
 
 
-def filter_by_zone(PowerOutput, inputs, z):
+def filter_by_zone(PowerOutput, inputs, z, thermal = None):
     """
     This function filters the dispaset Output Power dataframe by zone
 
@@ -93,7 +93,10 @@ def filter_by_zone(PowerOutput, inputs, z):
     :param z:               Selected zone (e.g. 'BE')
     :returns Power:          Dataframe with power generation by zone
     """
-    loc = inputs['units']['Zone']
+    if thermal:
+        loc = inputs['units']['Zone_th']
+    else:
+        loc = inputs['units']['Zone']
     Power = PowerOutput.loc[:, [u for u in PowerOutput.columns if loc[u] == z]]
     return Power
 
@@ -270,6 +273,7 @@ def get_result_analysis(inputs, results):
 
     # Aggregated values:
     demand = {}
+    demand_th = {}
     for z in inputs['sets']['n']:
         if 'OutputPowerConsumption' in results:
             demand_p2h = filter_by_zone(results['OutputPowerConsumption'], inputs, z)
@@ -282,14 +286,26 @@ def get_result_analysis(inputs, results):
             demand_flex = pd.Series(0, index=results['OutputPower'].index)
         demand_da = inputs['param_df']['Demand'][('DA', z)]
         demand[z] = pd.DataFrame(demand_da + demand_p2h + demand_flex, columns=[('DA', z)])
+    for z_th in inputs['sets']['n_th']:
+        if 'OutputHeat' in results:
+            demand_th[z_th] = filter_by_zone(results['OutputHeat'], inputs, z_th, thermal=True)
+            demand_th[z_th] = demand_th[z_th].sum(axis=1)
+        else:
+            demand_th[z_th] = pd.Series(0, index=results['OutputPower'].index)
+
     demand = pd.concat(demand, axis=1)
     demand.columns = demand.columns.droplevel(-1)
+    demand_th = pd.concat(demand_th, axis=1)
 
     TotalLoad = demand.sum().sum()
+    TotalHeatLoad = demand_th.sum().sum()
     PeakLoad = demand.sum(axis=1).max(axis=0)
+    PeakHeatLoad = demand_th.sum(axis=1).max(axis=0)
     LoadShedding = results['OutputShedLoad'].sum().sum() / 1e6
     Curtailment = results['OutputCurtailedPower'].sum().sum()
+    HeatCurtailment = results['OutputCurtailedHeat'].sum().sum()
     MaxCurtailemnt = results['OutputCurtailedPower'].sum(axis=1).max() / 1e6
+    MaxHeatCurtailemnt = results['OutputCurtailedHeat'].sum(axis=1).max() / 1e6
     MaxLoadShedding = results['OutputShedLoad'].sum(axis=1).max()
 
     if 'OutputDemandModulation' in results:
@@ -303,7 +319,7 @@ def get_result_analysis(inputs, results):
 
     NetImports = -get_imports(results['OutputFlow'], 'RoW')
 
-    Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports)
+    Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports + TotalHeatLoad)
 
     print('\nAverage electricity cost : ' + str(Cost_kwh) + ' EUR/MWh')
 
@@ -440,9 +456,12 @@ def get_result_analysis(inputs, results):
                                                                        inputs, z).sum(axis=1)
 
     return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-            'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt, 'ShedLoad': LoadShedding,
+            'TotalHeatLoad': TotalHeatLoad, 'PeakHeatLoad': PeakHeatLoad,
+            'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt,
+            'HeatCurtailment': HeatCurtailment, 'MaxHeatCurtailment': MaxHeatCurtailemnt,
+            'ShedLoad': LoadShedding, 'MaxShedLoad': MaxLoadShedding,
             'ShiftedLoad': ShiftedLoad_tot,
-            'MaxShedLoad': MaxLoadShedding, 'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
+            'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
             'UnitData': UnitData, 'FuelData': FuelData, 'WaterConsumptionData': WaterData}
 
 
