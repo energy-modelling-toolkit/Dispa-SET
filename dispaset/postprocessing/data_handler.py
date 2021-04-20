@@ -243,6 +243,7 @@ def results_to_xarray(results):
                                           ind[0]: df.columns.values},
                                   dims=[ind[1], ind[0]],
                                   name=var_name)
+                all_ds.append(ds)
             elif len(ind) == 1:
                 if k == 'LostLoad_WaterSlack':
                     ds = xr.DataArray(df,
@@ -252,13 +253,13 @@ def results_to_xarray(results):
                                       coords={ind[0]: df.index.values, },
                                       dims=[ind[0]],
                                       name=var_name)
+                all_ds.append(ds)
             else:
                 pass  # print('Ignoring ', var_name)
-            all_ds.append(ds)
         results = xr.merge(all_ds)
+        return results
     except ImportError:
         logging.warn('Cannot find xarray package. Falling back to dict of dataframes')
-    return results
 
 
 def inputs_to_xarray(inputs):

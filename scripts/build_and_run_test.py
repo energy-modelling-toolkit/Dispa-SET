@@ -43,7 +43,7 @@ rng = pd.date_range('2015-1-01','2015-12-31',freq='H')
 ds.plot_zone(inputs,results)
 
 # Bar plot with the installed capacities in all countries:
-cap = ds.plot_zone_capacities(inputs)
+cap = ds.plot_zone_capacities(inputs, results)
 
 # Bar plot with the energy balances in all countries:
 ds.plot_energy_zone_fuel(inputs,results,ds.get_indicators_powerplant(inputs,results))
