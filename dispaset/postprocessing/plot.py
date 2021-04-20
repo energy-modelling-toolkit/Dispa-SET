@@ -471,7 +471,7 @@ def plot_zone_capacities(inputs, results, plot=True):
     if plot:
         colors = [commons['colors'][tech] for tech in PowerCapacity.columns]
         ax = PowerCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
-                                title='Installed capacity per zone (the horizontal lines indicate the peak demand)')
+                                title='Installed capacity per zone (the horizontal lines indicate the peak demand [black] & peak power consumption [blue])')
         ax.set_ylabel('Capacity [MW]')
         demand = inputs['param_df']['Demand']['DA'].max()
         demand.sort_index(inplace=True)

@@ -152,7 +152,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
 
     keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
             'LostLoad_RampDown', 'LostLoad_2D', 'ShadowPrice', 'StorageShadowPrice',
-            'OutputCostStartUpH', 'OutputCostRampUpH', 'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U']  # 'status'
+            'OutputCostStartUpH', 'OutputCostRampUpH', 'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U', 'status']  # 'status'
 
     keys_sparse = ['OutputPower', 'OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted',
                    'OutputCurtailedPower', 'OutputFlow', 'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel',
@@ -211,12 +211,16 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
             status['errors'] = errors
 
     if return_xarray:
+        if return_status:
+            status['*'] = results.pop('*')
+            status['status'] = results.pop('status')
         results = results_to_xarray(results)
         inputs = inputs_to_xarray(inputs)
-        status['*'] = results.pop('*')
-        status['status'] = results.pop('status')
         out = (inputs, results)
-        return out + (status,)
+        if return_status:
+            return out + (status)
+        else:
+            return out
     else:
         return (inputs, results)
 
