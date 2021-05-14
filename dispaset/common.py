@@ -9,29 +9,39 @@ commons = {}
 commons['TimeStep'] = '1h'
 
 # DispaSET technologies:
+# 1) Hydro and renewables
+# 2) Thermal
+# 3) Storage
+# 4) P2HT
+# 5) Fuel cells
+# 6) Electrolyzers
 commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF', 'WTON',
                            'COMC', 'GTUR', 'ICEN', 'SCSP', 'STUR',
-                           'BATS', 'BEVS', 'CAES', 'P2GS', 'THMS',
-                           'ABHP', 'ASHP', 'GETH', 'GSHP', 'HOBO', 'HYHP', 'P2HT', 'REHE', 'SOTH', 'WSHP']
+                           'BATS', 'BEVS', 'CAES', 'THMS',
+                           'ABHP', 'ASHP', 'GETH', 'GSHP', 'HOBO', 'HYHP', 'P2HT', 'REHE', 'SOTH', 'WSHP',
+                           'PEFC', 'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC',
+                           'P2GS', 'ALKE', 'PEME', 'SOXE']
 # List of VRES technologies:
 commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 # List of storage technologies:
-commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS', 'P2GS', 'SCSP']
+commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'P2GS', 'SCSP']
 # List of power to heat technologies:
 commons['tech_p2ht'] = ['P2HT', 'ABHP', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
 # List of heat only technologies:
 commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH']
+# List of thermal storage technologies:
+commons['tech_thermal_storage'] = ['THMS']
 # List of CHP types:
 commons['types_CHP'] = ['extraction', 'back-pressure', 'p2h']
 # DispaSET fuels:
 commons['Fuels'] = ['AIR', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH', 'GEO',
                     'HYD', 'WHT']
 # Ordered list of fuels for plotting (the first ones are negative):
-commons['MeritOrder'] = ['THMS', 'SCSP', 'BATS', 'BEVS', 'HDAM', 'HPHS', 'P2GS', 'FlowOut', 'GEO', 'NUC', 'LIG',
+commons['MeritOrder'] = ['SCSP', 'BATS', 'BEVS', 'HDAM', 'HPHS', 'P2GS', 'FlowOut', 'GEO', 'NUC', 'LIG',
                          'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT',
                          'HYD', 'AIR', 'WHT']
 commons['MeritOrderHeat'] = ['GEO', 'NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'WAT',
-                             'HYD', 'AIR', 'WHT', 'HeatSlack']
+                             'HYD', 'AIR', 'WHT', 'HeatSlack', 'THMS']
 
 # Colors associated with each fuel:
 # commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': '#af4b91b2', 'OIL': '#af4b91ff',

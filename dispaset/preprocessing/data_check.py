@@ -270,7 +270,7 @@ def check_p2h(config, plants):
 
     # Check the COP values:
     for u in plants.index:
-        if plants.loc[u, 'COP'] < 0 or plants.loc[u, 'COP'] > 20:
+        if plants.loc[u, 'COP'] < 0 or plants.loc[u, 'COP'] > 50:
             logging.critical('The COP value of p2h units must be comprised between 0 and 20. '
                              'The provided value for unit ' + u + ' is "' + str(plants.loc[u, 'COP'] + '"'))
             sys.exit(1)

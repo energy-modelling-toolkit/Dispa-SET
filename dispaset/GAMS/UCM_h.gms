@@ -74,6 +74,7 @@ p2h(au)          Power to heat units
 p2h2(u)          power to hydrogen storage technologies
 th(au)           Units with thermal storage
 hu(au)           Heat only units
+thms(au)         Thermal storage units only
 h                Hours
 i(h)             Subset of simulated hours for one iteration
 wat(s)           hydro technologies
@@ -99,10 +100,10 @@ CHPPowerLossFactor(u)            [%]             Power loss when generating heat
 CHPPowerToHeat(u)                [%]             Nominal power-to-heat factor
 CHPMaxHeat(chp)                  [MW\u]          Maximum heat capacity of chp plant
 CHPType
-CommittedInitial(u)              [n.a.]          Initial committment status
+CommittedInitial(au)              [n.a.]          Initial committment status
 Config
 *CostCurtailment(n,h)             [EUR\MW]        Curtailment costs
-CostFixed(u)                     [EUR\h]         Fixed costs
+CostFixed(au)                     [EUR\h]         Fixed costs
 CostRampUp(u)                    [EUR\MW]        Ramp-up costs
 CostRampDown(u)                  [EUR\MW]        Ramp-down costs
 CostShutDown(u)                  [EUR\u]         Shut-down costs
@@ -129,11 +130,11 @@ Markup(u,h)                      [EUR\MW]        Markup
 OutageFactor(au,h)                [%]             Outage Factor (100% = full outage)
 PartLoadMin(au)                  [%]             Minimum part load
 PowerCapacity(au)                [MW\u]          Installed capacity
-PowerInitial(u)                  [MW\u]          Power output before initial period
+PowerInitial(au)                  [MW\u]          Power output before initial period
 PowerMinStable(au)               [MW\u]          Minimum power output
 PriceTransmission(l,h)           [EUR\MWh]       Transmission price
-StorageChargingCapacity(u)       [MW\u]          Storage capacity
-StorageChargingEfficiency(s)     [%]             Charging efficiency
+StorageChargingCapacity(au)       [MW\u]          Storage capacity
+StorageChargingEfficiency(au)     [%]             Charging efficiency
 StorageSelfDischarge(au)         [%\day]         Self-discharge of the storage units
 RampDownMaximum(u)               [MW\h\u]        Ramp down limit
 RampShutDownMaximum(u)           [MW\h\u]        Shut-down ramp limit
@@ -143,15 +144,15 @@ RampShutDownMaximumH(u,h)        [MW\h\u]        Shut-down ramp limit - Clustere
 RampUpMaximum(u)                 [MW\h\u]        Ramp up limit
 Reserve(t)                       [n.a.]          Reserve technology {1 0}
 StorageCapacity(au)              [MWh\u]         Storage capacity
-StorageDischargeEfficiency(s)    [%]             Discharge efficiency
-StorageOutflow(s,h)              [MW\u]          Storage outflows
-StorageInflow(s,h)               [MW\u]          Storage inflows (potential energy)
+StorageDischargeEfficiency(au)    [%]             Discharge efficiency
+StorageOutflow(au,h)              [MW\u]          Storage outflows
+StorageInflow(au,h)               [MW\u]          Storage inflows (potential energy)
 StorageInitial(au)               [MWh]           Storage level before initial period
-StorageProfile(s,h)              [%]             Storage level to be resepected at the end of each horizon
+StorageProfile(au,h)              [%]             Storage level to be resepected at the end of each horizon
 StorageMinimum(au)               [MWh]           Storage minimum
 Technology(au,t)                  [n.a.]          Technology type {1 0}
-TimeDownMinimum(u)               [h]             Minimum down time
-TimeUpMinimum(u)                 [h]             Minimum up time
+TimeDownMinimum(au)               [h]             Minimum down time
+TimeUpMinimum(au)                 [h]             Minimum up time
 PtLDemandInput(p2h2,h)           [MWh]           Demand of H2 for PtL at each timestep (useless for MTS)
 MaxCapacityPtL(p2h2)             [MW]            Max capacity of PtL
 $If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment status as for the MILP
@@ -165,7 +166,7 @@ PARAMETERS
 CostLoadShedding(n,h)            [EUR\MW]        Value of lost load
 LoadMaximum(au,h)                 [%]             Maximum load given AF and OF
 PowerMustRun(u,h)                [MW\u]          Minimum power output
-StorageFinalMin(s)               [MWh]           Minimum storage level at the end of the optimization horizon
+StorageFinalMin(au)               [MWh]           Minimum storage level at the end of the optimization horizon
 MaxFlexDemand(n)                 [MW]            Maximum value of the flexible demand parameter
 MaxOverSupply(n,h)               [MWh]           Maximum flexible demand accumultation
 AccumulatedOverSupply_inital(n)  [MWh]           Initial value of the flexible demand accumulation
@@ -199,6 +200,7 @@ $LOAD chp
 $LOAD p2h
 $LOAD th
 $LOAD hu
+$LOAD thms
 $LOAD h
 $LOAD z
 $LOAD AvailabilityFactor
@@ -280,6 +282,7 @@ chp,
 p2h,
 th,
 hu,
+thms,
 h,
 AvailabilityFactor,
 CHPPowerLossFactor,
@@ -341,13 +344,13 @@ $label skipdisplay
 *===============================================================================
 
 VARIABLES
-Committed(u,h)      [n.a.]  Unit committed at hour h {1 0} or integer
-StartUp(u,h)        [n.a.]  Unit start up at hour h {1 0}  or integer
-ShutDown(u,h)       [n.a.]  Unit shut down at hour h {1 0} or integer
+Committed(au,h)      [n.a.]  Unit committed at hour h {1 0} or integer
+StartUp(au,h)        [n.a.]  Unit start up at hour h {1 0}  or integer
+ShutDown(au,h)       [n.a.]  Unit shut down at hour h {1 0} or integer
 ;
 
-$If %LPFormulation% == 1 POSITIVE VARIABLES Committed (u,h) ; Committed.UP(u,h) = 1 ;
-$If not %LPFormulation% == 1 INTEGER VARIABLES Committed (u,h), StartUp(u,h), ShutDown(u,h) ; Committed.UP(u,h) = Nunits(u) ; StartUp.UP(u,h) = Nunits(u) ; ShutDown.UP(u,h) = Nunits(u) ;
+$If %LPFormulation% == 1 POSITIVE VARIABLES Committed (au,h) ; Committed.UP(au,h) = 1 ;
+$If not %LPFormulation% == 1 INTEGER VARIABLES Committed (au,h), StartUp(au,h), ShutDown(au,h) ; Committed.UP(au,h) = Nunits(au) ; StartUp.UP(au,h) = Nunits(au) ; ShutDown.UP(au,h) = Nunits(au) ;
 
 
 
@@ -381,7 +384,7 @@ Reserve_2D(u,h)            [MW]    Spinning reserve down
 Reserve_3U(u,h)            [MW]    Non spinning quick start reserve up
 Heat(au,h)                 [MW]    Heat output by chp plant
 HeatSlack(n_th,h)            [MW]    Heat satisfied by other sources
-WaterSlack(s)              [MWh]   Unsatisfied water level constraint at end of optimization period
+WaterSlack(au)              [MWh]   Unsatisfied water level constraint at end of optimization period
 StorageSlack(au,h)         [MWh]   Unsatisfied storage level constraint at end of simulation timestep
 H2Output(au,h)             [MWh]   H2 output from H2 storage to fulfill demand
 PtLDemand(au,h)            [MW]    Demand of H2 for PtL at each time step for p2h2 units
@@ -398,8 +401,8 @@ DemandModulation(n,h)      [MW]    Difference between the flexible demand and th
 
 
 *Initial commitment status
-CommittedInitial(u)=0;
-CommittedInitial(u)$(PowerInitial(u)>0)=1;
+CommittedInitial(au)=0;
+CommittedInitial(au)$(PowerInitial(au)>0)=1;
 
 * Definition of the minimum stable load:
 PowerMinStable(au) = PartLoadMin(au)*PowerCapacity(au);
@@ -445,6 +448,10 @@ EQ_CHP_max_heat
 EQ_Heat_Storage_balance
 EQ_Heat_Storage_minimum
 EQ_Heat_Storage_level
+EQ_Heat_Storage_input
+EQ_Heat_Storage_MaxDischarge
+EQ_Heat_Storage_MaxCharge
+EQ_Heat_Storage_boundaries
 EQ_Commitment
 EQ_MinUpTime
 EQ_MinDownTime
@@ -463,6 +470,7 @@ EQ_Max_P2H
 EQ_Power_must_run
 EQ_Power_available
 EQ_Heat_available
+EQ_thms_Heat_available
 EQ_Reserve_2U_capability
 EQ_Reserve_2D_capability
 EQ_Reserve_3U_capability
@@ -494,10 +502,10 @@ $If %RetrieveStatus% == 1 EQ_CommittedCalc
 
 $If %RetrieveStatus% == 0 $goto skipequation
 
-EQ_CommittedCalc(u,z)..
-         Committed(u,z)
+EQ_CommittedCalc(au,z)..
+         Committed(au,z)
          =E=
-         CommittedCalc(u,z)
+         CommittedCalc(au,z)
 ;
 
 $label skipequation
@@ -507,7 +515,7 @@ $ifthen %LPFormulation% == 1
 EQ_SystemCost(i)..
          SystemCost(i)
          =E=
-         sum(u,CostFixed(u)*TimeStep*Committed(u,i))
+         sum(au,CostFixed(au)*TimeStep*Committed(au,i))
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
@@ -525,7 +533,7 @@ $else
 EQ_SystemCost(i)..
          SystemCost(i)
          =E=
-         sum(u,CostFixed(u)*TimeStep*Committed(u,i))
+         sum(au,CostFixed(au)*TimeStep*Committed(au,i))
          +sum(u,CostStartUpH(u,i) + CostShutDownH(u,i))
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
@@ -553,26 +561,26 @@ EQ_Objective_function..
 ;
 
 * 3 binary commitment status
-EQ_Commitment(u,i)..
-         Committed(u,i)-CommittedInitial(u)$(ord(i) = 1)-Committed(u,i-1)$(ord(i) > 1)
+EQ_Commitment(au,i)..
+         Committed(au,i)-CommittedInitial(au)$(ord(i) = 1)-Committed(au,i-1)$(ord(i) > 1)
          =E=
-         StartUp(u,i) - ShutDown(u,i)
+         StartUp(au,i) - ShutDown(au,i)
 ;
 
 * minimum up time
-EQ_MinUpTime(u,i)$(TimeStep <= TimeUpMinimum(u))..
-         sum(ii$( (ord(ii) >= ord(i) - ceil(TimeUpMinimum(u)/TimeStep)) and (ord(ii) <= ord(i)) ), StartUp(u,ii))
-         + sum(h$( (ord(h) >= FirstHour + ord(i) - ceil(TimeUpMinimum(u)/TimeStep) -1) and (ord(h) < FirstHour)),StartUp.L(u,h))
+EQ_MinUpTime(au,i)$(TimeStep <= TimeUpMinimum(au))..
+         sum(ii$( (ord(ii) >= ord(i) - ceil(TimeUpMinimum(au)/TimeStep)) and (ord(ii) <= ord(i)) ), StartUp(au,ii))
+         + sum(h$( (ord(h) >= FirstHour + ord(i) - ceil(TimeUpMinimum(au)/TimeStep) -1) and (ord(h) < FirstHour)),StartUp.L(au,h))
          =L=
-         Committed(u,i)
+         Committed(au,i)
 ;
 
 * minimum down time
-EQ_MinDownTime(u,i)$(TimeStep <= TimeDownMinimum(u))..
-         sum(ii$( (ord(ii) >= ord(i) - ceil(TimeDownMinimum(u)/TimeStep)) and (ord(ii) <= ord(i)) ), ShutDown(u,ii))
-         + sum(h$( (ord(h) >= FirstHour + ord(i) - ceil(TimeDownMinimum(u)/TimeStep) -1) and (ord(h) < FirstHour)),ShutDown.L(u,h))
+EQ_MinDownTime(au,i)$(TimeStep <= TimeDownMinimum(au))..
+         sum(ii$( (ord(ii) >= ord(i) - ceil(TimeDownMinimum(au)/TimeStep)) and (ord(ii) <= ord(i)) ), ShutDown(au,ii))
+         + sum(h$( (ord(h) >= FirstHour + ord(i) - ceil(TimeDownMinimum(au)/TimeStep) -1) and (ord(h) < FirstHour)),ShutDown.L(au,h))
          =L=
-         Nunits(u)-Committed(u,i)
+         Nunits(au)-Committed(au,i)
 ;
 
 
@@ -731,7 +739,15 @@ EQ_Heat_available(hu,i)..
          =L=
          PowerCapacity(hu)
                  *LoadMaximum(hu,i)
-*                        *Committed(u,i)
+                        *Committed(hu,i)
+;
+
+* Maximum thermal storage technology heat output is below the available capacity
+EQ_thms_Heat_available(thms,i)..
+         Heat(thms,i)
+         =L=
+         PowerCapacity(thms)
+                 *LoadMaximum(thms,i)
 ;
 
 *Storage level must be above a minimum
@@ -770,8 +786,10 @@ EQ_Storage_MaxCharge(s,i)$(StorageCapacity(s)>PowerCapacity(s)*TimeStep)..
          StorageInput(s,i)*StorageChargingEfficiency(s)*TimeStep
          =L=
          (Nunits(s) * StorageCapacity(s)-StorageInitial(s))$(ord(i) = 1)
-         + (Nunits(s) * StorageCapacity(s)*AvailabilityFactor(s,i-1) - StorageLevel(s,i-1))$(ord(i) > 1)
-         + StorageOutflow(s,i)*Nunits(s)*TimeStep + H2Output(s,i)$(p2h2(s))*TimeStep
+         + (Nunits(s) * StorageCapacity(s)*AvailabilityFactor(s,i-1)
+         - StorageLevel(s,i-1))$(ord(i) > 1)
+         + StorageOutflow(s,i)*Nunits(s)*TimeStep
+         + H2Output(s,i)$(p2h2(s))*TimeStep
 ;
 
 *Storage balance
@@ -893,34 +911,71 @@ EQ_Heat_Demand_balance(n_th,i)..
          sum(chp, Heat(chp,i)*Location_th(chp,n_th))
          + sum(p2h, Heat(p2h,i)*Location_th(p2h,n_th))
          + sum(hu, Heat(hu,i)*Location_th(hu,n_th))
+         + sum(thms, Heat(thms,i)*Location_th(thms,n_th))
          =E=
          HeatDemand(n_th, i)
          - HeatSlack(n_th,i)
+         + sum(thms, StorageInput(thms,i)*Location_th(thms,n_th))
 ;
 
 *Heat Storage balance
 EQ_Heat_Storage_balance(th,i)..
-          StorageInitial(th)$(ord(i) = 1)
-         +StorageLevel(th,i-1)$(ord(i) > 1)
-         +StorageInput(th,i)*TimeStep
+         StorageInitial(th)$(ord(i) = 1)
+         + StorageLevel(th,i-1)$(ord(i) > 1)
+         + StorageInput(th,i)*TimeStep
          =E=
          StorageLevel(th,i)
-         +Heat(th,i)*TimeStep + StorageSelfDischarge(th) * StorageLevel(th,i) * TimeStep/24
+         + Heat(th,i)*TimeStep
+         + StorageSelfDischarge(th)*StorageLevel(th,i)*TimeStep
 ;
 * The self-discharge proportional to the charging level is a bold hypothesis, but it avoids keeping self-discharging if the level reaches zero
 
-*Storage level must be above a minimum
+* Heat Storage level must be above a minimum
 EQ_Heat_Storage_minimum(th,i)..
-         StorageMinimum(th)*Nunits(th)
+         StorageMinimum(th)
          =L=
          StorageLevel(th,i)
 ;
 
-*Storage level must be below storage capacity
+* Heat Storage level must be below storage capacity
 EQ_Heat_Storage_level(th,i)..
          StorageLevel(th,i)
          =L=
-         StorageCapacity(th)*Nunits(th)
+         StorageCapacity(th)*AvailabilityFactor(th,i)*Nunits(th)
+;
+
+* Heat Storage charging is bounded by the maximum capacity
+EQ_Heat_Storage_input(thms,i)..
+         StorageInput(thms,i)
+         =L=
+         StorageChargingCapacity(thms)
+;
+
+* Heat storage discharge is limited by the remaining storage capacity
+EQ_Heat_Storage_MaxDischarge(thms,i)$(StorageCapacity(thms)>PowerCapacity(thms)*TimeStep)..
+         Heat(thms,i)*TimeStep/(max(StorageDischargeEfficiency(thms),0.0001))
+         =L=
+         StorageInitial(thms)$(ord(i) = 1)
+         + StorageLevel(thms,i-1)$(ord(i) > 1)
+         + StorageInflow(thms,i)*Nunits(thms)*TimeStep
+;
+
+* Heat storage charging is limited by the remaining storage capacity
+EQ_Heat_Storage_MaxCharge(thms,i)$(StorageCapacity(thms)>PowerCapacity(thms)*TimeStep)..
+         StorageInput(thms,i)*StorageChargingEfficiency(thms)*TimeStep
+         =L=
+         (Nunits(thms) * StorageCapacity(thms)-StorageInitial(thms))$(ord(i) = 1)
+         + (Nunits(thms) * StorageCapacity(thms)*AvailabilityFactor(thms,i-1)
+         - StorageLevel(thms,i-1))$(ord(i) > 1)
+         + StorageOutflow(thms,i)*Nunits(thms)*TimeStep
+;
+
+* Minimum heat storage level at the end of the optimization horizon:
+EQ_Heat_Storage_boundaries(thms,i)$(ord(i) = card(i))..
+         StorageFinalMin(thms)
+         =L=
+         StorageLevel(thms,i)
+         + WaterSlack(thms)
 ;
 
 * Equations concerning PtL flexible demand
@@ -971,9 +1026,14 @@ EQ_P2H,
 EQ_Max_P2H,
 EQ_Power_available,
 EQ_Heat_available,
+EQ_thms_Heat_available,
 EQ_Heat_Storage_balance,
 EQ_Heat_Storage_minimum,
 EQ_Heat_Storage_level,
+EQ_Heat_Storage_input,
+EQ_Heat_Storage_MaxDischarge,
+EQ_Heat_Storage_MaxCharge,
+EQ_Heat_Storage_boundaries,
 EQ_Reserve_2U_capability,
 EQ_Reserve_2D_capability,
 EQ_Reserve_3U_capability,
@@ -1017,7 +1077,7 @@ if (mod(Config("RollingHorizon Length","day")*24,TimeStep) <> 0, abort "The roll
 
 * Some parameters used for debugging:
 failed=0;
-parameter CommittedInitial_dbg(u), PowerInitial_dbg(u), StorageInitial_dbg(au);
+parameter CommittedInitial_dbg(au), PowerInitial_dbg(au), StorageInitial_dbg(au);
 
 * Fixing the initial guesses:
 *PowerH.L(u,i)=PowerInitial(u);
@@ -1060,11 +1120,11 @@ $label skipdisplay3
          status("model",i) = UCM_SIMPLE.Modelstat;
          status("solver",i) = UCM_SIMPLE.Solvestat;
 
-if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, CommittedInitial_dbg(u) = CommittedInitial(u); PowerInitial_dbg(u) = PowerInitial(u); StorageInitial_dbg(au) = StorageInitial(au);
+if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, CommittedInitial_dbg(au) = CommittedInitial(au); PowerInitial_dbg(au) = PowerInitial(au); StorageInitial_dbg(au) = StorageInitial(au);
                                                                            EXECUTE_UNLOAD "debug.gdx" day, status, CommittedInitial_dbg, PowerInitial_dbg, StorageInitial_dbg;
                                                                            failed=1;);
 
-         CommittedInitial(u)=sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(u,i));
+         CommittedInitial(au)=sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(au,i));
          PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
          StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
          StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
@@ -1089,7 +1149,7 @@ $If %Verbose% == 1 Display Flow.L,Power.L,ShedLoad.L,CurtailedPower.L,CurtailedH
 *===============================================================================
 
 PARAMETER
-OutputCommitted(u,h)
+OutputCommitted(au,h)
 OutputFlow(l,h)
 OutputPower(u,h)
 OutputPowerConsumption(p2h,h)
@@ -1133,11 +1193,11 @@ OutputReserve_3U(u,h)
 ShadowPrice_RampUp_TC(u,h)
 ShadowPrice_RampDown_TC(u,h)
 OutputRampRate(u,h)
-OutputStartUp(u,h)
-OutputShutDown(u,h)
+OutputStartUp(au,h)
+OutputShutDown(au,h)
 ;
 
-OutputCommitted(u,z)=Committed.L(u,z);
+OutputCommitted(au,z)=Committed.L(au,z);
 OutputFlow(l,z)=Flow.L(l,z);
 OutputPower(u,z)=Power.L(u,z);
 OutputPowerConsumption(p2h,z)=PowerConsumption.L(p2h,z);
@@ -1189,8 +1249,8 @@ OutputReserve_3U(u,z) = Reserve_3U.L(u,z);
 ShadowPrice_RampUp_TC(u,z) = EQ_RampUp_TC.m(u,z);
 ShadowPrice_RampDown_TC(u,z) = EQ_RampDown_TC.m(u,z);
 OutputRampRate(u,z) = - Power.L(u,z-1)$(ord(z) > 1) - PowerInitial(u)$(ord(z) = 1) + Power.L(u,z);
-OutputStartUp(u,z) = StartUp.L(u,z);
-OutputShutDown(u,z) = ShutDown.L(u,z);
+OutputStartUp(au,z) = StartUp.L(au,z);
+OutputShutDown(au,z) = ShutDown.L(au,z);
 
 
 EXECUTE_UNLOAD "Results.gdx"
@@ -1299,7 +1359,7 @@ $If %MTS% == 0 $LOAD CommittedInitial_dbg
 $LOAD StorageInitial_dbg
 ;
 PowerInitial(u) = PowerInitial_dbg(u);
-$If %MTS%==0 CommittedInitial(u) = CommittedInitial_dbg(u);
+$If %MTS%==0 CommittedInitial(au) = CommittedInitial_dbg(au);
 StorageInitial(s) = StorageInitial_dbg(s);
 FirstHour = (day-1)*24/TimeStep+1;
 LastHour = min(card(h),FirstHour + (Config("RollingHorizon Length","day")+Config("RollingHorizon LookAhead","day")) * 24/TimeStep - 1);

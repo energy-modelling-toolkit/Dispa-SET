@@ -340,8 +340,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # Defining the hydro storages:
     Plants_sto = Plants_merged[[u in commons['tech_storage'] for u in Plants_merged['Technology']]]
+    # Defining the thermal storages:
+    Plants_thms = Plants_merged[[u in commons['tech_thermal_storage'] for u in Plants_merged['Technology']]]
     # check storage plants:
     check_sto(config, Plants_sto, raw_data=False)
+    check_sto(config, Plants_thms, raw_data=False)
     # Defining the CHPs:
     Plants_chp = Plants_merged[[x.lower() in commons['types_CHP'] for x in Plants_merged['CHPType']]].copy()
     # check chp plants:
@@ -379,6 +382,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     Plants_heat = Plants_heat_only.copy()
     Plants_heat = Plants_heat.append(Plants_chp)
     Plants_heat = Plants_heat.append(Plants_p2h)
+    Plants_heat = Plants_heat.append(Plants_thms)
 
     Plants_h2 = Plants_merged[Plants_merged['Technology'] == 'P2GS'].copy()
     # check chp plants:
@@ -457,15 +461,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
     sets['u'] = Plants_merged[[u in [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
-                                   commons['tech_p2ht']] for u in Plants_merged['Technology']]].index.tolist()
+                               commons['tech_p2ht'] + commons['tech_thermal_storage']]
+                               for u in Plants_merged['Technology']]].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
     sets['p2h'] = Plants_p2h.index.tolist()
     sets['p2h2'] = Plants_h2.index.tolist()
     sets['th'] = Plants_heat.index.tolist()
+    sets['thms'] = Plants_thms.index.tolist()
     sets['t'] = commons['Technologies']
     sets['tr'] = commons['tech_renewables']
     sets['wat'] = Plants_wat.index.tolist()
     sets['hu'] = Plants_heat_only.index.tolist()
+    sets['asu'] = Plants_merged[[u in [x for x in commons['Technologies'] if x in commons['tech_storage'] +
+                               commons['tech_thermal_storage']] for u in Plants_merged['Technology']]].index.tolist()
 
     ###################################################################################################################
     ############################################   Parameters    ######################################################
@@ -516,8 +524,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['Reserve'] = ['t']
     sets_param['StorageCapacity'] = ['au']
     sets_param['StorageChargingCapacity'] = ['au']
-    sets_param['StorageChargingEfficiency'] = ['s']
-    sets_param['StorageDischargeEfficiency'] = ['s']
+    sets_param['StorageChargingEfficiency'] = ['au']
+    sets_param['StorageDischargeEfficiency'] = ['asu']
     sets_param['StorageSelfDischarge'] = ['au']
     sets_param['StorageInflow'] = ['s', 'h']
     sets_param['StorageInitial'] = ['s']
@@ -562,10 +570,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # List of parameters whose value is known, and provided in the dataframe Plants_sto.
     for var in ['StorageChargingEfficiency']:
-        parameters[var]['val'] = Plants_sto[var].values
+        # parameters[var]['val'] = Plants_sto[var].values
+        parameters[var]['val'] = Plants_merged[var].values
 
     # The storage discharge efficiency is actually given by the unit efficiency:
-    parameters['StorageDischargeEfficiency']['val'] = Plants_sto['Efficiency'].values
+    parameters['StorageDischargeEfficiency']['val'] = np.concatenate((Plants_sto['Efficiency'].values,
+                                                                      Plants_thms['Efficiency'].values), axis=None)
 
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
     for var in ['CHPPowerToHeat', 'CHPPowerLossFactor', 'CHPMaxHeat']:
