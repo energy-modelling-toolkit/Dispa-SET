@@ -175,6 +175,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
     check_sto(config, plants_sto)
 
+    # Defining the thermal storages:
+    plants_thms = plants[[u in commons['tech_thermal_storage'] for u in plants['Technology']]]
+    check_sto(config, plants_thms)
+
+    # Merging all MTS storage units
+    plants_all_sto = plants_sto.append(plants_thms)
+
     # Defining the heat only units:
     plants_heat = plants[[u in commons['tech_heat'] for u in plants['Technology']]]
     check_heat(config, plants_heat)
@@ -200,7 +207,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                         RestrictWarning=commons['tech_renewables'])
     AF = AF.apply(pd.to_numeric)
 
-    ReservoirLevels = UnitBasedTable(plants_sto, 'ReservoirLevels', config, fallbacks=['Unit', 'Technology', 'Zone'],
+    ReservoirLevels = UnitBasedTable(plants_all_sto, 'ReservoirLevels', config, fallbacks=['Unit', 'Technology', 'Zone'],
                                      default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_sto, 'ReservoirScaledInflows', config,
                                             fallbacks=['Unit', 'Technology', 'Zone'], default=0)
@@ -229,12 +236,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
-        plants_sto.set_index(plants_sto.loc[:, 'Unit'], inplace=True, drop=True)
+        plants_all_sto.set_index(plants_all_sto.loc[:, 'Unit'], inplace=True, drop=True)
         for key in profiles.columns:
             if key not in ReservoirLevels.columns:
                 logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the '
                                 'ReservoirLevels table')
-            elif key in list(ReservoirLevels.loc[:, plants_sto['Technology'] == 'SCSP'].columns):
+            elif key in list(ReservoirLevels.loc[:, plants_all_sto['Technology'] == 'SCSP'].columns):
                 ReservoirLevels[key] = config['default']['ReservoirLevelInitial']
                 logging.info('The reservoir profile "' + key + '" can not be seleceted for MTS, instead, default value '
                              'of: ' + str(config['default']['ReservoirLevelInitial']) + ' will be used')
@@ -528,10 +535,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['StorageDischargeEfficiency'] = ['asu']
     sets_param['StorageSelfDischarge'] = ['au']
     sets_param['StorageInflow'] = ['s', 'h']
-    sets_param['StorageInitial'] = ['s']
+    sets_param['StorageInitial'] = ['asu']
     sets_param['StorageMinimum'] = ['s']
     sets_param['StorageOutflow'] = ['s', 'h']
-    sets_param['StorageProfile'] = ['s', 'h']
+    sets_param['StorageProfile'] = ['asu', 'h']
     sets_param['Technology'] = ['au', 't']
     sets_param['TimeUpMinimum'] = ['au']
     sets_param['TimeDownMinimum'] = ['au']
@@ -591,7 +598,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                     parameters['MaxCapacityPtL']['val'][i] = MaxCapacityPtL.loc[unit]
 
                     # Storage profile and initial state:
-    for i, s in enumerate(sets['s']):
+    for i, s in enumerate(sets['asu']):
         if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(
                 finalTS['ReservoirLevels'][s] - 1 <= 1e-11):
             # get the time series
@@ -608,9 +615,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                                                                     config['default']['ReservoirLevelFinal'],
                                                                     len(idx_sim))
         # The initial level is the same as the first value of the profile:
-        parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
-                                                 finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
-                                                 Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
+        if s in Plants_sto.index:
+            parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
+                                                     finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
+                                                     Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
+        if s in Plants_thms.index:
+            parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
+                                                     finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
+                                                     Plants_thms['StorageCapacity'][s] * Plants_thms['Nunits'][s]
 
     # Storage Inflows:
     for i, s in enumerate(sets['s']):

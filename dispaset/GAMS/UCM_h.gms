@@ -130,17 +130,17 @@ Markup(u,h)                      [EUR\MW]        Markup
 OutageFactor(au,h)                [%]             Outage Factor (100% = full outage)
 PartLoadMin(au)                  [%]             Minimum part load
 PowerCapacity(au)                [MW\u]          Installed capacity
-PowerInitial(au)                  [MW\u]          Power output before initial period
+PowerInitial(u)                  [MW\u]          Power output before initial period
 PowerMinStable(au)               [MW\u]          Minimum power output
 PriceTransmission(l,h)           [EUR\MWh]       Transmission price
 StorageChargingCapacity(au)       [MW\u]          Storage capacity
 StorageChargingEfficiency(au)     [%]             Charging efficiency
 StorageSelfDischarge(au)         [%\day]         Self-discharge of the storage units
 RampDownMaximum(u)               [MW\h\u]        Ramp down limit
-RampShutDownMaximum(u)           [MW\h\u]        Shut-down ramp limit
-RampStartUpMaximum(u)            [MW\h\u]        Start-up ramp limit
-RampStartUpMaximumH(u,h)         [MW\h\u]        Start-up ramp limit - Clustered formulation
-RampShutDownMaximumH(u,h)        [MW\h\u]        Shut-down ramp limit - Clustered formulation
+RampShutDownMaximum(au)           [MW\h\u]        Shut-down ramp limit
+RampStartUpMaximum(au)            [MW\h\u]        Start-up ramp limit
+RampStartUpMaximumH(au,h)         [MW\h\u]        Start-up ramp limit - Clustered formulation
+RampShutDownMaximumH(au,h)        [MW\h\u]        Shut-down ramp limit - Clustered formulation
 RampUpMaximum(u)                 [MW\h\u]        Ramp up limit
 Reserve(t)                       [n.a.]          Reserve technology {1 0}
 StorageCapacity(au)              [MWh\u]         Storage capacity
@@ -158,14 +158,14 @@ MaxCapacityPtL(p2h2)             [MW]            Max capacity of PtL
 $If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment status as for the MILP
 Nunits(au)                       [n.a.]          Number of units inside the cluster (upper bound value for integer variables)
 K_QuickStart(n)                  [n.a.]          Part of the reserve that can be provided by offline quickstart units
-QuickStartPower(u,h)             [MW\h\u]        Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
+QuickStartPower(au,h)             [MW\h\u]        Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
 ;
 
 *Parameters as used within the loop
 PARAMETERS
 CostLoadShedding(n,h)            [EUR\MW]        Value of lost load
 LoadMaximum(au,h)                 [%]             Maximum load given AF and OF
-PowerMustRun(u,h)                [MW\u]          Minimum power output
+PowerMustRun(au,h)                [MW\u]          Minimum power output
 StorageFinalMin(au)               [MWh]           Minimum storage level at the end of the optimization horizon
 MaxFlexDemand(n)                 [MW]            Maximum value of the flexible demand parameter
 MaxOverSupply(n,h)               [MWh]           Maximum flexible demand accumultation
@@ -402,7 +402,7 @@ DemandModulation(n,h)      [MW]    Difference between the flexible demand and th
 
 *Initial commitment status
 CommittedInitial(au)=0;
-CommittedInitial(au)$(PowerInitial(au)>0)=1;
+CommittedInitial(u)$(PowerInitial(u)>0)=1;
 
 * Definition of the minimum stable load:
 PowerMinStable(au) = PartLoadMin(au)*PowerCapacity(au);
@@ -410,10 +410,10 @@ PowerMinStable(au) = PartLoadMin(au)*PowerCapacity(au);
 LoadMaximum(au,h)= AvailabilityFactor(au,h)*(1-OutageFactor(au,h));
 
 * parameters for clustered formulation (quickstart is defined as the capability to go to minimum power in 15 min)
-QuickStartPower(u,h) = 0;
-QuickStartPower(u,h)$(RampStartUpMaximum(u)>=PowerMinStable(u)*4) = PowerCapacity(u)*LoadMaximum(u,h);
-RampStartUpMaximumH(u,h) = min(PowerCapacity(u)*LoadMaximum(u,h),max(RampStartUpMaximum(u),PowerMinStable(u),QuickStartPower(u,h)));
-RampShutDownMaximumH(u,h) = min(PowerCapacity(u)*LoadMaximum(u,h),max(RampShutDownMaximum(u),PowerMinStable(u)));
+QuickStartPower(au,h) = 0;
+QuickStartPower(au,h)$(RampStartUpMaximum(au)>=PowerMinStable(au)*4) = PowerCapacity(au)*LoadMaximum(au,h);
+RampStartUpMaximumH(au,h) = min(PowerCapacity(au)*LoadMaximum(au,h),max(RampStartUpMaximum(au),PowerMinStable(au),QuickStartPower(au,h)));
+RampShutDownMaximumH(au,h) = min(PowerCapacity(au)*LoadMaximum(au,h),max(RampShutDownMaximum(au),PowerMinStable(au)));
 
 PowerMustRun(u,h)=PowerMinStable(u)*LoadMaximum(u,h);
 PowerMustRun(u,h)$(sum(tr,Technology(u,tr))>=1 and smin(n,Location(u,n)*(1-Curtailment(n)))=1) = PowerCapacity(u)*LoadMaximum(u,h);
@@ -748,6 +748,7 @@ EQ_thms_Heat_available(thms,i)..
          =L=
          PowerCapacity(thms)
                  *LoadMaximum(thms,i)
+                        *Committed(thms,i)
 ;
 
 *Storage level must be above a minimum
@@ -777,7 +778,8 @@ EQ_Storage_input(s,i)..
 EQ_Storage_MaxDischarge(s,i)$(StorageCapacity(s)>PowerCapacity(s)*TimeStep)..
          Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
          =L=
-         StorageInitial(s)$(ord(i) = 1) + StorageLevel(s,i-1)$(ord(i) > 1)
+         StorageInitial(s)$(ord(i) = 1)
+         + StorageLevel(s,i-1)$(ord(i) > 1)
          +StorageInflow(s,i)*Nunits(s)*TimeStep
 ;
 
@@ -898,7 +900,7 @@ EQ_P2H(p2h,i)..
 EQ_Max_P2H(p2h,i)..
          PowerConsumption(p2h,i)
          =L=
-         PowerCapacity(p2h) * Nunits(p2h)
+         PowerCapacity(p2h) * Committed(p2h,i)
 ;
 
 *EQ_CHP_demand_satisfaction(th,i)..
@@ -948,7 +950,7 @@ EQ_Heat_Storage_level(th,i)..
 EQ_Heat_Storage_input(thms,i)..
          StorageInput(thms,i)
          =L=
-         StorageChargingCapacity(thms)
+         StorageChargingCapacity(thms)*(Nunits(thms)-Committed(thms,i))
 ;
 
 * Heat storage discharge is limited by the remaining storage capacity
@@ -1077,7 +1079,7 @@ if (mod(Config("RollingHorizon Length","day")*24,TimeStep) <> 0, abort "The roll
 
 * Some parameters used for debugging:
 failed=0;
-parameter CommittedInitial_dbg(au), PowerInitial_dbg(au), StorageInitial_dbg(au);
+parameter CommittedInitial_dbg(au), PowerInitial_dbg(u), StorageInitial_dbg(au);
 
 * Fixing the initial guesses:
 *PowerH.L(u,i)=PowerInitial(u);
@@ -1120,13 +1122,14 @@ $label skipdisplay3
          status("model",i) = UCM_SIMPLE.Modelstat;
          status("solver",i) = UCM_SIMPLE.Solvestat;
 
-if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, CommittedInitial_dbg(au) = CommittedInitial(au); PowerInitial_dbg(au) = PowerInitial(au); StorageInitial_dbg(au) = StorageInitial(au);
+if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, CommittedInitial_dbg(au) = CommittedInitial(au); PowerInitial_dbg(u) = PowerInitial(u); StorageInitial_dbg(au) = StorageInitial(au);
                                                                            EXECUTE_UNLOAD "debug.gdx" day, status, CommittedInitial_dbg, PowerInitial_dbg, StorageInitial_dbg;
                                                                            failed=1;);
 
          CommittedInitial(au)=sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(au,i));
          PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
          StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
+         StorageInitial(thms) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(thms,i));
          StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
 $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),AccumulatedOverSupply.L(n,i));
 
@@ -1192,7 +1195,7 @@ OutputReserve_2D(u,h)
 OutputReserve_3U(u,h)
 ShadowPrice_RampUp_TC(u,h)
 ShadowPrice_RampDown_TC(u,h)
-OutputRampRate(u,h)
+OutputRampRate(au,h)
 OutputStartUp(au,h)
 OutputShutDown(au,h)
 ;
@@ -1249,6 +1252,7 @@ OutputReserve_3U(u,z) = Reserve_3U.L(u,z);
 ShadowPrice_RampUp_TC(u,z) = EQ_RampUp_TC.m(u,z);
 ShadowPrice_RampDown_TC(u,z) = EQ_RampDown_TC.m(u,z);
 OutputRampRate(u,z) = - Power.L(u,z-1)$(ord(z) > 1) - PowerInitial(u)$(ord(z) = 1) + Power.L(u,z);
+OutputRampRate(hu,z) = - Heat.L(hu,z-1)$(ord(z) > 1) + Heat.L(hu,z);
 OutputStartUp(au,z) = StartUp.L(au,z);
 OutputShutDown(au,z) = ShutDown.L(au,z);
 

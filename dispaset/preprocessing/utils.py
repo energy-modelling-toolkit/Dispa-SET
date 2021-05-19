@@ -16,6 +16,7 @@ import pandas as pd
 
 from ..misc.gdx_handler import write_variables
 from ..misc.str_handler import clean_strings, shrink_to_64
+from ..common import commons
 
 
 def pd_timestep(hours):
@@ -53,10 +54,10 @@ def EfficiencyTimeSeries(config, plants, Temperatures):
     Efficiencies = pd.DataFrame(columns=plants.index, index=config['idx_long'])
     for u in plants.index:
         z = plants.loc[u, 'Zone']
-        if plants.loc[u, 'Technology'] == 'P2HT' and 'Tnominal' in plants:
+        if plants.loc[u, 'Technology'] in commons['tech_p2ht'] and plants.loc[u,'Tnominal'] in plants:
             eff = plants.loc[u, 'COP'] + plants.loc[u, 'coef_COP_a'] * (Temperatures[z] - plants.loc[u, 'Tnominal']) + \
                   plants.loc[u, 'coef_COP_b'] * (Temperatures[z] - plants.loc[u, 'Tnominal']) ** 2
-        elif plants.loc[u, 'Technology'] == 'P2HT':
+        elif plants.loc[u, 'Technology'] in commons['tech_p2ht']:
             eff = plants.loc[u, 'COP']
         else:
             eff = plants.loc[u, 'Efficiency']

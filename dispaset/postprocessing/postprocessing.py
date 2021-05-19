@@ -129,6 +129,23 @@ def filter_by_tech(PowerOutput, inputs, t):
     return Power
 
 
+def filter_by_tech_list(PowerOutput, inputs, tech):
+    """
+    This function filters the dispaset power output dataframe by technology
+
+    :param PowerOutput:   Dataframe of power generation with units as columns and time as index
+    :param inputs:        Dispaset inputs version 2.1.1
+    :param t:             Selected tech (e.g. 'HDAM')
+    :returns Power:
+    """
+    loc = inputs['units']['Technology']
+    Power = pd.DataFrame()
+    for t in tech:
+        tmp = PowerOutput.loc[:, [u for u in PowerOutput.columns if loc[u] == t]]
+        Power = pd.concat([Power, tmp], axis=1)
+    return Power
+
+
 def filter_by_storage(PowerOutput, Inputs, StorageSubset=None):
     """
     This function filters the power generation curves of the different storage units by storage type
