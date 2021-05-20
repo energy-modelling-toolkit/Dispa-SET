@@ -4,10 +4,10 @@ dependencies:
   - python >= 3.7
   - future >= 0.15
   - click >= 3.3
-  - numpy>=1.10
-  - scipy>=0.15
-  - matplotlib>=1.5.1
-  - pandas>= 0.19
+  - numpy >= 1.10
+  - scipy >= 0.15
+  - matplotlib >= 1.5.1
+  - pandas >= 0.19
   - xlrd = 1.2.0
   - xarray >= 0.11
   - netcdf4
@@ -17,9 +17,9 @@ dependencies:
   - cartopy
   - pip
   - pip:
-    - gdxcc
-    - gamsxcc
-    - optcc
+    - gdxcc = 7.28.20
+    - gamsxcc = 1.28.20
+    - optcc = 4.28.20
     - setuptools_scm
     - pytest-cov
     - codecov
