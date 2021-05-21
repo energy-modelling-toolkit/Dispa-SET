@@ -724,8 +724,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                 found = True
         # Special case for biomass plants, which are not included in EU ETS:
         if Plants_merged['Fuel'][unit] == 'BIO':
-            parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'][c] / Plants_merged['Efficiency'][
-                unit]
+            parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'][c] / \
+                                                         Plants_merged['Efficiency'][unit]
             found = True
         if not found:
             logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] +
