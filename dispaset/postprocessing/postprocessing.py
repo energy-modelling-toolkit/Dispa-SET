@@ -86,12 +86,14 @@ def aggregate_by_fuel(PowerOutput, Inputs, SpecifyFuels=None):
 
 def filter_by_zone(PowerOutput, inputs, z, thermal = None):
     """
+    This function filters the dispaset Output dataframes by zone
+
     This function filters the dispaset Output Power dataframe by zone
 
-    :param PowerOutput:     Dataframe of power generationwith units as columns and time as index
+    :param PowerOutput:     Dataframe of power generation with units as columns and time as index
     :param inputs:          Dispaset inputs version 2.1.1
     :param z:               Selected zone (e.g. 'BE')
-    :returns Power:          Dataframe with power generation by zone
+    :returns Power:         Dataframe with power generation by zone
     """
     if thermal:
         loc = inputs['units']['Zone_th']
@@ -228,23 +230,7 @@ def get_heat_plot_data(inputs, results, z_th):
         plotdata.loc[:, 'HeatSlack'] = 0
     else:
         plotdata.loc[:, 'HeatSlack'] = results['OutputHeatSlack'].loc[:, z_th]
-    # if 'OutputStorageInput' in results:
-    #     # onnly take the columns that correspond to storage units (StorageInput is also used for CHP plants):
-    #     cols = [col for col in results['OutputStorageInput'] if
-    #             (inputs['units'].loc[col, 'Technology'] in commons['tech_p2ht'] + commons['tech_heat']) or
-    #             (inputs['units'].loc[col, 'CHPType'] in commons['types_CHP'])]
-    #     tmp = filter_by_heating_zone(results['OutputStorageInput'][cols], inputs, z_th)
-    #     bb = pd.DataFrame()
-    #     for tech in commons['tech_storage']:
-    #         aa = filter_by_tech(tmp, inputs, tech)
-    #         aa = aa.sum(axis=1)
-    #         aa = pd.DataFrame(aa, columns=[tech])
-    #         bb = pd.concat([bb, aa], axis=1)
-    #     bb = -bb
-    #     plotdata = pd.concat([plotdata, bb], axis=1)
-    #     # plotdata['Storage'] = -tmp.sum(axis=1)
-    # else:
-    #     plotdata['Storage'] = 0
+
     plotdata.fillna(value=0, inplace=True)
 
     # re-ordering columns:
@@ -571,6 +557,7 @@ def CostExPost(inputs, results):
     committedlong_shifted.iloc[1:, :] = committedlong.iloc[:-1, :].values
 
     ramping = powerlong - powerlong_shifted
+   
     startups = committedlong.astype(int) - committedlong_shifted.astype(int)
     ramping.drop([ramping.index[0]], inplace=True)
     startups.drop([startups.index[0]], inplace=True)
@@ -679,7 +666,8 @@ def get_units_operation_cost(inputs, results):
 
     Main Author: @AbdullahAlawad
     """
-    datain = ds_to_df(inputs)
+    datain = inputs['param_df']
+
 
     # make sure that we have the same columns in the committed table and in the power table:
     for u in results['OutputCommitted']:
@@ -724,10 +712,18 @@ def get_units_operation_cost(inputs, results):
     RampUpCost = results['OutputCommitted'].copy()
     RampDownCost = results['OutputCommitted'].copy()
     VariableCost = results['OutputCommitted'].copy()
-    UnitOperationCost = results['OutputCommitted'].copy()
+    PowerUnitOperationCost = results['OutputCommitted'].copy()
+    ConsumptionCost = results['OutputPowerConsumption'].copy()
 
     OperatedUnitList = results['OutputCommitted'].columns
     for u in OperatedUnitList:
+        if u not in results['OutputPower']:
+            results['OutputPower'][u]=0
+            RampUps[u] = 0
+            RampDowns[u] = 0
+            StartUps[u] = 0
+            ShutDowns[u] = 0
+            logging.warning('Unit ' + u + ' is in the table committed but not in the output power table')
         unit_indexNo = inputs['units'].index.get_loc(u)
         FiexedCost.loc[:, [u]] = np.array(results['OutputCommitted'].loc[:, [u]]) * \
                                  inputs['parameters']['CostFixed']['val'][unit_indexNo]
@@ -741,8 +737,15 @@ def get_units_operation_cost(inputs, results):
         VariableCost.loc[:, [u]] = np.array(datain['CostVariable'].loc[:, [u]]) * np.array(
             results['OutputPower'][u]).reshape(-1, 1)
 
-    UnitOperationCost = FiexedCost + StartUpCost + ShutDownCost + RampUpCost + RampDownCost + VariableCost
-
+    PowerConsumers = results['OutputPowerConsumption'].columns
+    Shadowprice = results['ShadowPrice'].head(inputs['config']['LookAhead']*-24+1)#reindexing
+    for u in PowerConsumers:#at this moment only variable costs
+        z = inputs['units'].at[u,'Zone']
+        ConsumptionCost.loc[:,[u]] = np.array(Shadowprice.loc[:,[z]])*np.array(results['OutputPowerConsumption'][u]).reshape(-1,1)
+      
+    PowerUnitOperationCost = FiexedCost + StartUpCost + ShutDownCost + RampUpCost + RampDownCost + VariableCost
+	UnitOperationCost = pd.concat([PowerUnitOperationCost, ConsumptionCost], axis=1)
+    
     return UnitOperationCost
 
 
@@ -874,3 +877,179 @@ def get_net_positions(inputs, results, zones, idx):
     NetExports[NetExports < 0] = 0
     NetPosition = Demand.loc[idx].sum() + NetExports.iloc[0]
     return NetImports, NetPosition
+
+#%%
+def shadowprices(results, zone):
+    """
+    this function retrieves the schadowprices of DA, 2U, 2D, 3U for 1 zone
+    """
+    shadowprices = pd.DataFrame(0,index = results['OutputPower'].index, columns = ['DA','2U','2D','3U'])
+    
+    if  zone in results['ShadowPrice'].columns:
+        shadowprices['DA'] = results['ShadowPrice'][zone]
+    if zone in results['ShadowPrice_2U'].columns:
+        shadowprices['2U'] = results['ShadowPrice_2U'][zone]
+    if zone in results['ShadowPrice_2D'].columns:
+        shadowprices['2D'] = results['ShadowPrice_2D'][zone]        
+    if zone in results['ShadowPrice_3U'].columns:
+        shadowprices['3U'] = results['ShadowPrice_3U'][zone]
+
+    shadowprices.fillna(0,inplace=True)
+    return shadowprices
+#%%
+def Cashflows(inputs,results,unit):
+    """
+    This function calculates the different cashflows (DA,2U,2D,3U,Heat,costs) for one specific unit
+    returns: hourly cashflow
+    """
+    zone = inputs['units'].at[unit,'Zone']
+    cashflows = pd.DataFrame(index = inputs['config']['idx'])
+    
+    TMP = shadowprices(results, zone)
+
+    
+    if TMP['DA'].max() > 10000:
+        for i in TMP.index:
+            if TMP.loc[i,'DA']>10000:
+                TMP.loc[i,'DA']=TMP.at[i-1,'DA']
+        
+    if TMP['2U'].max() > 10000:
+        for i in TMP.index:
+            if TMP.loc[i,'2U']>10000:
+                TMP.loc[i,'2U']=TMP.at[i-1,'2U']
+        
+    if TMP['3U'].max() > 10000:
+        for i in TMP.index:
+            if TMP.loc[i,'3U']>10000:
+                TMP.loc[i,'3U']=TMP.at[i-1,'3U']
+        
+    if TMP['2D'].max() > 10000:
+        for i in TMP.index:
+            if TMP.loc[i,'2D']>10000:
+                TMP.loc[i,'2D']=TMP.at[i-1,'2D']
+
+    
+    #positive cashflows
+    if  unit in results['OutputPower'].columns and zone in results['ShadowPrice'].columns:
+        cashflows['DA'] = results['OutputPower'][unit]*TMP['DA']
+    else:
+        cashflows['DA'] = 0
+    if unit in results['OutputReserve_2U'].columns and zone in results['ShadowPrice_2U'].columns:
+        cashflows['2U'] = results['OutputReserve_2U'][unit]*TMP['2U']
+    else:
+        cashflows['2U'] = 0
+    if unit in results['OutputReserve_2D'].columns and zone in results['ShadowPrice_2D'].columns:
+        cashflows['2D'] = results['OutputReserve_2D'][unit]*TMP['2D']
+    else:
+        cashflows['2D'] = 0
+    if unit in results['OutputReserve_3U'].columns and zone in results['ShadowPrice_3U'].columns:
+        cashflows['3U'] = results['OutputReserve_3U'][unit]*TMP['3U']
+    else:
+        cashflows['3U'] = 0
+    if unit in results['OutputHeat'].columns and unit in results['HeatShadowPrice'].columns:
+        cashflows['heat'] = results['OutputHeat'][unit]*results['HeatShadowPrice'][unit]
+    else:
+        cashflows['heat'] = 0
+
+    #negative cashflow
+    units_operation_cost = get_units_operation_cost(inputs, results)
+    
+    cashflows['costs'] = -units_operation_cost[unit]
+
+    cashflows.fillna(0,inplace = True)
+    return cashflows
+#%%
+def reserve_availability_demand(inputs,results):
+    """
+    this function evaluates the reserve demand and availability of all units
+    returns: hourly_availability : hourly availability over the corresponding hourly reserve demand in [%]
+    returns: availability        : the mean of hourly availability,
+                                   total hourly availability over total corresponding hourly reserve demand in [%]
+    returns: reserve_demand        mean demand over peak load
+    """
+    
+    hourly_availability = {}
+    hourly_availability['2U'] = pd.DataFrame()
+    hourly_availability['3U'] = pd.DataFrame()
+    hourly_availability['Down'] = pd.DataFrame()
+    hourly_availability['Up'] = pd.DataFrame()
+    
+
+    total_up_reserves = pd.concat([results['OutputReserve_2U'],results['OutputReserve_3U']],axis=1)
+    total_up_reserves = total_up_reserves.groupby(level=0, axis=1).sum()
+
+    availability = {}
+    availability['2U'] = pd.DataFrame(0.0,index = results['OutputReserve_2U'].columns, columns = ['mean','total'])
+    availability['3U'] = pd.DataFrame(0.0,index = results['OutputReserve_3U'].columns, columns = ['mean','total'])
+    availability['Down'] = pd.DataFrame(0.0,index = results['OutputReserve_2D'].columns, columns = ['mean','total'])
+    availability['Up'] = pd.DataFrame(0.0,index = total_up_reserves.columns, columns = ['mean','total'])
+    
+    
+    for unit in results['OutputReserve_2U'].columns:
+        zone = inputs['units'].at[unit,'Zone']
+        hourly_availability['2U'][unit] = results['OutputReserve_2U'][unit]/(inputs['param_df']['Demand']['2U',zone]/2)*100
+        availability['2U'].at[unit,'mean'] = hourly_availability['2U'][unit].mean()
+        availability['2U'].at[unit,'total'] = results['OutputReserve_2U'][unit].sum()/(inputs['param_df']['Demand']['2U',zone].sum()/2)*100
+        
+    for unit in results['OutputReserve_3U'].columns:
+        zone = inputs['units'].at[unit,'Zone']
+        hourly_availability['3U'][unit] = results['OutputReserve_3U'][unit]/(inputs['param_df']['Demand']['2U',zone]/2)*100
+        availability['3U'].at[unit,'mean'] = hourly_availability['3U'][unit].mean()
+        availability['3U'].at[unit,'total'] = results['OutputReserve_3U'][unit].sum()/(inputs['param_df']['Demand']['2U',zone].sum()/2)*100
+
+    for unit in results['OutputReserve_2D'].columns:
+        zone = inputs['units'].at[unit,'Zone']
+        hourly_availability['Down'][unit] = results['OutputReserve_2D'][unit]/inputs['param_df']['Demand']['2D',zone]*100
+        availability['Down'].at[unit,'mean'] = hourly_availability['Down'][unit].mean()
+        availability['Down'].at[unit,'total'] = results['OutputReserve_2D'][unit].sum()/inputs['param_df']['Demand']['2D',zone].sum()*100
+
+    for unit in total_up_reserves.columns:
+        zone = inputs['units'].at[unit,'Zone']
+        hourly_availability['Up'][unit] = total_up_reserves[unit]/inputs['param_df']['Demand']['2U',zone]*100
+        availability['Up'].at[unit,'mean'] = hourly_availability['Up'][unit].mean()
+        availability['Up'].at[unit,'total'] = total_up_reserves[unit].sum()/inputs['param_df']['Demand']['2U',zone].sum()*100
+    
+    reserve_demand = pd.DataFrame(0.0,index = inputs['config']['zones'], columns = ['upwards','downwards'])
+    for zone in inputs['config']['zones']:
+        reserve_demand.at[zone,'upwards'] = inputs['param_df']['Demand']['2U',zone].mean()/inputs['param_df']['Demand']['DA',zone].max()
+        reserve_demand.at[zone,'downwards'] = inputs['param_df']['Demand']['2D',zone].mean()/inputs['param_df']['Demand']['DA',zone].max()
+        
+    return hourly_availability, availability, reserve_demand
+
+#%%
+def emissions(inputs,results):
+    """
+    function calculates emissions for each zone
+    returns: emissions : dataframe with summed up emissions for each zone
+    """
+    emissions = pd.DataFrame(0,index=inputs['config']['zones'], columns = ['emissions'])
+
+    unit_emissions = results['OutputPower'].sum() * inputs['param_df']['EmissionRate'] # MWh * tCO2 / MWh = tCO2
+    unit_emissions.fillna(0,inplace=True)
+    
+    for zone in inputs['config']['zones']:
+        emissions.at[zone,'emissions'] = filter_by_zone(unit_emissions, inputs, zone).sum(axis=1)
+    
+    return emissions
+    
+#%% load shedding
+def load_shedding(inputs,results):
+    loadshedding = pd.DataFrame(0,index = ['max','sum','amount'], columns = inputs['config']['zones'])
+    for z in inputs['config']['zones']:
+        if z in results['OutputShedLoad']:
+            loadshedding.loc['max',z] = results['OutputShedLoad'][z].max()
+            loadshedding.loc['sum',z] = results['OutputShedLoad'][z].sum()
+            loadshedding.loc['amount',z] = (results['OutputShedLoad'][z]!=0).sum()
+
+    return loadshedding
+
+#%% curtailment
+def curtailment(inputs,results):
+    curtailment = pd.DataFrame(0,index = ['max','sum','amount'], columns = inputs['config']['zones'])
+    for z in inputs['config']['zones']:
+        if z in results['OutputCurtailedPower']:
+            curtailment.loc['max',z] = results['OutputCurtailedPower'][z].max()
+            curtailment.loc['sum',z] = results['OutputCurtailedPower'][z].sum()
+            curtailment.loc['amount',z] = (results['OutputCurtailedPower'][z]!=0).sum()
+
+    return curtailment

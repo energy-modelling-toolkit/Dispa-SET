@@ -14,6 +14,7 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, check
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
+from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
 
 from .. import __version__
 from ..common import commons
@@ -405,14 +406,27 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     reserve_2U_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     reserve_2D_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     for z in Load.columns:
-        if z in Reserve2U:
-            reserve_2U_tot[z] = Reserve2U[z]
+        if config['ReserveCalculation'] == 'Exogenous':
+            if z in Reserve2U and z in Reserve2D:
+                reserve_2U_tot[z] = Reserve2U[z]
+                reserve_2D_tot[z] = Reserve2D[z]
+            else:
+                logging.critical('Exogenous reserve requirements (2D and 2U) not found for zone ' +z)
+                sys.exit(1)
         else:
-            reserve_2U_tot[z] = np.sqrt(10 * PeakLoad[z] + 150 ** 2) - 150
-        if z in Reserve2D:
-            reserve_2D_tot[z] = Reserve2D[z]
-        else:
-            reserve_2D_tot[z] = 0.5 * reserve_2U_tot[z]
+            if z in Reserve2U and z in Reserve2D:
+                logging.info('Using exogenous reserve data for zone ' + z)
+                reserve_2U_tot[z] = Reserve2U[z]
+                reserve_2D_tot[z] = Reserve2D[z]            
+            elif config['ReserveCalculation'] == 'Percentage':
+                logging.info('Using percentage-based reserve sizing for zone ' + z)
+                reserve_2U_tot[z], reserve_2D_tot[z] = percentage_reserve(config,plants,Load,AF,z)  
+            elif config['ReserveCalculation'] == 'Probabilistic':
+                logging.info('Using probabilistic reserve sizing for zone ' + z)
+                reserve_2U_tot[z], reserve_2D_tot[z] = probabilistic_reserve(config,plants,Load,AF,z)  
+            else:
+                logging.info('Using generic reserve calculation for zone ' + z)
+                reserve_2U_tot[z], reserve_2D_tot[z] = generic_reserve(Load[z])  
 
     # %% Store all times series and format
 
@@ -528,7 +542,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['RampDownMaximum'] = ['au']
     sets_param['RampStartUpMaximum'] = ['au']
     sets_param['RampShutDownMaximum'] = ['au']
-    sets_param['Reserve'] = ['t']
+    sets_param['Reserve'] = ['au']  #changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
     sets_param['StorageCapacity'] = ['au']
     sets_param['StorageChargingCapacity'] = ['au']
     sets_param['StorageChargingEfficiency'] = ['au']
@@ -738,7 +752,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                 logging.warning('Outages factors not found for unit ' + u + '. Assuming no outages')
 
     # Participation to the reserve market
-    values = np.array([s in config['ReserveParticipation'] for s in sets['t']], dtype='bool')
+    list_of_participating_units = []#new list
+    for unit in Plants_merged.index:
+        tech = Plants_merged.loc[unit,'Technology']
+        if tech in config['ReserveParticipation'] and Plants_merged.loc[unit,'CHPType'] == '':
+            list_of_participating_units.append(unit)    #if unit same technology as allowed without CHP and unit is no CHP then add to list
+        elif tech in config['ReserveParticipation_CHP'] and Plants_merged.loc[unit,'CHPType'] != '':
+            list_of_participating_units.append(unit)    #if unit same technology as allowed with CHP and unit is CHP then add to list
+            
+    values = np.array([s in list_of_participating_units for s in sets['au']], dtype='bool')# same as before but with new list
     parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
 
     # Technologies

@@ -338,7 +338,13 @@ The tertiary reserve can also be provided by non-spinning units. The inequality 
 		&+ \mathit{LL_{3U}}_{n,i}
 	\end{align}
 
-The reserve requirements are defined by the users. In case no input is provided a default formula is used to evaluate the needs for secondary reserves as a function of the maximum expected load for each day. The default formula is described by:
+
+Reserve Requirements
+--------------------
+
+The reserve requirements are defined by the users. In case no input is provided, one among the three methods modeled in Dispa-SET and briefly described here can be selected. 
+
+The first method proposed to evaluate the needs for reserves is static and based on an empirical formula which is function of the maximum expected load for each day. The empirical formula is described by:
 
 .. math::
 
@@ -350,6 +356,30 @@ Downward reserves are defined as 50\% of the upward margin:
 
 	\mathit{Demand}_{2D,n,h}=0.5 \cdot \mathit{Demand}_{2U,n,h}
 
+The second formulation proposed by Dispa-SET is dynamic and based on the (3+5)% rule. Reserve requirements are computed as a fraction of the forecasted demand and available wind and solar power at a certain hour of the day. Here the formula:
+
+
+.. math::
+ 	
+       \begin{align}
+       \mathit{Demand}_{2U,n,h}=0.03 \cdot \mathit{Demand}_{\mathit{DA},n,h}  \\ 
+        + 0.05 \cdot \mathit{AvailableWindPower}_{u,i} + 0.05 \cdot \mathit{AvailablePhotPower}_{u,i}
+       \end{align}
+
+In this case downward reserves are equal to upward reserves.
+
+The third and last method proposed in Dispa-SET is dynamic and probabilistic. It accounts for reserve requirements as the sum of two components as follows: 
+       
+
+.. math::
+ 	
+        \begin{align}
+        \mathit{Demand}_{2U,n,h}= \sqrt{10 \cdot \mathit{Demand}_{\mathit{DA},n,h} + 150^2}-150 \\
+	+ 2.74 \cdot \sqrt{ \sigma_{L,n,h}^2 + \sigma_{W,n,h}^2 + \sigma_{S,n,h}^2}
+        \end{align}
+
+where the second part of the function exploits the standard deviations of demand, solar and wind power forecast error functions assuming a confidence level equal to 99.7%. 
+Also in this last case downward reserves are equal to upward reserves.
 
 Power output bounds
 -------------------
