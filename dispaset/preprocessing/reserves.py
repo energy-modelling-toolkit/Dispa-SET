@@ -8,13 +8,13 @@ Created on Tue Apr 14 12:02:10 2020
 import pandas as pd
 
 
-def percentage_reserve(config,allunits,load,AvailabilityFactors,zone):   
-    '''
+def percentage_reserve(config,allunits,load,AvailabilityFactors,zone):
+    """
     Reserve Requirements : (3+5) rule
 
-    dynamic method for the evaluation of reserve requirements based on forecasted 
+    dynamic method for the evaluation of reserve requirements based on forecasted
     load and forecasted available wind and solar power.
-    '''
+    """
 
     c = zone
     func = lambda col: col * units.loc[col.name, 'PowerCapacity']* units.loc[col.name, 'Nunits']
@@ -53,12 +53,12 @@ def percentage_reserve(config,allunits,load,AvailabilityFactors,zone):
     return rr,rr
 
 
-def probabilistic_reserve(config,allunits,load,AvailabilityFactors,zone,std={'WTON':0.2,'WTOF':0.2,'PHOT':0.045,'LOAD':0.02}):   
-    '''
+def probabilistic_reserve(config,allunits,load,AvailabilityFactors,zone,std={'WTON':0.2,'WTOF':0.2,'PHOT':0.045,'LOAD':0.02}):
+    """
     dynamic method for the evaluation of reserve requirements based on load
-    (secondary reserves requiements) and error forecasting for load, wind and 
+    (secondary reserves requiements) and error forecasting for load, wind and
     solar power (tertiary reserves requirements).
-    '''
+    """
 
     c = zone
     func = lambda col: col * units.loc[col.name, 'PowerCapacity']* units.loc[col.name, 'Nunits']
@@ -103,11 +103,11 @@ def probabilistic_reserve(config,allunits,load,AvailabilityFactors,zone,std={'WT
     return rr,rr
 
 
-def generic_reserve(load):   
-    '''
+def generic_reserve(load):
+    """
     generic reserve sizing based on the load curve.
     Not adapted to high shares of renewables
-    '''
+    """
     up = (10 * load.max() + 150 ** 2)**(0.5) - 150
     down = 0.5 * up
     return pd.Series(up,index=load.index), pd.Series(down,index=load.index)

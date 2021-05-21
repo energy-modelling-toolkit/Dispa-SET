@@ -31,8 +31,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     :param config:        Dictionary with all the configuration fields loaded from the excel file. Output of the
                           'LoadConfig' function.
-    :param plot_load:     Boolean used to display a plot of the demand curves in the different zones
     :param profiles:      Profiles from mid term scheduling simulations
+    :param PtLDemand:     Profiles for PtL demand from mid ter scheduling simulations
     :param MTS:           Boolean, 1 if in MTS
     :PtLDemand:           PtLDemand from mid term scheduling simulations
     """
@@ -155,13 +155,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # If not present, add the non-compulsory fields to the units table:
     for key in ['CHPPowerLossFactor', 'CHPPowerToHeat', 'CHPType', 'STOCapacity', 'STOSelfDischarge',
-                'STOMaxChargingPower', 'STOChargingEfficiency', 'CHPMaxHeat','WaterWithdrawal',
+                'STOMaxChargingPower', 'STOChargingEfficiency', 'CHPMaxHeat', 'WaterWithdrawal',
                 'WaterConsumption']:
         if key not in plants.columns:
             plants[key] = np.nan
 
     # If the thermal and h2 zones are not defined in the units table, define one individual zone per power plant:
-    for key in ['Zone_th','Zone_h2']:
+    for key in ['Zone_th', 'Zone_h2']:
         if key in plants.columns:
             plants[key] = plants[key].fillna('')
         else:
@@ -208,7 +208,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                         RestrictWarning=commons['tech_renewables'])
     AF = AF.apply(pd.to_numeric)
 
-    ReservoirLevels = UnitBasedTable(plants_all_sto, 'ReservoirLevels', config, fallbacks=['Unit', 'Technology', 'Zone'],
+    ReservoirLevels = UnitBasedTable(plants_all_sto, 'ReservoirLevels', config,
+                                     fallbacks=['Unit', 'Technology', 'Zone'],
                                      default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_sto, 'ReservoirScaledInflows', config,
                                             fallbacks=['Unit', 'Technology', 'Zone'], default=0)
@@ -233,7 +234,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         zones_th.remove('')
 
     HeatDemand = GenericTable(zones_th, 'HeatDemand', config, default=0)
-    CostHeatSlack = GenericTable(zones_th,'CostHeatSlack', config, default=config['default']['CostHeatSlack'])
+    CostHeatSlack = GenericTable(zones_th, 'CostHeatSlack', config, default=config['default']['CostHeatSlack'])
 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
@@ -241,11 +242,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         for key in profiles.columns:
             if key not in ReservoirLevels.columns:
                 logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the '
-                                'ReservoirLevels table')
+                                                                  'ReservoirLevels table')
             elif key in list(ReservoirLevels.loc[:, plants_all_sto['Technology'] == 'SCSP'].columns):
                 ReservoirLevels[key] = config['default']['ReservoirLevelInitial']
                 logging.info('The reservoir profile "' + key + '" can not be seleceted for MTS, instead, default value '
-                             'of: ' + str(config['default']['ReservoirLevelInitial']) + ' will be used')
+                                                               'of: ' + str(
+                    config['default']['ReservoirLevelInitial']) + ' will be used')
             else:
                 ReservoirLevels[key].update(profiles[key])
                 logging.info(
@@ -255,13 +257,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         for key in PtLDemand.columns:
             if key not in H2FlexibleDemand.columns:
                 logging.warning('The H2 flexible demand "' + key + '" provided by the MTS is not found in the '
-                                'H2FlexibleDemand table')
+                                                                   'H2FlexibleDemand table')
             else:
                 H2FlexibleDemand[key].update(PtLDemand[key])
 
     # data checks:
     check_AvailabilityFactors(plants, AF)
-    check_heat_demand(plants, HeatDemand,zones_th)
+    check_heat_demand(plants, HeatDemand, zones_th)
     check_temperatures(plants, Temperatures)
     check_FlexibleDemand(ShareOfFlexibleDemand)
     check_reserves(Reserve2D, Reserve2U, Load)
@@ -411,24 +413,24 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                 reserve_2U_tot[z] = Reserve2U[z]
                 reserve_2D_tot[z] = Reserve2D[z]
             else:
-                logging.critical('Exogenous reserve requirements (2D and 2U) not found for zone ' +z)
+                logging.critical('Exogenous reserve requirements (2D and 2U) not found for zone ' + z)
                 sys.exit(1)
         else:
             if z in Reserve2U and z in Reserve2D:
                 logging.info('Using exogenous reserve data for zone ' + z)
                 reserve_2U_tot[z] = Reserve2U[z]
-                reserve_2D_tot[z] = Reserve2D[z]            
+                reserve_2D_tot[z] = Reserve2D[z]
             elif config['ReserveCalculation'] == 'Percentage':
                 logging.info('Using percentage-based reserve sizing for zone ' + z)
-                reserve_2U_tot[z], reserve_2D_tot[z] = percentage_reserve(config,plants,Load,AF,z)  
+                reserve_2U_tot[z], reserve_2D_tot[z] = percentage_reserve(config, plants, Load, AF, z)
             elif config['ReserveCalculation'] == 'Probabilistic':
                 logging.info('Using probabilistic reserve sizing for zone ' + z)
-                reserve_2U_tot[z], reserve_2D_tot[z] = probabilistic_reserve(config,plants,Load,AF,z)  
+                reserve_2U_tot[z], reserve_2D_tot[z] = probabilistic_reserve(config, plants, Load, AF, z)
             else:
                 logging.info('Using generic reserve calculation for zone ' + z)
-                reserve_2U_tot[z], reserve_2D_tot[z] = generic_reserve(Load[z])  
+                reserve_2U_tot[z], reserve_2D_tot[z] = generic_reserve(Load[z])
 
-    # %% Store all times series and format
+                # %% Store all times series and format
 
     # Formatting all time series (merging, resempling) and store in the FinalTS dict
     finalTS = {'Load': Load, 'Reserve2D': reserve_2D_tot, 'Reserve2U': reserve_2U_tot,
@@ -482,7 +484,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
     sets['u'] = Plants_merged[[u in [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
-                               commons['tech_p2ht'] + commons['tech_thermal_storage']]
+                                     commons['tech_p2ht'] + commons['tech_thermal_storage']]
                                for u in Plants_merged['Technology']]].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
     sets['p2h'] = Plants_p2h.index.tolist()
@@ -494,7 +496,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets['wat'] = Plants_wat.index.tolist()
     sets['hu'] = Plants_heat_only.index.tolist()
     sets['asu'] = Plants_merged[[u in [x for x in commons['Technologies'] if x in commons['tech_storage'] +
-                               commons['tech_thermal_storage']] for u in Plants_merged['Technology']]].index.tolist()
+                                       commons['tech_thermal_storage']] for u in
+                                 Plants_merged['Technology']]].index.tolist()
 
     ###################################################################################################################
     ############################################   Parameters    ######################################################
@@ -542,7 +545,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['RampDownMaximum'] = ['au']
     sets_param['RampStartUpMaximum'] = ['au']
     sets_param['RampShutDownMaximum'] = ['au']
-    sets_param['Reserve'] = ['au']  #changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
+    sets_param['Reserve'] = [
+        'au']  # changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
     sets_param['StorageCapacity'] = ['au']
     sets_param['StorageChargingCapacity'] = ['au']
     sets_param['StorageChargingEfficiency'] = ['au']
@@ -752,15 +756,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                 logging.warning('Outages factors not found for unit ' + u + '. Assuming no outages')
 
     # Participation to the reserve market
-    list_of_participating_units = []#new list
+    list_of_participating_units = []  # new list
     for unit in Plants_merged.index:
-        tech = Plants_merged.loc[unit,'Technology']
-        if tech in config['ReserveParticipation'] and Plants_merged.loc[unit,'CHPType'] == '':
-            list_of_participating_units.append(unit)    #if unit same technology as allowed without CHP and unit is no CHP then add to list
-        elif tech in config['ReserveParticipation_CHP'] and Plants_merged.loc[unit,'CHPType'] != '':
-            list_of_participating_units.append(unit)    #if unit same technology as allowed with CHP and unit is CHP then add to list
-            
-    values = np.array([s in list_of_participating_units for s in sets['au']], dtype='bool')# same as before but with new list
+        tech = Plants_merged.loc[unit, 'Technology']
+        if tech in config['ReserveParticipation'] and Plants_merged.loc[unit, 'CHPType'] == '':
+            list_of_participating_units.append(
+                unit)  # if unit same technology as allowed without CHP and unit is no CHP then add to list
+        elif tech in config['ReserveParticipation_CHP'] and Plants_merged.loc[unit, 'CHPType'] != '':
+            list_of_participating_units.append(
+                unit)  # if unit same technology as allowed with CHP and unit is CHP then add to list
+
+    values = np.array([s in list_of_participating_units for s in sets['au']],
+                      dtype='bool')  # same as before but with new list
     parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
 
     # Technologies

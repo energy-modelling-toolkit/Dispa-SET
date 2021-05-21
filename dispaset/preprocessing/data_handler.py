@@ -639,7 +639,8 @@ def load_config_excel(ConfigFile, AbsPath=True):
         config['mts_zones'] = read_truefalse(sheet, 225, 1, 250, 3, 2)
         config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 250, 6, 2)
         config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 321, 3)
-		config['ReserveParticipation_CHP'] = read_truefalse(sheet, 342, 1, 345,3)
+        config['ReserveParticipation'] = config['ReserveParticipation'] + read_truefalse(sheet, 305, 4, 321, 6)
+        config['ReserveParticipation_CHP'] = read_truefalse(sheet, 299, 1, 302, 3)
         
         # Set default values (for backward compatibility):
         for param in DEFAULTS:

@@ -744,7 +744,7 @@ def get_units_operation_cost(inputs, results):
         ConsumptionCost.loc[:,[u]] = np.array(Shadowprice.loc[:,[z]])*np.array(results['OutputPowerConsumption'][u]).reshape(-1,1)
       
     PowerUnitOperationCost = FiexedCost + StartUpCost + ShutDownCost + RampUpCost + RampDownCost + VariableCost
-	UnitOperationCost = pd.concat([PowerUnitOperationCost, ConsumptionCost], axis=1)
+    UnitOperationCost = pd.concat([PowerUnitOperationCost, ConsumptionCost], axis=1)
     
     return UnitOperationCost
 

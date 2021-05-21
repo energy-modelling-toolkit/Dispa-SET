@@ -17,9 +17,9 @@ dependencies:
   - cartopy
   - pip
   - pip:
-    - gdxcc == 7.28.20
-    - gamsxcc == 1.28.20
-    - optcc == 4.28.20
+    - gdxcc
+    - gamsxcc
+    - optcc
     - setuptools_scm
     - pytest-cov
     - codecov
