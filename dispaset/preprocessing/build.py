@@ -717,11 +717,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         found = False
         for FuelEntry in FuelEntries:
             if Plants_merged['Fuel'][unit] == FuelEntry:
-                parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
-                                                             Plants_merged['Efficiency'][unit] + \
-                                                             Plants_merged['EmissionRate'][unit] * \
-                                                             FuelPrices['PriceOfCO2'][c]
-                found = True
+                if Plants_merged['Technology'][unit] == 'ABHP':
+                    parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
+                                                                 1.55 + \
+                                                                 Plants_merged['EmissionRate'][unit] * \
+                                                                 FuelPrices['PriceOfCO2'][c]
+                    found = True
+                else:
+                    parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
+                                                                 Plants_merged['Efficiency'][unit] + \
+                                                                 Plants_merged['EmissionRate'][unit] * \
+                                                                 FuelPrices['PriceOfCO2'][c]
+                    found = True
         # Special case for biomass plants, which are not included in EU ETS:
         if Plants_merged['Fuel'][unit] == 'BIO':
             parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'][c] / \

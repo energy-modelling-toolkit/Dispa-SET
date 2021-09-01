@@ -91,7 +91,6 @@ def probabilistic_reserve(config, allunits, load, AvailabilityFactors, zone,
         wton = pd.Series(0, index=load.index)
 
     # 5% of the windoff forecast
-
     if units['Technology'].str.contains('WTOF').any():
         tmp = units.index[units['Technology'] == 'WTOF']
         wtof = AvailabilityFactors[tmp].agg(func).sum(axis=1)
@@ -99,7 +98,6 @@ def probabilistic_reserve(config, allunits, load, AvailabilityFactors, zone,
         wtof = pd.Series(0, index=load.index)
 
     # 5% of solar forecast
-
     if units['Technology'].str.contains('PHOT').any():
         tmp = units.index[units['Technology'] == 'PHOT']
         phot = AvailabilityFactors[tmp].agg(func).sum(axis=1)

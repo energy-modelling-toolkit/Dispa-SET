@@ -117,7 +117,7 @@ Curtailment(n)                   [n.a]           Curtailment allowed or not {1 0
 Demand(mk,n,h)                   [MW]            Demand
 Efficiency(p2h,h)                [%]             Efficiency
 EmissionMaximum(n,p)             [tP]            Emission limit
-EmissionRate(u,p)                [tP\MWh]        P emission rate
+EmissionRate(au,p)               [tP\MWh]        P emission rate
 FlowMaximum(l,h)                 [MW]            Line limits
 FlowMinimum(l,h)                 [MW]            Minimum flow
 Fuel(u,f)                        [n.a.]          Fuel type {1 0}
@@ -532,6 +532,7 @@ EQ_SystemCost(i)..
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
+         +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
@@ -551,6 +552,7 @@ EQ_SystemCost(i)..
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
+         +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
@@ -1280,6 +1282,7 @@ ShadowPrice_RampDown_TC(au,h)
 OutputRampRate(au,h)
 OutputStartUp(au,h)
 OutputShutDown(au,h)
+OutputEmissions(n,p,z)
 ;
 
 OutputCommitted(au,z)=Committed.L(au,z);
@@ -1338,6 +1341,9 @@ OutputRampRate(hu,z) = - Heat.L(hu,z-1)$(ord(z) > 1) + Heat.L(hu,z);
 OutputStartUp(au,z) = StartUp.L(au,z);
 OutputShutDown(au,z) = ShutDown.L(au,z);
 
+OutputEmissions(n,p,z) = (sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n))
+                        + sum(hu,Heat.L(hu,z)*EmissionRate(hu,p)*Location(hu,n)))
+                        / (sum(u,Power.L(u,z)*Location(u,n)) + sum(hu,Heat.L(hu,z)*Location(hu,n)));
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
@@ -1389,6 +1395,7 @@ ShadowPrice_RampDown_TC,
 OutputRampRate,
 OutputStartUp,
 OutputShutDown,
+OutputEmissions,
 status
 ;
 

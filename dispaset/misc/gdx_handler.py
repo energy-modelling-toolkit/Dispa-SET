@@ -21,6 +21,7 @@ import time as tm
 import numpy as np
 import pandas as pd
 import logging
+import copy
 
 from .str_handler import shrink_to_64, force_str
 
@@ -306,8 +307,31 @@ def gdx_to_dataframe(data, fixindex=False, verbose=False):
                 logging.debug('Successfully loaded variable ' + symbol)
             elif dim == 1:
                 logging.warning('Variable ' + symbol + ' has dimension 0, which should not occur. Skipping')
-            elif dim > 3:
+            elif dim > 4:
                 logging.warning('Variable ' + symbol + ' has more than 2 dimensions, which is very tiring. Skipping')
+            elif dim == 4:
+                vars1 = set()
+                vars2 = set()
+                for element in data[symbol]:
+                    if not element[0] in vars1:
+                        vars1.add(element[0])
+                    if not element[1] in vars2:
+                        vars2.add(element[1])
+                vars1 = list(vars1)
+                vars2 = list(vars2)
+                pd_index = pd.MultiIndex.from_product([vars1, vars2], names=('Zones', 'Emissions'))
+                out[symbol] = pd.DataFrame(columns=pd_index, index=out['OutputPower'].index)
+                for element1 in data[symbol]:
+                    element = copy.deepcopy(element1)
+                    for var1 in vars1:
+                        for var2 in vars2:
+                            if (var2 == element[1]) and (var1 == element[0]):
+                                out[symbol].loc[element[2], (var1, var2)] = element[3]
+                out[symbol].index = out[symbol].index.astype(int)
+                out[symbol].sort_index(inplace=True)
+                out[symbol] = out[symbol].fillna(0)
+
+                logging.warning('Successfully loaded variable ' + symbol)
         else:
             logging.debug('Variable ' + symbol + ' is empty. Skipping')
     for symbol in out:
