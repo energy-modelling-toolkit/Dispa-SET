@@ -24,10 +24,10 @@ config = ds.load_config('../ConfigFiles/ConfigTest.xlsx')
 # config['StartDate'] = (2016, 1, 1, 0, 0, 0)
 # config['StopDate'] = (2016, 1, 7, 0, 0, 0)
 
-# # Build the simulation environment:
+# Build the simulation environment:
 SimData = ds.build_simulation(config)
-#
-# # Solve using GAMS:
+
+# Solve using GAMS:
 _ = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
 
 # Load the simulation results:
@@ -35,15 +35,21 @@ inputs,results = ds.get_sim_results(config['SimulationDirectory'],cache=False)
 
 # import pandas as pd
 import pandas as pd
-rng = pd.date_range('2015-1-01','2015-12-31',freq='H')
+rng = pd.date_range('2015-1-01','2015-12-31', freq='H')
 # # Generate country-specific plots
-# ds.plot_zone(inputs,results,z='Z1',rng=rng)
+# ds.plot_zone(inputs,results,z='Z1', rng=rng)
 
 # Generate country-specific plots
 ds.plot_zone(inputs,results)
 
 # Bar plot with the installed capacities in all countries:
 cap = ds.plot_zone_capacities(inputs, results)
+
+# Bar plot with installed storage capacity
+sto = ds.plot_tech_cap(inputs)
+
+# Violin plot for CO2 emissions
+ds.plot_co2(inputs, results, figsize=(9,6), width=0.9)
 
 # Bar plot with the energy balances in all countries:
 ds.plot_energy_zone_fuel(inputs,results,ds.get_indicators_powerplant(inputs,results))

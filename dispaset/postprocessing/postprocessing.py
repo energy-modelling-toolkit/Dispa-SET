@@ -423,7 +423,7 @@ def get_result_analysis(inputs, results):
     UnitData.loc[:, 'CHP'] = inputs['units']['CHPType']
     UnitData.loc[:, 'Generation [TWh]'] = results['OutputPower'].sum() / 1e6
     UnitData.loc[:, 'CO2 [t]'] = co2.loc['CO2', :]
-    UnitData.loc[:, 'Total Costs [EUR]'] = get_units_operation_cost(inputs, results).sum()
+    UnitData.loc[:, 'Total Costs [EUR]'] = get_units_operation_cost(inputs, results).sum(axis=1)
     UnitData.loc[:, 'WaterWithdrawal'] = results['OutputPower'].sum() * \
                                          inputs['units'].loc[:, 'WaterWithdrawal'].fillna(0)
     UnitData.loc[:, 'WaterConsumption'] = results['OutputPower'].sum() * \
@@ -738,7 +738,8 @@ def get_units_operation_cost(inputs, results):
             results['OutputPower'][u]).reshape(-1, 1)
 
     PowerConsumers = results['OutputPowerConsumption'].columns
-    Shadowprice = results['ShadowPrice'].head(inputs['config']['LookAhead']*-24+1)#reindexing
+    # Shadowprice = results['ShadowPrice'].head(inputs['config']['LookAhead']*-24+1)#reindexing
+    Shadowprice = results['ShadowPrice']
     for u in PowerConsumers:#at this moment only variable costs
         z = inputs['units'].at[u,'Zone']
         ConsumptionCost.loc[:,[u]] = np.array(Shadowprice.loc[:,[z]])*np.array(results['OutputPowerConsumption'][u]).reshape(-1,1)

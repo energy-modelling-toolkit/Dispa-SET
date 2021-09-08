@@ -12,11 +12,10 @@ from matplotlib.patches import Patch
 from ..common import commons
 
 from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage, \
-    get_power_flow_tracing, get_from_to_flows, get_net_positions, get_EFOH, get_heat_plot_data, filter_by_heating_zone, \
-    filter_by_tech_list
+    get_power_flow_tracing, get_EFOH, get_heat_plot_data, filter_by_heating_zone, filter_by_tech_list
 
 
-def plot_dispatch(demand, plotdata, y_ax = '',level=None, curtailment=None, shedload=None, shiftedload=None, rng=None,
+def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedload=None, shiftedload=None, rng=None,
                   alpha=None, figsize=(13, 6)):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
@@ -24,11 +23,16 @@ def plot_dispatch(demand, plotdata, y_ax = '',level=None, curtailment=None, shed
     :param demand:      Pandas Series with the demand curve
     :param plotdata:    Pandas Dataframe with the data to be plotted. Negative columns should be at the beginning.
                         Output of the function GetPlotData
+    :param y_ax:        Y axis label
     :param level:       Optional pandas series/dataframe with an (dis)aggregated reservoir level for the considered zone
     :param curtailment: Optional pandas series with the value of the curtailment
     :param shedload:    Optional pandas series with the value of the shed load
+    :param shiftedload: Optional pandas series with the value of the shifted load
     :param rng:         Indexes of the values to be plotted. If undefined, the first week is plotted
+    :param alpha:       Alpha value for colours
+    :param figsize:     Figure size in inch
     """
+
     import matplotlib.patches as mpatches
     import matplotlib.lines as mlines
 
@@ -71,7 +75,7 @@ def plot_dispatch(demand, plotdata, y_ax = '',level=None, curtailment=None, shed
     sumplot_pos['zero'] = 0
     sumplot_pos = sumplot_pos[['zero'] + sumplot_pos.columns[:-1].tolist()]
 
-    fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(figsize), frameon=True,  # 14 4*2
+    fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
                              gridspec_kw={'height_ratios': [2.7, .8], 'hspace': 0.04})
 
     # Create left axis:
@@ -181,8 +185,8 @@ def plot_dispatch(demand, plotdata, y_ax = '',level=None, curtailment=None, shed
         axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
                              linestyle='dashed')
     else:
-        plt.legend(title='Dispatch for ' + demand.name[1], handles=[line_demand] + [line_shedload] + [line_SOC] +
-                                                                   patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
+        plt.legend(title='Dispatch for ' + demand.name, handles=[line_demand] + [line_shedload] + [line_SOC] +
+                   patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
         axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
                              linestyle='dashed')
 
@@ -194,13 +198,13 @@ def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=Fal
     """
     Create multiaxis rug plot from pandas Dataframe
 
-    :param df_series (pd.DataFrame):    2D pandas with timed index
-    :param on_off (bool):               if True all points that are above 0 will be plotted as one color. If False all
-                                        values will be colored based on their value.
-    :param cmap (str):                  palette name (from colorbrewer, matplotlib etc.)
-    :param fig_title (str):             Figure title
-    :param normalized (bool):           if True, all series colormaps will be normalized based on the maximum value
-                                        of the dataframe
+    :param df_series:    2D pandas with timed index (pd.DataFrame)
+    :param on_off:       if True all points that are above 0 will be plotted as one color. If False all
+                         values will be colored based on their value. (bool)
+    :param cmap:         palette name (from colorbrewer, matplotlib etc.) (str)
+    :param fig_title:    Figure title (str)
+    :param normalized:   if True, all series colormaps will be normalized based on the maximum value
+                         of the dataframe (bool)
     :return plot:
 
     Function copied from enlopy v0.1 www.github.com/kavvkon/enlopy. Install with `pip install enlopy` for latest version
@@ -277,11 +281,12 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
     """
     Plots the generation for each zone, disaggregated by fuel type
 
-    :param results:         Dictionnary with the outputs of the model (output of the function GetResults)
+    :param inputs:          Dictionary with the inputs of the model
+    :param results:         Dictionary with the outputs of the model (output of the function GetResults)
     :param PPindicators:    Por powerplant statistics (output of the function get_indicators_powerplant)
     """
     fuels = PPindicators[[u in [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
-                                   commons['tech_p2ht'] + commons['tech_thermal_storage']]
+                                commons['tech_p2ht'] + commons['tech_thermal_storage']]
                           for u in PPindicators['Technology']]].Fuel.unique()
     zones = PPindicators.Zone.unique()
     GenPerZone = pd.DataFrame(index=zones, columns=fuels)
@@ -305,7 +310,8 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
             power_consumption.loc[:, z] = 0
         else:
             power_consumption.loc[:, z] = filter_by_zone(results['OutputPowerConsumption'], inputs, z).sum(axis=1)
-        if filter_by_zone(filter_by_tech_list(results['OutputStorageInput'], inputs, commons['tech_storage']), inputs, z).empty:
+        if filter_by_zone(filter_by_tech_list(results['OutputStorageInput'], inputs, commons['tech_storage']), inputs,
+                          z).empty:
             storage_input.loc[:, z] = 0
         else:
             storage_input.loc[:, z] = filter_by_zone(filter_by_tech_list(results['OutputStorageInput'], inputs,
@@ -328,7 +334,8 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
     storage_input.sort_index(inplace=True)
 
     # Needs to be plotted in this order so that black line is always on top
-    ax.barh(power_consumption + storage_input + demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(power_consumption),
+    ax.barh(power_consumption + storage_input + demand, left=ax.get_xticks() - 0.4,
+            width=[0.8] * len(power_consumption),
             height=ax.get_ylim()[1] * 0.005, linewidth=2, color='b')
     ax.barh(storage_input + demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(storage_input),
             height=ax.get_ylim()[1] * 0.005, linewidth=2, color='g')
@@ -339,7 +346,7 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
     ZonePosition['ShedLoad'] = results['OutputShedLoad'].sum() / 1E6
     ShedLoad = ZonePosition.loc[:, 'ShedLoad']
     ax.bar(range(0, ShedLoad.index.size), ShedLoad.values, bottom=GenPerZone.sum(axis=1).values,
-            edgecolor='black', hatch='X', color='w', width=[0.4])
+           edgecolor='black', hatch='X', color='w', width=[0.4])
 
     curtailed_power = -results['OutputCurtailedPower'].sum() / 1E6
     curtailed_power.sort_index(inplace=True)
@@ -352,18 +359,18 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
 
     # Generation share plot
     GenPerZone_prct = GenPerZone.div(ZonePosition.sum(axis=1), axis=0)
-    ShedLoad = ZonePosition.loc[:,'ShedLoad'] / ZonePosition.sum(axis=1)
-    demand_prct = demand/ZonePosition.sum(axis=1)
+    ShedLoad = ZonePosition.loc[:, 'ShedLoad'] / ZonePosition.sum(axis=1)
+    demand_prct = demand / ZonePosition.sum(axis=1)
     power_consumption_prct = (demand + power_consumption) / ZonePosition.sum(axis=1)
     colors2 = [commons['colors'][tech] for tech in GenPerZone_prct.columns]
 
     ax2 = GenPerZone_prct.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors2, alpha=0.8, legend='reverse',
-                         title='Generation share per zone (the horizontal lines indicate the demand)')
+                               title='Generation share per zone (the horizontal lines indicate the demand)')
     ax2.set_ylabel('Generation share [%]')
     ax2.bar(range(0, ShedLoad.index.size), ShedLoad.values, bottom=GenPerZone_prct.sum(axis=1).values,
             edgecolor='black', hatch='X', color='w', width=[0.4])
     ax2.barh(power_consumption_prct, left=ax2.get_xticks() - 0.4, width=[0.8] * len(power_consumption_prct),
-            height=ax2.get_ylim()[1] * 0.005, linewidth=2, color='b')
+             height=ax2.get_ylim()[1] * 0.005, linewidth=2, color='b')
     ax2.barh(demand_prct, left=ax2.get_xticks() - 0.4, width=[0.8] * len(demand_prct), height=ax2.get_ylim()[1] * 0.005,
              linewidth=2, color='k')
     handles, labels = ax2.get_legend_handles_labels()  # get the handles
@@ -395,8 +402,9 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
                                                           commons['tech_thermal_storage']), inputs, z).empty:
                 heat_storage_input.loc[:, z] = 0
             else:
-                heat_storage_input.loc[:, z] = filter_by_heating_zone(filter_by_tech_list(results['OutputStorageInput'], inputs,
-                                                          commons['tech_thermal_storage']), inputs, z).sum(axis=1)
+                heat_storage_input.loc[:, z] = filter_by_heating_zone(
+                    filter_by_tech_list(results['OutputStorageInput'], inputs,
+                                        commons['tech_thermal_storage']), inputs, z).sum(axis=1)
 
         heat_storage_input = heat_storage_input.sum() / 1e6
         heat_storage_input.sort_index(inplace=True)
@@ -406,8 +414,8 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
         HeatPerZone_th.sort_index(inplace=True)
         colors = [commons['colors'][tech] for tech in HeatPerZone_th.columns]
         ax = HeatPerZone_th.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
-                             title='Heat generation per heating zone (the horizontal lines indicate the demand [black] '
-                                   '& storage input [green])')
+                                 title='Heat generation per heating zone (the horizontal lines indicate the demand '
+                                       '[black] & storage input [green])')
         ax.set_ylabel('Generation [TWh]')
 
         # Check for heat slack and plot it
@@ -440,13 +448,15 @@ def plot_zone_capacities(inputs, results, plot=True):
     """
     Plots the installed capacity for each zone, disaggregated by fuel type
 
-    :param inputs:         Dictionnary with the inputs of the model (output of the function GetResults)
+    :param inputs:          Dictionary with the inputs of the model
+    :param results:         Dictionary with the results of the model (output of the function GetResults)
+    :param plot:            Bool param to turn the plotting on/off
     """
 
     units = inputs['units'][[u in [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
                                    commons['tech_p2ht']] for u in inputs['units']['Technology']]]
     units_heat = inputs['units'][[u in [x for x in commons['Technologies'] if x in commons['tech_heat'] +
-                                   commons['tech_p2ht'] + commons['tech_thermal_storage']]
+                                        commons['tech_p2ht'] + commons['tech_thermal_storage']]
                                   for u in inputs['units']['Technology']]]
     units_chp = inputs['units'][[x.lower() in commons['types_CHP'] for x in inputs['units']['CHPType']]]
 
@@ -501,7 +511,8 @@ def plot_zone_capacities(inputs, results, plot=True):
     if plot:
         colors = [commons['colors'][tech] for tech in PowerCapacity.columns]
         ax = PowerCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
-                                title='Installed capacity per zone (the horizontal lines indicate the peak demand [black] & peak power consumption [blue])')
+                                title='Installed capacity per zone (the horizontal lines indicate the peak demand '
+                                      '[black] & peak power consumption [blue])')
         ax.set_ylabel('Capacity [MW]')
         demand = inputs['param_df']['Demand']['DA'].max()
         demand.sort_index(inplace=True)
@@ -524,8 +535,8 @@ def plot_zone_capacities(inputs, results, plot=True):
     if len(HeatCapacity) > 0 and plot:
         colors = [commons['colors'][tech] for tech in HeatCapacity.columns]
         ax = HeatCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
-                                title='Installed heat capacity per zone ' +
-                                      '(the horizontal lines indicate the peak heating demand)')
+                               title='Installed heat capacity per zone ' +
+                                     '(the horizontal lines indicate the peak heating demand)')
         ax.set_ylabel('Capacity [MW]')
         demand = inputs['param_df']['HeatDemand'].max()
         demand.sort_index(inplace=True)
@@ -544,6 +555,9 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
     :param inputs:      DispaSET inputs
     :param results:     DispaSET results
     :param z:           Considered zone (e.g. 'BE')
+    :param z_th:        Considered thermal zone (e.g. 'BE_th')
+    :param rng:         Date range to be considered in the plot
+    :param rug_plot:    Rug plot on/off
     """
     if z == '':
         Nzones = len(inputs['sets']['n'])
@@ -637,7 +651,8 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
 
     # Plot power dispatch
     demand.rename(z, inplace=True)
-    plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load, shiftedload=shifted_load,
+    plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load,
+                  shiftedload=shifted_load,
                   rng=rng, alpha=0.5)
 
     # Plot heat dispatch
@@ -648,16 +663,17 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
 
     if Nzones_th > 0:
         heat_demand = inputs['param_df']['HeatDemand'][z_th] / 1000
-        heat_demand = pd.DataFrame(heat_demand, columns=[(z_th)])
-        heat_demand = heat_demand[(z_th)]
+        heat_demand = pd.DataFrame(heat_demand, columns=[z_th])
+        heat_demand = heat_demand[z_th]
         heat_plotdata = get_heat_plot_data(inputs, results, z_th) / 1000
-    
+
         if 'OutputCurtailedHeat' in results and z_th in results['OutputCurtailedHeat']:
             heat_curtailment = results['OutputCurtailedHeat'][z_th] / 1000  # GW
         else:
             heat_curtailment = None
 
-        plot_dispatch(heat_demand, heat_plotdata, y_ax='Heat', level=level_heat, curtailment=heat_curtailment,rng=rng, alpha=0.5)
+        plot_dispatch(heat_demand, heat_plotdata, y_ax='Heat', level=level_heat, curtailment=heat_curtailment, rng=rng,
+                      alpha=0.5)
 
     # Generation plot:
     if rug_plot:
@@ -673,7 +689,8 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
 
 def storage_levels(inputs, results):
     """
-    Reads the DispaSET results and provides the difference between the minimum storage profile and the computed storage profile
+    Reads the DispaSET results and provides the difference between the minimum storage profile and the computed storage
+    profile
 
     :param inputs:      DispaSET inputs
     :param results:     DispaSET results
@@ -684,7 +701,7 @@ def storage_levels(inputs, results):
     sto_units = inputs['units'][isstorage]
     results['OutputStorageLevel'].plot(figsize=(12, 6), title='Storage levels')
     StorageError = ((inputs['param_df']['StorageProfile'] * sto_units.StorageCapacity).subtract(
-        results['OutputStorageLevel'], 'columns')).divide((sto_units.StorageCapacity), 'columns') * (-100)
+        results['OutputStorageLevel'], 'columns')).divide(sto_units.StorageCapacity, 'columns') * (-100)
     StorageError = StorageError.dropna(1)
     if not StorageError.empty:
         ax = StorageError.plot(figsize=(12, 6),
@@ -694,6 +711,7 @@ def storage_levels(inputs, results):
     return True
 
 
+# TODO this function should be generalized
 def plot_storage_levels(inputs, results, z):
     """
     This function plots the reservoir levels profiles during the year
@@ -718,14 +736,14 @@ def plot_storage_levels(inputs, results, z):
     plt.rcParams.update({'font.size': 10})
     fig, (ax, ax1, ax2) = plt.subplots(3, 1, sharex=True)
 
-    ax.fill_between(index_plot, 0, BATS_level.iloc[:, 0], color=('#41A317ff'))
+    ax.fill_between(index_plot, 0, BATS_level.iloc[:, 0], color='#41A317ff')
     ax.set_ylabel('SOC - BATS [%]')
     ax.set_xlim(0, len(index_plot))
 
-    ax1.fill_between(index_plot, 0, H2_level.iloc[:, 0], color=('#A0522D'))
+    ax1.fill_between(index_plot, 0, H2_level.iloc[:, 0], color='#A0522D')
     ax1.set_ylabel('SOC - H2[%]')
 
-    ax2.fill_between(index_plot, 0, HDAM_level.iloc[:, 0], color=('#00a0e1ff'))
+    ax2.fill_between(index_plot, 0, HDAM_level.iloc[:, 0], color='#00a0e1ff')
     ax2.set_ylabel('SOC - HDAM [%]')
     month_num = [360, 1056, 1800, 2544, 3264, 4008, 4728, 5472, 6216, 6936, 7680, 8400]
     month_name = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul',
@@ -744,7 +762,7 @@ def plot_EFOH(inputs, results):
     :param results:     Dispa-SET results
     """
     EFOH = {}
-    for i, s in enumerate(list(inputs.keys())):
+    for i, s in enumerate(list(inputs.keys())): # TODO something with scenarios should be dropped
         EFOH[i] = get_EFOH(inputs[s], results[s])
         EFOH[i] = EFOH[i].sort_values(by=['EFOH'], ascending=False)
 
@@ -880,7 +898,7 @@ def plot_H2_and_demand(inputs, results):
 
     Demand = {}
     Elyser_consumption = {}
-    scenarios = list(inputs.keys())
+    scenarios = list(inputs.keys()) #TODO Remove scenarios
     for s in scenarios:
         Demand[s], Elyser_consumption[s] = get_demand(inputs[s], results[s])
 
@@ -928,8 +946,16 @@ def plot_H2_and_demand(inputs, results):
     return True
 
 
-# TODO: Check this function and decide if neccessary
-def plot_tech_cap(inputs):
+def plot_tech_cap(inputs, plot=True, figsize=(10, 7), alpha=0.8, width=0.5):
+    """
+    Plot installed storage capacity
+    :param inputs:      Dictionary of standard inputs from the model
+    :param plot:        Bool for plotting
+    :param figsize:     Size of the figure to be plotted
+    :param alpha:       Alpha value for the chart
+    :param width:       Width of the bars in the plot
+    :return:            Storage capacities
+    """
 
     # 2 plot storage cap
     Cap = pd.DataFrame(columns=['BEVS', 'H2', 'Hydro', 'Thermal', 'BATS'], index=inputs['sets']['n']).fillna(0)
@@ -948,24 +974,26 @@ def plot_tech_cap(inputs):
                 elif inputs['param_df']['Technology'].loc['BATS', u]:
                     Cap.loc[z, 'BATS'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i, 0] * \
                                           inputs['param_df']['Nunits'].iloc[i, 0]
-                elif u in inputs['param_df']['sets']['p2h'] or u in inputs['param_df']['sets']['chp'] or \
-                        inputs['param_df']['Technology'].loc['SCSP', u]:
+                elif u in inputs['param_df']['sets']['p2h'] or inputs['param_df']['sets']['chp'] or \
+                        inputs['param_df']['Technology'].loc['SCSP', u] or inputs['param_df']['sets']['thms']:
                     Cap.loc[z, 'Thermal'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i, 0] * \
                                              inputs['param_df']['Nunits'].iloc[i, 0]
 
     Cap = Cap / 1000
     x = [i for i in range(len(Cap.index))]  # the label locations
-    width = 0.35  # the width of the bars
     colors = ['#57D53B', '#A0522D', '#00a0e1ff', '#C04000ff', 'black']
-    fig, ax = plt.subplots(figsize=(12, 8))
+    fig, ax = plt.subplots(figsize=figsize)
 
-    ax = Cap.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors,
-                  alpha=0.8, legend='reverse')
+    ax = Cap.plot(kind="bar", figsize=figsize, stacked=True, color=colors, alpha=alpha, legend='reverse', width=width)
     ax.set_ylabel('Capacity [GWh]')
+    ax.set_title('Installed storage capacity')
+    ax.set_xlabel('Zones')
+    if plot is True:
+        plt.show()
 
-    return True
+    return Cap
 
-
+# TODO Check if necessary
 def H2_demand_satisfaction(inputs, results):
     H2Demand = [0]
     OutputH2 = [0]
@@ -1010,10 +1038,10 @@ def heatmap(data, row_labels, col_labels, ax=None, cbar_kw=None, cbarlabel="", *
     :param data:        A 2D numpy array of shape (N, M).
     :param row_labels:  A list or array of length N with the labels for the rows.
     :param col_labels:  A list or array of length M with the labels for the columns.
-    :param ax:          A `matplotlib.axes.Axes`instance to which the heatmap is plotted. If not provided, use current axes or create a new one.  Optional.
+    :param ax:          A `matplotlib.axes.Axes`instance to which the heatmap is plotted. If not provided, use current
+                        axes or create a new one.  Optional.
     :param cbar_kw:     A dictionary with arguments to `matplotlib.Figure.colorbar`.  Optional.
     :param cbarlabel:   The label for the colorbar.  Optional.
-    :param **kwargs:    All other arguments are forwarded to `imshow`.
     """
 
     if cbar_kw is None:
@@ -1068,7 +1096,6 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}", textcolors=("black", "whit
                         Optional.
     :param threshold:   Value in data units according to which the colors from textcolors are applied.
                         If None (the default) uses the middle of the colormap as separation.  Optional.
-    :param **kwargs:    All other arguments are forwarded to each call to `text` used to create the text labels.
     """
 
     if not isinstance(data, (list, np.ndarray)):
@@ -1124,3 +1151,59 @@ def plot_power_flow_tracing_matrix(inputs, results, idx=None, figsize=(10, 7), *
     return data, data_prct
 
 
+def plot_co2(inputs, results, idx=None, figsize=(10,7), width=0.9, alpha=0.8, points=100, facecolor='#D43F3A'):
+    """
+
+    :param inputs:      Dictionary with model inputs
+    :param results:     Dictionary with model outputs
+    :param idx:         Index for selecting data
+    :param figsize:     Size of the plot
+    :return:
+    """
+    data = results['OutputEmissions'].T.swaplevel().T
+    data[data > 100] = 0
+    data = data.reindex(sorted(data.columns), axis=1)
+    labels = list(data.loc[:, 'CO2'].columns)
+    df = pd.DataFrame(np.sort(data.loc[:, 'CO2'].values, axis=0), columns=labels)
+    df = df.to_numpy()
+    fig, ax = plt.subplots(figsize=figsize)
+    parts = ax.violinplot(df, points=points, widths=width, showmeans=False, showmedians=False,
+        showextrema=False, bw_method=0.5)
+
+    for pc in parts['bodies']:
+        pc.set_facecolor(facecolor)
+        pc.set_edgecolor('black')
+        pc.set_alpha(alpha)
+
+    quartile1, medians, quartile3 = np.percentile(df.T, [25, 50, 75], axis=1)
+    whiskers = np.array([adjacent_values(sorted_array, q1, q3) for sorted_array, q1, q3 in zip(df.T, quartile1, quartile3)])
+    whiskers_min, whiskers_max = whiskers[:, 0], whiskers[:, 1]
+
+    inds = np.arange(1, len(medians) + 1)
+    ax.scatter(inds, medians, marker='o', color='white', s=40, zorder=3)
+    ax.vlines(inds, quartile1, quartile3, color='k', linestyle='-', lw=6)
+    ax.vlines(inds, whiskers_min, whiskers_max, color='k', linestyle='-', lw=1)
+
+    set_axis_style(ax, labels, xlabel='Zone', ylabel=r'$gCO_{2eq}/kWh$')
+    ax.set_title('$CO_{2}$ Emissions')
+    fig.tight_layout()
+    plt.show()
+
+
+def set_axis_style(ax, labels, xlabel='', ylabel=''):
+    ax.xaxis.set_tick_params(direction='out')
+    ax.xaxis.set_ticks_position('bottom')
+    ax.set_xticks(np.arange(1, len(labels) + 1))
+    ax.set_xticklabels(labels)
+    ax.set_xlim(0.25, len(labels) + 0.75)
+    ax.set_ylim(0)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+def adjacent_values(vals, q1, q3):
+    upper_adjacent_value = q3 + (q3 - q1) * 1.5
+    upper_adjacent_value = np.clip(upper_adjacent_value, q3, vals[-1])
+
+    lower_adjacent_value = q1 - (q3 - q1) * 1.5
+    lower_adjacent_value = np.clip(lower_adjacent_value, vals[0], q1)
+    return lower_adjacent_value, upper_adjacent_value
