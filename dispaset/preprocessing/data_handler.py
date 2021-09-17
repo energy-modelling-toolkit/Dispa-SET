@@ -602,7 +602,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
             'Reserve2U': 160, 'Reserve2D': 161,
             # Other costs related data
             'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169,
-            'CostH2Slack': 170,
+            'CostH2Slack': 170, 'CostCurtailment': 171,
             # Fuel price related data
             'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
             'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186
@@ -616,7 +616,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
             'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186,
             # Other price defaults
             'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169,
-            'CostH2Slack': 170,
+            'CostH2Slack': 170, 'CostCurtailment': 171,
             # Optimization and infeasibility cost data
             'ShareOfFlexibleDemand': 125, 'LoadShedding': 129,
             'DemandFlexibility': 162, 'ShareOfQuickStartUnits': 163,

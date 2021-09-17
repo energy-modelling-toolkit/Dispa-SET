@@ -114,6 +114,7 @@ CostH2Slack(p2h2,h)              [EUR\MWh]       Cost of supplying H2 by other m
 H2Demand(p2h2,h)                 [MW]            H2 rigid demand
 CostLoadShedding(n,h)            [EUR\MWh]       Cost of load shedding
 Curtailment(n)                   [n.a]           Curtailment allowed or not {1 0} at node n
+CostCurtailment(n,h)             [EUR\MWh]       Cost of VRES curtailment
 Demand(mk,n,h)                   [MW]            Demand
 Efficiency(p2h,h)                [%]             Efficiency
 EmissionMaximum(n,p)             [tP]            Emission limit
@@ -221,6 +222,7 @@ $LOAD CostShutDown
 $LOAD CostStartUp
 $LOAD CostVariable
 $LOAD Curtailment
+$LOAD CostCurtailment
 $LOAD Demand
 $LOAD StorageDischargeEfficiency
 $LOAD Efficiency
@@ -510,6 +512,7 @@ EQ_No_Flexible_Demand
 EQ_Tot_DemandPtL
 EQ_Max_Capacity_PtL
 EQ_PtL_Demand
+EQ_Curtailed_Power
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 ;
 
@@ -541,7 +544,9 @@ EQ_SystemCost(i)..
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
-         +Config("CostOfSpillage","val")*sum(wat,spillage(wat,i));
+         +Config("CostOfSpillage","val")*sum(wat,spillage(wat,i))
+         +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
+;
 $else
 
 EQ_SystemCost(i)..
@@ -561,7 +566,9 @@ EQ_SystemCost(i)..
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
-         +Config("CostOfSpillage","val")*sum(wat,spillage(wat,i));
+         +Config("CostOfSpillage","val")*sum(wat,spillage(wat,i))
+         +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
+;
 
 $endIf
 ;
@@ -572,7 +579,7 @@ EQ_Objective_function..
          SystemCostD
          =E=
          sum(i,SystemCost(i))
-         +Config("WaterValue","val")*sum(s,WaterSlack(s))
+         +Config("WaterValue","val")*sum(au,WaterSlack(au))
 ;
 
 * 3 binary commitment status
@@ -711,9 +718,17 @@ EQ_Demand_balance_2D(n,i)..
          sum((au),Reserve_2D(au,i)*Reserve(au)*Location(au,n))
          =E=
          Demand("2D",n,i)
-         -LL_2D(n,i)
+         - LL_2D(n,i)
 ;
 
+*Curtailed power
+EQ_Curtailed_Power(n,i)..
+        CurtailedPower(n,i)
+        =E=
+        sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,i)-Power(u,i))$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
+;
+
+* Reserve capability
 EQ_Reserve_2U_capability(u,i)..
          Reserve_2U(u,i)
          =L=
@@ -1078,6 +1093,7 @@ EQ_PtL_Demand(p2h2,i)..
 *===============================================================================
 MODEL UCM_SIMPLE /
 EQ_Objective_function,
+EQ_Curtailed_Power,
 EQ_CHP_extraction_Pmax,
 EQ_CHP_extraction,
 EQ_CHP_backpressure,
@@ -1218,13 +1234,13 @@ if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, Commi
 $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),AccumulatedOverSupply.L(n,i));
 
 * Assigning waterslack (one value per optimization horizon) to the last element of storageslack
-StorageSlack.L(s,i)$(ord(i)=LastKeptHour-FirstHour+1) =StorageSlack.L(s,i)+ Waterslack.L(s);
+StorageSlack.L(au,i)$(ord(i)=LastKeptHour-FirstHour+1) =StorageSlack.L(au,i)+ Waterslack.L(au);
 
 *Loop variables to display after solving:
 $If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
 );
 
-CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n)) + sum(s,spillage.L(s,z)* Location(s,n));
+*CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n)) + sum(s,spillage.L(s,z)* Location(s,n));
 CurtailedHeat.L(n_th,z)=sum(hu,(Nunits(hu)*PowerCapacity(hu)*LoadMaximum(hu,z)-Heat.L(hu,z))$(sum(tr,Technology(hu,tr))>=1) * Location_th(hu,n_th));
 
 
@@ -1262,7 +1278,7 @@ $If %MTS%==0 LostLoad_RampDown(n,h)
 OutputGenMargin(n,h)
 OutputHeat(au,h)
 OutputHeatSlack(n_th,h)
-LostLoad_WaterSlack(s)
+LostLoad_WaterSlack(au)
 StorageShadowPrice(au,h)
 H2ShadowPrice(p2h2,h)
 OutputPtLDemand(p2h2,h)
@@ -1299,7 +1315,7 @@ OutputStorageSlack(s,z) = StorageSlack.L(s,z);
 OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(s,z)  = Spillage.L(s,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
-OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
+OutputCurtailedPower(n,z)=CurtailedPower.L(n,z) + spillage.L(s,z)*Location(s,n);
 OutputCurtailedHeat(n_th,z)=CurtailedHeat.L(n_th,z);
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
 LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
@@ -1312,7 +1328,7 @@ $If %MTS%==0 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
 *HeatShadowPrice(au,z) = EQ_CHP_demand_satisfaction.m(au,z);
 HeatShadowPrice(n_th,z) = EQ_Heat_Demand_balance.m(n_th,z);
-LostLoad_WaterSlack(s) = WaterSlack.L(s);
+LostLoad_WaterSlack(au) = WaterSlack.L(au);
 StorageShadowPrice(s,z) = 0 ;
 OutputPtLDemand(p2h2,z) = PtLDemand.L(p2h2,z);
 *EQ_Storage_balance.m(s,z);

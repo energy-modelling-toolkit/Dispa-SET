@@ -129,6 +129,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     Reserve2D = NodeBasedTable('Reserve2D', config, default=None)
     Reserve2U = NodeBasedTable('Reserve2U', config, default=None)
 
+    # Curtailment:
+    CostCurtailment = NodeBasedTable('CostCurtailment', config, default=config['default']['CostCurtailment'])
+
     # Power plants:
     plants = pd.DataFrame()
     if os.path.isfile(config['PowerPlantData']):
@@ -435,7 +438,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # Formatting all time series (merging, resempling) and store in the FinalTS dict
     finalTS = {'Load': Load, 'Reserve2D': reserve_2D_tot, 'Reserve2U': reserve_2U_tot,
                'Efficiencies': Efficiencies, 'NTCs': NTCs, 'Inter_RoW': Inter_RoW,
-               'LoadShedding': LoadShedding, 'CostLoadShedding': CostLoadShedding,
+               'LoadShedding': LoadShedding, 'CostLoadShedding': CostLoadShedding, 'CostCurtailment': CostCurtailment,
                'ScaledInflows': ReservoirScaledInflows, 'ReservoirLevels': ReservoirLevels,
                'Outages': Outages, 'AvailabilityFactors': AF, 'CostHeatSlack': CostHeatSlack,
                'HeatDemand': HeatDemand, 'ShareOfFlexibleDemand': ShareOfFlexibleDemand,
@@ -522,6 +525,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['CostStartUp'] = ['au']
     sets_param['CostVariable'] = ['au', 'h']
     sets_param['Curtailment'] = ['n']
+    sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
     sets_param['Efficiency'] = ['p2h', 'h']
     sets_param['EmissionMaximum'] = ['n', 'p']
@@ -706,6 +710,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     for i, c in enumerate(sets['n']):
         parameters['LoadShedding']['val'][i] = finalTS['LoadShedding'][c] * PeakLoad[c]
         parameters['CostLoadShedding']['val'][i] = finalTS['CostLoadShedding'][c]
+        parameters['CostCurtailment']['val'][i] = finalTS['CostCurtailment'][c]
 
     # %%###############################################################################################################
     # Variable Cost
