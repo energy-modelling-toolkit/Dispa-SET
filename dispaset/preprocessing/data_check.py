@@ -464,10 +464,12 @@ def check_units(config, plants):
     for key in higher:
         if any(plants[key] > higher[key]):
             plantlist = plants[plants[key] > higher[key]]
-            plantlist = plantlist['Unit'].tolist()
-            logging.critical('The value of ' + key + ' should be lower or equal to one. '
-                             'A higher value has been found for units ' + str(plantlist))
-            sys.exit(1)
+            plantlist = plantlist[~plantlist['Technology'].str.contains("ABHP")]
+            if not plantlist.empty:
+                plantlist = plantlist['Unit'].tolist()
+                logging.critical('The value of ' + key + ' should be lower or equal to one. '
+                                 'A higher value has been found for units ' + str(plantlist))
+                sys.exit(1)
 
     for key in higher_time:
         if any(plants[key] >= config['HorizonLength'] * 24):

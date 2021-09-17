@@ -724,7 +724,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
             if Plants_merged['Fuel'][unit] == FuelEntry:
                 if Plants_merged['Technology'][unit] == 'ABHP':
                     parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
-                                                                 1.55 + \
+                                                                 Plants_merged['Efficiency'][unit] + \
                                                                  Plants_merged['EmissionRate'][unit] * \
                                                                  FuelPrices['PriceOfCO2'][c]
                     found = True

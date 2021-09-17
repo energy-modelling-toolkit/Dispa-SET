@@ -57,7 +57,7 @@ def EfficiencyTimeSeries(config, plants, Temperatures):
         if plants.loc[u, 'Technology'] in commons['tech_p2ht'] and plants.loc[u,'Tnominal'] in plants:
             eff = plants.loc[u, 'COP'] + plants.loc[u, 'coef_COP_a'] * (Temperatures[z] - plants.loc[u, 'Tnominal']) + \
                   plants.loc[u, 'coef_COP_b'] * (Temperatures[z] - plants.loc[u, 'Tnominal']) ** 2
-        elif (plants.loc[u, 'Technology'] in commons['tech_p2ht']) and \
+        elif (plants.loc[u, 'Technology'] in commons['tech_p2ht']) or \
                 (plants.loc[u, 'Technology'] in commons['tech_heat']):
             eff = plants.loc[u, 'COP']
         else:
