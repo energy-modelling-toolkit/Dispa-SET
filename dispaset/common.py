@@ -26,9 +26,9 @@ commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 # List of storage technologies:
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'P2GS', 'SCSP']
 # List of power to heat technologies:
-commons['tech_p2ht'] = ['P2HT', 'ABHP', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
+commons['tech_p2ht'] = ['P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
 # List of heat only technologies:
-commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH']
+commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
 # List of thermal storage technologies:
 commons['tech_thermal_storage'] = ['THMS']
 # List of CHP types:

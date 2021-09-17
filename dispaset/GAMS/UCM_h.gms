@@ -1315,7 +1315,7 @@ OutputStorageSlack(s,z) = StorageSlack.L(s,z);
 OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(s,z)  = Spillage.L(s,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
-OutputCurtailedPower(n,z)=CurtailedPower.L(n,z) + spillage.L(s,z)*Location(s,n);
+OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
 OutputCurtailedHeat(n_th,z)=CurtailedHeat.L(n_th,z);
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
 LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
