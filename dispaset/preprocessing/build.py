@@ -273,7 +273,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2',
-             'PriceOfLignite', 'PriceOfPeat']
+             'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia']
     FuelPrices = {}
     for fuel in fuels:
         FuelPrices[fuel] = NodeBasedTable(fuel, config, default=config['default'][fuel])
@@ -716,7 +716,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # Variable Cost
     # Equivalence dictionary between fuel types and price entries in the config sheet:
     FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
-                   'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat'}
+                   'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia'}
     for unit in range(Nunits):
         c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
         found = False
@@ -910,7 +910,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
                     os.path.join(sim, 'writeresults.gms'))
     # Create cplex option file
-    cplex_options = {'epgap': 0.005,  # TODO: For the moment hardcoded, it has to be moved to a config file
+    cplex_options = {'epgap': 0.0005,  # TODO: For the moment hardcoded, it has to be moved to a config file
                      'numericalemphasis': 0,
                      'scaind': 1,
                      'lpmethod': 0,

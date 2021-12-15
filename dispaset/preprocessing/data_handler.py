@@ -13,7 +13,7 @@ except ImportError:
     pass
 
 DEFAULTS = {'ReservoirLevelInitial': 0.5, 'ReservoirLevelFinal': 0.5, 'ValueOfLostLoad': 1E5,
-            'PriceOfSpillage': 1, 'WaterValue': 100, 'ShareOfQuickStartUnits': 0.5,
+            'PriceOfSpillage': 1, 'WaterValue': 100, 'ShareOfQuickStartUnits': 0.5, 'PriceOfAmmonia': 0,
             'PriceOfNuclear': 0, 'PriceOfBlackCoal': 0, 'PriceOfGas': 0, 'PriceOfFuelOil': 0, 'PriceOfBiomass': 0,
             'PriceOfCO2': 0, 'PriceOfLignite': 0, 'PriceOfPeat': 0, 'LoadShedding': 0, 'CostHeatSlack': 0,
             'CostLoadShedding': 100, 'ShareOfFlexibleDemand': 0, 'DemandFlexibility': 0, 'PriceTransmission': 0,
@@ -605,7 +605,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
             'CostH2Slack': 170, 'CostCurtailment': 171,
             # Fuel price related data
             'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
-            'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186
+            'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187
         }
         modifiers = {'Demand': 274, 'Wind': 275, 'Solar': 276, 'Storage': 277}
         default = {
@@ -613,7 +613,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
             'ReservoirLevelInitial': 101, 'ReservoirLevelFinal': 102,
             # Fuel price defaults
             'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
-            'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186,
+            'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187,
             # Other price defaults
             'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169,
             'CostH2Slack': 170, 'CostCurtailment': 171,
@@ -809,10 +809,10 @@ def load_config_yaml(filename, AbsPath=True):
     # Define missing parameters if they were not provided in the config file
     PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
               'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
-              'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat', 'HeatDemand',
-              'CostHeatSlack', 'CostLoadShedding', 'ShareOfFlexibleDemand', 'Temperatures', 'PriceTransmission',
-              'Reserve2D', 'Reserve2U', 'H2RigidDemand', 'H2FlexibleDemand', 'H2FlexibleCapacity', 'CostH2Slack',
-              'GeoData']
+              'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia',
+              'HeatDemand', 'CostHeatSlack', 'CostLoadShedding', 'ShareOfFlexibleDemand', 'Temperatures',
+              'PriceTransmission', 'Reserve2D', 'Reserve2U', 'H2RigidDemand', 'H2FlexibleDemand', 'H2FlexibleCapacity',
+              'CostH2Slack', 'GeoData']
     for param in PARAMS:
         if param not in config:
             config[param] = ''

@@ -869,7 +869,7 @@ EQ_Storage_MaxDischarge(s,i)$(StorageCapacity(s)>PowerCapacity(s)*TimeStep)..
          =L=
          StorageInitial(s)$(ord(i) = 1)
          + StorageLevel(s,i-1)$(ord(i) > 1)
-         +StorageInflow(s,i)*Nunits(s)*TimeStep
+         + StorageInflow(s,i)*Nunits(s)*TimeStep
 ;
 
 *Charging is limited by the remaining storage capacity
@@ -1299,6 +1299,7 @@ OutputRampRate(au,h)
 OutputStartUp(au,h)
 OutputShutDown(au,h)
 OutputEmissions(n,p,z)
+CapacityMargin(n,h)
 ;
 
 OutputCommitted(au,z)=Committed.L(au,z);
@@ -1361,6 +1362,16 @@ OutputEmissions(n,p,z) = (sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n))
                         + sum(hu,Heat.L(hu,z)*EmissionRate(hu,p)*Location(hu,n)))
                         / (sum(u,Power.L(u,z)*Location(u,n)) + sum(hu,Heat.L(hu,z)*Location(hu,n)));
 
+CapacityMargin(n,z) = (sum(u, Nunits(u)*PowerCapacity(u)$(not s(u))*LoadMaximum(u,z)*Location(u,n))
+                      + min(sum(s, Nunits(s)*PowerCapacity(s)*LoadMaximum(s,z)*Location(s,n)), sum(s, StorageLevel.L(s,z)*StorageCapacity(s)))
+                      + sum(l,FlowMaximum(l,z)*LineNode(l,n))
+*                      + sum(l,Flow.L(l,z)*LineNode(l,n))
+                      - Demand("DA",n,z)
+*                      + Demand("Flex",n,z)
+*                      + DemandModulation.L(n,z)
+                      - sum(p2h,PowerConsumption.L(p2h,z)*Location(p2h,n))
+);
+
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
 OutputFlow,
@@ -1412,6 +1423,7 @@ OutputRampRate,
 OutputStartUp,
 OutputShutDown,
 OutputEmissions,
+CapacityMargin,
 status
 ;
 

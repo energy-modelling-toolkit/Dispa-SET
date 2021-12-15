@@ -34,14 +34,14 @@ commons['tech_thermal_storage'] = ['THMS']
 # List of CHP types:
 commons['types_CHP'] = ['extraction', 'back-pressure', 'p2h']
 # DispaSET fuels:
-commons['Fuels'] = ['AIR', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH', 'GEO',
-                    'HYD', 'WHT', 'ELE', 'THE']
+commons['Fuels'] = ['AIR', 'AMO', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH',
+                    'GEO', 'HYD', 'WHT', 'ELE', 'THE']
 # Ordered list of fuels for plotting (the first ones are negative):
 commons['MeritOrder'] = ['SCSP', 'BATS', 'BEVS', 'HDAM', 'HPHS', 'P2GS', 'FlowOut', 'GEO', 'NUC', 'LIG',
-                         'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT',
+                         'HRD', 'BIO', 'AMO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT',
                          'HYD', 'AIR', 'WHT']
-commons['MeritOrderHeat'] = ['GEO', 'NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'WAT',
-                             'HYD', 'AIR', 'WHT', 'ELE', 'THE', 'HeatSlack', 'THMS']
+commons['MeritOrderHeat'] = ['GEO', 'NUC', 'LIG', 'HRD', 'BIO', 'AMO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN',
+                             'WAT', 'HYD', 'AIR', 'WHT', 'ELE', 'THE', 'HeatSlack', 'THMS']
 
 # Colors associated with each fuel:
 # commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': '#af4b91b2', 'OIL': '#af4b91ff',
@@ -69,6 +69,7 @@ commons['colors'] = {'LIG': '#af4b9180',
                      'WAT': '#00a0e1ff',
                      'HYD': '#A0522D',
                      'BIO': '#7daf4bff',
+                     'AMO': '#ffff00ff',
                      'GEO': '#7daf4bbf',
                      'Storage': '#b93c46ff',
                      'FlowIn': '#b93c46b2',
@@ -92,7 +93,7 @@ commons['colors'] = {'LIG': '#af4b9180',
 commons['colors']['curtailment'] = 'red'
 # Hatches associated with each fuel:
 commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '', 'GAS': '', 'NUC': '', 'SUN': '', 'WIN': '', 'WAT': '',
-                      'BIO': '', 'GEO': '', 'Storage': '', 'WST': '', 'OTH': '', 'HYD': '',
+                      'BIO': '', 'AMO': '', 'GEO': '', 'Storage': '', 'WST': '', 'OTH': '', 'HYD': '',
                       'FlowIn': '/', 'FlowOut': '\\', 'HDAM': '/', 'HPHS': '/', 'SCSP': '/', 'THMS': '', 'BATS': '/',
                       'BEVS': '/', 'P2GS': '/', 'AIR': '', 'WHT': '', 'HeatSlack': '/', 'ELE': '', 'THE': ''
                       }

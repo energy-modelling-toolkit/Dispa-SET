@@ -160,24 +160,27 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
                    'OutputStorageSlack', 'OutputPtLDemand', 'OutputH2Output', 'OutputPowerMustRun',
                    'OutputReserve_2U', 'OutputReserve_2D', 'OutputReserve_3U', 'ShadowPrice_RampUp_TC',
                    'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown','HeatShadowPrice',
-                   'H2ShadowPrice', 'OutputCurtailedHeat', 'OutputEmissions']
+                   'H2ShadowPrice', 'OutputCurtailedHeat', 'OutputEmissions', 'CapacityMargin']
 
     # Setting the proper index to the result dataframes:
     from itertools import chain
     for key in chain(keys, keys_sparse):
         if key in results:
-            if len(results[key]) == len(
-                    index_long):  # Case of variables for which the look-ahead period recorded (e.g. the lost loads)
+            # Case of variables for which the look-ahead period is recorded (e.g. the lost loads)
+            if len(results[key]) == len(index_long):
                 results[key].index = index_long
-            elif len(results[key]) == len(
-                    index):  # Case of variables for which the look-ahead is not recorded (standard case)
+            # Case of variables for which the look-ahead is not recorded (standard case)
+            elif len(results[key]) == len(index):
                 results[key].index = index
-            else:  # Variables whose index is not complete (sparse formulation)
+            # Variables whose index is not complete (sparse formulation)
+            else:
                 results[key].index = index_long[results[key].index - 1]
                 if key in keys_sparse:
                     results[key] = results[key].reindex(index).fillna(0)
         else:
             results[key] = pd.DataFrame(index=index)
+        if isinstance(results[key], type(pd.DataFrame())):
+            results[key] = results[key].reindex(sorted(results[key].columns), axis=1)
 
     # Include water slack in the results (only one number)
     if 'LostLoad_WaterSlack' in results:
