@@ -134,8 +134,8 @@ Dispa-SET only considers a limited number of different fuel types. They are summ
 	Fuel	Examples
 	======= =============
 	AIR     Air energy from the surrounding environment (used by heat pumps and other heat generation technologies)
-	AMO     Ammonia
-    BIO	    Bagasse, Biodiesel, Gas From Biomass, Gasification, Biomass, Briquettes, Cattle Residues, Rice Hulls Or Padi Husk, Straw, Wood Gas (From Wood Gasification), Wood Waste Liquids Excl Blk Liq (Incl Red Liquor, Sludge, Wood,Spent Sulfite Liquor And Oth Liquids, Wood And Wood Waste
+	AMO	    Ammonia
+	BIO	    Bagasse, Biodiesel, Gas From Biomass, Gasification, Biomass, Briquettes, Cattle Residues, Rice Hulls Or Padi Husk, Straw, Wood Gas (From Wood Gasification), Wood Waste Liquids Excl Blk Liq (Incl Red Liquor, Sludge, Wood,Spent Sulfite Liquor And Oth Liquids, Wood And Wood Waste
 	GAS	    Blast Furnace Gas, Boiler Natural Gas, Butane, Coal Bed Methane, Coke Oven Gas, Flare Gas, Gas (Generic), Methane, Mine Gas, Natural Gas, Propane, Refinery Gas, Sour Gas, Synthetic Natural Gas, Top Gas, Voc Gas & Vapor, Waste Gas, Wellhead Gas
 	GEO	    Geothermal steam
 	HRD	    Anthracite, Other Anthracite, Bituminous Coal, Coker By-Product, Coal Gas (From Coal Gasification), Coke, Coal (Generic), Coal-Oil Mixture, Other Coal, Coal And Pet Coke Mi, Coal Tar Oil, Anthracite Coal Waste, Coal-Water Mixture, Gob, Hard Coal / Anthracite, Imported Coal, Other Solids, Soft Coal, Anthracite Silt, Steam Coal, Subbituminous, Pelletized Synthetic Fuel From Coal, Bituminous Coal Waste)
@@ -149,7 +149,7 @@ Dispa-SET only considers a limited number of different fuel types. They are summ
 	WAT	    Hydro energy
 	WIN	    Wind energy
 	WST	    Digester Gas (Sewage Sludge Gas), Gas From Refuse Gasification, Hazardous Waste, Industrial Waste, Landfill Gas, Poultry Litter, Manure, Medical Waste, Refused Derived Fuel, Refuse, Waste Paper And Waste Plastic, Refinery Waste, Tires, Agricultural Waste, Waste Coal, Waste Water Sludge, Waste
-	WHT     Waste heat, Excess heat 
+	WHT     Waste heat, Excess heat
 	======= =============
 
 Different fuels may be used to power a given technology, e.g. steam turbines may be fired with almost any fuel type. In Dispa-SET, each unit must be defined with the pair of values (technology,fuel). The next tables is derived from a commercial power plant database and indicates the number of occurences of each combination. It appears clearly that, even through some combinations are irrelevant, both characteristics are needed to define a power plant type.
@@ -157,7 +157,7 @@ Different fuels may be used to power a given technology, e.g. steam turbines may
 ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ==========
 f/t	COMC	GTUR	HDAM	HPHS	HROR	ICEN	PHOT	STUR	WTOF	WTON	Total
 ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ==========
-AMO 1
+AMO	1	1
 BIO		2				10		79			91
 GAS	485	188				28		97			798
 GEO								10			10
