@@ -208,13 +208,13 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                 elif len(temp_results[c]['OutputPtLDemand']) < len(idx):
                     temp_results[c]['OutputPtLDemand'] = temp_results[c]['OutputPtLDemand'].reindex(
                         range(1, len(idx) + 1)).fillna(0)
-                for u in temp_results[c]['OutputPtLDemand']:
-                    if u not in units.index:
-                        logging.critical('Unit "' + u + '" is reported in the PtL demand of the result file but '
-                                                        'does not appear in the units table')
-                        sys.exit(1)
-                    for u_old in units.loc[u, 'FormerUnits']:
-                        PtLDemand[u_old] = temp_results[c]['OutputPtLDemand'][u].values
+                # for u in temp_results[c]['OutputPtLDemand']:
+                #     if u not in units.index:
+                #         logging.critical('Unit "' + u + '" is reported in the PtL demand of the result file but '
+                #                                         'does not appear in the units table')
+                #         sys.exit(1)
+                #     for u_old in units.loc[u, 'FormerUnits']:
+                #         PtLDemand[u_old] = temp_results[c]['OutputPtLDemand'][u].values
 
     # Solving reservoir levels for all regions simultaneously
     elif config['HydroScheduling'] == 'Regional':
@@ -257,18 +257,18 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             for u_old in units.loc[u, 'FormerUnits']:
                 profiles[u_old] = profiles[u]
             profiles.drop(u, axis=1, inplace=True)
-        if config['H2FlexibleDemand'] != '':
-            for u in PtLDemand:
-                if u not in units.index:
-                    logging.critical('Unit "' + u + '" is reported in the PtL demand of the result file but '
-                                                    'does not appear in the units table')
-                    sys.exit(1)
-                # TODO: check if else statement should be used here, if its not everything currently in the else
-                #  statement is never used
-                else:
-                    for u_old in units.loc[u, 'FormerUnits']:
-                        PtLDemand[u_old] = PtLDemand[u]
-                        PtLDemand.drop(u, axis=1, inplace=True)
+        # if config['H2FlexibleDemand'] != '':
+        #     for u in PtLDemand:
+        #         if u not in units.index:
+        #             logging.critical('Unit "' + u + '" is reported in the PtL demand of the result file but '
+        #                                             'does not appear in the units table')
+        #             sys.exit(1)
+        #         # TODO: check if else statement should be used here, if its not everything currently in the else
+        #         #  statement is never used
+        #         else:
+        #             for u_old in units.loc[u, 'FormerUnits']:
+        #                 PtLDemand[u_old] = PtLDemand[u]
+        #                 PtLDemand.drop(u, axis=1, inplace=True)
     else:
         logging.error('HydroScheduling parameter should be either "Regional" or "Zonal" (case sensitive). ')
         sys.exit()

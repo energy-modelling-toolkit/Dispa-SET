@@ -221,15 +221,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     #                                default=config['default']['CostHeatSlack'])
     Temperatures = NodeBasedTable('Temperatures', config)
 
-    if plants_h2.empty is True:
-        H2RigidDemand = pd.DataFrame(index=config['idx_long'])
-        H2FlexibleDemand = pd.DataFrame(index=config['idx_long'])
-        CostH2Slack = pd.DataFrame(index=config['idx_long'])
-    else:
-        H2RigidDemand = UnitBasedTable(plants_h2, 'H2RigidDemand', config, fallbacks=['Unit'], default=0)
-        H2FlexibleDemand = UnitBasedTable(plants_h2, 'H2FlexibleDemand', config, fallbacks=['Unit'], default=0)
-        CostH2Slack = UnitBasedTable(plants_h2, 'CostH2Slack', config, fallbacks=['Unit', 'Zone'],
-                                     default=config['default']['CostH2Slack'])
+    # if plants_h2.empty is True:
+    #     H2RigidDemand = pd.DataFrame(index=config['idx_long'])
+    #     H2FlexibleDemand = pd.DataFrame(index=config['idx_long'])
+    #     CostH2Slack = pd.DataFrame(index=config['idx_long'])
+    # else:
+    #     H2RigidDemand = UnitBasedTable(plants_h2, 'H2RigidDemand', config, fallbacks=['Unit'], default=0)
+    #     H2FlexibleDemand = UnitBasedTable(plants_h2, 'H2FlexibleDemand', config, fallbacks=['Unit'], default=0)
+    #     CostH2Slack = UnitBasedTable(plants_h2, 'CostH2Slack', config, fallbacks=['Unit', 'Zone'],
+    #                                  default=config['default']['CostH2Slack'])
 
     # Detecting thermal zones:
     zones_th = plants_heat['Zone_th'].unique().tolist()
@@ -238,6 +238,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     HeatDemand = GenericTable(zones_th, 'HeatDemand', config, default=0)
     CostHeatSlack = GenericTable(zones_th, 'CostHeatSlack', config, default=config['default']['CostHeatSlack'])
+
+    # Detecting h2 zones:
+    zones_h2 = plants_h2['Zone_h2'].unique().tolist()
+    if '' in zones_h2:
+        zones_h2.remove('')
+
+    H2RigidDemand = GenericTable(zones_h2, 'H2RigidDemand', config, default=0)
+    H2FlexibleDemand = GenericTable(zones_h2, 'H2FlexibleDemand', config, default=0)
+    CostH2Slack = GenericTable(zones_h2, 'CostH2Slack', config, default=config['default']['CostH2Slack'])
 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
@@ -445,12 +454,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                'PriceTransmission': PriceTransmission, 'CostH2Slack': CostH2Slack,
                'H2RigidDemand': H2RigidDemand, 'H2FlexibleDemand': H2FlexibleDemand}
 
+    # # Merge the following time series with weighted averages
+    # for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors', 'CostH2Slack']:
+    #     finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
     # Merge the following time series with weighted averages
-    for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors', 'CostH2Slack']:
+    for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
-    # Merge the following time series by summing
-    for key in ['H2RigidDemand', 'H2FlexibleDemand']:
-        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='Sum')
+    # # Merge the following time series by summing
+    # for key in ['H2RigidDemand', 'H2FlexibleDemand']:
+    #     finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='Sum')
     # Merge the following time series by weighted average based on storage capacity
     for key in ['ReservoirLevels']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
@@ -481,13 +493,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets['mk'] = ['DA', '2U', '2D', 'Flex']
     sets['n'] = config['zones']
     sets['n_th'] = zones_th
+    sets['n_h2'] = zones_h2
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
     sets['u'] = Plants_merged[[u in [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
-                                     commons['tech_p2ht'] + commons['tech_thermal_storage']]
+                                     commons['tech_p2ht'] + commons['tech_thermal_storage'] + commons['tech_p2h2']]
                                for u in Plants_merged['Technology']]].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
     sets['p2h'] = Plants_p2h.index.tolist()
@@ -517,7 +530,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['CHPMaxHeat'] = ['chp']
     sets_param['CostFixed'] = ['au']
     sets_param['CostHeatSlack'] = ['n_th', 'h']
-    sets_param['CostH2Slack'] = ['p2h2', 'h']
+    sets_param['CostH2Slack'] = ['n_h2', 'h']
     sets_param['CostLoadShedding'] = ['n', 'h']
     sets_param['CostRampUp'] = ['au']
     sets_param['CostRampDown'] = ['au']
@@ -527,7 +540,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['Curtailment'] = ['n']
     sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
-    sets_param['Efficiency'] = ['p2h', 'h']
+    sets_param['Efficiency'] = ['au', 'h']
     sets_param['EmissionMaximum'] = ['n', 'p']
     sets_param['EmissionRate'] = ['au', 'p']
     sets_param['FlowMaximum'] = ['l', 'h']
@@ -538,6 +551,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['LoadShedding'] = ['n', 'h']
     sets_param['Location'] = ['au', 'n']
     sets_param['Location_th'] = ['au', 'n_th']
+    sets_param['Location_h2'] = ['au', 'n_h2']
     sets_param['Markup'] = ['au', 'h']
     sets_param['Nunits'] = ['au']
     sets_param['OutageFactor'] = ['au', 'h']
@@ -564,9 +578,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['Technology'] = ['au', 't']
     sets_param['TimeUpMinimum'] = ['au']
     sets_param['TimeDownMinimum'] = ['au']
-    sets_param['PtLDemandInput'] = ['p2h2', 'h']
-    sets_param['MaxCapacityPtL'] = ['p2h2']
-    sets_param['H2Demand'] = ['s', 'h']
+    sets_param['PtLDemandInput'] = ['n_h2', 'h']
+    sets_param['MaxCapacityPtL'] = ['n_h2']
+    sets_param['H2Demand'] = ['n_h2', 'h']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -583,7 +597,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         parameters[var] = define_parameter(sets_param[var], sets, value=1e7)
 
     # Boolean parameters:
-    for var in ['Technology', 'Fuel', 'Reserve', 'Location', 'Location_th']:
+    for var in ['Technology', 'Fuel', 'Reserve', 'Location', 'Location_th', 'Location_h2']:
         parameters[var] = define_parameter(sets_param[var], sets, value='bool')
 
     # %%
@@ -614,10 +628,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # that is given separetly from the Power plant database 
     if 'H2FlexibleCapacity' in config and config['H2FlexibleCapacity'] != '':
         MaxCapacityPtL = pd.read_csv(config['H2FlexibleCapacity'], index_col=0, keep_default_na=False)
-        for i, u in enumerate(sets['p2h2']):
-            for unit in MaxCapacityPtL.index:
-                if unit in u:
-                    parameters['MaxCapacityPtL']['val'][i] = MaxCapacityPtL.loc[unit]
+        for i, u in enumerate(sets['n_h2']):
+            for zone_h2 in MaxCapacityPtL.index:
+                if zone_h2 in zones_h2:
+                    parameters['MaxCapacityPtL']['val'][i] = MaxCapacityPtL.loc[zone_h2]
 
                     # Storage profile and initial state:
     for i, s in enumerate(sets['asu']):
@@ -659,11 +673,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
             parameters['CostHeatSlack']['val'][i, :] = finalTS['CostHeatSlack'][u][idx_sim].values
 
     # H2 time series:
-    for i, u in enumerate(sets['s']):
+    for i, u in enumerate(sets['n_h2']):
         if u in finalTS['H2RigidDemand']:
             parameters['H2Demand']['val'][i, :] = finalTS['H2RigidDemand'][u][idx_sim].values
-    for i, u in enumerate(sets['p2h2']):
-        if u in finalTS['H2RigidDemand']:
+    for i, u in enumerate(sets['n_h2']):
+        if u in finalTS['CostH2Slack']:
             parameters['CostH2Slack']['val'][i, :] = finalTS['CostH2Slack'][u][idx_sim].values
         if u in finalTS['H2FlexibleDemand']:
             parameters['PtLDemandInput']['val'][i, :] = finalTS['H2FlexibleDemand'][u][idx_sim].values
@@ -693,6 +707,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # Efficiencies (currently limited to p2h units, but can be extended to all units):
     if len(finalTS['Efficiencies']) != 0:
         for i, u in enumerate(sets['p2h']):
+            parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
+        for i, u in enumerate(sets['p2h2']):
             parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
 
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])
@@ -797,6 +813,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['zones'][i]).values
     for i in range(len(sets['n_th'])):
         parameters['Location_th']['val'][:, i] = (Plants_merged['Zone_th'] == zones_th[i]).values
+    for i in range(len(sets['n_h2'])):
+        parameters['Location_h2']['val'][:, i] = (Plants_merged['Zone_h2'] == zones_h2[i]).values
 
     # CHPType parameter:
     sets['chp_type'] = ['Extraction', 'Back-Pressure', 'P2H']
