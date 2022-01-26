@@ -64,11 +64,15 @@ except Exception:
 try:
     from setuptools_scm import get_version
     import warnings
+    from shutil import which
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        version = get_version(version_scheme='post-release',
-                              local_scheme=lambda version: version.format_choice("" if version.exact else "+{node}", "+dirty"),
-                              root='..', relative_to=__file__)
+        if which('git') is not None:
+            version = get_version(version_scheme='post-release',
+                                  local_scheme=lambda version: version.format_choice("" if version.exact else "+{node}", "+dirty"),
+                                  root='..', relative_to=__file__)
+        else:
+            version='N/A'
 except (ImportError, LookupError):
     try:
         from pkg_resources import get_distribution, DistributionNotFound
