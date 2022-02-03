@@ -259,12 +259,8 @@ def check_p2h(config, plants):
     if len(plants) == 0:  # If there are no P2HT units, exit the check
         return True
 
-    check_keys(plants, keys, 'P2HT')
-    check_keys(plants, keys, 'ABHP')
-    check_keys(plants, keys, 'ASHP')
-    check_keys(plants, keys, 'GSHP')
-    check_keys(plants, keys, 'HYHP')
-    check_keys(plants, keys, 'WSHP')
+    for t in commons['tech_p2ht']:
+        check_keys(plants, keys, t)
     check_NonNaNKeys(plants, NonNaNKeys)
     check_StrKeys(plants, StrKeys)
 
@@ -274,6 +270,36 @@ def check_p2h(config, plants):
             logging.critical('The COP value of p2h units must be comprised between 0 and 20. '
                              'The provided value for unit ' + u + ' is "' + str(plants.loc[u, 'COP'] + '"'))
             sys.exit(1)
+
+    return True
+
+
+def check_p2bs(config, plants):
+    """
+    Function that checks the p2bs unit characteristics
+    """
+    keys = [col for col in plants if col.startswith('ChargingEfficiencySector') or col.startswith('EfficiencySector')]
+    NonNaNKeys = []
+    StrKeys = [col for col in plants if col.startswith('Sector')]
+
+    if len(plants) == 0:  # If there are no P2HT units, exit the check
+        return True
+
+    for t in commons['tech_p2bs']:
+        check_keys(plants, keys, t)
+    check_NonNaNKeys(plants, NonNaNKeys)
+    check_StrKeys(plants, StrKeys)
+
+    # Check the COP values:
+    #TODO: check variables that need to be checked (Eff, sector, power capacity etc.)
+
+    # for u in plants.index:
+    #     if plants.loc[u, 'Efficiency1'] < 0 or plants.loc[u, 'Efficiency2'] < 0:
+    #         logging.critical('The Efficiency value of p2bs units must be >= 0. '
+    #                          'The provided value for Efficiency1 of unit ' + u + ' is "' +
+    #                          str(plants.loc[u, 'Efficiency1'] + '"')
+    #                          )
+    #         sys.exit(1)
 
     return True
 
@@ -289,9 +315,27 @@ def check_heat(config, plants):
     if len(plants) == 0:  # If there are no P2HT units, exit the check
         return True
 
-    check_keys(plants, keys, 'HOBO')
-    check_keys(plants, keys, 'GETH')
-    check_keys(plants, keys, 'SOTH')
+    for t in commons['tech_heat']:
+        check_keys(plants, keys, t)
+    check_NonNaNKeys(plants, NonNaNKeys)
+    check_StrKeys(plants, StrKeys)
+
+    return True
+
+
+def check_boundary_sector(config, plants):
+    """
+    Function that checks the heat only unit characteristics
+    """
+    keys = ['PowerCapacity', 'Efficiency']
+    NonNaNKeys = []
+    StrKeys = ['Sector1']
+
+    if len(plants) == 0:  # If there are no P2HT units, exit the check
+        return True
+
+    for t in commons['tech_boundary_sector']:
+        check_keys(plants, keys, t)
     check_NonNaNKeys(plants, NonNaNKeys)
     check_StrKeys(plants, StrKeys)
 

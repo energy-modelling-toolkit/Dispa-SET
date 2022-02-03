@@ -62,13 +62,17 @@ mk               Markets
 n                Nodes
 n_th             Thermal nodes
 n_h2             Hydrogen nodes
+n_bs             Boundary sector nodes
 l                Lines
+l_bs             Boundary sector lines
 au               All Units
 u(au)            Generation units
 t                Generation technologies
 tr(t)            Renewable generation technologies
 f                Fuel types
 p                Pollutants
+p2bs(au)         Power to X
+bsu(au)          Boundary sector only units
 s(u)             Storage Units (with reservoir)
 chp(u)           CHP units
 p2h(au)          Power to heat units
@@ -96,72 +100,77 @@ Alias(i,ii);
 *Parameters as defined in the input file
 * \u indicate that the value is provided for one single unit
 PARAMETERS
-AvailabilityFactor(au,h)         [%]             Availability factor
-CHPPowerLossFactor(u)            [%]             Power loss when generating heat
-CHPPowerToHeat(u)                [%]             Nominal power-to-heat factor
-CHPMaxHeat(chp)                  [MW\u]          Maximum heat capacity of chp plant
+AvailabilityFactor(au,h)                    [%]             Availability factor
+CHPPowerLossFactor(u)                       [%]             Power loss when generating heat
+CHPPowerToHeat(u)                           [%]             Nominal power-to-heat factor
+CHPMaxHeat(chp)                             [MW\u]          Maximum heat capacity of chp plant
 CHPType
-CommittedInitial(au)             [n.a.]          Initial committment status
+CommittedInitial(au)                        [n.a.]          Initial committment status
 Config
-*CostCurtailment(n,h)            [EUR\MW]        Curtailment costs
-CostFixed(au)                    [EUR\h]         Fixed costs
-CostRampUp(u)                    [EUR\MW]        Ramp-up costs
-CostRampDown(u)                  [EUR\MW]        Ramp-down costs
-CostShutDown(u)                  [EUR\u]         Shut-down costs
-CostStartUp(u)                   [EUR\u]         Start-up costs
-CostVariable(au,h)               [EUR\MW]        Variable costs
-CostHeatSlack(n_th,h)            [EUR\MWh]       Cost of supplying heat via other means
-CostH2Slack(n_h2,h)              [EUR\MWh]       Cost of supplying H2 by other means
-H2Demand(n_h2,h)                 [MW]            H2 rigid demand
-CostLoadShedding(n,h)            [EUR\MWh]       Cost of load shedding
-Curtailment(n)                   [n.a]           Curtailment allowed or not {1 0} at node n
-CostCurtailment(n,h)             [EUR\MWh]       Cost of VRES curtailment
-Demand(mk,n,h)                   [MW]            Demand
-Efficiency(au,h)                 [%]             Efficiency
-EmissionMaximum(n,p)             [tP]            Emission limit
-EmissionRate(au,p)               [tP\MWh]        P emission rate
-FlowMaximum(l,h)                 [MW]            Line limits
-FlowMinimum(l,h)                 [MW]            Minimum flow
-Fuel(u,f)                        [n.a.]          Fuel type {1 0}
-HeatDemand(n_th,h)               [MWh\u]         Heat demand profile for chp units
-LineNode(l,n)                    [n.a.]          Incidence matrix {-1 +1}
-LoadShedding(n,h)                [MW]            Load shedding capacity
-Location(au,n)                   [n.a.]          Location {1 0}
-Location_th(au,n_th)             [n.a.]          Location {1 0}
-Location_h2(au,n_h2)             [n.a.]          Location {1 0}
-Markup(u,h)                      [EUR\MW]        Markup
-OutageFactor(au,h)               [%]             Outage Factor (100% = full outage)
-PartLoadMin(au)                  [%]             Minimum part load
-PowerCapacity(au)                [MW\u]          Installed capacity
-PowerInitial(u)                  [MW\u]          Power output before initial period
-PowerMinStable(au)               [MW\u]          Minimum power output
-PriceTransmission(l,h)           [EUR\MWh]       Transmission price
-StorageChargingCapacity(au)      [MW\u]          Storage capacity
-StorageChargingEfficiency(au)    [%]             Charging efficiency
-StorageSelfDischarge(au)         [%\day]         Self-discharge of the storage units
-RampDownMaximum(u)               [MW\h\u]        Ramp down limit
-RampShutDownMaximum(au)          [MW\h\u]        Shut-down ramp limit
-RampStartUpMaximum(au)           [MW\h\u]        Start-up ramp limit
-RampStartUpMaximumH(au,h)        [MW\h\u]        Start-up ramp limit - Clustered formulation
-RampShutDownMaximumH(au,h)       [MW\h\u]        Shut-down ramp limit - Clustered formulation
-RampUpMaximum(u)                 [MW\h\u]        Ramp up limit
-Reserve(au)                      [n.a.]          Reserve technology {1 0}
-StorageCapacity(au)              [MWh\u]         Storage capacity
-StorageDischargeEfficiency(au)   [%]             Discharge efficiency
-StorageOutflow(au,h)             [MW\u]          Storage outflows
-StorageInflow(au,h)              [MW\u]          Storage inflows (potential energy)
-StorageInitial(au)               [MWh]           Storage level before initial period
-StorageProfile(au,h)             [%]             Storage level to be resepected at the end of each horizon
-StorageMinimum(au)               [MWh]           Storage minimum
-Technology(au,t)                 [n.a.]          Technology type {1 0}
-TimeDownMinimum(au)              [h]             Minimum down time
-TimeUpMinimum(au)                [h]             Minimum up time
-PtLDemandInput(n_h2,h)           [MWh]           Demand of H2 for PtL at each timestep (useless for MTS)
-MaxCapacityPtL(n_h2)             [MW]            Max capacity of PtL
-$If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment status as for the MILP
-Nunits(au)                       [n.a.]          Number of units inside the cluster (upper bound value for integer variables)
-K_QuickStart(n)                  [n.a.]          Part of the reserve that can be provided by offline quickstart units
-QuickStartPower(au,h)            [MW\h\u]        Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
+*CostCurtailment(n,h)                       [EUR\MW]        Curtailment costs
+CostFixed(au)                               [EUR\h]         Fixed costs
+CostRampUp(u)                               [EUR\MW]        Ramp-up costs
+CostRampDown(u)                             [EUR\MW]        Ramp-down costs
+CostShutDown(u)                             [EUR\u]         Shut-down costs
+CostStartUp(u)                              [EUR\u]         Start-up costs
+CostVariable(au,h)                          [EUR\MW]        Variable costs
+CostHeatSlack(n_th,h)                       [EUR\MWh]       Cost of supplying heat via other means
+CostH2Slack(n_h2,h)                         [EUR\MWh]       Cost of supplying H2 by other means
+CostBoundarySectorSlack(n_bs,h)             [EUR\MWh]       Cost of supplying energy to boundary sector via other means
+H2Demand(n_h2,h)                            [MW]            H2 rigid demand
+CostLoadShedding(n,h)                       [EUR\MWh]       Cost of load shedding
+Curtailment(n)                              [n.a]           Curtailment allowed or not {1 0} at node n
+CostCurtailment(n,h)                        [EUR\MWh]       Cost of VRES curtailment
+Demand(mk,n,h)                              [MW]            Demand
+Efficiency(au,h)                            [%]             Efficiency
+EfficiencyBoundarySector(n_bs,au,h)         [%]             Discharge Efficiency boundary sector
+ChargingEfficiencyBoundarySector(n_bs,au,h) [%]             Charging Efficiency boundary sector
+EmissionMaximum(n,p)                        [tP]            Emission limit
+EmissionRate(au,p)                          [tP\MWh]        P emission rate
+FlowMaximum(l,h)                            [MW]            Line limits
+FlowMinimum(l,h)                            [MW]            Minimum flow
+Fuel(u,f)                                   [n.a.]          Fuel type {1 0}
+HeatDemand(n_th,h)                          [MWh\u]         Heat demand profile for chp units
+BoundarySectorDemand(n_bs,h)                [MWh\n_bs]      Demand profile in boundary sectors
+LineNode(l,n)                               [n.a.]          Incidence matrix {-1 +1}
+LoadShedding(n,h)                           [MW]            Load shedding capacity
+Location(au,n)                              [n.a.]          Location {1 0}
+Location_th(au,n_th)                        [n.a.]          Location {1 0}
+Location_h2(au,n_h2)                        [n.a.]          Location {1 0}
+Location_bs(au,n_bs)                        [n.a.]          Location {1 0}
+Markup(u,h)                                 [EUR\MW]        Markup
+OutageFactor(au,h)                          [%]             Outage Factor (100% = full outage)
+PartLoadMin(au)                             [%]             Minimum part load
+PowerCapacity(au)                           [MW\u]          Installed capacity
+PowerInitial(u)                             [MW\u]          Power output before initial period
+PowerMinStable(au)                          [MW\u]          Minimum power output
+PriceTransmission(l,h)                      [EUR\MWh]       Transmission price
+StorageChargingCapacity(au)                 [MW\u]          Storage capacity
+StorageChargingEfficiency(au)               [%]             Charging efficiency
+StorageSelfDischarge(au)                    [%\day]         Self-discharge of the storage units
+RampDownMaximum(u)                          [MW\h\u]        Ramp down limit
+RampShutDownMaximum(au)                     [MW\h\u]        Shut-down ramp limit
+RampStartUpMaximum(au)                      [MW\h\u]        Start-up ramp limit
+RampStartUpMaximumH(au,h)                   [MW\h\u]        Start-up ramp limit - Clustered formulation
+RampShutDownMaximumH(au,h)                  [MW\h\u]        Shut-down ramp limit - Clustered formulation
+RampUpMaximum(u)                            [MW\h\u]        Ramp up limit
+Reserve(au)                                 [n.a.]          Reserve technology {1 0}
+StorageCapacity(au)                         [MWh\u]         Storage capacity
+StorageDischargeEfficiency(au)              [%]             Discharge efficiency
+StorageOutflow(au,h)                        [MW\u]          Storage outflows
+StorageInflow(au,h)                         [MW\u]          Storage inflows (potential energy)
+StorageInitial(au)                          [MWh]           Storage level before initial period
+StorageProfile(au,h)                        [%]             Storage level to be resepected at the end of each horizon
+StorageMinimum(au)                          [MWh]           Storage minimum
+Technology(au,t)                            [n.a.]          Technology type {1 0}
+TimeDownMinimum(au)                         [h]             Minimum down time
+TimeUpMinimum(au)                           [h]             Minimum up time
+PtLDemandInput(n_h2,h)                      [MWh]           Demand of H2 for PtL at each timestep (useless for MTS)
+MaxCapacityPtL(n_h2)                        [MW]            Max capacity of PtL
+$If %RetrieveStatus%==1 CommittedCalc(u,z)  [n.a.]          Committment status as for the MILP
+Nunits(au)                                  [n.a.]          Number of units inside the cluster (upper bound value for integer variables)
+K_QuickStart(n)                             [n.a.]          Part of the reserve that can be provided by offline quickstart units
+QuickStartPower(au,h)                       [MW\h\u]        Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
 ;
 
 *Parameters as used within the loop
@@ -194,6 +203,7 @@ $LOAD mk
 $LOAD n
 $LOAD n_th
 $LOAD n_h2
+$LOAD n_bs
 $LOAD l
 $LOAD au
 $LOAD u
@@ -204,10 +214,12 @@ $LOAD p
 $LOAD s
 $LOAD wat
 $LOAD p2h2
+$LOAD p2bs
 $LOAD chp
 $LOAD p2h
 $LOAD th
 $LOAD hu
+$LOAD bsu
 $LOAD thms
 $LOAD h
 $LOAD z
@@ -220,6 +232,7 @@ $LOAD Config
 $LOAD CostFixed
 $LOAD CostHeatSlack
 $LOAD CostH2Slack
+$LOAD CostBoundarySectorSlack
 $LOAD CostLoadShedding
 $LOAD CostShutDown
 $LOAD CostStartUp
@@ -227,8 +240,11 @@ $LOAD CostVariable
 $LOAD Curtailment
 $LOAD CostCurtailment
 $LOAD Demand
+$LOAD BoundarySectorDemand
 $LOAD StorageDischargeEfficiency
 $LOAD Efficiency
+$LOAD EfficiencyBoundarySector
+$LOAD ChargingEfficiencyBoundarySector
 $LOAD EmissionMaximum
 $LOAD EmissionRate
 $LOAD FlowMaximum
@@ -240,6 +256,7 @@ $LOAD LoadShedding
 $LOAD Location
 $LOAD Location_th
 $LOAD Location_h2
+$LOAD Location_bs
 $LOAD Markup
 $LOAD Nunits
 $LOAD OutageFactor
@@ -280,6 +297,7 @@ mk,
 n,
 n_th,
 n_h2,
+n_bs,
 l,
 u,
 t,
@@ -288,6 +306,7 @@ f,
 p,
 s,
 p2h2,
+p2bs,
 wat,
 chp,
 p2h,
@@ -319,6 +338,7 @@ LineNode,
 Location,
 Location_th,
 Location_h2,
+Location_bs,
 LoadShedding,
 Markup,
 OutageFactor,
@@ -345,7 +365,7 @@ Technology,
 TimeDownMinimum,
 TimeUpMinimum,
 PtLDemandInput,
-MaxCapacityPtL
+MaxCapacityPtL,
 $If %RetrieveStatus% == 1 , CommittedCalc
 ;
 
@@ -367,46 +387,48 @@ $If not %LPFormulation% == 1 INTEGER VARIABLES Committed (au,h), StartUp(au,h), 
 
 
 POSITIVE VARIABLES
-AccumulatedOverSupply(n,h) [MWh]   Accumulated oversupply due to the flexible demand
-CostStartUpH(u,h)          [EUR]   Cost of starting up
-CostShutDownH(u,h)         [EUR]   cost of shutting down
-CostRampUpH(u,h)           [EUR]   Ramping cost
-CostRampDownH(u,h)         [EUR]   Ramping cost
-CurtailedPower(n,h)        [MW]    Curtailed power at node n
-CurtailedHeat(n_th,h)      [MW]    Curtailed heat at node n_th
-CurtailedH2(n_h2,h)        [MW]    Curtailed hydrogen at node n_h2
-Flow(l,h)                  [MW]    Flow through lines
-Power(u,h)                 [MW]    Power output
-PowerConsumption(au,h)     [MW]    Power consumption by P2H units
-PowerMaximum(u,h)          [MW]    Power output
-PowerMinimum(u,h)          [MW]    Power output
-ShedLoad(n,h)              [MW]    Shed load
-StorageInput(au,h)         [MWh]   Charging input for storage units
-StorageLevel(au,h)         [MWh]   Storage level of charge
-LL_MaxPower(n,h)           [MW]    Deficit in terms of maximum power
-LL_RampUp(u,h)             [MW]    Deficit in terms of ramping up for each plant
-LL_RampDown(u,h)           [MW]    Deficit in terms of ramping down
-LL_MinPower(n,h)           [MW]    Power exceeding the demand
-LL_2U(n,h)                 [MW]    Deficit in reserve up
-LL_3U(n,h)                 [MW]    Deficit in reserve up - non spinning
-LL_2D(n,h)                 [MW]    Deficit in reserve down
-spillage(s,h)              [MWh]   spillage from water reservoirs
-SystemCost(h)              [EUR]   Hourly system cost
-Reserve_2U(au,h)           [MW]    Spinning reserve up
-Reserve_2D(au,h)           [MW]    Spinning reserve down
-Reserve_3U(au,h)           [MW]    Non spinning quick start reserve up
-Heat(au,h)                 [MW]    Heat output by chp plant
-HeatSlack(n_th,h)          [MW]    Heat satisfied by other sources
-H2Slack(n_h2,h)            [MW]    H2 demand satisfied by other sources
-WaterSlack(au)             [MWh]   Unsatisfied water level constraint at end of optimization period
-StorageSlack(au,h)         [MWh]   Unsatisfied storage level constraint at end of simulation timestep
-H2Output(au,h)             [MWh]   H2 output from H2 storage to fulfill demand
-PtLDemand(n_h2,h)          [MW]    Demand of H2 for PtL at each time step for each n_h2 node
+AccumulatedOverSupply(n,h)  [MWh]   Accumulated oversupply due to the flexible demand
+CostStartUpH(u,h)           [EUR]   Cost of starting up
+CostShutDownH(u,h)          [EUR]   cost of shutting down
+CostRampUpH(u,h)            [EUR]   Ramping cost
+CostRampDownH(u,h)          [EUR]   Ramping cost
+CurtailedPower(n,h)         [MW]    Curtailed power at node n
+CurtailedHeat(n_th,h)       [MW]    Curtailed heat at node n_th
+CurtailedH2(n_h2,h)         [MW]    Curtailed hydrogen at node n_h2
+Flow(l,h)                   [MW]    Flow through lines
+Power(au,h)                 [MW]    Power output
+PowerConsumption(au,h)      [MW]    Power consumption by P2X units
+PowerMaximum(u,h)           [MW]    Power output
+PowerMinimum(u,h)           [MW]    Power output
+ShedLoad(n,h)               [MW]    Shed load
+StorageInput(au,h)          [MWh]   Charging input for storage units
+StorageLevel(au,h)          [MWh]   Storage level of charge
+LL_MaxPower(n,h)            [MW]    Deficit in terms of maximum power
+LL_RampUp(u,h)              [MW]    Deficit in terms of ramping up for each plant
+LL_RampDown(u,h)            [MW]    Deficit in terms of ramping down
+LL_MinPower(n,h)            [MW]    Power exceeding the demand
+LL_2U(n,h)                  [MW]    Deficit in reserve up
+LL_3U(n,h)                  [MW]    Deficit in reserve up - non spinning
+LL_2D(n,h)                  [MW]    Deficit in reserve down
+spillage(s,h)               [MWh]   spillage from water reservoirs
+SystemCost(h)               [EUR]   Hourly system cost
+Reserve_2U(au,h)            [MW]    Spinning reserve up
+Reserve_2D(au,h)            [MW]    Spinning reserve down
+Reserve_3U(au,h)            [MW]    Non spinning quick start reserve up
+Heat(au,h)                  [MW]    Heat output by chp plant
+HeatSlack(n_th,h)           [MW]    Heat satisfied by other sources
+H2Slack(n_h2,h)             [MW]    H2 demand satisfied by other sources
+BoundarySectorSlack(n_bs,h) [MW]    Boundary sector demand satisfied by other sources
+WaterSlack(au)              [MWh]   Unsatisfied water level constraint at end of optimization period
+StorageSlack(au,h)          [MWh]   Unsatisfied storage level constraint at end of simulation timestep
+H2Output(au,h)              [MWh]   H2 output from H2 storage to fulfill demand
+PtLDemand(n_h2,h)           [MW]    Demand of H2 for PtL at each time step for each n_h2 node
 ;
 
 free variable
-SystemCostD                ![EUR]  Total system cost for one optimization period
-DemandModulation(n,h)      [MW]    Difference between the flexible demand and the baseline
+SystemCostD                     ![EUR]   Total system cost for one optimization period
+DemandModulation(n,h)           [MW]    Difference between the flexible demand and the baseline
+PowerBoundarySector(n_bs,au,h)  [MW]    Power output in boundary sector
 ;
 
 *===============================================================================
@@ -447,7 +469,6 @@ $If %Verbose% == 1 Display RampStartUpMaximum, RampShutDownMaximum, CommittedIni
 
 $offorder
 
-
 *===============================================================================
 *Declaration and definition of equations
 *===============================================================================
@@ -459,6 +480,7 @@ EQ_CHP_backpressure
 *EQ_CHP_demand_satisfaction
 EQ_Heat_Demand_balance
 EQ_H2_Demand_balance
+EQ_BS_Demand_balance
 EQ_CHP_max_heat
 EQ_Heat_Storage_balance
 EQ_Heat_Storage_minimum
@@ -480,14 +502,14 @@ EQ_Demand_balance_DA
 EQ_Demand_balance_2U
 EQ_Demand_balance_3U
 EQ_Demand_balance_2D
-EQ_P2H
-EQ_Max_P2H
-EQ_P2H2
-EQ_Max_P2H2
+EQ_P2X_Power_Balance
+EQ_Max_Power_Consumption
+EQ_Power_Balance_of_BS_units
+EQ_Max_Power_Consumption_of_BS_units
+EQ_Boundary_sector_only_power_available
+EQ_Boundary_sector_only_power_available_min
 EQ_Power_must_run
 EQ_Power_available
-EQ_Heat_available
-EQ_thms_Heat_available
 EQ_Reserve_2U_capability
 EQ_Reserve_2D_capability
 EQ_Reserve_3U_capability
@@ -547,10 +569,12 @@ EQ_SystemCost(i)..
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
          +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
+         +sum((n_bs,bsu),CostVariable(bsu,i) * PowerBoundarySector(n_bs,bsu,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
          +sum(n_h2, CostH2Slack(n_h2,i) * H2Slack(n_h2,i)*TimeStep)
+         +sum(n_bs, CostBoundarySectorSlack(n_bs,i) * BoundarySectorSlack(n_bs,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
@@ -569,10 +593,12 @@ EQ_SystemCost(i)..
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
          +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
+         +sum((n_bs,bsu),CostVariable(bsu,i) * PowerBoundarySector(n_bs,bsu,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
          +sum(n_h2, CostH2Slack(n_h2,i) * H2Slack(n_h2,i)*TimeStep)
+         +sum(n_bs, CostBoundarySectorSlack(n_bs,i) * BoundarySectorSlack(n_bs,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
@@ -583,8 +609,6 @@ EQ_SystemCost(i)..
 
 $endIf
 ;
-
-
 
 EQ_Objective_function..
          SystemCostD
@@ -615,7 +639,6 @@ EQ_MinDownTime(au,i)$(TimeStep <= TimeDownMinimum(au))..
          =L=
          Nunits(au)-Committed(au,i)
 ;
-
 
 * ramp up constraints
 EQ_RampUp_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
@@ -670,15 +693,17 @@ EQ_CostRampDown(u,i)$(CostRampDown(u) <> 0)..
 *Hourly demand balance in the day-ahead market for each node
 EQ_Demand_balance_DA(n,i)..
          sum(u,Power(u,i)*Location(u,n))
+         +sum(p2bs,Power(p2bs,i)*Location(p2bs,n))
          +sum(l,Flow(l,i)*LineNode(l,n))
+         +ShedLoad(n,i)
+         +LL_MaxPower(n,i)
          =E=
          Demand("DA",n,i) + Demand("Flex",n,i)
          +DemandModulation(n,i)
          +sum(s,StorageInput(s,i)*Location(s,n))
-         -ShedLoad(n,i)
          +sum(p2h,PowerConsumption(p2h,i)*Location(p2h,n))
          +sum(p2h2,PowerConsumption(p2h2,i)*Location(p2h2,n))
-         -LL_MaxPower(n,i)
+         +sum(p2bs,PowerConsumption(p2bs,i)*Location(p2bs,n))
          +LL_MinPower(n,i)
 ;
 
@@ -836,30 +861,29 @@ EQ_Power_must_run(u,i)..
 ;
 
 *Maximum power output is below the available capacity
-EQ_Power_available(u,i)..
-         Power(u,i)
+EQ_Power_available(au,i)..
+         Power(au,i)$(u(au))
+         + Power(au,i)$(p2bs(au))
+         + Heat(au,i)$(hu(au))
+         + Heat(au,i)$(thms(au))
          =L=
-         PowerCapacity(u)
-                 *LoadMaximum(u,i)
-                        *Committed(u,i)
+         PowerCapacity(au)$(u(au))*LoadMaximum(au,i)$(u(au))*Committed(au,i)$(u(au))
+         + PowerCapacity(au)$(p2bs(au))*LoadMaximum(au,i)$(p2bs(au))*Nunits(au)$(p2bs(au))
+         + PowerCapacity(au)$(hu(au))*LoadMaximum(au,i)$(hu(au))*Committed(au,i)$(hu(au))
+         + PowerCapacity(au)$(thms(au))*LoadMaximum(au,i)$(thms(au))*Committed(au,i)$(thms(au))
 ;
 
-* Maximum heat output is below the available capacity
-EQ_Heat_available(hu,i)..
-         Heat(hu,i)
+* Maximum boundary sector output is below the available capacity
+EQ_Boundary_sector_only_power_available(n_bs,bsu,i)..
+         PowerBoundarySector(n_bs,bsu,i)
          =L=
-         PowerCapacity(hu)
-                 *LoadMaximum(hu,i)
-                        *Committed(hu,i)
+         PowerCapacity(bsu)*LoadMaximum(bsu,i)*Committed(bsu,i)*Location_bs(bsu,n_bs)
 ;
 
-* Maximum thermal storage technology heat output is below the available capacity
-EQ_thms_Heat_available(thms,i)..
-         Heat(thms,i)
+EQ_Boundary_sector_only_power_available_min(n_bs,bsu,i)..
+         0
          =L=
-         PowerCapacity(thms)
-                 *LoadMaximum(thms,i)
-                        *Committed(thms,i)
+         PowerBoundarySector(n_bs,bsu,i)
 ;
 
 *Storage level must be above a minimum
@@ -902,7 +926,6 @@ EQ_Storage_MaxCharge(s,i)$(StorageCapacity(s)>PowerCapacity(s)*TimeStep)..
          + (Nunits(s) * StorageCapacity(s)*AvailabilityFactor(s,i-1)
          - StorageLevel(s,i-1))$(ord(i) > 1)
          + StorageOutflow(s,i)*Nunits(s)*TimeStep
-*         + H2Output(s,i)$(p2h2(s))*TimeStep
 ;
 
 *Storage balance
@@ -914,7 +937,6 @@ EQ_Storage_balance(s,i)..
          =E=
          StorageLevel(s,i)
          +StorageOutflow(s,i)*Nunits(s)*TimeStep
-*         +H2Output(s,i)$(p2h2(s))*TimeStep
          +spillage(s,i)
          +Power(s,i)*TimeStep/(max(StorageDischargeEfficiency(s),0.0001))
 ;
@@ -994,39 +1016,36 @@ EQ_CHP_max_heat(chp,i)..
          CHPMaxHeat(chp)*Nunits(chp)
 ;
 
-* Power to heat units
-EQ_P2H(p2h,i)..
-         StorageInput(p2h,i)
+* Power to X units
+EQ_P2X_Power_Balance(au,i)..
+         StorageInput(au,i)$(p2h2(au))
+         + StorageInput(au,i)$(p2h(au))
          =E=
-         PowerConsumption(p2h,i) * Efficiency(p2h,i)
+         PowerConsumption(au,i)$(p2h2(au)) * Efficiency(au,i)$(p2h2(au))
+         + PowerConsumption(au,i)$(p2h(au)) * Efficiency(au,i)$(p2h(au))
 ;
 
-
-EQ_Max_P2H(p2h,i)..
-         PowerConsumption(p2h,i)
+EQ_Max_Power_Consumption(au,i)..
+         PowerConsumption(au,i)$(p2h2(au))
+         + PowerConsumption(au,i)$(p2h(au))
          =L=
-         PowerCapacity(p2h) * Committed(p2h,i)
+         PowerCapacity(au)$(p2h2(au)) * Committed(au,i)$(p2h2(au))
+         + PowerCapacity(au)$(p2h(au)) * Committed(au,i)$(p2h(au))
 ;
 
-* Power to h2 units
-EQ_P2H2(p2h2,i)..
-         StorageInput(p2h2,i)
+* Power to boundary sector units
+EQ_Power_Balance_of_BS_units(n_bs,p2bs,i)..
+         PowerBoundarySector(n_bs,p2bs,i)
          =E=
-         PowerConsumption(p2h2,i) * Efficiency(p2h2,i)
+         PowerConsumption(p2bs,i) * ChargingEfficiencyBoundarySector(n_bs,p2bs,i)
+         + Power(p2bs,i) / (EfficiencyBoundarySector(n_bs,p2bs,i)+0.0001)
 ;
 
-
-EQ_Max_P2H2(p2h2,i)..
-         PowerConsumption(p2h2,i)
+EQ_Max_Power_Consumption_of_BS_units(p2bs,i)..
+         PowerConsumption(p2bs,i)
          =L=
-         PowerCapacity(p2h2) * Committed(p2h2,i)
+         StorageChargingCapacity(p2bs) * Nunits(p2bs) *TimeStep
 ;
-
-*EQ_CHP_demand_satisfaction(th,i)..
-*         Heat(th,i) + HeatSlack(th,i)
-*         =E=
-*         HeatDemand(th,i)
-*;
 
 EQ_Heat_Demand_balance(n_th,i)..
          sum(chp, Heat(chp,i)*Location_th(chp,n_th))
@@ -1047,6 +1066,14 @@ EQ_H2_Demand_balance(n_h2,i)..
          H2Demand(n_h2, i)
          + PtLDemand(n_h2, i)
 *         + sum(h2st, StorageInput(h2st,i)*Location_h2(h2st,n_h2))
+;
+
+EQ_BS_Demand_balance(n_bs,i)..
+        BoundarySectorDemand(n_bs,i)
+        =E=
+        sum(p2bs, PowerBoundarySector(n_bs,p2bs,i))
+        + sum(bsu, PowerBoundarySector(n_bs,bsu,i))
+        + BoundarySectorSlack(n_bs,i)
 ;
 
 *Heat Storage balance
@@ -1116,18 +1143,21 @@ EQ_Tot_DemandPtL(n_h2)..
          =E=
          sum(i,PtLDemand(n_h2,i))
 ;
+
 * Capacity of PtL must not be exceeded
 EQ_Max_Capacity_PtL(n_h2,i)..
          PtLDemand(n_h2,i)
          =L=
          MaxCapacityPtL(n_h2)
 ;
+
 * If MTS = 0: PtLDemand is not a variable anymore, but a parameter
 EQ_PtL_Demand(n_h2,i)..
          PtLDemand(n_h2,i)
          =E=
          PtLDemandInput(n_h2,i)
 ;
+
 *===============================================================================
 *Definition of models
 *===============================================================================
@@ -1140,6 +1170,7 @@ EQ_CHP_backpressure,
 *EQ_CHP_demand_satisfaction,
 EQ_Heat_Demand_balance,
 EQ_H2_Demand_balance,
+EQ_BS_Demand_balance,
 EQ_CHP_max_heat,
 EQ_CostRampUp,
 EQ_CostRampDown,
@@ -1155,13 +1186,13 @@ EQ_Demand_balance_2U,
 EQ_Demand_balance_2D,
 EQ_Demand_balance_3U,
 $If not %LPFormulation% == 1 EQ_Power_must_run,
-EQ_P2H,
-EQ_Max_P2H,
-EQ_P2H2,
-EQ_Max_P2H2,
+EQ_P2X_Power_Balance,
+EQ_Max_Power_Consumption,
+EQ_Power_Balance_of_BS_units,
+EQ_Max_Power_Consumption_of_BS_units,
+EQ_Boundary_sector_only_power_available
+EQ_Boundary_sector_only_power_available_min
 EQ_Power_available,
-EQ_Heat_available,
-EQ_thms_Heat_available,
 EQ_Heat_Storage_balance,
 EQ_Heat_Storage_minimum,
 EQ_Heat_Storage_level,
@@ -1297,7 +1328,8 @@ $If %Verbose% == 1 Display Flow.L,Power.L,ShedLoad.L,CurtailedPower.L,CurtailedH
 PARAMETER
 OutputCommitted(au,h)
 OutputFlow(l,h)
-OutputPower(u,h)
+OutputPower(au,h)
+OutputPowerBoundarySector(n_bs,au,h)
 OutputPowerConsumption(au,h)
 OutputStorageInput(au,h)
 OutputStorageLevel(au,h)
@@ -1323,6 +1355,7 @@ OutputGenMargin(n,h)
 OutputHeat(au,h)
 OutputHeatSlack(n_th,h)
 OutputH2Slack(n_h2,h)
+OutputBoundarySectorSlack(n_bs,h)
 LostLoad_WaterSlack(au)
 StorageShadowPrice(au,h)
 OutputPtLDemand(n_h2,h)
@@ -1348,11 +1381,13 @@ CapacityMargin(n,h)
 
 OutputCommitted(au,z)=Committed.L(au,z);
 OutputFlow(l,z)=Flow.L(l,z);
-OutputPower(u,z)=Power.L(u,z);
+OutputPower(au,z)=Power.L(au,z);
+OutputPowerBoundarySector(n_bs,au,z)=PowerBoundarySector.L(n_bs,au,z);
 OutputPowerConsumption(au,z)=PowerConsumption.L(au,z);
 OutputHeat(au,z)=Heat.L(au,z);
 OutputHeatSlack(n_th,z)=HeatSlack.L(n_th,z);
 OutputH2Slack(n_h2,z)=H2Slack.L(n_h2,z);
+OutputBoundarySectorSlack(n_bs,z) = BoundarySectorSlack.L(n_bs,z);
 OutputStorageInput(s,z)=StorageInput.L(s,z);
 OutputStorageInput(th,z)=StorageInput.L(th,z);
 OutputStorageLevel(s,z)=StorageLevel.L(s,z)/max(1,StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,z));
@@ -1420,10 +1455,12 @@ EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
 OutputFlow,
 OutputPower,
+OutputPowerBoundarySector,
 OutputPowerConsumption,
 OutputHeat,
 OutputHeatSlack,
 OutputH2Slack,
+OutputBoundarySectorSlack,
 OutputStorageInput,
 OutputStorageLevel,
 OutputStorageSlack,

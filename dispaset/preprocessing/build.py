@@ -10,10 +10,11 @@ from future.builtins import int
 
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
     check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_h2, check_df, check_MinMaxFlows, \
-    check_FlexibleDemand, check_reserves, check_PtLDemand, check_heat
+    check_FlexibleDemand, check_reserves, check_PtLDemand, check_heat, check_p2bs, check_boundary_sector
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
-from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
+from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, \
+    BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
 
 from .. import __version__
@@ -190,6 +191,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     plants_heat = plants[[u in commons['tech_heat'] for u in plants['Technology']]]
     check_heat(config, plants_heat)
 
+    # Defining the boundary sector only units:
+    plants_boundary_sector = plants[[u in commons['tech_boundary_sector'] for u in plants['Technology']]]
+    check_boundary_sector(config, plants_boundary_sector)
+
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
     check_chp(config, plants_chp)
@@ -202,9 +207,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     plants_heat = plants_heat.append(plants_chp)
     plants_heat = plants_heat.append(plants_p2h)
 
-    # Defining the P2H units:
+    # Defining the P2H2 units:
     plants_h2 = plants[plants['Technology'] == 'P2GS']
     check_h2(config, plants_h2)
+
+    # Defining the P2BS units:
+    #TODO: Check if plants should be grouped by technology or by energy in one of the boundary sectors
+    plants_p2bs = plants[[u in commons['tech_p2bs'] for u in plants['Technology']]]
+    check_p2bs(config, plants_p2bs)
 
     Outages = UnitBasedTable(plants, 'Outages', config, fallbacks=['Unit', 'Technology'])
     AF = UnitBasedTable(plants, 'RenewablesAF', config, fallbacks=['Unit', 'Technology'], default=1,
@@ -248,6 +258,21 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     H2FlexibleDemand = GenericTable(zones_h2, 'H2FlexibleDemand', config, default=0)
     CostH2Slack = GenericTable(zones_h2, 'CostH2Slack', config, default=config['default']['CostH2Slack'])
 
+    # Detecting boundary zones:
+    filter_bs_cols = [col for col in plants_p2bs if col.startswith('Sector')]
+    zones_bs = []
+    for col in plants_p2bs[filter_bs_cols].columns:
+        tmp = plants_p2bs[col].unique().tolist()
+        zones_bs += tmp
+    zones_bs = list(set(zones_bs))
+    if '' in zones_bs:
+        zones_bs.remove('')
+
+    BoundarySectorDemand = GenericTable(zones_bs, 'BoundarySectorDemand', config, default=0)
+    CostBoundarySectorSlack = GenericTable(zones_bs, 'CostBoundarySectorSlack', config,
+                                           default=config['default']['CostBoundarySectorSlack'])
+
+
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
         plants_all_sto.set_index(plants_all_sto.loc[:, 'Unit'], inplace=True, drop=True)
@@ -276,6 +301,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # data checks:
     check_AvailabilityFactors(plants, AF)
     check_heat_demand(plants, HeatDemand, zones_th)
+    #TODO: Check bounadry sector demands
     check_temperatures(plants, Temperatures)
     check_FlexibleDemand(ShareOfFlexibleDemand)
     check_reserves(Reserve2D, Reserve2U, Load)
@@ -400,6 +426,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # Check heat only units
     check_heat(config, Plants_heat_only)
 
+    # Filter boundary sector only plants
+    Plants_boundary_sector_only = Plants_merged[[u in commons['tech_boundary_sector'] for u in Plants_merged['Technology']]].copy()
+    # Check heat only units
+    check_boundary_sector(config, Plants_boundary_sector_only)
+
     # All heating plants:
     Plants_heat = Plants_heat_only.copy()
     Plants_heat = Plants_heat.append(Plants_chp)
@@ -410,11 +441,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # check chp plants:
     check_h2(config, Plants_h2)
 
+    # Filter power to boundary sector plants
+    Plants_p2bs = Plants_merged[[u in commons['tech_p2bs'] for u in Plants_merged['Technology']]].copy()
+    # Check heat only units
+    check_p2bs(config, Plants_p2bs)
+
     # Water storage
     Plants_wat = Plants_merged[(Plants_merged['Fuel'] == 'WAT') & (Plants_merged['Technology'] != 'HROR')].copy()
 
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config, Plants_merged, Temperatures)
+
+    # Calculating boundary sector efficiencies
+    BoundarySectorEfficiencies = BoundarySectorEfficiencyTimeSeries(config, Plants_merged, zones_bs)
 
     # Reserve calculation
     reserve_2U_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
@@ -446,13 +485,17 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # Formatting all time series (merging, resempling) and store in the FinalTS dict
     finalTS = {'Load': Load, 'Reserve2D': reserve_2D_tot, 'Reserve2U': reserve_2U_tot,
-               'Efficiencies': Efficiencies, 'NTCs': NTCs, 'Inter_RoW': Inter_RoW,
+               'Efficiencies': Efficiencies,
+               'NTCs': NTCs, 'Inter_RoW': Inter_RoW,
+               'EfficienciesBoundarySector': BoundarySectorEfficiencies['Efficiency'],
+               'ChargingEfficienciesBoundarySector': BoundarySectorEfficiencies['ChargingEfficiency'],
                'LoadShedding': LoadShedding, 'CostLoadShedding': CostLoadShedding, 'CostCurtailment': CostCurtailment,
                'ScaledInflows': ReservoirScaledInflows, 'ReservoirLevels': ReservoirLevels,
                'Outages': Outages, 'AvailabilityFactors': AF, 'CostHeatSlack': CostHeatSlack,
                'HeatDemand': HeatDemand, 'ShareOfFlexibleDemand': ShareOfFlexibleDemand,
                'PriceTransmission': PriceTransmission, 'CostH2Slack': CostH2Slack,
-               'H2RigidDemand': H2RigidDemand, 'H2FlexibleDemand': H2FlexibleDemand}
+               'H2RigidDemand': H2RigidDemand, 'H2FlexibleDemand': H2FlexibleDemand,
+               'BoundarySectorDemand': BoundarySectorDemand, 'CostBoundarySectorSlack': CostBoundarySectorSlack}
 
     # # Merge the following time series with weighted averages
     # for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors', 'CostH2Slack']:
@@ -471,7 +514,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     for key in FuelPrices:
         check_df(FuelPrices[key], StartDate=config['idx'][0], StopDate=config['idx'][-1], name=key)
     for key in finalTS:
-        check_df(finalTS[key], StartDate=config['idx'][0], StopDate=config['idx'][-1], name=key)
+        if key in ['EfficienciesBoundarySector','ChargingEfficienciesBoundarySector']:
+            for ts in finalTS[key]:
+                check_df(finalTS[key][ts], StartDate=config['idx'][0], StopDate=config['idx'][-1], name=key)
+        else:
+            check_df(finalTS[key], StartDate=config['idx'][0], StopDate=config['idx'][-1], name=key)
 
     # Resemple to the required time step
     if config['DataTimeStep'] != config['SimulationTimeStep']:
@@ -479,8 +526,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
             if len(FuelPrices[key].columns) > 0:
                 FuelPrices[key] = FuelPrices[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
         for key in finalTS:
-            if len(finalTS[key].columns) > 0:
-                finalTS[key] = finalTS[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
+            if key in ['EfficienciesBoundarySector','ChargingEfficienciesBoundarySector']:
+                for ts in finalTS[key]:
+                    if len(finalTS[key][ts].columns) > 0:
+                        finalTS[key][ts] = finalTS[key][ts].resample(pd_timestep(config['SimulationTimeStep'])).mean()
+            else:
+                if len(finalTS[key].columns) > 0:
+                    finalTS[key] = finalTS[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
 
     # %%###############################################################################################################
     ############################################   Sets    ############################################################
@@ -494,23 +546,27 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets['n'] = config['zones']
     sets['n_th'] = zones_th
     sets['n_h2'] = zones_h2
+    sets['n_bs'] = zones_bs
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
     sets['u'] = Plants_merged[[u in [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
-                                     commons['tech_p2ht'] + commons['tech_thermal_storage'] + commons['tech_p2h2']]
+                                     commons['tech_p2ht'] + commons['tech_thermal_storage'] + commons['tech_p2h2'] +
+                                     commons['tech_p2bs'] + commons['tech_boundary_sector']]
                                for u in Plants_merged['Technology']]].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
     sets['p2h'] = Plants_p2h.index.tolist()
     sets['p2h2'] = Plants_h2.index.tolist()
+    sets['p2bs'] = Plants_p2bs.index.tolist()
     sets['th'] = Plants_heat.index.tolist()
     sets['thms'] = Plants_thms.index.tolist()
     sets['t'] = commons['Technologies']
     sets['tr'] = commons['tech_renewables']
     sets['wat'] = Plants_wat.index.tolist()
     sets['hu'] = Plants_heat_only.index.tolist()
+    sets['bsu'] = Plants_boundary_sector_only.index.tolist()
     sets['asu'] = Plants_merged[[u in [x for x in commons['Technologies'] if x in commons['tech_storage'] +
                                        commons['tech_thermal_storage']] for u in
                                  Plants_merged['Technology']]].index.tolist()
@@ -531,6 +587,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['CostFixed'] = ['au']
     sets_param['CostHeatSlack'] = ['n_th', 'h']
     sets_param['CostH2Slack'] = ['n_h2', 'h']
+    sets_param['CostBoundarySectorSlack'] = ['n_bs', 'h']
     sets_param['CostLoadShedding'] = ['n', 'h']
     sets_param['CostRampUp'] = ['au']
     sets_param['CostRampDown'] = ['au']
@@ -541,22 +598,27 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
     sets_param['Efficiency'] = ['au', 'h']
+    sets_param['EfficiencyBoundarySector'] = ['n_bs', 'au', 'h']
+    sets_param['ChargingEfficiencyBoundarySector'] = ['n_bs', 'au', 'h']
     sets_param['EmissionMaximum'] = ['n', 'p']
     sets_param['EmissionRate'] = ['au', 'p']
     sets_param['FlowMaximum'] = ['l', 'h']
     sets_param['FlowMinimum'] = ['l', 'h']
     sets_param['Fuel'] = ['au', 'f']
     sets_param['HeatDemand'] = ['n_th', 'h']
+    sets_param['BoundarySectorDemand'] = ['n_bs', 'h']
     sets_param['LineNode'] = ['l', 'n']
     sets_param['LoadShedding'] = ['n', 'h']
     sets_param['Location'] = ['au', 'n']
     sets_param['Location_th'] = ['au', 'n_th']
     sets_param['Location_h2'] = ['au', 'n_h2']
+    sets_param['Location_bs'] = ['au', 'n_bs']
     sets_param['Markup'] = ['au', 'h']
     sets_param['Nunits'] = ['au']
     sets_param['OutageFactor'] = ['au', 'h']
     sets_param['PartLoadMin'] = ['au']
     sets_param['PowerCapacity'] = ['au']
+    sets_param['PowerCapacityBoundarySector'] = ['au', 'n_bs']
     sets_param['PowerInitial'] = ['au']
     sets_param['PriceTransmission'] = ['l', 'h']
     sets_param['RampUpMaximum'] = ['au']
@@ -597,8 +659,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         parameters[var] = define_parameter(sets_param[var], sets, value=1e7)
 
     # Boolean parameters:
-    for var in ['Technology', 'Fuel', 'Reserve', 'Location', 'Location_th', 'Location_h2']:
+    for var in ['Technology', 'Fuel', 'Reserve', 'Location', 'Location_th', 'Location_h2', 'Location_bs']:
         parameters[var] = define_parameter(sets_param[var], sets, value='bool')
+    # for var in [col for col in plants if col.startswith('Sector')]:
+    #     parameters[var] = define_parameter(sets_param[var], sets, value='bool')
 
     # %%
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
@@ -672,6 +736,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
             parameters['HeatDemand']['val'][i, :] = finalTS['HeatDemand'][u][idx_sim].values
             parameters['CostHeatSlack']['val'][i, :] = finalTS['CostHeatSlack'][u][idx_sim].values
 
+    # Boundary sector demands:
+    for i, u in enumerate(sets['n_bs']):
+        if u in finalTS['BoundarySectorDemand']:
+            parameters['BoundarySectorDemand']['val'][i, :] = finalTS['BoundarySectorDemand'][u][idx_sim].values
+            parameters['CostBoundarySectorSlack']['val'][i, :] = finalTS['CostBoundarySectorSlack'][u][idx_sim].values
+
     # H2 time series:
     for i, u in enumerate(sets['n_h2']):
         if u in finalTS['H2RigidDemand']:
@@ -710,6 +780,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
             parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
         for i, u in enumerate(sets['p2h2']):
             parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
+
+    # Assign charging and discharging efficiencies for boundary sectors
+    values = np.ndarray([len(sets['n_bs']), len(sets['au']), len(sets['h'])])
+    for i in range(len(sets['n_bs'])):
+        for u in range(len(sets['au'])):
+            values[i, u, :] = finalTS['EfficienciesBoundarySector'][sets['n_bs'][i]][sets['au'][u]]
+    parameters['EfficiencyBoundarySector'] = {'sets': sets_param['EfficiencyBoundarySector'], 'val': values}
+
+    values = np.ndarray([len(sets['n_bs']), len(sets['au']), len(sets['h'])])
+    for i in range(len(sets['n_bs'])):
+        for u in range(len(sets['au'])):
+            values[i, u, :] = finalTS['ChargingEfficienciesBoundarySector'][sets['n_bs'][i]][sets['au'][u]]
+    parameters['ChargingEfficiencyBoundarySector'] = {'sets': sets_param['ChargingEfficiencyBoundarySector'], 'val': values}
 
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])
     for i in range(len(sets['n'])):
@@ -815,6 +898,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         parameters['Location_th']['val'][:, i] = (Plants_merged['Zone_th'] == zones_th[i]).values
     for i in range(len(sets['n_h2'])):
         parameters['Location_h2']['val'][:, i] = (Plants_merged['Zone_h2'] == zones_h2[i]).values
+    for i in range(len(sets['n_bs'])):
+        parameters['Location_bs']['val'][:, i] = (Plants_merged['Sector1'] == zones_bs[i]).values
 
     # CHPType parameter:
     sets['chp_type'] = ['Extraction', 'Back-Pressure', 'P2H']

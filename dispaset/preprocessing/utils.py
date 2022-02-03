@@ -66,6 +66,38 @@ def EfficiencyTimeSeries(config, plants, Temperatures):
     return Efficiencies
 
 
+def BoundarySectorEfficiencyTimeSeries(config, plants, zones_bs):
+    """
+    Function that calculates boundary sector efficiency time series for each unit
+    In case of generation unit, the efficiency is defined as the EfficiencySectorX
+    In case of of power consumption units, the efficiency is defined as the ChargingEfficiencySectorX, (for now)
+
+    :param config:          Dispa-SET config file
+    :param plants:          Pandas dataframe with the original list of units
+    :param zones_bs:        Boundary sector zones
+
+    :returns:               Dictionary of Dataframes with a time series of the efficiency for each unit
+    """
+    filter_bs_cols = [col for col in plants if col.startswith('Sector')]
+    Efficiencies = {}
+    for n in zones_bs:
+        Efficiencies[n] = pd.DataFrame(columns=plants.index, index=config['idx_long'])
+        for s in filter_bs_cols:
+            for u in plants.index:
+                if (plants.loc[u, 'Technology'] in commons['tech_p2bs']) and (plants.loc[u, s] == n):
+                    Efficiencies[n][u] = plants.loc[u, 'Efficiency'+s]
+        Efficiencies[n].fillna(0, inplace=True)
+    ChargingEfficiencies = {}
+    for n in zones_bs:
+        ChargingEfficiencies[n] = pd.DataFrame(columns=plants.index, index=config['idx_long'])
+        for s in filter_bs_cols:
+            for u in plants.index:
+                if (plants.loc[u, 'Technology'] in commons['tech_p2bs']) and (plants.loc[u, s] == n):
+                    ChargingEfficiencies[n][u] = plants.loc[u, 'ChargingEfficiency'+s]
+        ChargingEfficiencies[n].fillna(0, inplace=True)
+    return {'Efficiency': Efficiencies, 'ChargingEfficiency': ChargingEfficiencies}
+
+
 def select_units(units, config):
     """
     Function returning a new list of units by removing the ones that have unknown
@@ -80,7 +112,8 @@ def select_units(units, config):
             logging.warning('Removed Unit ' + str(units.loc[unit, 'Unit']) + ' since its technology is unknown')
             units.drop(unit, inplace=True)
         elif (units.loc[unit, 'PowerCapacity'] == 0) and ((units.loc[unit, 'STOMaxChargingPower'] == 0) or (
-                type(units.loc[unit, 'STOMaxChargingPower']) == np.float64)):
+                type(units.loc[unit, 'STOMaxChargingPower']) == np.float64)) and (units.loc[unit, 'Technology'] not in
+                                                                                  commons['tech_p2bs']):
             logging.warning('Removed Unit ' + str(units.loc[unit, 'Unit']) + ' since it has a null capacity')
             units.drop(unit, inplace=True)
         elif units.loc[unit, 'Zone'] not in config['zones']:
