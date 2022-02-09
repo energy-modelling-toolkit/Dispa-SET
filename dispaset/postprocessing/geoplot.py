@@ -88,7 +88,7 @@ def draw_map_cartopy(x, y, ax, crs=4326, boundaries=None, margin_type='Fixed', m
 
     if terrain is True:
         # Create a Stamen terrain background instance.
-        stamen_terrain = cimgt.Stamen('terrain-background')
+        stamen_terrain = cimgt.Stamen('terrain')
         # Add the Stamen data at zoom level 8.
         ax.add_image(stamen_terrain, 8)
 
