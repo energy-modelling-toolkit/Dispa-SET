@@ -364,6 +364,11 @@ def load_time_series(config, path, header='infer'):
     Function that loads time series data, checks the compatibility of the indexes
     and guesses when no exact match between the required index and the data is 
     present
+
+    :param: config      dispaset config
+    :param: path        path towards the desired timeseries
+    :param: header      list of header names
+    :return:            reindexed timeseries
     """
 
     data = pd.read_csv(path, index_col=0, parse_dates=True, header=header, keep_default_na=False)

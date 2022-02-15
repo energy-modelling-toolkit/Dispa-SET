@@ -1,7 +1,15 @@
-click==6.7
-docutils==0.14
-matplotlib==2.1.0
-numpy==1.13.3
-pandas==0.21.0
-Sphinx==1.6.5
-xlrd==0.9.4
+docutils>=0.14
+Sphinx>=1.6.5
+future >= 0.15
+click >= 3.3
+numpy >= 1.10
+scipy >= 0.15
+matplotlib >= 1.5.1
+pandas >= 0.19
+xlrd == 1.2.0
+xarray >= 0.11
+netcdf4
+pyyaml >= 5.1
+pytest
+networkx
+cartopy

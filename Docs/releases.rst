@@ -7,7 +7,7 @@ Major stable releases:
 
 *  Dispa-SET v2.5
 
-*  Dispa-SET v2.4
+* `Dispa-SET v2.4`_
 
 * `Dispa-SET v2.3`_ 
 
@@ -42,7 +42,6 @@ Version 2.5
 * Reserves
 	- Added three new reserve forcasting methods: Exogenous, Percentage and Probablistic
 	- CHP and power to heat units can now provide reserves
-	- 
 
 * Hydrogen sector
 	- Added new hydrogen technologies
@@ -87,6 +86,7 @@ Version 2.5
 	- (get_result_analysis) Added a more detailed storage analysis summarized under StorageData 
 
 **Bugfixes**
+
 * Variable time step
 	- The pre-processing and the GAMS file have been updated to handle different time steps (not only one hour)
 	- This is currently restricted to three time steps: 15min, 1h, 24h
@@ -200,7 +200,7 @@ Version 2.0
 
 First public version of the Dispa-SET model.
 
-
+.. _Dispa-SET v2.4: https://github.com/energy-modelling-toolkit/Dispa-SET/archive/v2.4.zip
 .. _Dispa-SET v2.3: https://github.com/energy-modelling-toolkit/Dispa-SET/archive/v2.3.zip
 .. _Dispa-SET v2.2: https://github.com/energy-modelling-toolkit/Dispa-SET/archive/v2.2.zip
 .. _Dispa-SET v2.1: https://github.com/energy-modelling-toolkit/Dispa-SET/archive/v2.1.zip
