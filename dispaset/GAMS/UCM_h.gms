@@ -171,17 +171,23 @@ $If %RetrieveStatus%==1 CommittedCalc(u,z)  [n.a.]          Committment status a
 Nunits(au)                                  [n.a.]          Number of units inside the cluster (upper bound value for integer variables)
 K_QuickStart(n)                             [n.a.]          Part of the reserve that can be provided by offline quickstart units
 QuickStartPower(au,h)                       [MW\h\u]        Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
+BoundarySectorStorageCapacity(n_bs)         [MWh]           Storage capacity of the boundary sector
+BoundarySectorStorageSelfDischarge(n_bs)    [%]             Boundary sector storage self discharge
+BoundarySectorStorageMinimum(n_bs)          [MWh]           Boundary sector storage minimum
+BoundarySectorStorageInitial(n_bs)          [MWh]           Boundary sector storage initial state of charge
+BoundarySectorStorageProfile(n_bs,h)        [%]             Boundary sector storage level respected at the end of each horizon
 ;
 
 *Parameters as used within the loop
 PARAMETERS
-CostLoadShedding(n,h)            [EUR\MW]        Value of lost load
-LoadMaximum(au,h)                [%]             Maximum load given AF and OF
-PowerMustRun(au,h)               [MW\u]          Minimum power output
-StorageFinalMin(au)              [MWh]           Minimum storage level at the end of the optimization horizon
-MaxFlexDemand(n)                 [MW]            Maximum value of the flexible demand parameter
-MaxOverSupply(n,h)               [MWh]           Maximum flexible demand accumultation
-AccumulatedOverSupply_inital(n)  [MWh]           Initial value of the flexible demand accumulation
+CostLoadShedding(n,h)               [EUR\MW]        Value of lost load
+LoadMaximum(au,h)                   [%]             Maximum load given AF and OF
+PowerMustRun(au,h)                  [MW\u]          Minimum power output
+StorageFinalMin(au)                 [MWh]           Minimum storage level at the end of the optimization horizon
+BoundarySectorStorageFinalMin(n_bs) [MWh]           Minimum boundary sector storage level at the end of the optimization horizon
+MaxFlexDemand(n)                    [MW]            Maximum value of the flexible demand parameter
+MaxOverSupply(n,h)                  [MWh]           Maximum flexible demand accumultation
+AccumulatedOverSupply_inital(n)     [MWh]           Initial value of the flexible demand accumulation
 ;
 
 * Scalar variables necessary to the loop:
@@ -286,6 +292,11 @@ $LOAD CostRampDown
 $LOAD PtLDemandInput
 $LOAD MaxCapacityPtL
 $LOAD H2Demand
+$LOAD BoundarySectorStorageCapacity
+$LOAD BoundarySectorStorageSelfDischarge
+$LOAD BoundarySectorStorageMinimum
+$LOAD BoundarySectorStorageInitial
+$LOAD BoundarySectorStorageProfile
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
 ;
 
@@ -366,6 +377,11 @@ TimeDownMinimum,
 TimeUpMinimum,
 PtLDemandInput,
 MaxCapacityPtL,
+BoundarySectorStorageCapacity,
+BoundarySectorStorageSelfDischarge,
+BoundarySectorStorageMinimum,
+BoundarySectorStorageInitial,
+BoundarySectorStorageProfile,
 $If %RetrieveStatus% == 1 , CommittedCalc
 ;
 
@@ -387,48 +403,53 @@ $If not %LPFormulation% == 1 INTEGER VARIABLES Committed (au,h), StartUp(au,h), 
 
 
 POSITIVE VARIABLES
-AccumulatedOverSupply(n,h)  [MWh]   Accumulated oversupply due to the flexible demand
-CostStartUpH(u,h)           [EUR]   Cost of starting up
-CostShutDownH(u,h)          [EUR]   cost of shutting down
-CostRampUpH(u,h)            [EUR]   Ramping cost
-CostRampDownH(u,h)          [EUR]   Ramping cost
-CurtailedPower(n,h)         [MW]    Curtailed power at node n
-CurtailedHeat(n_th,h)       [MW]    Curtailed heat at node n_th
-CurtailedH2(n_h2,h)         [MW]    Curtailed hydrogen at node n_h2
-Flow(l,h)                   [MW]    Flow through lines
-Power(au,h)                 [MW]    Power output
-PowerConsumption(au,h)      [MW]    Power consumption by P2X units
-PowerMaximum(u,h)           [MW]    Power output
-PowerMinimum(u,h)           [MW]    Power output
-ShedLoad(n,h)               [MW]    Shed load
-StorageInput(au,h)          [MWh]   Charging input for storage units
-StorageLevel(au,h)          [MWh]   Storage level of charge
-LL_MaxPower(n,h)            [MW]    Deficit in terms of maximum power
-LL_RampUp(u,h)              [MW]    Deficit in terms of ramping up for each plant
-LL_RampDown(u,h)            [MW]    Deficit in terms of ramping down
-LL_MinPower(n,h)            [MW]    Power exceeding the demand
-LL_2U(n,h)                  [MW]    Deficit in reserve up
-LL_3U(n,h)                  [MW]    Deficit in reserve up - non spinning
-LL_2D(n,h)                  [MW]    Deficit in reserve down
-spillage(s,h)               [MWh]   spillage from water reservoirs
-SystemCost(h)               [EUR]   Hourly system cost
-Reserve_2U(au,h)            [MW]    Spinning reserve up
-Reserve_2D(au,h)            [MW]    Spinning reserve down
-Reserve_3U(au,h)            [MW]    Non spinning quick start reserve up
-Heat(au,h)                  [MW]    Heat output by chp plant
-HeatSlack(n_th,h)           [MW]    Heat satisfied by other sources
-H2Slack(n_h2,h)             [MW]    H2 demand satisfied by other sources
-BoundarySectorSlack(n_bs,h) [MW]    Boundary sector demand satisfied by other sources
-WaterSlack(au)              [MWh]   Unsatisfied water level constraint at end of optimization period
-StorageSlack(au,h)          [MWh]   Unsatisfied storage level constraint at end of simulation timestep
-H2Output(au,h)              [MWh]   H2 output from H2 storage to fulfill demand
-PtLDemand(n_h2,h)           [MW]    Demand of H2 for PtL at each time step for each n_h2 node
+AccumulatedOverSupply(n,h)          [MWh]   Accumulated oversupply due to the flexible demand
+CostStartUpH(u,h)                   [EUR]   Cost of starting up
+CostShutDownH(u,h)                  [EUR]   cost of shutting down
+CostRampUpH(u,h)                    [EUR]   Ramping cost
+CostRampDownH(u,h)                  [EUR]   Ramping cost
+CurtailedPower(n,h)                 [MW]    Curtailed power at node n
+CurtailedHeat(n_th,h)               [MW]    Curtailed heat at node n_th
+CurtailedH2(n_h2,h)                 [MW]    Curtailed hydrogen at node n_h2
+Flow(l,h)                           [MW]    Flow through lines
+Power(au,h)                         [MW]    Power output
+PowerConsumption(au,h)              [MW]    Power consumption by P2X units
+PowerMaximum(u,h)                   [MW]    Power output
+PowerMinimum(u,h)                   [MW]    Power output
+ShedLoad(n,h)                       [MW]    Shed load
+StorageInput(au,h)                  [MWh]   Charging input for storage units
+StorageLevel(au,h)                  [MWh]   Storage level of charge
+BoundarySectorStorageLevel(n_bs,h)  [MWh]   Storage level of charge of the boundary sector
+BoundarySectorSpillage(n_bs,h)      [MWh]   Spillage from boundary sector storage
+LL_MaxPower(n,h)                    [MW]    Deficit in terms of maximum power
+LL_RampUp(u,h)                      [MW]    Deficit in terms of ramping up for each plant
+LL_RampDown(u,h)                    [MW]    Deficit in terms of ramping down
+LL_MinPower(n,h)                    [MW]    Power exceeding the demand
+LL_2U(n,h)                          [MW]    Deficit in reserve up
+LL_3U(n,h)                          [MW]    Deficit in reserve up - non spinning
+LL_2D(n,h)                          [MW]    Deficit in reserve down
+spillage(s,h)                       [MWh]   spillage from water reservoirs
+SystemCost(h)                       [EUR]   Hourly system cost
+Reserve_2U(au,h)                    [MW]    Spinning reserve up
+Reserve_2D(au,h)                    [MW]    Spinning reserve down
+Reserve_3U(au,h)                    [MW]    Non spinning quick start reserve up
+Heat(au,h)                          [MW]    Heat output by chp plant
+HeatSlack(n_th,h)                   [MW]    Heat satisfied by other sources
+H2Slack(n_h2,h)                     [MW]    H2 demand satisfied by other sources
+BoundarySectorSlack(n_bs,h)         [MW]    Boundary sector demand satisfied by other sources
+WaterSlack(au)                      [MWh]   Unsatisfied water level constraint at end of optimization period
+StorageSlack(au,h)                  [MWh]   Unsatisfied storage level constraint at end of simulation timestep
+BoundarySectorWaterSlack(n_bs)      [MWh]   Unsatisfied boundary sector water level constraint at end of optimization period
+BoundarySectorStorageSlack(n_bs,h)  [MWh]   Unsatisfied boundary sector storage level constraint at end of simulation timestep
+H2Output(au,h)                      [MWh]   H2 output from H2 storage to fulfill demand
+PtLDemand(n_h2,h)                   [MW]    Demand of H2 for PtL at each time step for each n_h2 node
 ;
 
 free variable
-SystemCostD                     ![EUR]   Total system cost for one optimization period
-DemandModulation(n,h)           [MW]    Difference between the flexible demand and the baseline
-PowerBoundarySector(n_bs,au,h)  [MW]    Power output in boundary sector
+SystemCostD                         ![EUR]  Total system cost for one optimization period
+DemandModulation(n,h)               [MW]    Difference between the flexible demand and the baseline
+PowerBoundarySector(n_bs,au,h)      [MW]    Power output in boundary sector
+BoundarySectorStorageInput(n_bs,h)  [MW]    Boundary Sector Storage input - output
 ;
 
 *===============================================================================
@@ -528,8 +549,11 @@ EQ_Storage_input
 EQ_Storage_MaxDischarge
 EQ_Storage_MaxCharge
 EQ_Storage_balance
-*EQ_H2_demand
 EQ_Storage_boundaries
+EQ_Boundary_Sector_Storage_minimum
+EQ_Boundary_Sector_Storage_level
+EQ_Boundary_Sector_Storage_balance
+EQ_Boundary_Sector_Storage_boundaries
 EQ_SystemCost
 EQ_Emission_limits
 EQ_Flow_limits_lower
@@ -615,6 +639,7 @@ EQ_Objective_function..
          =E=
          sum(i,SystemCost(i))
          +Config("WaterValue","val")*sum(au,WaterSlack(au))
+         +Config("WaterValue","val")*sum(n_bs,BoundarySectorWaterSlack(n_bs))
 ;
 
 * 3 binary commitment status
@@ -886,6 +911,37 @@ EQ_Boundary_sector_only_power_available_min(n_bs,bsu,i)..
          PowerBoundarySector(n_bs,bsu,i)
 ;
 
+*Boundary Sector Storage level must be above a minimum
+EQ_Boundary_Sector_Storage_minimum(n_bs,i)..
+         BoundarySectorStorageMinimum(n_bs)
+         =L=
+         BoundarySectorStorageLevel(n_bs,i)
+;
+
+*Storage level must be below storage capacity
+EQ_Boundary_Sector_Storage_level(n_bs,i)..
+         BoundarySectorStorageLevel(n_bs,i)
+         =L=
+         BoundarySectorStorageCapacity(n_bs)
+;
+
+*Storage balance
+EQ_Boundary_Sector_Storage_balance(n_bs,i)..
+         BoundarySectorStorageInitial(n_bs)$(ord(i) = 1)
+         + BoundarySectorStorageLevel(n_bs,i-1)$(ord(i) > 1)
+         + BoundarySectorStorageInput(n_bs,i)*TimeStep
+         =E=
+         BoundarySectorStorageLevel(n_bs,i)
+         + BoundarySectorSpillage(n_bs,i)
+;
+
+* Minimum level at the end of the optimization horizon:
+EQ_Boundary_Sector_Storage_boundaries(n_bs,i)$(ord(i) = card(i))..
+         BoundarySectorStorageFinalMin(n_bs)
+         =L=
+         BoundarySectorStorageLevel(n_bs,i) + BoundarySectorWaterSlack(n_bs)
+;
+
 *Storage level must be above a minimum
 EQ_Storage_minimum(s,i)..
          StorageMinimum(s)*Nunits(s)
@@ -1069,11 +1125,12 @@ EQ_H2_Demand_balance(n_h2,i)..
 ;
 
 EQ_BS_Demand_balance(n_bs,i)..
-        BoundarySectorDemand(n_bs,i)
-        =E=
         sum(p2bs, PowerBoundarySector(n_bs,p2bs,i))
         + sum(bsu, PowerBoundarySector(n_bs,bsu,i))
         + BoundarySectorSlack(n_bs,i)
+        =E=
+        BoundarySectorDemand(n_bs,i)
+        + BoundarySectorStorageInput(n_bs,i)
 ;
 
 *Heat Storage balance
@@ -1217,6 +1274,10 @@ EQ_Storage_level,
 EQ_Storage_input,
 EQ_Storage_balance,
 EQ_Storage_boundaries,
+EQ_Boundary_Sector_Storage_minimum,
+EQ_Boundary_Sector_Storage_level,
+EQ_Boundary_Sector_Storage_balance,
+EQ_Boundary_Sector_Storage_boundaries,
 *EQ_H2_demand,
 EQ_Storage_MaxCharge,
 EQ_Storage_MaxDischarge ,
@@ -1282,6 +1343,7 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
 *        Defining the minimum level at the end of the horizon :
          StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
          StorageFinalMin(thms) =  sum(i$(ord(i)=card(i)),StorageProfile(thms,i)*StorageCapacity(thms)*Nunits(thms)*AvailabilityFactor(thms,i));
+         BoundarySectorStorageFinalMin(n_bs) = sum(i$(ord(i)=card(i)),BoundarySectorStorageProfile(n_bs,i)*BoundarySectorStorageCapacity(n_bs));
 
 $If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
 $If %Verbose% == 1   Display PowerInitial,StorageFinalMin;
@@ -1309,6 +1371,7 @@ $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i
 
 * Assigning waterslack (one value per optimization horizon) to the last element of storageslack
 StorageSlack.L(au,i)$(ord(i)=LastKeptHour-FirstHour+1) = Waterslack.L(au);
+BoundarySectorStorageSlack.L(n_bs,i)$(ord(i)=LastKeptHour-FirstHour+1) = BoundarySectorWaterslack.L(n_bs);
 
 *Loop variables to display after solving:
 $If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
@@ -1334,6 +1397,10 @@ OutputPowerConsumption(au,h)
 OutputStorageInput(au,h)
 OutputStorageLevel(au,h)
 OutputStorageSlack(s,h)
+OutputBoundarySectorStorageLevel(n_bs,h)
+OutputBoundarySectorStorageShadowPrice(n_bs,h)
+OutputBoundarySectorStorageSlack(n_bs,h)
+OutputBoundarySectorStorageInput(n_bs,h)
 OutputH2Output(p2h2,h)
 OutputSystemCost(h)
 OutputSpillage(s,h)
@@ -1344,6 +1411,7 @@ $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 ShadowPrice(n,h)
 HeatShadowPrice(n_th,h)
 H2ShadowPrice(n_h2,h)
+BoundarySectorShadowPrice(n_bs,h)
 LostLoad_MaxPower(n,h)
 LostLoad_MinPower(n,h)
 LostLoad_2D(n,h)
@@ -1357,6 +1425,7 @@ OutputHeatSlack(n_th,h)
 OutputH2Slack(n_h2,h)
 OutputBoundarySectorSlack(n_bs,h)
 LostLoad_WaterSlack(au)
+LostLoad_BoundarySectorWaterSlack(n_bs)
 StorageShadowPrice(au,h)
 OutputPtLDemand(n_h2,h)
 OutputPowerMustRun(u,h)
@@ -1393,6 +1462,10 @@ OutputStorageInput(th,z)=StorageInput.L(th,z);
 OutputStorageLevel(s,z)=StorageLevel.L(s,z)/max(1,StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,z));
 OutputStorageLevel(th,z)=StorageLevel.L(th,z)/max(1,StorageCapacity(th)*Nunits(th));
 OutputStorageSlack(s,z) = StorageSlack.L(s,z);
+OutputBoundarySectorStorageLevel(n_bs,z) = BoundarySectorStorageLevel.L(n_bs,z);
+OutputBoundarySectorStorageShadowPrice(n_bs,z) = EQ_Boundary_Sector_Storage_balance.m(n_bs,z);
+OutputBoundarySectorStorageSlack(n_bs,z) = BoundarySectorStorageSlack.l(n_bs,z);
+OutputBoundarySectorStorageInput(n_bs,z) = BoundarySectorStorageInput.l(n_bs,z);
 OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(s,z)  = Spillage.L(s,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
@@ -1409,7 +1482,9 @@ $If %MTS%==0 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
 HeatShadowPrice(n_th,z) = EQ_Heat_Demand_balance.m(n_th,z);
 H2ShadowPrice(n_h2,z) = EQ_H2_Demand_balance.m(n_h2,z);
+BoundarySectorShadowPrice(n_bs,z) = EQ_BS_Demand_balance.m(n_bs,z);
 LostLoad_WaterSlack(au) = WaterSlack.L(au);
+LostLoad_BoundarySectorWaterSlack(n_bs) = BoundarySectorWaterSlack.L(n_bs);
 StorageShadowPrice(s,z) = 0 ;
 OutputPtLDemand(n_h2,z) = PtLDemand.L(n_h2,z);
 StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
@@ -1464,6 +1539,10 @@ OutputBoundarySectorSlack,
 OutputStorageInput,
 OutputStorageLevel,
 OutputStorageSlack,
+OutputBoundarySectorStorageLevel,
+OutputBoundarySectorStorageShadowPrice,
+OutputBoundarySectorStorageSlack,
+OutputBoundarySectorStorageInput,
 OutputSystemCost,
 OutputSpillage,
 OutputShedLoad,
@@ -1484,10 +1563,12 @@ ShadowPrice_2D,
 ShadowPrice_3U,
 HeatShadowPrice,
 LostLoad_WaterSlack,
+LostLoad_BoundarySectorWaterSlack,
 StorageShadowPrice,
 OutputPtLDemand,
 OutputH2Output,
 H2ShadowPrice,
+BoundarySectorShadowPrice,
 OutputPowerMustRun,
 $If %MTS%==0 OutputCostStartUpH,
 $If %MTS%==0 OutputCostShutDownH,

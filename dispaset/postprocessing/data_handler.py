@@ -161,7 +161,9 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
                    'OutputReserve_2U', 'OutputReserve_2D', 'OutputReserve_3U', 'ShadowPrice_RampUp_TC',
                    'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown','HeatShadowPrice',
                    'H2ShadowPrice', 'OutputCurtailedHeat', 'OutputEmissions', 'CapacityMargin',
-                   'OutputBoundarySectorSlack', 'OutputPowerBoundarySector']
+                   'OutputBoundarySectorSlack', 'OutputPowerBoundarySector', 'OutputBoundarySectorStorageLevel',
+                   'OutputBoundarySectorStorageInput', 'OutputBoundarySectorStorageShadowPrice',
+                   'BoundarySectorShadowPrice', 'OutputBoundarySectorSlack', 'OutputBoundarySectorStorageSlack']
 
     # Setting the proper index to the result dataframes:
     from itertools import chain
@@ -188,6 +190,10 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
         results['LostLoad_WaterSlack'] = results['LostLoad_WaterSlack']
     else:
         results['LostLoad_WaterSlack'] = 0
+    if 'LostLoad_BoundarySectorWaterSlack' in results:
+        results['LostLoad_BoundarySectorWaterSlack'] = results['LostLoad_BoundarySectorWaterSlack']
+    else:
+        results['LostLoad_BoundarySectorWaterSlack'] = 0
 
     # Clean power plant names:
     results['OutputPower'].columns = clean_strings(results['OutputPower'].columns.tolist())

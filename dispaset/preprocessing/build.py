@@ -133,6 +133,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # Curtailment:
     CostCurtailment = NodeBasedTable('CostCurtailment', config, default=config['default']['CostCurtailment'])
 
+    # Boundary Sectors:
+    BoundarySector = pd.DataFrame()
+    if os.path.isfile(config['BoundarySectorData']):
+        BoundarySector = pd.read_csv(config['BoundarySectorData'],
+                                     na_values=commons['na_values'],
+                                     keep_default_na=False, index_col='Sector')
+    BoundarySector.fillna(0, inplace=True)
+
     # Power plants:
     plants = pd.DataFrame()
     if os.path.isfile(config['PowerPlantData']):
@@ -337,6 +345,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     check_clustering(plants, Plants_merged)
 
     # Renaming the columns to ease the production of parameters:
+    BoundarySector.rename(columns={'STOCapacity': 'BoundarySectorStorageCapacity',
+                                   'STOSelfDischarge': 'BoundarySectorStorageSelfDischarge',
+                                   'STOMaxChargingPower': 'BoundarySectorStorageChargingCapacity',
+                                   'STOMinSOC': 'BoundarySectorStorageSOC'}, inplace=True)
+
     Plants_merged.rename(columns={'StartUpCost': 'CostStartUp',
                                   'RampUpMax': 'RampUpMaximum',
                                   'RampDownMax': 'RampDownMaximum',
@@ -643,6 +656,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['PtLDemandInput'] = ['n_h2', 'h']
     sets_param['MaxCapacityPtL'] = ['n_h2']
     sets_param['H2Demand'] = ['n_h2', 'h']
+    sets_param['BoundarySectorStorageCapacity'] = ['n_bs']
+    sets_param['BoundarySectorStorageSelfDischarge'] = ['n_bs']
+    sets_param['BoundarySectorStorageMinimum'] = ['n_bs']
+    sets_param['BoundarySectorStorageInitial'] = ['n_bs']
+    sets_param['BoundarySectorStorageProfile'] = ['n_bs', 'h']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -665,6 +683,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     #     parameters[var] = define_parameter(sets_param[var], sets, value='bool')
 
     # %%
+    # List of parameters whose value is known and provided in the dataframe BoundarySector
+    for var in ['BoundarySectorStorageCapacity', 'BoundarySectorStorageSelfDischarge']:
+        parameters[var]['val'] = BoundarySector[var].values
+
+
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
     for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
                 'CostRampUp', 'StorageCapacity', 'StorageSelfDischarge', 'StorageChargingCapacity']:
