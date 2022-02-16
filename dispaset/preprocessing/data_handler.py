@@ -211,7 +211,6 @@ def GenericTable(headers, varname, config, default=None):
     :param varname:             Variable to be read
     :param config:              Config variable
     :param default:             Default value to be applied if no data is found
-    :param RestrictWarning:     Only display the warnings if the unit belongs to the list of technologies provided in this parameter
 
     :return:           Dataframe with the time series for each unit
     """
@@ -246,13 +245,12 @@ def GenericTable(headers, varname, config, default=None):
             if header in data:
                 out[header] = data[header]
             else:
-                logging.info(
-                    'No specific information was found for header ' + header + ' in table ' + varname + '. Using default value ' + str(
-                        default))
+                logging.info('No specific information was found for header ' + header + ' in table ' + varname +
+                             '. Using default value ' + str(default))
     if not out.columns.is_unique:
-        logging.critical(
-            'The column headers of table "' + varname + '" are not unique!. The following headers are duplicated: ' + str(
-                out.columns.get_duplicates()))
+        logging.critical('The column headers of table "' + varname +
+                         '" are not unique!. The following headers are duplicated: ' +
+                         str(out.columns.get_duplicates()))
         sys.exit(1)
     return out
 
@@ -480,11 +478,23 @@ def read_truefalse(sheet, rowstart, colstart, rowstop, colstop, colapart=1):
             out.append(sheet.cell_value(i, colstart))
     return out
 
-def read_Participation(sheet,rowstart,colstart,rowstop,colapart=1):# creates dict for each technology and add 0 for false and 1 for true (first value for without CHP second with CHP)
+
+def read_Participation(sheet, rowstart, colstart, rowstop, colapart=1):
+    """
+    Creates dict for each technology and add 0 for false and 1 for true (first value for without CHP second with CHP)
+    :param sheet:       Excel sheet to load data from
+    :param rowstart:    Row to start reading the data
+    :param colstart:    Column to start reading the data
+    :param rowstop:     Row to stop reading the data
+    :param colapart:    Columns apart to read the data
+    :return:
+    """
     Reserveparticipation = {}
     for i in range(rowstart, rowstop):
-        Reserveparticipation[sheet.cell_value(i, colstart)]=[sheet.cell_value(i,colstart+colapart),sheet.cell_value(i,colstart+colapart+1)]
+        Reserveparticipation[sheet.cell_value(i, colstart)] = [sheet.cell_value(i, colstart + colapart),
+                                                               sheet.cell_value(i, colstart + colapart + 1)]
     return Reserveparticipation
+
 
 def load_config_excel(ConfigFile, AbsPath=True):
     """
@@ -499,32 +509,37 @@ def load_config_excel(ConfigFile, AbsPath=True):
     sheet = wb.sheet_by_name('main')
     config = {}
 
-    if sheet.cell_value(0,0) == 'Dispa-SET Configuration File (v20.01)':
+    if sheet.cell_value(0, 0) == 'Dispa-SET Configuration File (v20.01)':
         config['Description'] = sheet.cell_value(5, 1)
         config['StartDate'] = xlrd.xldate_as_tuple(sheet.cell_value(56, 2), wb.datemode)
         config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(57, 2), wb.datemode)
         config['HorizonLength'] = int(sheet.cell_value(58, 2))
         config['LookAhead'] = int(sheet.cell_value(59, 2))
-        
+
         # Defning the input locations in the config file:
-        StdParameters={'SimulationDirectory':33,'WriteGDX':34,'WritePickle':35,'GAMS_folder':36,
-                          'cplex_path':37,'DataTimeStep':60,'SimulationTimeStep':61,
-                          'SimulationType':76,'ReserveCalculation':77,'AllowCurtailment':78,
-                          'HydroScheduling':98,'HydroSchedulingHorizon':99,'InitialFinalReservoirLevel':100}
-        PathParameters={'Demand':124, 'Outages':126, 'PowerPlantData':127, 'RenewablesAF':128, 
-                          'LoadShedding':129, 'NTC':130, 'Interconnections':131, 'ReservoirScaledInflows':132, 
-                          'PriceOfNuclear':180, 'PriceOfBlackCoal':181, 'PriceOfGas':182, 
-                          'PriceOfFuelOil':183,'PriceOfBiomass':184, 'PriceOfCO2':166, 
-                          'ReservoirLevels':133, 'PriceOfLignite':185, 'PriceOfPeat':186,
-                          'HeatDemand':134,'CostHeatSlack':165,'CostLoadShedding':168,'ShareOfFlexibleDemand':125,
-                          'Temperatures':135,'PriceTransmission':169,'Reserve2U':160,'Reserve2D':161,
-                          'H2Demand':136,'CostH2Slack':170}
-        modifiers= {'Demand':274,'Wind':275,'Solar':276,'Storage':277}
-        default = {'ReservoirLevelInitial':101,'ReservoirLevelFinal':102,'PriceOfNuclear':180,'PriceOfBlackCoal':181,
-                    'PriceOfGas':182,'PriceOfFuelOil':183,'PriceOfBiomass':184,'PriceOfCO2':166,'PriceOfLignite':185,
-                    'PriceOfPeat':186,'LoadShedding':129,'CostHeatSlack':167,'CostLoadShedding':168,'ValueOfLostLoad':204,
-                    'PriceOfSpillage':205,'WaterValue':206,'ShareOfQuickStartUnits':163,'ShareOfFlexibleDemand':125,
-                    'DemandFlexibility':162,'PriceTransmission':169,'CostH2Slack':170}
+        StdParameters = {'SimulationDirectory': 33, 'WriteGDX': 34, 'WritePickle': 35, 'GAMS_folder': 36,
+                         'cplex_path': 37, 'DataTimeStep': 60, 'SimulationTimeStep': 61,
+                         'SimulationType': 76, 'ReserveCalculation': 77, 'AllowCurtailment': 78,
+                         'HydroScheduling': 98, 'HydroSchedulingHorizon': 99, 'InitialFinalReservoirLevel': 100}
+        PathParameters = {'Demand': 124, 'Outages': 126, 'PowerPlantData': 127, 'RenewablesAF': 128,
+                          'LoadShedding': 129, 'NTC': 130, 'Interconnections': 131, 'ReservoirScaledInflows': 132,
+                          'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182,
+                          'PriceOfFuelOil': 183, 'PriceOfBiomass': 184, 'PriceOfCO2': 166,
+                          'ReservoirLevels': 133, 'PriceOfLignite': 185, 'PriceOfPeat': 186,
+                          'HeatDemand': 134, 'CostHeatSlack': 165, 'CostLoadShedding': 168,
+                          'ShareOfFlexibleDemand': 125,
+                          'Temperatures': 135, 'PriceTransmission': 169, 'Reserve2U': 160, 'Reserve2D': 161,
+                          'H2Demand': 136, 'CostH2Slack': 170}
+        modifiers = {'Demand': 274, 'Wind': 275, 'Solar': 276, 'Storage': 277}
+        default = {'ReservoirLevelInitial': 101, 'ReservoirLevelFinal': 102, 'PriceOfNuclear': 180,
+                   'PriceOfBlackCoal': 181,
+                   'PriceOfGas': 182, 'PriceOfFuelOil': 183, 'PriceOfBiomass': 184, 'PriceOfCO2': 166,
+                   'PriceOfLignite': 185,
+                   'PriceOfPeat': 186, 'LoadShedding': 129, 'CostHeatSlack': 167, 'CostLoadShedding': 168,
+                   'ValueOfLostLoad': 204,
+                   'PriceOfSpillage': 205, 'WaterValue': 206, 'ShareOfQuickStartUnits': 163,
+                   'ShareOfFlexibleDemand': 125,
+                   'DemandFlexibility': 162, 'PriceTransmission': 169, 'CostH2Slack': 170}
         for p in StdParameters:
             config[p] = sheet.cell_value(StdParameters[p], 2)
         for p in PathParameters:
@@ -535,39 +550,40 @@ def load_config_excel(ConfigFile, AbsPath=True):
         config['default'] = {}
         for p in default:
             config['default'][p] = sheet.cell_value(default[p], 5)
-            
-        #True/Falst values:
+
+        # True/Falst values:
         config['zones'] = read_truefalse(sheet, 225, 1, 247, 3)
         config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 247, 6)
         config['mts_zones'] = read_truefalse(sheet, 225, 1, 247, 3, 2)
         config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 247, 6, 2)
         config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 321, 3)
-        config['ReserveParticipation_CHP'] = read_truefalse(sheet, 342, 1, 345,3)
+        config['ReserveParticipation_CHP'] = read_truefalse(sheet, 342, 1, 345, 3)
 
         # Set default values (for backward compatibility):
         for param in DEFAULTS:
-            if config['default'][param]=='':
-                config['default'][param]=DEFAULTS[param]
-                logging.warning('No value was provided in config file for {}. Will use {}'.format(param, DEFAULTS[param]))
+            if config['default'][param] == '':
+                config['default'][param] = DEFAULTS[param]
+                logging.warning(
+                    'No value was provided in config file for {}. Will use {}'.format(param, DEFAULTS[param]))
                 config['default'][param] = DEFAULTS[param]
 
         if AbsPath:
-        # Changing all relative paths to absolute paths. Relative paths must be defined 
-        # relative to the parent folder of the config file.
+            # Changing all relative paths to absolute paths. Relative paths must be defined
+            # relative to the parent folder of the config file.
             abspath = os.path.abspath(ConfigFile)
-            basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath),os.pardir))
+            basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath), os.pardir))
             if not os.path.isabs(config['SimulationDirectory']):
-                config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
+                config['SimulationDirectory'] = os.path.join(basefolder, config['SimulationDirectory'])
             for param in PathParameters:
                 if config[param] == '' or config[param].isspace():
                     config[param] = ''
                 elif not os.path.isabs(config[param]):
-                    config[param] = os.path.join(basefolder,config[param])
+                    config[param] = os.path.join(basefolder, config[param])
 
         logging.info("Using config file (v20.01) " + ConfigFile + " to build the simulation environment")
         logging.info("Using " + config['SimulationDirectory'] + " as simulation folder")
-        logging.info("Description of the simulation: "+ config['Description'])
-        
+        logging.info("Description of the simulation: " + config['Description'])
+
         return config
 
     elif sheet.cell_value(0, 0) == 'Dispa-SET Configuration File (v20.02)':
@@ -646,7 +662,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
         config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 321, 3)
         config['ReserveParticipation'] = config['ReserveParticipation'] + read_truefalse(sheet, 305, 4, 321, 6)
         config['ReserveParticipation_CHP'] = read_truefalse(sheet, 299, 1, 302, 3)
-        
+
         # Set default values (for backward compatibility):
         for param in DEFAULTS:
             if config['default'][param] == '':
@@ -774,7 +790,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
         # Read the technologies participating to reserve markets:
         config['ReserveParticipation'] = read_truefalse(sheet, 131, 1, 145, 3)
         config['ReserveParticipation_CHP'] = []
-    
+
         logging.info("Using config file " + ConfigFile + " to build the simulation environment")
         logging.info("Using " + config['SimulationDirectory'] + " as simulation folder")
         logging.info("Description of the simulation: " + config['Description'])
@@ -799,7 +815,8 @@ def load_config_yaml(filename, AbsPath=True):
     # List of parameters to be added with a default value if not present (for backward compatibility):
 
     params_to_be_added = {'Temperatures': '', 'DataTimeStep': 1, 'SimulationTimeStep': 1, 'HydroScheduling': 'Off',
-                          'HydroSchedulingHorizon': 'Annual', 'InitialFinalReservoirLevel': True, 'ReserveParticipation_CHP':[]}
+                          'HydroSchedulingHorizon': 'Annual', 'InitialFinalReservoirLevel': True,
+                          'ReserveParticipation_CHP': []}
     for param in params_to_be_added:
         if param not in config:
             config[param] = params_to_be_added[param]

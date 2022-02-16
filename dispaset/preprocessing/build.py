@@ -3,7 +3,6 @@ import logging
 import os
 import shutil
 import sys
-
 import numpy as np
 import pandas as pd
 from future.builtins import int

@@ -11,6 +11,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 # edited manually when a new release is out (git tag -a)
 FINAL_RELEASE = open(os.path.join(HERE, 'VERSION')).read().strip()
 
+
 def read(*parts):
     """
     Build an absolute path from *parts* and and return the contents of the
@@ -19,14 +20,15 @@ def read(*parts):
     with codecs.open(os.path.join(HERE, *parts), "rb", "utf-8") as f:
         return f.read()
 
+
 setup(
     name='dispaset',
-    author='Sylvain Quoilin, Konstantinos Kavvadias',
+    author='Sylvain Quoilin, Konstantinos Kavvadias, Matija Pavičević',
     author_email='squoilin@uliege.be',
     description='An open-source unit commitment and optimal dispatch model ',
     license='EUPL v1.2.',
-    url='http://www.dispaset.eu',
-    download_url='http://www.dispaset.eu/en/latest/releases.html',
+    url='https://www.dispaset.eu',
+    download_url='https://www.dispaset.eu/en/latest/releases.html',
     packages=find_packages(),
     long_description=read('README.md'),
     include_package_data=True,
