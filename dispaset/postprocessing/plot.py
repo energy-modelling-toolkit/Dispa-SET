@@ -3,20 +3,19 @@
 import logging
 import sys
 
-import numpy as np
-import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
-
+import numpy as np
+import pandas as pd
 from matplotlib.patches import Patch
-from ..common import commons
 
 from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage, \
     get_power_flow_tracing, get_EFOH, get_heat_plot_data, filter_by_heating_zone, filter_by_tech_list
+from ..common import commons
 
 
 def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedload=None, shiftedload=None, rng=None,
-                  alpha=None, figsize=(13, 6)):
+                  alpha=None, figsize=(13, 7), ntc=None):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
 
@@ -50,6 +49,10 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
     else:
         pdrng = rng
 
+    # NTC plot data
+    if ntc is not None:
+        ntc['FlowIn'], ntc['FlowOut'], ntc['ZeroLine'] = plotdata['FlowIn'], plotdata['FlowOut'], 0
+
     # Netting the interconnections:
     if 'FlowIn' in plotdata and 'FlowOut' in plotdata:
         plotdata['FlowOut'], plotdata['FlowIn'] = (np.minimum(0, plotdata['FlowIn'] + plotdata['FlowOut']),
@@ -75,8 +78,21 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
     sumplot_pos['zero'] = 0
     sumplot_pos = sumplot_pos[['zero'] + sumplot_pos.columns[:-1].tolist()]
 
-    fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
-                             gridspec_kw={'height_ratios': [2.7, .8], 'hspace': 0.04})
+    if ntc is not None:
+        fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
+                                 gridspec_kw={'height_ratios': [2.7, .8, .8], 'hspace': 0.04})
+
+        axes[2].plot(pdrng, ntc.loc[pdrng, 'NTCIn'].values, color='r')
+        axes[2].plot(pdrng, ntc.loc[pdrng, 'NTCOut'].values, color='g')
+        axes[2].set_xlim(pdrng[0], pdrng[-1])
+        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'FlowIn'], ntc.loc[pdrng, 'ZeroLine'], facecolor='red',
+                             alpha=alpha, hatch=commons['hatches']['FlowIn'])
+        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'], facecolor='green',
+                             alpha=alpha, hatch=commons['hatches']['FlowOut'])
+        axes[2].set_ylabel('NTC [GWh]')
+    else:
+        fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
+                                 gridspec_kw={'height_ratios': [2.7, .8], 'hspace': 0.04})
 
     # Create left axis:
     axes[0].plot(pdrng, demand[pdrng], color='k')
@@ -649,10 +665,20 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
     else:
         curtailment = None
 
+    # Assign NTC
+    ntc = pd.DataFrame(0, columns=['NTCIn', 'NTCOut'], index=plotdata.index)
+    for col in inputs['param_df']['FlowMaximum']:
+        from_node, to_node = col.split('->')
+        if to_node.strip() == z:
+            ntc['NTCIn'] = ntc['NTCIn'] + inputs['param_df']['FlowMaximum'][col]
+        if from_node.strip() == z:
+            ntc['NTCOut'] = ntc['NTCOut'] - inputs['param_df']['FlowMaximum'][col]
+    ntc = ntc / 1e3  # GW
+
     # Plot power dispatch
     demand.rename(z, inplace=True)
     plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load,
-                  shiftedload=shifted_load,
+                  shiftedload=shifted_load, ntc=ntc,
                   rng=rng, alpha=0.5)
 
     # Plot heat dispatch

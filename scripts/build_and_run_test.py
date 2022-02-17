@@ -11,7 +11,8 @@ This script runs the Dispa-SET EU model with the 2016 data. The main steps are:
 """
 
 # Add the root folder of Dispa-SET to the path so that the library can be loaded:
-import sys, os
+import os
+import sys
 
 sys.path.append(os.path.abspath('..'))
 

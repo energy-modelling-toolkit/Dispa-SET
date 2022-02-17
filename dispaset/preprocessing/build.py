@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 import sys
+
 import numpy as np
 import pandas as pd
 from future.builtins import int
@@ -12,9 +13,8 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, check
     check_FlexibleDemand, check_reserves, check_PtLDemand, check_heat
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
-from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
-
+from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
 from .. import __version__
 from ..common import commons
 from ..misc.gdx_handler import write_variables
