@@ -1010,7 +1010,7 @@ EQ_Max_P2H(p2h,i)..
 
 * Power to h2 units
 EQ_P2H2(p2h2,i)..
-         StorageInput(p2h2,i)
+         H2Output(p2h2,i)
          =E=
          PowerConsumption(p2h2,i) * Efficiency(p2h2,i)
 ;
