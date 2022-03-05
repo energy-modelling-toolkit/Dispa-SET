@@ -16,7 +16,6 @@ from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merg
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, \
     BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
-
 from .. import __version__
 from ..common import commons
 from ..misc.gdx_handler import write_variables
@@ -216,8 +215,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     plants_heat = plants_heat.append(plants_p2h)
 
     # Defining the P2H2 units:
-    plants_h2 = plants[plants['Technology'] == 'P2GS']
+    # plants_h2 = plants[plants['Technology'] == 'P2GS']
+    plants_h2 = plants[[u in commons['tech_p2h2'] for u in plants['Technology']]]
     check_h2(config, plants_h2)
+
+    # Merging all MTS storage units
+    plants_all_sto = plants_sto.append(plants_h2)
 
     # Defining the P2BS units:
     #TODO: Check if plants should be grouped by technology or by energy in one of the boundary sectors
@@ -581,7 +584,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets['hu'] = Plants_heat_only.index.tolist()
     sets['bsu'] = Plants_boundary_sector_only.index.tolist()
     sets['asu'] = Plants_merged[[u in [x for x in commons['Technologies'] if x in commons['tech_storage'] +
-                                       commons['tech_thermal_storage']] for u in
+                                       commons['tech_thermal_storage'] + commons['tech_p2h2']] for u in
                                  Plants_merged['Technology']]].index.tolist()
 
     ###################################################################################################################
@@ -647,7 +650,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['StorageSelfDischarge'] = ['au']
     sets_param['StorageInflow'] = ['s', 'h']
     sets_param['StorageInitial'] = ['asu']
-    sets_param['StorageMinimum'] = ['s']
+    sets_param['StorageMinimum'] = ['asu']
     sets_param['StorageOutflow'] = ['s', 'h']
     sets_param['StorageProfile'] = ['asu', 'h']
     sets_param['Technology'] = ['au', 't']
@@ -705,7 +708,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # The storage discharge efficiency is actually given by the unit efficiency:
     parameters['StorageDischargeEfficiency']['val'] = np.concatenate((Plants_sto['Efficiency'].values,
-                                                                      Plants_thms['Efficiency'].values), axis=None)
+                                                                      Plants_thms['Efficiency'].values,
+                                                                      Plants_h2['Efficiency'].values), axis=None)
 
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
     for var in ['CHPPowerToHeat', 'CHPPowerLossFactor', 'CHPMaxHeat']:
@@ -746,6 +750,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
             parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
                                                      finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
                                                      Plants_thms['StorageCapacity'][s] * Plants_thms['Nunits'][s]
+        if s in Plants_h2.index:
+            parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
+                                                     finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
+                                                     Plants_h2['StorageCapacity'][s] * Plants_h2['Nunits'][s]
 
     # Storage Inflows:
     for i, s in enumerate(sets['s']):

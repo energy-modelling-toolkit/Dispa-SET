@@ -167,7 +167,7 @@ Free Variables
     Name                       Units   Description
     ========================== ======= =============================================================
     SystemCostD                EUR     Total system cost for one optimization period
-	DemandModulation           MW      Difference between the flexible demand and the baseline
+    DemandModulation           MW      Difference between the flexible demand and the baseline
     ========================== ======= =============================================================
 
 
@@ -209,7 +209,7 @@ The goal of the unit commitment problem is to minimize the total power system co
 	& + \sum_{u,i} (CostRampUpH_{u,i} + CostRampDownH_{u,i})  \\
 	& + \sum_{u,i} CostVariable_{u,i} \cdot Power_{u,i} \cdot TimeStep    \\
 	& + \sum_{hu,i} CostVariable_{hu,i} \cdot Heat_{hu,i} \cdot TimeStep     \\
-	& + \sum_{l,i} PriceTransimission_{l,i} \cdot Flow_{l,i} \cdot TimeStep \\ 
+	& + \sum_{l,i} PriceTransimission_{l,i} \cdot Flow_{l,i} \cdot TimeStep \\
 	& + \sum_{n,i} CostLoadShedding_{i,n} \cdot ShedLoad_{i,n} \cdot TimeStep  \\
 	& + \sum_{th,i} CostHeatSlack_{nth,i} \cdot  HeatSlack_{nth,i} \cdot TimeStep) \\
 	& + \sum_{p2h2,i} CostH2Slack_{p2h2,i} \cdot StorageSlack_{p2h2,i} \cdot TimeStep \\
@@ -261,7 +261,7 @@ The start-up and shut-down costs are positive variables, calculated from the num
 	\end{align}
 
 Renewable units are enforced commited when the availability factor is non null and the outage factor is not 1 and decommited in the other case.
-	
+
 Ramping costs are defined as positive variables (i.e. negative costs are not allowed) and are computed with the following equations:
 
 .. math:: 
@@ -285,7 +285,7 @@ The main constraint to be met is the supply-demand balance, for each period and 
 	\begin{align}
 	 \sum _u\left(\mathit{Power}_{u,i} \cdot \mathit{Location}_{u,n}\right) + \sum _l\left(\mathit{Flow}_{l,i} \cdot \mathit{LineNode}_{l,n}\right)\\
  	 = \mathit{Demand}_{\mathit{DA},n,h} + \sum _s\left(\mathit{StorageInput}_{s,h} \cdot \mathit{Location}_{s,n}\right) -\mathit{ShedLoad}_{n,i} \\
-	   + \sum_{p2h} \mathit{PowerConsumption}_{p2h,i} \cdot \mathit{Location}_{p2h,n}  - \mathit{LL_{MaxPower}}_{n,i} + \mathit{LL_{MinPower}}_{n,i} 
+	   + \sum_{p2h} \mathit{PowerConsumption}_{p2h,i} \cdot \mathit{Location}_{p2h,n}  - \mathit{LL_{MaxPower}}_{n,i} + \mathit{LL_{MinPower}}_{n,i}
 	\end{align}
 
 Reserve constraints
@@ -301,7 +301,7 @@ The secondary reserve capability of committed units is limited by the capacity m
 
 .. math::
 	\begin{align}
-		\mathit{Reserve_{2U}}_{u,i} \leq& \mathit{PowerCapacity}_u \cdot \mathit{AvailabilityFactor}_{u,i} \cdot (1-\mathit{OutageFactor}_{u,i})  \cdot  \mathit{Committed}_{u,i}\\	 
+		\mathit{Reserve_{2U}}_{u,i} \leq& \mathit{PowerCapacity}_u \cdot \mathit{AvailabilityFactor}_{u,i} \cdot (1-\mathit{OutageFactor}_{u,i})  \cdot  \mathit{Committed}_{u,i}\\
 		& - \mathit{Power}_{u,i}
 	\end{align}
 
@@ -360,7 +360,7 @@ The second formulation proposed by Dispa-SET is dynamic and based on the (3+5)% 
 
 
 .. math::
- 	
+
        \begin{align}
        \mathit{Demand}_{2U,n,h}=0.03 \cdot \mathit{Demand}_{\mathit{DA},n,h}  \\ 
         + 0.05 \cdot \mathit{AvailableWindPower}_{u,i} + 0.05 \cdot \mathit{AvailablePhotPower}_{u,i}
@@ -372,7 +372,7 @@ The third and last method proposed in Dispa-SET is dynamic and probabilistic. It
        
 
 .. math::
- 	
+
         \begin{align}
         \mathit{Demand}_{2U,n,h}= \sqrt{10 \cdot \mathit{Demand}_{\mathit{DA},n,h} + 150^2}-150 \\
 	+ 2.74 \cdot \sqrt{ \sigma_{L,n,h}^2 + \sigma_{W,n,h}^2 + \sigma_{S,n,h}^2}
@@ -387,7 +387,7 @@ Power output bounds
 The minimum power output is determined by the must-run or stable generation level of the unit if it is committed:
 
 .. math::
-	\mathit{Power}\mathit{MustRun}_{u,i} \cdot \mathit{Committed}_{u,i}  \leq \mathit{Power}_{u,i} 
+	\mathit{Power}\mathit{MustRun}_{u,i} \cdot \mathit{Committed}_{u,i}  \leq \mathit{Power}_{u,i}
 
 In the particular case of CHP unit (extration type or power-to-heat type), the minimum power is defined for for a heat demand equal to zero. If the unit produces heat, the minimum power must be reduced according to the power loss factor and the previous equation is replaced by:
 
@@ -415,7 +415,7 @@ Each unit is characterized by a maximum ramp up and ramp down capability. This i
 
 .. math::
 
-	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq 
+	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq
 
 	(\mathit{Committed}_{u,i} - \mathit{StartUp}_{u,i}) \cdot \mathit{RampUpMaximum}_{u} \cdot \mathit{TimeStep}
 
@@ -429,7 +429,7 @@ and for the case of ramping down:
 
 .. math::
 
-	\mathit{Power}_{u,i-1} - \mathit{Power}_{u,i} \leq 
+	\mathit{Power}_{u,i-1} - \mathit{Power}_{u,i} \leq
 
 	(\mathit{Committed}_{u,i} - \mathit{ShutDown}_{u,i}) \cdot \mathit{RampDownMaximum}_{u} \cdot \mathit{TimeStep}
 
@@ -443,7 +443,7 @@ Note that this formulation is valid for both the clustered formulation and the b
 
 .. math::
 
-	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq 
+	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq
 
 	\mathit{RampUpMaximum}_{u} \cdot \mathit{TimeStep} + \mathit{LL_{RampUp}}_{u,i}
 
@@ -451,7 +451,7 @@ If the unit has just been committed, the inequality becomes:
 
 .. math::
 
-	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq 
+	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq
 
 	\mathit{RampStartUpMaximum}_{u} \cdot \mathit{TimeStep} + \mathit{LL_{RampUp}}_{u,i}
 
@@ -459,7 +459,7 @@ And if the unit has just been stopped:
 
 .. math::
 
-	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq 
+	\mathit{Power}_{u,i} - \mathit{Power}_{u,i-1} \leq
 
 	- \mathit{PowerMustRun}_{u,i} + \mathit{LL_{RampUp}}_{u,i}
 
@@ -505,7 +505,7 @@ The energy added to the storage unit is limited by the charging capacity. Chargi
 
 .. math::
 
-	\mathit{StorageInput}_{s,i} \leq 
+	\mathit{StorageInput}_{s,i} \leq
 
 	\mathit{StorageChargingCapacity}_s \cdot (\mathit{Nunits}_s-\mathit{Committed}_{s,i})
 
@@ -529,22 +529,22 @@ Charge is limited by the level of charge of the storage unit:
 	\mathit{StorageInput}_{s,i} \cdot \mathit{StorageChargingEfficiency}_s \cdot \mathit{TimeStep}
 
 	- \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}-  \mathit{Spillage}_{wat,i}
-	
+
 	+ \mathit{StorageInflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep} + StorageSlack_{p2h2,i}
 
-	\leq \mathit{StorageCapacity}_s \cdot \mathit{AvailabilityFactor}_{s,i} 
+	\leq \mathit{StorageCapacity}_s \cdot \mathit{AvailabilityFactor}_{s,i}
 
 	- \mathit{StorageLevel}_{s,i}
 
 Besides, the energy stored in a given period is given by the energy stored in the previous period, net of charges and discharges:
 
 .. math::
-	
+
 	\mathit{StorageLevel}_{s,i-1} + \mathit{StorageInflow}_{s,i}  \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}
 
 	+ \mathit{StorageInput}_{s,i} \cdot \mathit{StorageChargingEfficiency}_s \cdot \mathit{TimeStep} + StorageSlack_{p2h2,i}
 
-	= \mathit{StorageLevel}_{s,i} + \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep} 
+	= \mathit{StorageLevel}_{s,i} + \mathit{StorageOutflow}_{s,i} \cdot \mathit{Nunits}_s \cdot \mathit{TimeStep}
 
 	+ Spillage_{wat,i} + \frac{\mathit{Power}_{s,i}\cdot \mathit{TimeStep}}{\mathit{StorageDischargeEfficienc}y_s}
 
@@ -568,7 +568,7 @@ In Dispa-SET heat demand is specified for individual heating zones (nth). It can
 	+ \sum _{p2h} (Heat_{p2h,i} \cdot LocationTH_{p2h, nth}) \\
 	+ \sum _{hu} (Heat_{hu,i} \cdot LocationTH_{hu, nth}) \\
 	= HeatDemand_{nth,i} - HeatSlack_{nth,i}
-	
+
 
 Heat output cosntraints
 -----------------------
@@ -777,10 +777,10 @@ Firstly, the cost equation is modified as follow:
 	& + \sum_{u,i} (CostRampUpH_{u,i} + CostRampDownH_{u,i})  \\
 	& + \sum_{u,i} CostVariable_{u,i} \cdot Power_{u,i} \cdot TimeStep    \\
 	& + \sum_{hu,i} CostVariable_{hu,i} \cdot Heat_{hu,i} \cdot TimeStep    \\
-	& + \sum_{l,i} PriceTransimission_{l,i} \cdot Flow_{l,i} \cdot TimeStep \\ 
+	& + \sum_{l,i} PriceTransimission_{l,i} \cdot Flow_{l,i} \cdot TimeStep \\
 	& + \sum_{n,i} CostLoadShedding_{i,n} \cdot ShedLoad_{i,n} \cdot TimeStep  \\
 	& + \sum_{th,i} CostHeatSlack_{th,i} \cdot  HeatSlack_{th,i} \cdot TimeStep) \\
-	& + \sum_{p2h2,i} CostH2Slack_{p2h2,i} \cdot StorageSlack_{p2h2,i} \cdot TimeStep) \\ 
+	& + \sum_{p2h2,i} CostH2Slack_{p2h2,i} \cdot StorageSlack_{p2h2,i} \cdot TimeStep) \\
 	& + \sum _{chp,i} CostVariable_{chp,i} \cdot CHPPowerLossFactor_{chp} \cdot Heat_{chp,i} \cdot TimeStep) \\
 	& + \sum_{i,n} VOLL_{Power} \cdot \left( \mathit{LL}_{MaxPower,i,n} + \mathit{LL}_{MinPower,i,n} \right) \cdot TimeStep \\
 	& + \sum_{i,n} 0.8 \cdot VOLL_{Reserve} \cdot \left( LL_{2U,i,n} + LL_{2D,i,n}+ LL_{3U,i,n} \right) \cdot TimeStep \\
@@ -792,7 +792,7 @@ The upwards and downwards secondary reserve capabilities of units becomes:
 
 .. math::
 	\begin{align}
-		\mathit{Reserve_{2U}}_{u,i} \leq& \mathit{PowerCapacity}_u \cdot \mathit{AvailabilityFactor}_{u,i} \cdot (1-\mathit{OutageFactor}_{u,i}) \\	 
+		\mathit{Reserve_{2U}}_{u,i} \leq& \mathit{PowerCapacity}_u \cdot \mathit{AvailabilityFactor}_{u,i} \cdot (1-\mathit{OutageFactor}_{u,i}) \\
 		& - \mathit{Power}_{u,i} \\
 		\mathit{Reserve_{2D}}_{u,i} \leq &\; \mathit{Power}_{u,i} + (\mathit{StorageChargingCapacity}_u \cdot \mathit{Nunits}_u - \mathit{StorageInput}_{u,i})
 	\end{align}
@@ -806,7 +806,7 @@ Also the non spinning reserve is modified:
 The output power available for each unit is now expressed as:
 
 .. math::
-	\mathit{Power}_{u,i} \leq \mathit{PowerCapacity} \cdot \mathit{AvailibilityFactor} \cdot (1- \mathit{OutageFactor}) 
+	\mathit{Power}_{u,i} \leq \mathit{PowerCapacity} \cdot \mathit{AvailibilityFactor} \cdot (1- \mathit{OutageFactor})
 
 Finally, the maximum capacity of storage charging is:
 

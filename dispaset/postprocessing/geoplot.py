@@ -14,6 +14,7 @@ import requests
 
 from .postprocessing import get_from_to_flows, get_net_positions
 
+
 # Insipired by Pypsa geo plot
 def get_projection_from_crs(crs):
     """
@@ -61,9 +62,26 @@ def compute_bbox_with_margins(x, y, margin_type='Fixed', margin=0):
     return tuple(xy1), tuple(xy2)
 
 
-# TODO: Check this function and provide descriptions
 def draw_map_cartopy(x, y, ax, crs=4326, boundaries=None, margin_type='Fixed', margin=0.05, geomap=True,
                      color_geomap=None, terrain=False):
+    """
+    This function draws a map in the background of the plot
+
+    :param x:               geo['Longitude']
+    :param y:               geo['Latitude']
+    :param ax:              Plot axis
+    :param crs:             Geographic projection code (i.e. 4326 is a standard EPSG coordinate system)
+    :param boundaries:      if boundaries is None "compute_bbox_with_margins(x, y, margin_type, margin)" will be used,
+                            otherwise boundaries need to be specified manually "x1, x2, y1, y2 = boundaries"
+    :param margin_type:     'Fixed': xy1 = minxy - margin, xy2 = maxxy + margin, otherwise:
+                            xy1 = minxy - margin * (maxxy - minxy), xy2 = maxxy + margin * (maxxy - minxy)
+    :param margin:          Margin for extending the plotting range
+    :param geomap:          Boolean for plotting the edges
+    :param color_geomap:    Background colors. Should be specified in form: {'ocean': 'lightblue', 'land': 'whitesmoke'}
+    :param terrain:         Boolean for plotting the background terrain, if False only country borders will be drawn
+    :return:                Axis transformation
+    """
+    
     if boundaries is None:
         (x1, y1), (x2, y2) = compute_bbox_with_margins(x, y, margin_type, margin)
     else:
@@ -86,33 +104,61 @@ def draw_map_cartopy(x, y, ax, crs=4326, boundaries=None, margin_type='Fixed', m
     border = cartopy.feature.BORDERS.with_scale(resolution)
     ax.add_feature(border, linewidth=0.8)
 
+    #FIXME: Sometimes there is an issue with connecting to the stamen server and terain can not be plotted. I dont know how to fix this!
     if terrain is True:
         # Create a Stamen terrain background instance.
-        stamen_terrain = cimgt.Stamen('terrain-background')
+        stamen_terrain = cimgt.Stamen('terrain')
         # Add the Stamen data at zoom level 8.
         ax.add_image(stamen_terrain, 8)
 
     return axis_transformation
 
 
-# TODO: Check this function and provide descriptions
 def get_congestion(inputs, flows, idx):
+    """
+    This function computes the congestion in the interconnection lines (power system only)
+
+    :param inputs:  Dispa-SET inputs
+    :param flows:   Flows between neighbouring (interconnected) nodes
+    :param idx:     Datetime index defining the range for which the congestion should be computed
+    :return:        Congestion
+    """
+
     cols = [x for x in inputs['sets']['l'] if "RoW" not in x]
-    cgst = pd.DataFrame(columns=cols)
+    congestion = pd.DataFrame(columns=cols)
     for l in flows:
         if l[:3] != 'RoW' and l[-3:] != 'RoW':
-            cgst.loc[0, l] = (
+            congestion.loc[0, l] = (
                     (flows.loc[idx, l] == inputs['param_df']['FlowMaximum'].loc[idx, l]) & (
                     inputs['param_df']['FlowMaximum'].loc[idx, l] > 0)).sum()
 
-    cgst.fillna(0, inplace=True)
-    cgst = cgst / inputs['param_df']['Demand'].loc[idx, :].index.size
-    return cgst
+    congestion.fillna(0, inplace=True)
+    congestion = congestion / inputs['param_df']['Demand'].loc[idx, :].index.size
+    return congestion
 
 
-# TODO: Generalize this function and provide descriptions
 def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, margin_type='Fixed', margin=0.20,
                        geomap=True, color_geomap=None, terrain=False, figsize=(12, 8), bublesize=5000):
+    """
+    Function for generating the net flows map diagram
+
+    :param inputs:          Dispa-SET inputs
+    :param results:         Dispa-SET results
+    :param idx:             Datetime index range
+    :param crs:             Geographic projection code (i.e. 4326 is a standard EPSG coordinate system)
+    :param boundaries:      if boundaries is None "compute_bbox_with_margins(x, y, margin_type, margin)" will be used,
+                            otherwise boundaries need to be specified manually "x1, x2, y1, y2 = boundaries"
+    :param margin_type:     'Fixed': xy1 = minxy - margin, xy2 = maxxy + margin, otherwise:
+                            xy1 = minxy - margin * (maxxy - minxy), xy2 = maxxy + margin * (maxxy - minxy)
+    :param margin:          Margin for extending the plotting range
+    :param geomap:          Boolean for plotting the edges
+    :param color_geomap:    Background colors. Should be specified in form: {'ocean': 'lightblue', 'land': 'whitesmoke'}
+    :param terrain:         Boolean for plotting the background terrain, if False only country borders will be drawn
+    :param figsize:         Figure size
+    :param bublesize:       Size of the bubbles. This value is impacted by the figsize.
+    :return:                Net flows plot
+    """
+
     # Preprocess input data
     flows = results['OutputFlow'].copy()
     zones = inputs['sets']['n'].copy()
@@ -150,7 +196,8 @@ def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, mar
 
     # Assign colors based on net flows (if importing/exporting/neutral)
     node_neg = NetImports.columns[(NetImports < 0).any()].tolist()
-    node_pos = NetImports.columns[(NetImports >= 0).any()].tolist()
+    node_pos = NetImports.columns[(NetImports > 0).any()].tolist()
+
     color_map = []
     for node in g:
         if node in node_neg:
@@ -204,7 +251,28 @@ def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, mar
 
 # TODO: Generalize this function and provide descriptions
 def plot_line_congestion_map(inputs, results, idx=None, crs=4326, boundaries=None, margin_type='Fixed', margin=0.20,
-                             geomap=True, color_geomap=None, terrain=False, figsize=(12, 8), edge_width=10, bublesize=5000):
+                             geomap=True, color_geomap=None, terrain=False, figsize=(12, 8), edge_width=10,
+                             bublesize=5000):
+    """
+    This function plots congestion in the lines
+
+    :param inputs:          DispaSET inputs
+    :param results:         DispaSET results
+    :param idx:             Datetime index range
+    :param crs:             Geographic projection code (i.e. 4326 is a standard EPSG coordinate system)
+    :param boundaries:      if boundaries is None "compute_bbox_with_margins(x, y, margin_type, margin)" will be used,
+                            otherwise boundaries need to be specified manually "x1, x2, y1, y2 = boundaries"
+    :param margin_type:     'Fixed': xy1 = minxy - margin, xy2 = maxxy + margin, otherwise:
+                            xy1 = minxy - margin * (maxxy - minxy), xy2 = maxxy + margin * (maxxy - minxy)
+    :param margin:          Margin for extending the plotting range
+    :param geomap:          Boolean for plotting the edges
+    :param color_geomap:    Background colors. Should be specified in form: {'ocean': 'lightblue', 'land': 'whitesmoke'}
+    :param terrain:         Boolean for plotting the background terrain, if False only country borders will be drawn
+    :param figsize:         Figure size
+    :param edge_width:      Thickness of the NTC lines, 10 usually works well for the default figsize
+    :param bublesize:       Size of the bubbles. This value is impacted by the figsize.
+    :return:                Plot the diagram
+    """
 
     # Preprocess input data
     zones = inputs['sets']['n'].copy()

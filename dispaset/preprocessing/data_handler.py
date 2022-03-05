@@ -211,7 +211,6 @@ def GenericTable(headers, varname, config, default=None):
     :param varname:             Variable to be read
     :param config:              Config variable
     :param default:             Default value to be applied if no data is found
-    :param RestrictWarning:     Only display the warnings if the unit belongs to the list of technologies provided in this parameter
 
     :return:           Dataframe with the time series for each unit
     """
@@ -363,6 +362,11 @@ def load_time_series(config, path, header='infer'):
     Function that loads time series data, checks the compatibility of the indexes
     and guesses when no exact match between the required index and the data is 
     present
+
+    :param: config      dispaset config
+    :param: path        path towards the desired timeseries
+    :param: header      list of header names
+    :return:            reindexed timeseries
     """
 
     data = pd.read_csv(path, index_col=0, parse_dates=True, header=header, keep_default_na=False)
@@ -476,7 +480,15 @@ def read_truefalse(sheet, rowstart, colstart, rowstop, colstop, colapart=1):
 
 
 def read_Participation(sheet, rowstart, colstart, rowstop, colapart=1):
-    # creates dict for each technology and add 0 for false and 1 for true (first value for without CHP second with CHP)
+    """
+    Creates dict for each technology and add 0 for false and 1 for true (first value for without CHP second with CHP)
+    :param sheet:       Excel sheet to load data from
+    :param rowstart:    Row to start reading the data
+    :param colstart:    Column to start reading the data
+    :param rowstop:     Row to stop reading the data
+    :param colapart:    Columns apart to read the data
+    :return:
+    """
     Reserveparticipation = {}
     for i in range(rowstart, rowstop):
         Reserveparticipation[sheet.cell_value(i, colstart)] = [sheet.cell_value(i, colstart + colapart),

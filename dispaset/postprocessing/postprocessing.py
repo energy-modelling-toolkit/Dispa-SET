@@ -7,7 +7,6 @@ Set of functions useful to analyse to DispaSET output data.
 
 from __future__ import division
 
-import datetime as dt
 import logging
 import sys
 
@@ -15,7 +14,6 @@ import numpy as np
 import pandas as pd
 
 from ..common import commons
-from .data_handler import ds_to_df
 
 
 def get_load_data(inputs, z):
@@ -200,7 +198,7 @@ def get_plot_data(inputs, results, z):
             plotdata['FlowIn'] = plotdata['FlowIn'] + results['OutputFlow'][col]
         if from_node.strip() == z:
             plotdata['FlowOut'] = plotdata['FlowOut'] - results['OutputFlow'][col]
-
+    
     # re-ordering columns:
     OrderedColumns = [col for col in commons['MeritOrder'] if col in plotdata.columns]
     plotdata = plotdata[OrderedColumns]
