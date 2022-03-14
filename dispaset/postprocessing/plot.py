@@ -50,11 +50,11 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
         pdrng = rng
 
     # NTC plot data
-    if ntc is not None:
+    if (ntc is not None) and ('FlowIn' in plotdata) and ('FlowOut' in plotdata):
         ntc['FlowIn'], ntc['FlowOut'], ntc['ZeroLine'] = plotdata['FlowIn'], plotdata['FlowOut'], 0
 
     # Netting the interconnections:
-    if 'FlowIn' in plotdata and 'FlowOut' in plotdata:
+    if ('FlowIn' in plotdata) and ('FlowOut' in plotdata):
         plotdata['FlowOut'], plotdata['FlowIn'] = (np.minimum(0, plotdata['FlowIn'] + plotdata['FlowOut']),
                                                    np.maximum(0, plotdata['FlowOut'] + plotdata['FlowIn']))
 
@@ -85,9 +85,9 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
         axes[2].plot(pdrng, ntc.loc[pdrng, 'NTCIn'].values, color='r')
         axes[2].plot(pdrng, ntc.loc[pdrng, 'NTCOut'].values, color='g')
         axes[2].set_xlim(pdrng[0], pdrng[-1])
-        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'FlowIn'], ntc.loc[pdrng, 'ZeroLine'], facecolor='red',
+        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'NTCIn'], ntc.loc[pdrng, 'ZeroLine'], facecolor='red',
                              alpha=alpha, hatch=commons['hatches']['FlowIn'])
-        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'], facecolor='green',
+        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'NTCOut'], facecolor='green',
                              alpha=alpha, hatch=commons['hatches']['FlowOut'])
         axes[2].set_ylabel('NTC [GWh]')
     else:
@@ -202,7 +202,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
                              linestyle='dashed')
     else:
         plt.legend(title='Dispatch for ' + demand.name, handles=[line_demand] + [line_shedload] + [line_SOC] +
-                   patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
+                                                                patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
         axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
                              linestyle='dashed')
 
@@ -499,7 +499,8 @@ def plot_zone_capacities(inputs, results, plot=True):
         units.loc[u, 'PowerCapacity'] = PurePowerCapacity
         units_chp.loc[u, 'PowerCapacity'] = MaxHeat
 
-    units_heat = units_heat.append(units_chp)
+    # units_heat = units_heat.append(units_chp)
+    units_heat = pd.concat([units_heat, units_chp])
 
     ZoneFuels = {}
     ZoneFuelsHT = {}
@@ -674,12 +675,16 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
         if from_node.strip() == z:
             ntc['NTCOut'] = ntc['NTCOut'] - inputs['param_df']['FlowMaximum'][col]
     ntc = ntc / 1e3  # GW
+    ntc = ntc.loc[:, (ntc != 0).any(axis=0)]
 
     # Plot power dispatch
     demand.rename(z, inplace=True)
-    plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load,
-                  shiftedload=shifted_load, ntc=ntc,
-                  rng=rng, alpha=0.5)
+    if ntc.empty:
+        plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load,
+                      shiftedload=shifted_load, rng=rng, alpha=0.5)
+    else:
+        plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load,
+                      shiftedload=shifted_load, ntc=ntc, rng=rng, alpha=0.5)
 
     # Plot heat dispatch
     Nzones_th = len(inputs['sets']['n_th'])
@@ -788,7 +793,7 @@ def plot_EFOH(inputs, results):
     :param results:     Dispa-SET results
     """
     EFOH = {}
-    for i, s in enumerate(list(inputs.keys())): # TODO something with scenarios should be dropped
+    for i, s in enumerate(list(inputs.keys())):  # TODO something with scenarios should be dropped
         EFOH[i] = get_EFOH(inputs[s], results[s])
         EFOH[i] = EFOH[i].sort_values(by=['EFOH'], ascending=False)
 
@@ -864,7 +869,7 @@ def plot_H2_and_demand(inputs, results):
     # TODO: Check this function adn decide if necessary
     """
     This function plots the demand and the electrolyser demand as bar chart
-    
+
     :param inputs:      Dispa-SET inputs
     :param results:     Dispa-SET results
     """
@@ -924,7 +929,7 @@ def plot_H2_and_demand(inputs, results):
 
     Demand = {}
     Elyser_consumption = {}
-    scenarios = list(inputs.keys()) #TODO Remove scenarios
+    scenarios = list(inputs.keys())  # TODO Remove scenarios
     for s in scenarios:
         Demand[s], Elyser_consumption[s] = get_demand(inputs[s], results[s])
 
@@ -1018,6 +1023,7 @@ def plot_tech_cap(inputs, plot=True, figsize=(10, 7), alpha=0.8, width=0.5):
         plt.show()
 
     return Cap
+
 
 # TODO Check if necessary
 def H2_demand_satisfaction(inputs, results):
@@ -1177,7 +1183,7 @@ def plot_power_flow_tracing_matrix(inputs, results, idx=None, figsize=(10, 7), *
     return data, data_prct
 
 
-def plot_co2(inputs, results, idx=None, figsize=(10,7), width=0.9, alpha=0.8, points=100, facecolor='#D43F3A'):
+def plot_co2(inputs, results, idx=None, figsize=(10, 7), width=0.9, alpha=0.8, points=100, facecolor='#D43F3A'):
     """
 
     :param inputs:      Dictionary with model inputs
@@ -1194,7 +1200,7 @@ def plot_co2(inputs, results, idx=None, figsize=(10,7), width=0.9, alpha=0.8, po
     df = df.to_numpy()
     fig, ax = plt.subplots(figsize=figsize)
     parts = ax.violinplot(df, points=points, widths=width, showmeans=False, showmedians=False,
-        showextrema=False, bw_method=0.5)
+                          showextrema=False, bw_method=0.5)
 
     for pc in parts['bodies']:
         pc.set_facecolor(facecolor)
@@ -1202,7 +1208,8 @@ def plot_co2(inputs, results, idx=None, figsize=(10,7), width=0.9, alpha=0.8, po
         pc.set_alpha(alpha)
 
     quartile1, medians, quartile3 = np.percentile(df.T, [25, 50, 75], axis=1)
-    whiskers = np.array([adjacent_values(sorted_array, q1, q3) for sorted_array, q1, q3 in zip(df.T, quartile1, quartile3)])
+    whiskers = np.array(
+        [adjacent_values(sorted_array, q1, q3) for sorted_array, q1, q3 in zip(df.T, quartile1, quartile3)])
     whiskers_min, whiskers_max = whiskers[:, 0], whiskers[:, 1]
 
     inds = np.arange(1, len(medians) + 1)
@@ -1225,6 +1232,7 @@ def set_axis_style(ax, labels, xlabel='', ylabel=''):
     ax.set_ylim(0)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+
 
 def adjacent_values(vals, q1, q3):
     upper_adjacent_value = q3 + (q3 - q1) * 1.5
