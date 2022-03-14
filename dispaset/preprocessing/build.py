@@ -714,10 +714,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # Efficiencies (currently limited to p2h units, but can be extended to all units):
     if len(finalTS['Efficiencies']) != 0:
-        for i, u in enumerate(sets['p2h']):
+        for i, u in enumerate(sets['au']):
             parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
-        for i, u in enumerate(sets['p2h2']):
-            parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
+        # for i, u in enumerate(sets['p2h']):
+        #     parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
+        # for i, u in enumerate(sets['p2h2']):
+        #     parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
 
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])
     for i in range(len(sets['n'])):
