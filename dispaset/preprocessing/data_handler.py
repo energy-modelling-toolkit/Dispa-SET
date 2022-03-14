@@ -2,6 +2,7 @@ import datetime as dt
 import logging
 import os
 import sys
+
 import numpy as np
 import pandas as pd
 
@@ -590,55 +591,13 @@ def load_config_excel(ConfigFile, AbsPath=True):
         config['LookAhead'] = int(sheet.cell_value(59, 2))
 
         # Defning the input locations in the config file:
-        StdParameters = {
-            # Scenario options
-            'SimulationDirectory': 33, 'WriteGDX': 34, 'WritePickle': 35, 'GAMS_folder': 36,
-            'cplex_path': 37,
-            # Horizon Settings
-            'DataTimeStep': 60, 'SimulationTimeStep': 61,
-            # Simulation Options
-            'SimulationType': 76, 'ReserveCalculation': 77, 'AllowCurtailment': 78,
-            # Mid-term scheduling related
-            'HydroScheduling': 98, 'HydroSchedulingHorizon': 99, 'InitialFinalReservoirLevel': 100
-        }
-        PathParameters = {
-            # Power system data
-            'Demand': 124, 'ShareOfFlexibleDemand': 125, 'Outages': 126, 'PowerPlantData': 127,
-            'RenewablesAF': 128, 'LoadShedding': 129,
-            # Interconnection data
-            'NTC': 130, 'Interconnections': 131,
-            # Hydro data
-            'ReservoirScaledInflows': 132, 'ReservoirLevels': 133,
-            # Heat data
-            'HeatDemand': 134, 'Temperatures': 135,
-            # Geo data
-            'GeoData': 136,
-            # Hydrogen data
-            'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
-            # Reserves input data
-            'Reserve2U': 160, 'Reserve2D': 161,
-            # Other costs related data
-            'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169,
-            'CostH2Slack': 170, 'CostCurtailment': 171,
-            # Fuel price related data
-            'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
-            'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187
-        }
-        modifiers = {'Demand': 274, 'Wind': 275, 'Solar': 276, 'Storage': 277}
-        default = {
-            # Hydro scheduling defaults
-            'ReservoirLevelInitial': 101, 'ReservoirLevelFinal': 102,
-            # Fuel price defaults
-            'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
-            'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187,
-            # Other price defaults
-            'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169,
-            'CostH2Slack': 170, 'CostCurtailment': 171,
-            # Optimization and infeasibility cost data
-            'ShareOfFlexibleDemand': 125, 'LoadShedding': 129,
-            'DemandFlexibility': 162, 'ShareOfQuickStartUnits': 163,
-            'ValueOfLostLoad': 204, 'PriceOfSpillage': 205, 'WaterValue': 206
-        }
+        StdParameters = commons['StdParameters']
+        PathParameters = commons['PathParameters']
+
+        # Modifiers and default values
+        modifiers = commons['modifiers']
+        default = commons['default']
+
         for p in StdParameters:
             config[p] = sheet.cell_value(StdParameters[p], 2)
         for p in PathParameters:
@@ -649,6 +608,13 @@ def load_config_excel(ConfigFile, AbsPath=True):
         config['default'] = {}
         for p in default:
             config['default'][p] = sheet.cell_value(default[p], 5)
+
+        params2 = ['BoundarySectorDemand', 'BoundarySectorData', 'CostBoundarySectorSlack']
+        defaults2 = ['CostBoundarySectorSlack']
+        for param in params2:
+            config[param] = ''
+        for param in defaults2:
+            config['default'][param] = 0
 
         # True/Falst values:
         config['zones'] = read_truefalse(sheet, 225, 1, 250, 3)

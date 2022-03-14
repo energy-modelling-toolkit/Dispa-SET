@@ -296,18 +296,25 @@ def get_result_analysis(inputs, results):
 
     demand = pd.concat(demand, axis=1)
     demand.columns = demand.columns.droplevel(-1)
-    demand_th = pd.concat(demand_th, axis=1)
 
     TotalLoad = demand.sum().sum()
-    TotalHeatLoad = demand_th.sum().sum()
     PeakLoad = demand.sum(axis=1).max(axis=0)
-    PeakHeatLoad = demand_th.sum(axis=1).max(axis=0)
     LoadShedding = results['OutputShedLoad'].sum().sum() / 1e6
     Curtailment = results['OutputCurtailedPower'].sum().sum()
     HeatCurtailment = results['OutputCurtailedHeat'].sum().sum()
     MaxCurtailemnt = results['OutputCurtailedPower'].sum(axis=1).max() / 1e6
     MaxHeatCurtailemnt = results['OutputCurtailedHeat'].sum(axis=1).max() / 1e6
     MaxLoadShedding = results['OutputShedLoad'].sum(axis=1).max()
+
+    if not demand_th:
+        logging.info(
+            'There are no heating zones specified in the database. Heating sector related results will not be analysed')
+        TotalHeatLoad = 0
+        PeakHeatLoad = 0
+    else:
+        demand_th = pd.concat(demand_th, axis=1)
+        TotalHeatLoad = demand_th.sum().sum()
+        PeakHeatLoad = demand_th.sum(axis=1).max(axis=0)
 
     if 'OutputDemandModulation' in results:
         ShiftedLoad_net = results['OutputDemandModulation'].sum().sum() / 1E6
@@ -391,7 +398,7 @@ def get_result_analysis(inputs, results):
     try:
         StorageData = pd.DataFrame(index=inputs['sets']['n'])
         for z in StorageData.index:
-            isstorage = pd.Series(index=inputs['units'].index)
+            isstorage = pd.Series(index=inputs['units'].index, dtype='float64')
             for u in isstorage.index:
                 isstorage[u] = inputs['units'].Technology[u] in commons['tech_storage']
             sto_units = inputs['units'][(inputs['units'].Zone == z) & isstorage]

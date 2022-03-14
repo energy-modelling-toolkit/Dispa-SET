@@ -450,6 +450,7 @@ SystemCostD                         ![EUR]  Total system cost for one optimizati
 DemandModulation(n,h)               [MW]    Difference between the flexible demand and the baseline
 PowerBoundarySector(n_bs,au,h)      [MW]    Power output in boundary sector
 BoundarySectorStorageInput(n_bs,h)  [MW]    Boundary Sector Storage input - output
+ResidualLoad(n,h)                   [MW]    Residual Load
 ;
 
 *===============================================================================
@@ -570,6 +571,7 @@ EQ_Tot_DemandPtL
 EQ_Max_Capacity_PtL
 EQ_PtL_Demand
 EQ_Curtailed_Power
+EQ_Residual_Load
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 ;
 
@@ -713,6 +715,17 @@ EQ_CostRampDown(u,i)$(CostRampDown(u) <> 0)..
          CostRampDownH(u,i)
          =G=
          CostRampDown(u)*(PowerInitial(u)$(ord(i) = 1)+Power(u,i-1)$(ord(i) > 1)-Power(u,i))
+;
+
+EQ_Residual_Load(n,i)..
+        ResidualLoad(n,i)
+        =E=
+        Demand("DA",n,i)
+        + Demand("Flex",n,i)
+        + DemandModulation(n,i)
+        + sum(au, PowerConsumption(au,i) * Location(au,n))
+        - sum(u,Power(u,i)$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
+        - sum(l,Flow(l,i)*LineNode(l,n))
 ;
 
 *Hourly demand balance in the day-ahead market for each node
@@ -1293,6 +1306,7 @@ EQ_Flow_limits_upper,
 *$If not %MTS% == 1 EQ_Force_Commitment,
 *$If not %MTS% == 1 EQ_Force_DeCommitment,
 EQ_LoadShedding,
+EQ_Residual_Load,
 $If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand,
 $If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand_Max,
 $if not %ActivateFlexibleDemand% == 1 EQ_No_Flexible_Demand,
@@ -1401,6 +1415,7 @@ OutputFlow(l,h)
 OutputPower(au,h)
 OutputPowerBoundarySector(n_bs,au,h)
 OutputPowerConsumption(au,h)
+OutputResidualLoad(n,h)
 OutputStorageInput(au,h)
 OutputStorageLevel(au,h)
 OutputStorageSlack(au,h)
@@ -1460,6 +1475,7 @@ OutputFlow(l,z)=Flow.L(l,z);
 OutputPower(au,z)=Power.L(au,z);
 OutputPowerBoundarySector(n_bs,au,z)=PowerBoundarySector.L(n_bs,au,z);
 OutputPowerConsumption(au,z)=PowerConsumption.L(au,z);
+OutputResidualLoad(n,z)=ResidualLoad.L(n,z);
 OutputHeat(au,z)=Heat.L(au,z);
 OutputHeatSlack(n_th,z)=HeatSlack.L(n_th,z);
 OutputH2Slack(n_h2,z)=H2Slack.L(n_h2,z);
@@ -1542,6 +1558,7 @@ OutputFlow,
 OutputPower,
 OutputPowerBoundarySector,
 OutputPowerConsumption,
+OutputResidualLoad,
 OutputHeat,
 OutputHeatSlack,
 OutputH2Slack,
