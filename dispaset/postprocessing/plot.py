@@ -85,9 +85,9 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
         axes[2].plot(pdrng, ntc.loc[pdrng, 'NTCIn'].values, color='r')
         axes[2].plot(pdrng, ntc.loc[pdrng, 'NTCOut'].values, color='g')
         axes[2].set_xlim(pdrng[0], pdrng[-1])
-        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'NTCIn'], ntc.loc[pdrng, 'ZeroLine'], facecolor='red',
+        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'FlowIn'], ntc.loc[pdrng, 'ZeroLine'], facecolor='red',
                              alpha=alpha, hatch=commons['hatches']['FlowIn'])
-        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'NTCOut'], facecolor='green',
+        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'], facecolor='green',
                              alpha=alpha, hatch=commons['hatches']['FlowOut'])
         axes[2].set_ylabel('NTC [GWh]')
     else:

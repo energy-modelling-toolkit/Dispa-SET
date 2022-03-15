@@ -407,6 +407,8 @@ PtLDemand(n_h2,h)          [MW]    Demand of H2 for PtL at each time step for ea
 free variable
 SystemCostD                ![EUR]  Total system cost for one optimization period
 DemandModulation(n,h)      [MW]    Difference between the flexible demand and the baseline
+ObjectiveFunction(h)
+OptimalityGap(h)
 ;
 
 *===============================================================================
@@ -1231,7 +1233,7 @@ parameter CommittedInitial_dbg(au), PowerInitial_dbg(u), StorageInitial_dbg(au);
 *Committed.L(u,i)=CommittedInitial(u);
 
 * Defining a parameter that records the solver status:
-set  tmp   "tpm"  / "model", "solver" /  ;
+set  tmp   "tpm"  / "model", "solver"/  ;
 parameter status(tmp,h);
 
 $if %Debug% == 1 $goto DebugSection
@@ -1283,6 +1285,8 @@ $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i
 
 * Assigning waterslack (one value per optimization horizon) to the last element of storageslack
 StorageSlack.L(au,i)$(ord(i)=LastKeptHour-FirstHour+1) = Waterslack.L(au);
+ObjectiveFunction.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = SystemCostD.L;
+OptimalityGap.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = UCM_SIMPLE.objVal - UCM_SIMPLE.objEst;
 
 *Loop variables to display after solving:
 $If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
@@ -1349,6 +1353,8 @@ OutputStartUp(au,h)
 OutputShutDown(au,h)
 OutputEmissions(n,p,z)
 CapacityMargin(n,h)
+OutputSystemCostD(h)
+OutputOptimalityGap(h)
 ;
 
 OutputCommitted(au,z)=Committed.L(au,z);
@@ -1423,6 +1429,8 @@ CapacityMargin(n,z) = (sum(u, Nunits(u)*PowerCapacity(u)$(not s(u))*LoadMaximum(
                       - sum(p2h,PowerConsumption.L(p2h,z)*Location(p2h,n))
                       - sum(p2h2,PowerConsumption.L(p2h2,z)*Location(p2h2,n))
 );
+OutputSystemCostD(z) = ObjectiveFunction.L(z);
+OutputOptimalityGap(z) = OptimalityGap.L(z);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
@@ -1477,6 +1485,8 @@ OutputStartUp,
 OutputShutDown,
 OutputEmissions,
 CapacityMargin,
+OutputSystemCostD,
+OutputOptimalityGap,
 status
 ;
 

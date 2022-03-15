@@ -159,7 +159,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
                    'OutputStorageInput', 'OutputHeat', 'OutputHeatSlack', 'OutputDemandModulation',
                    'OutputStorageSlack', 'OutputPtLDemand', 'OutputH2Output', 'OutputPowerMustRun',
                    'OutputReserve_2U', 'OutputReserve_2D', 'OutputReserve_3U', 'ShadowPrice_RampUp_TC',
-                   'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown','HeatShadowPrice',
+                   'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown', 'HeatShadowPrice',
                    'H2ShadowPrice', 'OutputCurtailedHeat', 'OutputEmissions', 'CapacityMargin']
 
     # Setting the proper index to the result dataframes:
