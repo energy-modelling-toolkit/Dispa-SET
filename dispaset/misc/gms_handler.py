@@ -9,6 +9,8 @@ from .str_handler import force_str
 def solve_high_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file='Results.gdx', output_lst=False):
     """Use higher level apis to run GAMSy"""
     # create GAMS workspace:
+    if isinstance(gams_folder, bytes):
+        gams_folder = gams_folder.decode()
     try:
         from gams import GamsWorkspace
         ws = GamsWorkspace(system_directory=str(gams_folder), debug=3)

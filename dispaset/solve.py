@@ -82,12 +82,12 @@ def solve_GAMS(sim_folder, gams_folder=None, gams_file='UCM_h.gms', result_file=
     :param output_lst: Set to True to conserve a copy of the GAMS lst file in the simulation folder
     '''
 
-    if package_exists('gamsxcc') and package_exists('optcc'):
-        solv_func = solve_low_level
-        logging.info('Using the low-level gams api')
-    elif package_exists('gams'):
+    if package_exists('gams'):
         solv_func = solve_high_level
         logging.info('Using the high-level gams api')
+    elif package_exists('gamsxcc') and package_exists('optcc'):
+        solv_func = solve_low_level
+        logging.info('Using the low-level gams api')
     else:
         logging.warning('Could not find the GAMS APIs. Trying to locate local version')
         if not import_local_lib('lowlevel'):
