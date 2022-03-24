@@ -10,7 +10,6 @@ def solve_high_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file
     """Use higher level apis to run GAMSy"""
     # create GAMS workspace:
     gams_folder = force_str(gams_folder)
-    gams_folder = b'/home/sylvain/progs/GAMS/gams37.1_linux_x64_64_sfx/'
     try:
         from gams import GamsWorkspace
         ws = GamsWorkspace(system_directory=str(gams_folder), debug=3)
