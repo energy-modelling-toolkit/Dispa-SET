@@ -37,7 +37,7 @@ setup(
         'local_scheme': lambda version: version.format_choice("" if version.exact else "+{node}", "+dirty"),
         'fallback_version': FINAL_RELEASE,
     },
-    python_requires='>=3.7',
+    python_requires='>=3.6',
     setup_requires=["setuptools_scm"],
     install_requires=[
         "setuptools_scm",
