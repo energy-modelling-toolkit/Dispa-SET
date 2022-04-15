@@ -591,7 +591,8 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
     aggregation = False
     if 'OutputStorageLevel' in results:
         lev = filter_by_zone(results['OutputStorageLevel'], inputs, z)
-        lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] / 1e3  # GWh of storage
+        lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] * inputs['units']['Nunits'].loc[
+            lev.columns] / 1e3  # GWh of storage
         for col in lev.columns:
             if 'BEVS' in col:
                 lev[col] = lev[col] * inputs['param_df']['AvailabilityFactor'][col]
@@ -606,7 +607,8 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
                 del levels[col]
 
         lev_heat = filter_by_heating_zone(results['OutputStorageLevel'], inputs, z_th)
-        lev_heat = lev_heat * inputs['units']['StorageCapacity'].loc[lev_heat.columns] / 1e3  # GWh of storage
+        lev_heat = lev_heat * inputs['units']['StorageCapacity'].loc[lev_heat.columns] * inputs['units']['Nunits'].loc[
+            lev_heat.columns] / 1e3  # GWh of storage
         # Filter storage levels for thermal storage
         level_heat = filter_by_storage(lev_heat, inputs, StorageSubset='thms')
         levels_heat = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
