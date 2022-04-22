@@ -296,18 +296,21 @@ def get_result_analysis(inputs, results):
 
     demand = pd.concat(demand, axis=1)
     demand.columns = demand.columns.droplevel(-1)
-    demand_th = pd.concat(demand_th, axis=1)
-
     TotalLoad = demand.sum().sum()
-    TotalHeatLoad = demand_th.sum().sum()
     PeakLoad = demand.sum(axis=1).max(axis=0)
-    PeakHeatLoad = demand_th.sum(axis=1).max(axis=0)
     LoadShedding = results['OutputShedLoad'].sum().sum() / 1e6
     Curtailment = results['OutputCurtailedPower'].sum().sum()
-    HeatCurtailment = results['OutputCurtailedHeat'].sum().sum()
     MaxCurtailemnt = results['OutputCurtailedPower'].sum(axis=1).max() / 1e6
-    MaxHeatCurtailemnt = results['OutputCurtailedHeat'].sum(axis=1).max() / 1e6
     MaxLoadShedding = results['OutputShedLoad'].sum(axis=1).max()
+
+    if not inputs['param_df']['HeatDemand'].empty:
+        demand_th = pd.concat(demand_th, axis=1)
+        TotalHeatLoad = demand_th.sum().sum()
+        PeakHeatLoad = demand_th.sum(axis=1).max(axis=0)
+        HeatCurtailment = results['OutputCurtailedHeat'].sum().sum()
+        MaxHeatCurtailemnt = results['OutputCurtailedHeat'].sum(axis=1).max() / 1e6
+
+
 
     if 'OutputDemandModulation' in results:
         ShiftedLoad_net = results['OutputDemandModulation'].sum().sum() / 1E6
@@ -320,7 +323,10 @@ def get_result_analysis(inputs, results):
 
     NetImports = -get_imports(results['OutputFlow'], 'RoW')
 
-    Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports + TotalHeatLoad)
+    if not inputs['param_df']['HeatDemand'].empty:
+        Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports + TotalHeatLoad)
+    else:
+        Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports)
 
     print('\nAverage electricity cost : ' + str(Cost_kwh) + ' EUR/MWh')
 
@@ -456,14 +462,22 @@ def get_result_analysis(inputs, results):
         WaterData['ZoneLevel']['WaterConsumption'][z] = filter_by_zone(WaterData['UnitLevel']['WaterConsumption'],
                                                                        inputs, z).sum(axis=1)
 
-    return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-            'TotalHeatLoad': TotalHeatLoad, 'PeakHeatLoad': PeakHeatLoad,
-            'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt,
-            'HeatCurtailment': HeatCurtailment, 'MaxHeatCurtailment': MaxHeatCurtailemnt,
-            'ShedLoad': LoadShedding, 'MaxShedLoad': MaxLoadShedding,
-            'ShiftedLoad': ShiftedLoad_tot,
-            'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
-            'UnitData': UnitData, 'FuelData': FuelData, 'WaterConsumptionData': WaterData}
+    if not inputs['param_df']['HeatDemand'].empty:
+        return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
+                'TotalHeatLoad': TotalHeatLoad, 'PeakHeatLoad': PeakHeatLoad,
+                'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt,
+                'HeatCurtailment': HeatCurtailment, 'MaxHeatCurtailment': MaxHeatCurtailemnt,
+                'ShedLoad': LoadShedding, 'MaxShedLoad': MaxLoadShedding,
+                'ShiftedLoad': ShiftedLoad_tot,
+                'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
+                'UnitData': UnitData, 'FuelData': FuelData, 'WaterConsumptionData': WaterData}
+    else:
+        return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
+                'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt,
+                'ShedLoad': LoadShedding, 'MaxShedLoad': MaxLoadShedding,
+                'ShiftedLoad': ShiftedLoad_tot,
+                'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
+                'UnitData': UnitData, 'FuelData': FuelData, 'WaterConsumptionData': WaterData}
 
 
 def get_indicators_powerplant(inputs, results):
@@ -495,6 +509,9 @@ def get_indicators_powerplant(inputs, results):
             out.loc[u, 'Generation'] = results['OutputPower'][u].sum()
         if u in results['OutputHeat']:
             out.loc[u, 'HeatGeneration'] = results['OutputHeat'][u].sum()
+    if inputs['param_df']['HeatDemand'].empty:
+        # out.drop(['Zone_th'], axis=1, inplace=True)
+        out.loc[:,'Zone_th']=''
     return out
 
 
