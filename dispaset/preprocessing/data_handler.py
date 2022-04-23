@@ -403,6 +403,9 @@ def load_time_series(config, path, header='infer'):
 
     if data.index.is_all_dates:
         data.index = data.index.tz_localize(None)  # removing locational data
+        main_year = data.groupby(data.index.year).size()
+        year = int(main_year[main_year > 8759].index.values)
+        data = data[data.index.year == year]
         # Checking if the required index entries are in the data:
         common = data.index.intersection(config['idx'])
         if len(common) == 0:
