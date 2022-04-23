@@ -430,6 +430,7 @@ def load_time_series(config, path, header='infer'):
                 mask = mask.groupby(mask.index.hour).mean()
                 time = pd.date_range(str(config['idx'][0].year) + '-2-29', periods=24, freq='H')
                 mask = mask.set_index(time)
+                data = data[~data.index.duplicated(keep='last')]
                 data = data.reindex(config['idx'])
                 data.update(mask)
         # recompute common index entries, and check again:
