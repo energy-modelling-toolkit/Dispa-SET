@@ -15,7 +15,7 @@ from ..common import commons
 
 
 def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedload=None, shiftedload=None, rng=None,
-                  alpha=None, figsize=(13, 7), ntc=None):
+                  alpha=None, figsize=(13, 7), ntc=None, dispatch_limits=None, storage_limits=None, ntc_limits=None):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
 
@@ -85,11 +85,15 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
         axes[2].plot(pdrng, ntc.loc[pdrng, 'NTCIn'].values, color='r')
         axes[2].plot(pdrng, ntc.loc[pdrng, 'NTCOut'].values, color='g')
         axes[2].set_xlim(pdrng[0], pdrng[-1])
-        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'FlowIn'], ntc.loc[pdrng, 'ZeroLine'], facecolor='red',
+        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'FlowIn'], ntc.loc[pdrng, 'ZeroLine'],
+                             facecolor=commons['colors']['FlowIn'],
                              alpha=alpha, hatch=commons['hatches']['FlowIn'])
-        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'], facecolor='green',
+        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'],
+                             facecolor=commons['colors']['FlowOut'],
                              alpha=alpha, hatch=commons['hatches']['FlowOut'])
-        axes[2].set_ylabel('NTC [GWh]')
+        axes[2].set_ylabel('NTC [GW]')
+        if ntc_limits is not None:
+            axes[2].set_ylim(ntc_limits[0], ntc_limits[1])
     else:
         fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
                                  gridspec_kw={'height_ratios': [2.7, .8], 'hspace': 0.04})
@@ -126,11 +130,12 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
         elif isinstance(level, pd.Series):
             # Create lower axis:
             axes[1].plot(pdrng, level[pdrng], color='k', alpha=alpha, linestyle=':')
-            axes[1].fill_between(pdrng, 0, level[pdrng],
-                                 facecolor=commons['colors']['WAT'], alpha=.3)
+            axes[1].fill_between(pdrng, 0, level[pdrng], facecolor=commons['colors']['WAT'], alpha=.3)
         axes[1].set_ylabel('Level [GWh]')
         axes[1].yaxis.label.set_fontsize(12)
         line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Reservoir', linestyle=':')
+        if storage_limits is not None:
+            axes[1].set_ylim(storage_limits[0], storage_limits[1])
 
     # Plot negative values:
     for j in range(idx_zero):
@@ -141,7 +146,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
         axes[0].fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2], facecolor=color,
                              alpha=alpha, hatch=hatch)
         if col2 not in labels:
-            labels.append(col1)
+            labels.append(col2)
             patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
             colorlist.append(color)
 
@@ -170,6 +175,8 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
 
     axes[0].set_ylabel(y_ax + ' [GW]')
     axes[0].yaxis.label.set_fontsize(12)
+    if dispatch_limits is not None:
+        axes[0].set_ylim(dispatch_limits[0], dispatch_limits[1])
 
     load_change = pd.Series(0, index=demand.index)
     load_changed = False
@@ -565,7 +572,8 @@ def plot_zone_capacities(inputs, results, plot=True):
     return {'PowerCapacity': PowerCapacity, 'StorageCapacity': StorageCapacity, 'HeatCapacity': HeatCapacity}
 
 
-def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
+def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatch_limits=None, storage_limits=None,
+              ntc_limits=None):
     """
     Generates plots from the dispa-SET results for one specific zone
 
@@ -592,10 +600,10 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
     if 'OutputStorageLevel' in results:
         lev = filter_by_zone(results['OutputStorageLevel'], inputs, z)
         lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] * inputs['units']['Nunits'].loc[
-            lev.columns] / 1e3  # GWh of storage
-        for col in lev.columns:
-            if 'BEVS' in col:
-                lev[col] = lev[col] * inputs['param_df']['AvailabilityFactor'][col]
+            lev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:, lev.columns] / 1e3  # GWh of storage
+        # for col in lev.columns:
+        #     if 'BEVS' in col:
+        #         lev[col] = lev[col] * inputs['param_df']['AvailabilityFactor'][col]
         level = filter_by_storage(lev, inputs, StorageSubset='s')
         levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
         for t in commons['tech_storage']:
@@ -683,10 +691,12 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True):
     demand.rename(z, inplace=True)
     if ntc.empty:
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load,
-                      shiftedload=shifted_load, rng=rng, alpha=0.5)
+                      shiftedload=shifted_load, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
+                      storage_limits=storage_limits)
     else:
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load,
-                      shiftedload=shifted_load, ntc=ntc, rng=rng, alpha=0.5)
+                      shiftedload=shifted_load, ntc=ntc, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
+                      storage_limits=storage_limits, ntc_limits=ntc_limits)
 
     # Plot heat dispatch
     Nzones_th = len(inputs['sets']['n_th'])

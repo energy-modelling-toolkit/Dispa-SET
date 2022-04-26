@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
-from setuptools import setup, find_packages
 import codecs
 import os
+
+from setuptools import setup, find_packages
+
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 # FINAL_RELEASE is the last stable version of Dispa-SET
@@ -48,9 +50,11 @@ setup(
         "xlrd >= 0.9",
         "matplotlib >= 1.5.1",
         "gdxcc >= 7",
-	"xlrd == 1.2.0",
+        "xlrd == 1.2.0",
         "gamsxcc",
-        "optcc"
+        "optcc",
+        "networkx",
+        "cartopy"
     ],
     entry_points={
         'console_scripts': [

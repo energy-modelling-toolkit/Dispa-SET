@@ -40,7 +40,7 @@ import pandas as pd
 
 rng = pd.date_range('2016-1-01', '2016-1-07', freq='H')
 # Generate country-specific plots
-ds.plot_zone(inputs, results, z='Z2', rng=rng)
+ds.plot_zone(inputs, results, z='Z1', rng=rng)
 
 # Generate country-specific plots
 ds.plot_zone(inputs, results)
