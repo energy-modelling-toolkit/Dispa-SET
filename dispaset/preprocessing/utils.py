@@ -821,7 +821,7 @@ def adjust_capacity(inputs, tech_fuel, scaling=1, value=None, singleunit=False, 
     if singleunit:
         Nunits_new = pd.Series(1, index=units.index)
     else:
-        Nunits_new = (units.Nunits * RequiredCapacity / TotalCapacity).round()
+        Nunits_new = (units.Nunits * RequiredCapacity / TotalCapacity).astype('float').round()
     Nunits_new[Nunits_new < 1] = 1
     Cap_new = units.PowerCapacity * RequiredCapacity / (units.PowerCapacity * Nunits_new).sum()
     for u in units.index:
