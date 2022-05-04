@@ -315,6 +315,18 @@ def _new_unit_names(df_merged, df_, string_keys):
     return df_merged.set_index('Unit', drop=False)
 
 
+def _linearize_ramping(plants):
+    '''
+    Function that converts the integer constraints for the power plants into ramping rates
+    '''
+    #ramping_up = (lambda row: min(1/ (row["MinDownTime"]+1E-9) / 60, row["RampUpRate"]))
+    #ramping_down = (lambda row: min(1/ (row["MinUpTime"]+1E-9) / 60, row["RampDownRate"]))
+    #plants["RampUpRate"] = plants.apply(ramping_up, axis=1)
+    #plants["RampDownRate"] = plants.apply(ramping_down, axis=1)
+    plants["RampUpRate"] = plants['PartLoadMin'] * ( 1 / (np.maximum(1,plants['MinDownTime'])*60 + 1e-9)) + (1 - plants['PartLoadMin'])*np.minimum(plants['RampUpRate'],1/60)
+    plants["RampDownRate"] = plants['PartLoadMin'] * ( 1 / (np.maximum(1,plants['MinUpTime'])*60 + 1e-9)) + (1 - plants['PartLoadMin'])*np.minimum(plants['RampDownRate'],1/60)
+
+
 def group_plants(plants, method, df_grouped=False, group_list=None):
     """
     This function returns the final dataframe with the merged units and their characteristics
@@ -394,7 +406,6 @@ def create_agg_dict(df_, method="Standard"):
                             'RampingCost'
                             ]
         min_cols = ["StartUpTime"]
-        ramping_cost = ["RampingCost"]
         nunits = ["Nunits"]
 
         # Define aggregators
@@ -418,6 +429,7 @@ def create_agg_dict(df_, method="Standard"):
                             "NoLoadCost",
                             "Efficiency",
                             "MinEfficiency",
+                            'PartLoadMin',
                             "STOChargingEfficiency",
                             "CO2Intensity",
                             "STOSelfDischarge",
@@ -439,7 +451,7 @@ def create_agg_dict(df_, method="Standard"):
         agg_dict = _list2dict(sum_cols, 'sum')
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(weighted_avg_cols, wm_pcap))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(min_cols, 'min'))
-        agg_dict = _merge_two_dicts(agg_dict, _list2dict(['PartLoadMin'], lambda x: 0))
+        #agg_dict = _merge_two_dicts(agg_dict, _list2dict(['PartLoadMin'], lambda x: 0))
         # agg_dict = _merge_two_dicts(agg_dict, _list2dict(ramping_cost, get_ramping_cost))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(nunits, lambda x: 1))
         agg_dict = dict((k, v) for k, v in agg_dict.items() if k in df_.columns)  # remove unnecesary columns
@@ -641,10 +653,6 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
             OnlyOnes = True
 
         plants_merged = group_plants(plants, method="LP clustered")
-        # Transforming the start-up cost into ramping for the plants that did not go through any clustering:
-        ramping_lbd = (lambda row: row["StartUpCost"] / row["PowerCapacity"] if row.RampingCost == 0
-                       else row.RampingCost)
-        plants_merged["RampingCost"] = plants_merged.apply(ramping_lbd, axis=1)
 
     elif method == "LP":
         if not OnlyOnes:
@@ -664,10 +672,7 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
             OnlyOnes = True
 
         plants_merged = plants
-        # Transforming the start-up cost into ramping for the plants that did not go through any clustering:
-        ramping_lbd = (lambda row: row["StartUpCost"] / row["PowerCapacity"] if row.RampingCost == 0
-                       else row.RampingCost)
-        plants_merged["RampingCost"] = plants_merged.apply(ramping_lbd, axis=1)
+        # formers indexes and units:        
         plants_merged["FormerIndexes"] = plants["index"].apply(lambda x: [x])
         plants_merged["FormerUnits"] = plants["Unit"].apply(lambda x: [x])
 
@@ -699,6 +704,13 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
     idx_orig = [plants_merged.loc[i, 'FormerIndexes'][0] for i in idx_merged]
     columns = plants_merged.columns.drop(['Unit', 'FormerIndexes', 'FormerUnits'])
     plants_merged.loc[idx_merged, columns] = plants.loc[idx_orig, columns].values
+    if method in ['LP','LP clustered']:
+        # Transforming the min up/down times into ramping rates
+        _linearize_ramping(plants_merged)
+        # Transforming the start-up cost into ramping for the plants that did not go through any clustering:
+        ramping_lbd = (lambda row: row["StartUpCost"] / row["PowerCapacity"] if row.RampingCost == 0
+                       else row.RampingCost)
+        plants_merged["RampingCost"] = plants_merged.apply(ramping_lbd, axis=1)
     # reorder columns:
     new_columns = [key for key in plants.columns if key in plants_merged]
     plants_merged = plants_merged[new_columns + list(plants_merged.columns.drop(new_columns))]

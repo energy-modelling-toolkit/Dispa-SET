@@ -149,7 +149,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # Some columns can be in two format (absolute or per unit). If not specified, they are set to zero:
     for key in ['StartUpCost', 'NoLoadCost']:
         if key in plants:
-            pass
+            if key + '_pu' in plants:
+                logging.warning('Column ' + key + '_pu found in the power plant table but not used since column ' + key + ' exists')
         elif key + '_pu' in plants:
             plants[key] = plants[key + '_pu'] * plants['PowerCapacity']
         else:
@@ -881,7 +882,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sim = config['SimulationDirectory']
 
     # Simulation data:
-    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units': Plants_merged,
+    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units_nonclustered': plants, 'units': Plants_merged,
                'geo': geo, 'version': dispa_version}
 
     # list_vars = []
