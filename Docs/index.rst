@@ -40,9 +40,9 @@ Main contributors:
 
 * `Sylvain Quoilin`_ (KU Leuven, Belgium)) 
 
-* Konstantinos Kavvadias  (Joint Research Centre, EU Commission)
+* `Konstantinos Kavvadias`_ (Joint Research Centre, EU Commission)
 
-* Matija Pavičević  (KU Leuven, Belgium)
+* `Matija Pavičević`_ (KU Leuven, Belgium)
 
 
 Contents
@@ -74,3 +74,7 @@ Indices and tables
 .. _Modelling Future EU Power Systems Under High Shares of Renewables: https://ec.europa.eu/jrc/en/publication/eur-scientific-and-technical-research-reports/modelling-future-eu-power-systems-under-high-shares-renewables-dispa-set-21-open-source
 
 .. _Sylvain Quoilin: http://www.squoilin.eu
+
+.. _Matija Pavičević: https://www.mpavicevic.com
+
+.. _Konstantinos Kavvadias: http://kavvadias.eu

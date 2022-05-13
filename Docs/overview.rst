@@ -84,7 +84,7 @@ Main Developers
 ---------------
 - `Sylvain Quoilin`_ (University of Liège, KU Leuven)
 - `Konstantinos Kavvadias`_ (European Commission, Joint Research Centre)
-- Matija Pavičević  (KU Leuven, Belgium)
+- `Matija Pavičević`_ (KU Leuven, Belgium)
 
 
 References
@@ -121,5 +121,6 @@ References
 .. _Joint Research Centre: https://ec.europa.eu/jrc/en
 .. _Sylvain Quoilin: http://squoilin.eu
 .. _Konstantinos Kavvadias: http://kavvadias.eu
+.. _Matija Pavičević: https://www.mpavicevic.com
 
 

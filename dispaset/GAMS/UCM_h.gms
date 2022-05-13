@@ -451,6 +451,10 @@ DemandModulation(n,h)               [MW]    Difference between the flexible dema
 PowerBoundarySector(n_bs,au,h)      [MW]    Power output in boundary sector
 BoundarySectorStorageInput(n_bs,h)  [MW]    Boundary Sector Storage input - output
 ResidualLoad(n,h)                   [MW]    Residual Load
+ObjectiveFunction(h)
+OptimalityGap(h)
+OptimizationError
+Error
 ;
 
 *===============================================================================
@@ -1339,7 +1343,7 @@ parameter CommittedInitial_dbg(au), PowerInitial_dbg(u), StorageInitial_dbg(au);
 *Committed.L(u,i)=CommittedInitial(u);
 
 * Defining a parameter that records the solver status:
-set  tmp   "tpm"  / "model", "solver" /  ;
+set  tmp   "tpm"  / "model", "solver"/  ;
 parameter status(tmp,h);
 
 $if %Debug% == 1 $goto DebugSection
@@ -1393,6 +1397,16 @@ $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i
 * Assigning waterslack (one value per optimization horizon) to the last element of storageslack
 StorageSlack.L(au,i)$(ord(i)=LastKeptHour-FirstHour+1) = Waterslack.L(au);
 BoundarySectorStorageSlack.L(n_bs,i)$(ord(i)=LastKeptHour-FirstHour+1) = BoundarySectorWaterslack.L(n_bs);
+ObjectiveFunction.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = SystemCostD.L;
+Error.L = sum((i,n), CostLoadShedding(n,i)*ShedLoad.L(n,i)
+                               +Config("ValueOfLostLoad","val")*(LL_MaxPower.L(n,i)+LL_MinPower.L(n,i))
+                               +0.8*Config("ValueOfLostLoad","val")*(LL_2U.L(n,i)+LL_2D.L(n,i)+LL_3U.L(n,i)))
+                      +sum((u,i), 0.7*Config("ValueOfLostLoad","val")*(LL_RampUp.L(u,i)+LL_RampDown.L(u,i)))
+                      +sum((i,n_th), CostHeatSlack(n_th,i) * HeatSlack.L(n_th,i))
+                      +sum((i,n_h2), CostH2Slack(n_h2,i) * H2Slack.L(n_h2,i));
+OptimalityGap.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = UCM_SIMPLE.objVal - UCM_SIMPLE.objEst;
+OptimizationError.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = Error.L - OptimalityGap.L(i);
+
 
 *Loop variables to display after solving:
 $If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
@@ -1468,6 +1482,9 @@ OutputStartUp(au,h)
 OutputShutDown(au,h)
 OutputEmissions(n,p,z)
 CapacityMargin(n,h)
+OutputSystemCostD(h)
+OutputOptimalityGap(h)
+OutputOptimizationError(h)
 ;
 
 OutputCommitted(au,z)=Committed.L(au,z);
@@ -1551,6 +1568,9 @@ CapacityMargin(n,z) = (sum(u, Nunits(u)*PowerCapacity(u)$(not s(u))*LoadMaximum(
                       - sum(p2h,PowerConsumption.L(p2h,z)*Location(p2h,n))
                       - sum(p2h2,PowerConsumption.L(p2h2,z)*Location(p2h2,n))
 );
+OutputSystemCostD(z) = ObjectiveFunction.L(z);
+OutputOptimalityGap(z) = OptimalityGap.L(z);
+OutputOptimizationError(z) = OptimizationError.L(z);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
@@ -1614,6 +1634,9 @@ OutputStartUp,
 OutputShutDown,
 OutputEmissions,
 CapacityMargin,
+OutputSystemCostD,
+OutputOptimalityGap,
+OutputOptimizationError,
 status
 ;
 

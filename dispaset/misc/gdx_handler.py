@@ -400,65 +400,65 @@ def get_gams_path(gams_dir=None):
     except ImportError:
         logging.warning("Couldn't use which to locate gams.")
 
-    # Else try to locate
-    if sys.platform == 'linux2' or sys.platform == 'linux':
-        try:
-            tmp = subprocess.check_output(['locate', '-i', 'libgamscall64.so']).decode()
-        except:
-            tmp = ''
-        lines = tmp.split('\n')
-        for line in lines:
-            path = line.strip('libgamscall64.so')
-            if os.path.exists(path):
-                out = path
-            break
-    elif sys.platform == 'win32':
-        paths = ['C:\\GAMS', 'C:\\Program Files\\GAMS', 'C:\\Program Files (x86)\\GAMS']
-        lines_32 = []
-        lines_64 = []
-        for path in paths:
-            if os.path.exists(path):
-                paths_32 = [path + os.sep + tmp for tmp in os.listdir(path) if
-                            tmp.startswith('win32') and os.path.exists(path + os.sep + tmp)]
-                paths_64 = [path + os.sep + tmp for tmp in os.listdir(path) if
-                            tmp.startswith('win64') and os.path.exists(path + os.sep + tmp)]
-                for path1 in paths_32:
-                    lines_32 = lines_32 + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
-                                           tmp.startswith('24') and os.path.isfile(
-                                               path1 + os.sep + tmp + os.sep + 'gams.exe')]
-                for path1 in paths_64:
-                    lines_64 = lines_64 + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
-                                           tmp.startswith('24') and os.path.isfile(
-                                               path1 + os.sep + tmp + os.sep + 'gams.exe')]
-        for line in lines_64:
-            if os.path.exists(line):
-                out = line
-            break
-        if out is None:  # The 32-bit version of gams should never be preferred
-            for line in lines_32:
+        # Else try to locate
+        if sys.platform == 'linux2' or sys.platform == 'linux':
+            try:
+                tmp = subprocess.check_output(['locate', '-i', 'libgamscall64.so']).decode()
+            except:
+                tmp = ''
+            lines = tmp.split('\n')
+            for line in lines:
+                path = line.strip('libgamscall64.so')
+                if os.path.exists(path):
+                    out = path
+                break
+        elif sys.platform == 'win32':
+            paths = ['C:\\GAMS', 'C:\\Program Files\\GAMS', 'C:\\Program Files (x86)\\GAMS']
+            lines_32 = []
+            lines_64 = []
+            for path in paths:
+                if os.path.exists(path):
+                    paths_32 = [path + os.sep + tmp for tmp in os.listdir(path) if
+                                tmp.startswith('win32') and os.path.exists(path + os.sep + tmp)]
+                    paths_64 = [path + os.sep + tmp for tmp in os.listdir(path) if
+                                tmp.startswith('win64') and os.path.exists(path + os.sep + tmp)]
+                    for path1 in paths_32:
+                        lines_32 = lines_32 + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
+                                               tmp.startswith('24') and os.path.isfile(
+                                                   path1 + os.sep + tmp + os.sep + 'gams.exe')]
+                    for path1 in paths_64:
+                        lines_64 = lines_64 + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
+                                               tmp.startswith('24') and os.path.isfile(
+                                                   path1 + os.sep + tmp + os.sep + 'gams.exe')]
+            for line in lines_64:
                 if os.path.exists(line):
                     out = line
-                    logging.critical('It seems that the installed version of gams is 32-bit, which might cause consol '
-                                     'crashing and compatibility problems. Please consider using GAMS 64-bit')
                 break
-    elif sys.platform == 'darwin':
-        paths = ['/Applications/']
-        lines = []
-        for path in paths:
-            if os.path.exists(path):
-                paths1 = [path + os.sep + tmp for tmp in os.listdir(path) if
-                          tmp.startswith('GAMS') and os.path.exists(path + os.sep + tmp)]
-                for path1 in paths1:
-                    lines = lines + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
-                                     tmp.startswith('sysdir') and os.path.isfile(
-                                         path1 + os.sep + tmp + os.sep + 'gams')]
-        if len(lines) == 0:
-            tmp = subprocess.check_output(['mdfind', '-name', 'libgamscall64.dylib'])
-            lines = [x.strip('libgamscall64.dylib') for x in tmp.split('\n')]
-        for line in lines:
-            if os.path.exists(line):
-                out = line
-            break
+            if out is None:  # The 32-bit version of gams should never be preferred
+                for line in lines_32:
+                    if os.path.exists(line):
+                        out = line
+                        logging.critical('It seems that the installed version of gams is 32-bit, which might cause consol '
+                                         'crashing and compatibility problems. Please consider using GAMS 64-bit')
+                    break
+        elif sys.platform == 'darwin':
+            paths = ['/Applications/']
+            lines = []
+            for path in paths:
+                if os.path.exists(path):
+                    paths1 = [path + os.sep + tmp for tmp in os.listdir(path) if
+                              tmp.startswith('GAMS') and os.path.exists(path + os.sep + tmp)]
+                    for path1 in paths1:
+                        lines = lines + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
+                                         tmp.startswith('sysdir') and os.path.isfile(
+                                             path1 + os.sep + tmp + os.sep + 'gams')]
+            if len(lines) == 0:
+                tmp = subprocess.check_output(['mdfind', '-name', 'libgamscall64.dylib'])
+                lines = [x.strip('libgamscall64.dylib') for x in tmp.split('\n')]
+            for line in lines:
+                if os.path.exists(line):
+                    out = line
+                break
 
     if out is not None:
         logging.info('Detected ' + out + ' as GAMS path on this computer')
