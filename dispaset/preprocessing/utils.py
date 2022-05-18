@@ -14,9 +14,9 @@ import sys
 import numpy as np
 import pandas as pd
 
+from ..common import commons
 from ..misc.gdx_handler import write_variables
 from ..misc.str_handler import clean_strings, shrink_to_64
-from ..common import commons
 
 
 def pd_timestep(hours):
@@ -341,7 +341,11 @@ def group_plants(plants, method, df_grouped=False, group_list=None):
 
     """
     # Definition of the merged power plants dataframe:
-    if group_list is None:
+    if (group_list is None) and ((plants['Zone_th'] != np.nan).all()) and ((plants['Zone_h2'] != np.nan).all()):
+        group_list = ['Zone', 'Zone_th', 'Zone_h2', 'Technology', 'Fuel', 'CHPType']
+    elif (group_list is None) and ((plants['Zone_th'] != np.nan).all()):
+        group_list = ['Zone', 'Zone_th', 'Technology', 'Fuel', 'CHPType']
+    else:
         group_list = ['Zone', 'Technology', 'Fuel', 'CHPType']
     plants_merged = pd.DataFrame(columns=plants.columns)
     grouped = plants.groupby(group_list, as_index=False)

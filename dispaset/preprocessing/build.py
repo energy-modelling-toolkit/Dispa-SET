@@ -208,7 +208,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     check_h2(config, plants_h2)
 
     # Merging all MTS storage units
-    plants_all_sto = plants_sto.append(plants_h2)
+    plants_all_sto = plants_all_sto.append(plants_h2)
 
     Outages = UnitBasedTable(plants, 'Outages', config, fallbacks=['Unit', 'Technology'])
     AF = UnitBasedTable(plants, 'RenewablesAF', config, fallbacks=['Unit', 'Technology'], default=1,
