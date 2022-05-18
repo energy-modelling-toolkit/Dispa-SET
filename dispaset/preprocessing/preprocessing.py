@@ -7,20 +7,19 @@ It comprises a single function that generates the DispaSET simulation environmen
 """
 import datetime as dt
 import logging
-import sys
 import os
 import shutil
+import sys
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from .build import build_single_run
-
-from ..solve import solve_GAMS
-from ..misc.gdx_handler import gdx_to_dataframe, gdx_to_list
-from ..postprocessing.data_handler import GAMSstatus
 from .utils import pd_timestep
 from ..common import commons
+from ..misc.gdx_handler import gdx_to_dataframe, gdx_to_list
+from ..postprocessing.data_handler import GAMSstatus
+from ..solve import solve_GAMS
 
 
 def build_simulation(config, mts_plot=None, MTSTimeStep=24):
@@ -133,7 +132,8 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     temp_config['LookAhead'] = 0
 
     # Don't use any historical reservoir level:
-    temp_config['ReservoirLevels'] = ''
+    if config['InitialFinalReservoirLevel'] != 0:
+        temp_config['ReservoirLevels'] = ''
 
     # use a LP formulation
     temp_config['SimulationType'] = 'LP clustered'
