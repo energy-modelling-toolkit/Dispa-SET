@@ -124,20 +124,20 @@ def select_units(units, config):
     return units
 
 
-def incidence_matrix(sets, set_used, parameters, param_used):
+def incidence_matrix(sets, set_used, parameters, param_used, nodes='n'):
     """
     This function generates the incidence matrix of the lines within the nodes
     A particular case is considered for the node "Rest Of the World", which is no explicitely defined in DispaSET
     """
     for i, l in enumerate(sets[set_used]):
         [from_node, to_node] = l.split('->')
-        if (from_node.strip() in sets['n']) and (to_node.strip() in sets['n']):
-            parameters[param_used]['val'][i, sets['n'].index(to_node.strip())] = 1
-            parameters[param_used]['val'][i, sets['n'].index(from_node.strip())] = -1
-        elif (from_node.strip() in sets['n']) and (to_node.strip() == 'RoW'):
-            parameters[param_used]['val'][i, sets['n'].index(from_node.strip())] = -1
-        elif (from_node.strip() == 'RoW') and (to_node.strip() in sets['n']):
-            parameters[param_used]['val'][i, sets['n'].index(to_node.strip())] = 1
+        if (from_node.strip() in sets[nodes]) and (to_node.strip() in sets[nodes]):
+            parameters[param_used]['val'][i, sets[nodes].index(to_node.strip())] = 1
+            parameters[param_used]['val'][i, sets[nodes].index(from_node.strip())] = -1
+        elif (from_node.strip() in sets[nodes]) and (to_node.strip() == 'RoW'):
+            parameters[param_used]['val'][i, sets[nodes].index(from_node.strip())] = -1
+        elif (from_node.strip() == 'RoW') and (to_node.strip() in sets[nodes]):
+            parameters[param_used]['val'][i, sets[nodes].index(to_node.strip())] = 1
         else:
             logging.error("The line " + str(
                 l) + " contains unrecognized nodes (" + from_node.strip() + ' or ' + to_node.strip() + ")")

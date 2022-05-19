@@ -13,9 +13,9 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, check
     check_FlexibleDemand, check_reserves, check_PtLDemand, check_heat, check_p2bs, check_boundary_sector
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
+from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, \
     BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep
-from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
 from .. import __version__
 from ..common import commons
 from ..misc.gdx_handler import write_variables
@@ -114,6 +114,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     else:
         PriceTransmission_raw = pd.DataFrame(index=config['idx_long'])
 
+    # Boundary Sector Interconnections:
+    if os.path.isfile(config['BoundarySectorInterconnections']):
+        BS_flows = load_time_series(config, config['BoundarySectorInterconnections']).fillna(0)
+    else:
+        logging.warning('No historical boundary sector flows will be considered (no valid file provided)')
+        BS_flows = pd.DataFrame(index=config['idx_long'])
+    if os.path.isfile(config['BoundarySectorNTC']):
+        BS_NTC = load_time_series(config, config['BoundarySectorNTC']).fillna(0)
+    else:
+        logging.warning('No boundary sector NTC values will be considered (no valid file provided)')
+        BS_NTC = pd.DataFrame(index=config['idx_long'])
+
     # Geo data
     if 'GeoData' in config and os.path.isfile(config['GeoData']):
         geo = load_geo_data(config['GeoData'], header=0)
@@ -200,8 +212,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     check_heat(config, plants_heat)
 
     # Defining the boundary sector only units:
-    plants_boundary_sector = plants[[u in commons['tech_boundary_sector'] for u in plants['Technology']]]
-    check_boundary_sector(config, plants_boundary_sector)
+    plants_bs = plants[[u in commons['tech_boundary_sector'] for u in plants['Technology']]]
+    check_boundary_sector(config, plants_bs)
 
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
@@ -224,9 +236,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     plants_all_sto = plants_all_sto.append(plants_h2)
 
     # Defining the P2BS units:
-    #TODO: Check if plants should be grouped by technology or by energy in one of the boundary sectors
+    # TODO: Check if plants should be grouped by technology or by energy in one of the boundary sectors
     plants_p2bs = plants[[u in commons['tech_p2bs'] for u in plants['Technology']]]
     check_p2bs(config, plants_p2bs)
+
+    # Define all Boundary Sector units:
+    plants_all_bs = pd.concat([plants_p2bs, plants_bs])
 
     Outages = UnitBasedTable(plants, 'Outages', config, fallbacks=['Unit', 'Technology'])
     AF = UnitBasedTable(plants, 'RenewablesAF', config, fallbacks=['Unit', 'Technology'], default=1,
@@ -271,20 +286,22 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     CostH2Slack = GenericTable(zones_h2, 'CostH2Slack', config, default=config['default']['CostH2Slack'])
 
     # Detecting boundary zones:
-    filter_bs_cols = [col for col in plants_p2bs if col.startswith('Sector')]
+    filter_bs_cols = [col for col in plants_all_bs if col.startswith('Sector')]
     zones_bs = []
-    for col in plants_p2bs[filter_bs_cols].columns:
-        tmp = plants_p2bs[col].unique().tolist()
+    for col in plants_all_bs[filter_bs_cols].columns:
+        tmp = plants_all_bs[col].unique().tolist()
         zones_bs += tmp
     zones_bs = list(set(zones_bs))
     if '' in zones_bs:
         zones_bs.remove('')
+    if np.nan in zones_bs:
+        zones_bs = [x for x in zones_bs if pd.isnull(x) == False]
 
     BoundarySectorDemand = GenericTable(zones_bs, 'BoundarySectorDemand', config, default=0)
     CostBoundarySectorSlack = GenericTable(zones_bs, 'CostBoundarySectorSlack', config,
                                            default=config['default']['CostBoundarySectorSlack'])
 
-
+    BoundarySector = BoundarySector.reindex(zones_bs)
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
         plants_all_sto.set_index(plants_all_sto.loc[:, 'Unit'], inplace=True, drop=True)
@@ -328,6 +345,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # Interconnections:
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], NTC, flows)
 
+    # Boundary Sector Interconnections:
+    [BSInterconnections_sim, BSInterconnections_RoW, BSInterconnections] = interconnections(zones_bs, BS_NTC, BS_flows)
+
     if len(Interconnections_sim.columns) > 0:
         NTCs = Interconnections_sim.reindex(config['idx_long'])
     else:
@@ -342,6 +362,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
             if config['default']['PriceTransmission'] > 0:
                 logging.warning('No detailed values were found the transmission prices of line ' + l +
                                 '. Using default value ' + str(config['default']['PriceTransmission']))
+
+    if len(BSInterconnections_sim.columns) > 0:
+        BS_NTCs = BSInterconnections_sim.reindex(config['idx_long'])
+    else:
+        BS_NTCs = pd.DataFrame(index=config['idx_long'])
+    BS_Inter_RoW = BSInterconnections_RoW.reindex(config['idx_long'])
 
     # Clustering of the plants:
     Plants_merged, mapping = clustering(plants, method=config['SimulationType'])
@@ -504,6 +530,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     finalTS = {'Load': Load, 'Reserve2D': reserve_2D_tot, 'Reserve2U': reserve_2U_tot,
                'Efficiencies': Efficiencies,
                'NTCs': NTCs, 'Inter_RoW': Inter_RoW,
+               'BS_NTCs': BS_NTCs, 'BS_Inter_RoW': BS_Inter_RoW,
                'EfficienciesBoundarySector': BoundarySectorEfficiencies['Efficiency'],
                'ChargingEfficienciesBoundarySector': BoundarySectorEfficiencies['ChargingEfficiency'],
                'LoadShedding': LoadShedding, 'CostLoadShedding': CostLoadShedding, 'CostCurtailment': CostCurtailment,
@@ -566,6 +593,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets['n_bs'] = zones_bs
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
+    sets['l_bs'] = BSInterconnections
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
@@ -621,10 +649,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['EmissionRate'] = ['au', 'p']
     sets_param['FlowMaximum'] = ['l', 'h']
     sets_param['FlowMinimum'] = ['l', 'h']
+    sets_param['FlowBSMaximum'] = ['l_bs', 'h']
+    sets_param['FlowBSMinimum'] = ['l_bs', 'h']
     sets_param['Fuel'] = ['au', 'f']
     sets_param['HeatDemand'] = ['n_th', 'h']
     sets_param['BoundarySectorDemand'] = ['n_bs', 'h']
     sets_param['LineNode'] = ['l', 'n']
+    sets_param['BSLineNode'] = ['l_bs', 'n_bs']
     sets_param['LoadShedding'] = ['n', 'h']
     sets_param['Location'] = ['au', 'n']
     sets_param['Location_th'] = ['au', 'n_th']
@@ -892,6 +923,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
 
+    # Maximum Boundary Sector Line Capacity
+    for i, l_bs in enumerate(sets['l_bs']):
+        if l_bs in BS_NTCs.columns:
+            parameters['FlowBSMaximum']['val'][i, :] = finalTS['BS_NTCs'][l_bs]
+        if l_bs in BS_Inter_RoW.columns:
+            parameters['FlowBSMaximum']['val'][i, :] = finalTS['BS_Inter_RoW'][l_bs]
+            parameters['FlowBSMinimum']['val'][i, :] = finalTS['BS_Inter_RoW'][l_bs]
+
+    # Check values:
+    check_MinMaxFlows(parameters['FlowBSMinimum']['val'], parameters['FlowBSMaximum']['val'])
+
+    parameters['BSLineNode'] = incidence_matrix(sets, 'l_bs', parameters, 'BSLineNode', nodes='n_bs')
+
     # Outage Factors
     if len(finalTS['Outages'].columns) != 0:
         for i, u in enumerate(sets['au']):
@@ -932,8 +976,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         parameters['Location_th']['val'][:, i] = (Plants_merged['Zone_th'] == zones_th[i]).values
     for i in range(len(sets['n_h2'])):
         parameters['Location_h2']['val'][:, i] = (Plants_merged['Zone_h2'] == zones_h2[i]).values
+
+    sectors = [col for col in plants if col.startswith('Sector')]
     for i in range(len(sets['n_bs'])):
-        parameters['Location_bs']['val'][:, i] = (Plants_merged['Sector1'] == zones_bs[i]).values
+        for s in sectors:
+            # parameters['Location_bs']['val'][:, i] = (Plants_merged[s] == zones_bs[i]).values
+            parameters['Location_bs']['val'][:, i] = np.logical_or(parameters['Location_bs']['val'][:, i],
+                                                                   (Plants_merged[s] == zones_bs[i]).values)
 
     # CHPType parameter:
     sets['chp_type'] = ['Extraction', 'Back-Pressure', 'P2H']

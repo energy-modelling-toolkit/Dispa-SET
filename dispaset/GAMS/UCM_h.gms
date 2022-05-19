@@ -129,10 +129,13 @@ EmissionMaximum(n,p)                        [tP]            Emission limit
 EmissionRate(au,p)                          [tP\MWh]        P emission rate
 FlowMaximum(l,h)                            [MW]            Line limits
 FlowMinimum(l,h)                            [MW]            Minimum flow
+FlowBSMaximum(l_bs,h)                       [MW]            Boundary sector line limits
+FlowBSMinimum(l_bs,h)                       [MW]            Boundary sector line minimum flow
 Fuel(u,f)                                   [n.a.]          Fuel type {1 0}
 HeatDemand(n_th,h)                          [MWh\u]         Heat demand profile for chp units
 BoundarySectorDemand(n_bs,h)                [MWh\n_bs]      Demand profile in boundary sectors
 LineNode(l,n)                               [n.a.]          Incidence matrix {-1 +1}
+BSLineNode(l_bs,n_bs)                       [n.a.]          Incidence matrix {-1 +1}
 LoadShedding(n,h)                           [MW]            Load shedding capacity
 Location(au,n)                              [n.a.]          Location {1 0}
 Location_th(au,n_th)                        [n.a.]          Location {1 0}
@@ -211,6 +214,7 @@ $LOAD n_th
 $LOAD n_h2
 $LOAD n_bs
 $LOAD l
+$LOAD l_bs
 $LOAD au
 $LOAD u
 $LOAD t
@@ -255,9 +259,12 @@ $LOAD EmissionMaximum
 $LOAD EmissionRate
 $LOAD FlowMaximum
 $LOAD FlowMinimum
+$LOAD FlowBSMaximum
+$LOAD FlowBSMinimum
 $LOAD Fuel
 $LOAD HeatDemand
 $LOAD LineNode
+$LOAD BSLineNode
 $LOAD LoadShedding
 $LOAD Location
 $LOAD Location_th
@@ -310,6 +317,7 @@ n_th,
 n_h2,
 n_bs,
 l,
+l_bs,
 u,
 t,
 tr,
@@ -343,9 +351,12 @@ EmissionMaximum,
 EmissionRate,
 FlowMaximum,
 FlowMinimum,
+FlowBSMaximum,
+FlowBSMinimum,
 Fuel,
 HeatDemand,
 LineNode,
+BSLineNode,
 Location,
 Location_th,
 Location_h2,
@@ -412,6 +423,7 @@ CurtailedPower(n,h)                 [MW]    Curtailed power at node n
 CurtailedHeat(n_th,h)               [MW]    Curtailed heat at node n_th
 CurtailedH2(n_h2,h)                 [MW]    Curtailed hydrogen at node n_h2
 Flow(l,h)                           [MW]    Flow through lines
+FlowBS(l_bs,h)                      [MW]    Flow through boundary sector lines
 Power(au,h)                         [MW]    Power output
 PowerConsumption(au,h)              [MW]    Power consumption by P2X units
 PowerMaximum(u,h)                   [MW]    Power output
@@ -563,6 +575,8 @@ EQ_SystemCost
 EQ_Emission_limits
 EQ_Flow_limits_lower
 EQ_Flow_limits_upper
+EQ_BS_Flow_limits_lower
+EQ_BS_Flow_limits_upper
 EQ_Force_Commitment
 EQ_Force_DeCommitment
 EQ_LoadShedding
@@ -1046,6 +1060,20 @@ EQ_Flow_limits_upper(l,i)..
          FlowMaximum(l,i)
 ;
 
+*Boundary Sector Flows are above minimum values
+EQ_BS_Flow_limits_lower(l_bs,i)..
+         FlowBSMinimum(l_bs,i)
+         =L=
+         FlowBS(l_bs,i)
+;
+
+*Boundary Sector Flows are below maximum values
+EQ_BS_Flow_limits_upper(l_bs,i)..
+         FlowBS(l_bs,i)
+         =L=
+         FlowBSMaximum(l_bs,i)
+;
+
 *Force Unit commitment/decommitment:
 * E.g: renewable units with AF>0 must be committed
 EQ_Force_Commitment(u,i)$((sum(tr,Technology(u,tr))>=1 and LoadMaximum(u,i)>0))..
@@ -1114,8 +1142,8 @@ EQ_Max_Power_Consumption(au,i)..
 EQ_Power_Balance_of_BS_units(n_bs,p2bs,i)..
          PowerBoundarySector(n_bs,p2bs,i)
          =E=
-         PowerConsumption(p2bs,i) * ChargingEfficiencyBoundarySector(n_bs,p2bs,i)
-         + Power(p2bs,i) / (EfficiencyBoundarySector(n_bs,p2bs,i)+0.0001)
+         PowerConsumption(p2bs,i) * ChargingEfficiencyBoundarySector(n_bs,p2bs,i) * Location_bs(p2bs,n_bs)
+         + Power(p2bs,i) / (EfficiencyBoundarySector(n_bs,p2bs,i)+0.0001) * Location_bs(p2bs,n_bs)
 ;
 
 EQ_Max_Power_Consumption_of_BS_units(p2bs,i)..
@@ -1150,6 +1178,7 @@ EQ_BS_Demand_balance(n_bs,i)..
         sum(p2bs, PowerBoundarySector(n_bs,p2bs,i))
         + sum(bsu, PowerBoundarySector(n_bs,bsu,i))
         + BoundarySectorSlack(n_bs,i)
+        + sum(l_bs,FlowBS(l_bs,i)*BSLineNode(l_bs,n_bs))
         =E=
         BoundarySectorDemand(n_bs,i)
         + BoundarySectorStorageInput(n_bs,i)
@@ -1307,6 +1336,8 @@ EQ_SystemCost,
 *EQ_Emission_limits,
 EQ_Flow_limits_lower,
 EQ_Flow_limits_upper,
+EQ_BS_Flow_limits_lower,
+EQ_BS_Flow_limits_upper,
 *$If not %MTS% == 1 EQ_Force_Commitment,
 *$If not %MTS% == 1 EQ_Force_DeCommitment,
 EQ_LoadShedding,
@@ -1426,6 +1457,7 @@ $If %Verbose% == 1 Display Flow.L,Power.L,ShedLoad.L,CurtailedPower.L,CurtailedH
 PARAMETER
 OutputCommitted(au,h)
 OutputFlow(l,h)
+OutputFlowBoundarySector(l_bs,h)
 OutputPower(au,h)
 OutputPowerBoundarySector(n_bs,au,h)
 OutputPowerConsumption(au,h)
@@ -1489,6 +1521,7 @@ OutputOptimizationError(h)
 
 OutputCommitted(au,z)=Committed.L(au,z);
 OutputFlow(l,z)=Flow.L(l,z);
+OutputFlowBoundarySector(l_bs,z)=FlowBS.L(l_bs,z);
 OutputPower(au,z)=Power.L(au,z);
 OutputPowerBoundarySector(n_bs,au,z)=PowerBoundarySector.L(n_bs,au,z);
 OutputPowerConsumption(au,z)=PowerConsumption.L(au,z);
@@ -1575,6 +1608,7 @@ OutputOptimizationError(z) = OptimizationError.L(z);
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
 OutputFlow,
+OutputFlowBoundarySector,
 OutputPower,
 OutputPowerBoundarySector,
 OutputPowerConsumption,

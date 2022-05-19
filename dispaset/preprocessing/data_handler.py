@@ -674,6 +674,8 @@ def load_config_excel(ConfigFile, AbsPath=True):
         # Also include boundary sector data
         PathParameters['BoundarySectorDemand'] = 140
         PathParameters['BoundarySectorData'] = 141
+        PathParameters['BoundarySectorNTC'] = 142
+        PathParameters['BoundarySectorInterconnections'] = 143
         PathParameters['CostBoundarySectorSlack'] = 172
         default['CostBoundarySectorSlack'] = 172
 
