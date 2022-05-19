@@ -5,11 +5,12 @@ data
 __author__ = 'Sylvain Quoilin (sylvain.quoilin@ec.europa.eu)'
 """
 
+import logging
 import os
 import sys
+
 import numpy as np
 import pandas as pd
-import logging
 from pandas.api.types import is_numeric_dtype
 
 from ..common import commons  # Load fuel types, technologies, timestep, etc
@@ -679,6 +680,16 @@ def check_PtLDemand(parameters, config):
     for i, u in enumerate(parameters['MaxCapacityPtL']['val']):
         TotDemand = parameters['PtLDemandInput']['val'][i, :].sum() * config['SimulationTimeStep']
         MaxProduction = parameters['MaxCapacityPtL']['val'][i] * len(parameters['PtLDemandInput']['val'][i, :]) * \
+                        config['SimulationTimeStep']
+        if TotDemand > MaxProduction:
+            logging.error('Unit ' + u + ' has a higher PtL demand than what the PtL capacity can provide')
+            sys.exit(1)
+
+
+def check_BSFlexDemand(parameters, config):
+    for i, u in enumerate(parameters['BSFlexMaxCapacity']['val']):
+        TotDemand = parameters['BSFlexDemandInput']['val'][i, :].sum() * config['SimulationTimeStep']
+        MaxProduction = parameters['BSFlexMaxCapacity']['val'][i] * len(parameters['BSFlexDemandInput']['val'][i, :]) * \
                         config['SimulationTimeStep']
         if TotDemand > MaxProduction:
             logging.error('Unit ' + u + ' has a higher PtL demand than what the PtL capacity can provide')

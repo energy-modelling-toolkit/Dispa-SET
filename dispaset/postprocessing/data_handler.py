@@ -164,7 +164,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
                    'OutputBoundarySectorSlack', 'OutputPowerBoundarySector', 'OutputBoundarySectorStorageLevel',
                    'OutputBoundarySectorStorageInput', 'OutputBoundarySectorStorageShadowPrice',
                    'BoundarySectorShadowPrice', 'OutputBoundarySectorSlack', 'OutputBoundarySectorStorageSlack',
-                   'OutputResidualLoad']
+                   'OutputBSFlexDemand', 'OutputResidualLoad']
 
     # Setting the proper index to the result dataframes:
     from itertools import chain

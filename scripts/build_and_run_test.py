@@ -24,8 +24,8 @@ config = ds.load_config('../ConfigFiles/ConfigTestBoundarySector.xlsx')
 # config = ds.load_config('../ConfigFiles/ConfigTest.xlsx')
 
 # Limit the simulation period (for testing purposes, comment the line to run the whole year)
-# config['StartDate'] = (2016, 1, 1, 0, 0, 0)
-# config['StopDate'] = (2016, 1, 7, 0, 0, 0)
+config['StartDate'] = (2015, 1, 1, 0, 0, 0)
+config['StopDate'] = (2015, 5, 31, 0, 0, 0)
 
 # Build the simulation environment:
 SimData = ds.build_simulation(config)

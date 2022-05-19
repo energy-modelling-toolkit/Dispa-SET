@@ -170,6 +170,8 @@ TimeDownMinimum(au)                         [h]             Minimum down time
 TimeUpMinimum(au)                           [h]             Minimum up time
 PtLDemandInput(n_h2,h)                      [MWh]           Demand of H2 for PtL at each timestep (useless for MTS)
 MaxCapacityPtL(n_h2)                        [MW]            Max capacity of PtL
+BSFlexDemandInput(n_bs,h)                   [MWh]           Flexible demand inside BS at each timestep (unless for MTS)
+BSFlexMaxCapacity(n_bs)                     [MW]            Max capacity for BS Flexible demand
 $If %RetrieveStatus%==1 CommittedCalc(u,z)  [n.a.]          Committment status as for the MILP
 Nunits(au)                                  [n.a.]          Number of units inside the cluster (upper bound value for integer variables)
 K_QuickStart(n)                             [n.a.]          Part of the reserve that can be provided by offline quickstart units
@@ -299,6 +301,8 @@ $LOAD CostRampDown
 $LOAD PtLDemandInput
 $LOAD MaxCapacityPtL
 $LOAD H2Demand
+$LOAD BSFlexDemandInput
+$LOAD BSFlexMaxCapacity
 $LOAD BoundarySectorStorageCapacity
 $LOAD BoundarySectorStorageSelfDischarge
 $LOAD BoundarySectorStorageMinimum
@@ -388,6 +392,8 @@ TimeDownMinimum,
 TimeUpMinimum,
 PtLDemandInput,
 MaxCapacityPtL,
+BSFlexDemandInput,
+BSFlexMaxCapacity,
 BoundarySectorStorageCapacity,
 BoundarySectorStorageSelfDischarge,
 BoundarySectorStorageMinimum,
@@ -455,6 +461,7 @@ BoundarySectorWaterSlack(n_bs)      [MWh]   Unsatisfied boundary sector water le
 BoundarySectorStorageSlack(n_bs,h)  [MWh]   Unsatisfied boundary sector storage level constraint at end of simulation timestep
 H2Output(au,h)                      [MWh]   H2 output from H2 storage to fulfill demand
 PtLDemand(n_h2,h)                   [MW]    Demand of H2 for PtL at each time step for each n_h2 node
+BSFlexDemand(n_bs,h)                [MW]    FLexible boundary sector demand at each time step of each n_bs node
 ;
 
 free variable
@@ -588,6 +595,9 @@ EQ_No_Flexible_Demand
 EQ_Tot_DemandPtL
 EQ_Max_Capacity_PtL
 EQ_PtL_Demand
+EQ_Tot_Flex_Demand_BS
+EQ_Max_Flex_Capacity_BS
+EQ_BS_Flex_Demand
 EQ_Curtailed_Power
 EQ_Residual_Load
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
@@ -1181,6 +1191,7 @@ EQ_BS_Demand_balance(n_bs,i)..
         + sum(l_bs,FlowBS(l_bs,i)*BSLineNode(l_bs,n_bs))
         =E=
         BoundarySectorDemand(n_bs,i)
+        + BSFlexDemand(n_bs,i)
         + BoundarySectorStorageInput(n_bs,i)
 ;
 
@@ -1264,6 +1275,28 @@ EQ_PtL_Demand(n_h2,i)..
          PtLDemand(n_h2,i)
          =E=
          PtLDemandInput(n_h2,i)
+;
+
+* Equations concerning boundary sector (PtL) flexible demand
+* If MTS=1: assures that total demand of boundary sector (PtL) is fulfilled
+EQ_Tot_Flex_Demand_BS(n_bs)..
+         sum(i,BSFlexDemandInput(n_bs,i))
+         =E=
+         sum(i,BSFlexDemand(n_bs,i))
+;
+
+* Capacity of boundary sector (PtL) must not be exceeded
+EQ_Max_Flex_Capacity_BS(n_bs,i)..
+         BSFlexDemand(n_bs,i)
+         =L=
+         BSFlexMaxCapacity(n_bs)
+;
+
+* If MTS = 0: Boundary sector (PtL) demand is not a variable anymore, but a parameter
+EQ_BS_Flex_Demand(n_bs,i)..
+         BSFlexDemand(n_bs,i)
+         =E=
+         BSFlexDemandInput(n_bs,i)
 ;
 
 *===============================================================================
@@ -1350,6 +1383,9 @@ EQ_Flexible_Demand_Modulation_Max,
 $If %MTS% == 1 EQ_Tot_DemandPtL,
 $If %MTS% == 1 EQ_Max_Capacity_PtL,
 $If %MTS% == 0 EQ_PtL_Demand,
+$If %MTS% == 1 EQ_Tot_Flex_Demand_BS,
+$If %MTS% == 1 EQ_Max_Flex_Capacity_BS,
+$If %MTS% == 0 EQ_BS_Flex_Demand,
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 /
 ;
@@ -1496,6 +1532,7 @@ LostLoad_WaterSlack(au)
 LostLoad_BoundarySectorWaterSlack(n_bs)
 StorageShadowPrice(au,h)
 OutputPtLDemand(n_h2,h)
+OutputBSFlexDemand(n_bs,h)
 OutputPowerMustRun(u,h)
 $If %MTS%==0 OutputCostStartUpH(u,h)
 $If %MTS%==0 OutputCostShutDownH(u,h)
@@ -1562,6 +1599,7 @@ LostLoad_WaterSlack(au) = WaterSlack.L(au);
 LostLoad_BoundarySectorWaterSlack(n_bs) = BoundarySectorWaterSlack.L(n_bs);
 StorageShadowPrice(s,z) = 0 ;
 OutputPtLDemand(n_h2,z) = PtLDemand.L(n_h2,z);
+OutputBSFlexDemand(n_bs,z) = BSFlexDemand.L(n_bs,z);
 StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
 StorageShadowPrice(p2h2,z) = EQ_Storage_balance.m(p2h2,z);
 StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
@@ -1647,6 +1685,7 @@ LostLoad_WaterSlack,
 LostLoad_BoundarySectorWaterSlack,
 StorageShadowPrice,
 OutputPtLDemand,
+OutputBSFlexDemand,
 OutputH2Output,
 H2ShadowPrice,
 BoundarySectorShadowPrice,
