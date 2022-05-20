@@ -874,3 +874,51 @@ def adjust_capacity(inputs, tech_fuel, scaling=1, value=None, singleunit=False, 
             shutil.copy('Inputs.gdx', dest_path + '/')
             os.remove('Inputs.gdx')
     return SimData
+
+def adjust_ntc(inputs, value=None, write_gdx=False, dest_path=''):
+    """
+    Function used to modify the net transfer capacities in the Dispa-SET generated input data
+    The function update the Inputs.p file in the simulation directory at each call
+
+    :param inputs:      Input data dictionary OR path to the simulation directory containing Inputs.p
+    :param value:       Absolute value of the desired capacity (! Applied only if scaling != 1 !)
+    :param write_gdx:   boolean defining if Inputs.gdx should be also overwritten with the new data
+    :param dest_path:   Simulation environment path to write the new input data. If unspecified, no data is written!
+    :return:            New SimData dictionary
+    @author: Carla Vidal
+    """
+    import pickle
+
+    if isinstance(inputs, str):
+        path = inputs
+        inputfile = path + '/Inputs.p'
+        if not os.path.exists(path):
+            sys.exit('Path + "' + path + '" not found')
+        with open(inputfile, 'rb') as f:
+            SimData = pickle.load(f)
+    elif isinstance(inputs, dict):
+        SimData = inputs
+        path = SimData['config']['SimulationDirectory']
+    else:
+        logging.error('The input data must be either a dictionary or string containing a valid directory')
+        sys.exit(1)
+
+    if value is not None:
+        SimData['parameters']['FlowMaximum']=SimData['parameters']['FlowMaximum'] * value
+    else:
+        pass
+
+    if dest_path == '':
+        logging.info('Not writing any input data to the disk')
+    else:
+        if not os.path.isdir(dest_path):
+            shutil.copytree(path, dest_path)
+            logging.info('Created simulation environment directory ' + dest_path)
+        logging.info('Writing input files to ' + dest_path)
+        with open(os.path.join(dest_path, 'Inputs.p'), 'wb') as pfile:
+            pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
+        if write_gdx:
+            write_variables(SimData['config'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
+            shutil.copy('Inputs.gdx', dest_path + '/')
+            os.remove('Inputs.gdx')
+    return SimData
