@@ -33,11 +33,11 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'ShadowPrice': ('n', 'h'),
             'StorageShadowPrice': ('u', 'h'),
             'LostLoad_WaterSlack': ('u'),
-            'OutputH2Output': ('u', 'h'),
+            # 'OutputH2Output': ('u', 'h'),
             'OutputStorageSlack': ('u', 'h'),
-            'OutputPtLDemand': ('u', 'h'),
+            # 'OutputPtLDemand': ('u', 'h'),
             'HeatShadowPrice': ('n_th', 'h'),
-            'H2ShadowPrice': ('u', 'h'),
+            # 'H2ShadowPrice': ('u', 'h'),
             'ShadowPrice_2U': ('u', 'h'),
             'ShadowPrice_2D': ('u', 'h'),
             'ShadowPrice_3U': ('u', 'h'),
@@ -157,10 +157,10 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     keys_sparse = ['OutputPower', 'OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted',
                    'OutputCurtailedPower', 'OutputFlow', 'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel',
                    'OutputStorageInput', 'OutputHeat', 'OutputHeatSlack', 'OutputDemandModulation',
-                   'OutputStorageSlack', 'OutputPtLDemand', 'OutputH2Output', 'OutputPowerMustRun',
+                   'OutputStorageSlack', 'OutputPowerMustRun',
                    'OutputReserve_2U', 'OutputReserve_2D', 'OutputReserve_3U', 'ShadowPrice_RampUp_TC',
                    'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown', 'HeatShadowPrice',
-                   'H2ShadowPrice', 'OutputCurtailedHeat', 'OutputEmissions', 'CapacityMargin',
+                   'OutputCurtailedHeat', 'OutputEmissions', 'CapacityMargin',
                    'OutputBoundarySectorSlack', 'OutputPowerBoundarySector', 'OutputBoundarySectorStorageLevel',
                    'OutputBoundarySectorStorageInput', 'OutputBoundarySectorStorageShadowPrice',
                    'BoundarySectorShadowPrice', 'OutputBoundarySectorSlack', 'OutputBoundarySectorStorageSlack',
@@ -185,6 +185,8 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
             results[key] = pd.DataFrame(index=index)
         if isinstance(results[key], type(pd.DataFrame())):
             results[key] = results[key].reindex(sorted(results[key].columns), axis=1)
+        if key in ['OutputPowerBoundarySector']:
+            results[key] = results[key].loc[:, (results[key] != 0).any(axis=0)]
 
     # Include water slack in the results (only one number)
     if 'LostLoad_WaterSlack' in results:
@@ -196,7 +198,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     else:
         results['LostLoad_BoundarySectorWaterSlack'] = 0
 
-    # Clean power plant names:
+        # Clean power plant names:
     results['OutputPower'].columns = clean_strings(results['OutputPower'].columns.tolist())
     # Remove epsilons:
     if 'ShadowPrice' in results:
@@ -206,7 +208,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
         results['ShadowPrice_2U'][results['ShadowPrice_2U'] >= 1e300] = 0
         results['ShadowPrice_3U'][results['ShadowPrice_3U'] >= 1e300] = 0
         results['HeatShadowPrice'][results['HeatShadowPrice'] >= 1e300] = 0
-        results['H2ShadowPrice'][results['H2ShadowPrice'] >= 1e300] = 0
+        # results['H2ShadowPrice'][results['H2ShadowPrice'] >= 1e300] = 0
 
     status = {}
     if "model" in results['status']:

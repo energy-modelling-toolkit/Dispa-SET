@@ -766,13 +766,13 @@ def plot_storage_levels(inputs, results, z):
     """
     BATS_unit = [u for u in inputs['units'].index if
                  (inputs['units'].loc[u, 'Zone'] == z and inputs['units'].loc[u, 'Technology'] == 'BATS')]
-    H2_unit = [u for u in inputs['units'].index if
-               inputs['units'].loc[u, 'Zone'] == z and inputs['units'].loc[u, 'Technology'] == 'P2GS']
+    # H2_unit = [u for u in inputs['units'].index if
+    #            inputs['units'].loc[u, 'Zone'] == z and inputs['units'].loc[u, 'Technology'] == 'P2GS']
     HDAM_unit = [u for u in inputs['units'].index if
                  inputs['units'].loc[u, 'Zone'] == z and inputs['units'].loc[u, 'Technology'] == 'HDAM']
 
     BATS_level = results['OutputStorageLevel'][BATS_unit]
-    H2_level = results['OutputStorageLevel'][H2_unit]
+    # H2_level = results['OutputStorageLevel'][H2_unit]
     HDAM_level = results['OutputStorageLevel'][HDAM_unit]
 
     # plot
@@ -784,8 +784,8 @@ def plot_storage_levels(inputs, results, z):
     ax.set_ylabel('SOC - BATS [%]')
     ax.set_xlim(0, len(index_plot))
 
-    ax1.fill_between(index_plot, 0, H2_level.iloc[:, 0], color='#A0522D')
-    ax1.set_ylabel('SOC - H2[%]')
+    # ax1.fill_between(index_plot, 0, H2_level.iloc[:, 0], color='#A0522D')
+    # ax1.set_ylabel('SOC - H2[%]')
 
     ax2.fill_between(index_plot, 0, HDAM_level.iloc[:, 0], color='#00a0e1ff')
     ax2.set_ylabel('SOC - HDAM [%]')

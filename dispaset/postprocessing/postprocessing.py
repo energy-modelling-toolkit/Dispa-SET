@@ -530,7 +530,6 @@ def CostExPost(inputs, results):
              +sum(l,PriceTransmission(l,i)*Flow(l,i))
              +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i))
              +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
-             +sum(p2h2, CostH2Slack(p2h2,i) * StorageSlack(p2h2,i))
              +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
              +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
              +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
@@ -629,11 +628,11 @@ def CostExPost(inputs, results):
             CostHeat[u] = dfin['CostVariable'][u].fillna(0) * results['OutputHeat'][u].fillna(0)
     costs['CostHeat'] = CostHeat.sum(axis=1).fillna(0)
 
-    # %% Cost H2:
-    CostH2 = pd.DataFrame(index=costs.index, columns=dfin['CostH2Slack'].columns)
-    for u in dfin['CostH2Slack'].columns:
-        CostH2[u] = dfin['CostH2Slack'][u].fillna(0) * results['OutputStorageSlack'][u].fillna(0)
-    costs['CostH2Slack'] = CostH2.fillna(0).sum(axis=1)
+    # # %% Cost H2:
+    # CostH2 = pd.DataFrame(index=costs.index, columns=dfin['CostH2Slack'].columns)
+    # for u in dfin['CostH2Slack'].columns:
+    #     CostH2[u] = dfin['CostH2Slack'][u].fillna(0) * results['OutputStorageSlack'][u].fillna(0)
+    # costs['CostH2Slack'] = CostH2.fillna(0).sum(axis=1)
 
     # %% Lost loads:
     # NB: the value of lost load is currently hard coded. This will have to be updated

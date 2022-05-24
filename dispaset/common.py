@@ -28,10 +28,11 @@ commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
 # List of power to heat technologies:
 commons['tech_p2ht'] = ['P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
-# List of power to h2 technologies
-commons['tech_p2h2'] = ['P2GS', 'ALKE', 'PEME', 'SOXE']
+# # List of power to h2 technologies
+# commons['tech_p2h2'] = ['P2GS', 'ALKE', 'PEME', 'SOXE']
 # List of power to boundary sector technologies
-commons['tech_p2bs'] = ['P2GS', 'ALKE', 'PEME', 'SOXE', 'P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE', 'P2BS']
+commons['tech_p2bs'] = ['P2GS', 'ALKE', 'PEME', 'SOXE', 'P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE', 'P2BS', 'PEFC',
+                        'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC']
 # List of heat only technologies:
 commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
 # List of noundary sector only technologies:
@@ -137,13 +138,12 @@ commons['PathParameters'] = {
     'HeatDemand': 134, 'Temperatures': 135,
     # Geo data
     'GeoData': 136,
-    # Hydrogen data
-    'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
+    # # Hydrogen data
+    # 'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
     # Reserves input data
     'Reserve2U': 160, 'Reserve2D': 161,
     # Other costs related data
-    'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169,
-    'CostH2Slack': 170, 'CostCurtailment': 171,
+    'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostCurtailment': 171,
     # Fuel price related data
     'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
     'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187
@@ -158,8 +158,7 @@ commons['default'] = {
     'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
     'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187,
     # Other price defaults
-    'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169,
-    'CostH2Slack': 170, 'CostCurtailment': 171,
+    'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostCurtailment': 171,
     # Optimization and infeasibility cost data
     'ShareOfFlexibleDemand': 125, 'LoadShedding': 129,
     'DemandFlexibility': 162, 'ShareOfQuickStartUnits': 163,

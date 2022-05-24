@@ -374,9 +374,9 @@ def group_plants(plants, method, df_grouped=False, group_list=None):
 
     """
     # Definition of the merged power plants dataframe:
-    if (group_list is None) and ((plants['Zone_th'] != np.nan).all()) and ((plants['Zone_h2'] != np.nan).all()):
-        group_list = ['Zone', 'Zone_th', 'Zone_h2', 'Technology', 'Fuel', 'CHPType']
-    elif (group_list is None) and ((plants['Zone_th'] != np.nan).all()):
+    # if (group_list is None) and ((plants['Zone_th'] != np.nan).all()) and ((plants['Zone_h2'] != np.nan).all()):
+    #     group_list = ['Zone', 'Zone_th', 'Zone_h2', 'Technology', 'Fuel', 'CHPType']
+    if (group_list is None) and ((plants['Zone_th'] != np.nan).all()):
         group_list = ['Zone', 'Zone_th', 'Technology', 'Fuel', 'CHPType']
     else:
         group_list = ['Zone', 'Technology', 'Fuel', 'CHPType']

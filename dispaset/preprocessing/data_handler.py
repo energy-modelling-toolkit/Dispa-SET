@@ -17,8 +17,8 @@ DEFAULTS = {'ReservoirLevelInitial': 0.5, 'ReservoirLevelFinal': 0.5, 'ValueOfLo
             'PriceOfSpillage': 1, 'WaterValue': 100, 'ShareOfQuickStartUnits': 0.5, 'PriceOfAmmonia': 0,
             'PriceOfNuclear': 0, 'PriceOfBlackCoal': 0, 'PriceOfGas': 0, 'PriceOfFuelOil': 0, 'PriceOfBiomass': 0,
             'PriceOfCO2': 0, 'PriceOfLignite': 0, 'PriceOfPeat': 0, 'LoadShedding': 0, 'CostHeatSlack': 0,
-            'CostLoadShedding': 100, 'ShareOfFlexibleDemand': 0, 'DemandFlexibility': 0, 'PriceTransmission': 0,
-            'CostH2Slack': 75}
+            'CostLoadShedding': 100, 'ShareOfFlexibleDemand': 0, 'DemandFlexibility': 0, 'PriceTransmission': 0
+            }
 
 
 def NodeBasedTable(varname, config, default=None):
@@ -402,7 +402,7 @@ def load_time_series(config, path, header='infer'):
                                                                                    'allow guessing its timestamps. Please use a 8760 elements time series')
             sys.exit(1)
 
-    if data.index.is_all_dates:
+    if data.index.inferred_type == 'datetime64':
         data.index = data.index.tz_localize(None)  # removing locational data
         main_year = data.groupby(data.index.year).size()
         year = int(main_year[main_year >= 8759].index.values)
@@ -672,14 +672,14 @@ def load_config_excel(ConfigFile, AbsPath=True):
         default = commons['default']
 
         # Also include boundary sector data
-        PathParameters['BoundarySectorDemand'] = 140
-        PathParameters['BoundarySectorData'] = 141
-        PathParameters['BoundarySectorNTC'] = 142
-        PathParameters['BoundarySectorInterconnections'] = 143
-        PathParameters['BSFlexibleDemand'] = 144
-        PathParameters['BSFlexibleCapacity'] = 145
-        PathParameters['CostBoundarySectorSlack'] = 172
-        default['CostBoundarySectorSlack'] = 172
+        PathParameters['BoundarySectorDemand'] = 137
+        PathParameters['BoundarySectorData'] = 138
+        PathParameters['BoundarySectorNTC'] = 139
+        PathParameters['BoundarySectorInterconnections'] = 140
+        PathParameters['BSFlexibleDemand'] = 141
+        PathParameters['BSFlexibleCapacity'] = 142
+        PathParameters['CostBoundarySectorSlack'] = 170
+        default['CostBoundarySectorSlack'] = 170
 
         for p in StdParameters:
             config[p] = sheet.cell_value(StdParameters[p], 2)
