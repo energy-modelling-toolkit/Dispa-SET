@@ -328,7 +328,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         #     PtLDemand = PtLDemand.resample(pd_timestep(config['SimulationTimeStep'])).pad()
         #     PtLDemand = PtLDemand.iloc[0:len(idx_long), :]
         if config['BSFlexibleDemand'] != '':
-            BSFlexDemand = BSFlexDemand.resample(pd_timestep(config['SimulationTimeStep'])).pad()
+            BSFlexDemand = BSFlexDemand.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
             BSFlexDemand = BSFlexDemand.iloc[0:len(idx_long), :]
     pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'], "temp_profiles.p"), "wb"))
     # if config['H2FlexibleDemand'] != '':

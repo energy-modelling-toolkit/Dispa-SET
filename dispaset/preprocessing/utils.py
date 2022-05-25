@@ -383,7 +383,7 @@ def group_plants(plants, method, df_grouped=False, group_list=None):
     plants_merged = pd.DataFrame(columns=plants.columns)
     grouped = plants.groupby(group_list, as_index=False)
     agg_dict = create_agg_dict(plants, method=method)
-    plants_merged = plants_merged.append(grouped.agg(agg_dict))
+    plants_merged = pd.concat([plants_merged, grouped.agg(agg_dict)])
     if method == "Integer clustering":
         plants_merged['StartUpCost'] = plants_merged['StartUpCost'] / plants_merged['Nunits']
         plants_merged['NoLoadCost'] = plants_merged['NoLoadCost'] / plants_merged['Nunits']
