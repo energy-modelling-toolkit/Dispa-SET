@@ -680,7 +680,7 @@ EQ_RampUp_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
 * ramp down constraints
 EQ_RampDown_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
          Power(u,i)
-         + (Committed(u,i) - StartUp(u,i)) * RampDownMaximum(u) * TimeStep
+         + (Committed(u,i) - ShutDown(u,i)) * RampDownMaximum(u) * TimeStep
          + RampShutDownMaximumH(u,i) * TimeStep * ShutDown(u,i)
          + LL_RampDown(u,i)
          =G=
@@ -781,7 +781,7 @@ EQ_No_Flexible_Demand(n,i)..
 
 *Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(n,i)..
-         sum((au),Reserve_2U(au,i)*Reserve(au)*Location(au,n))
+         sum((au),Reserve_2U(au,i)*Reserve(au)*Location(au,n)) + CurtailedPower(n,i)
          =E=
          +Demand("2U",n,i)*(1-K_QuickStart(n))
          -LL_2U(n,i)
@@ -789,7 +789,7 @@ EQ_Demand_balance_2U(n,i)..
 
 *Hourly demand balance in the upwards non-spinning reserve market for each node
 EQ_Demand_balance_3U(n,i)..
-         sum((au),(Reserve_2U(au,i) + Reserve_3U(au,i))*Reserve(au)*Location(au,n))
+         sum((au),(Reserve_2U(au,i) + Reserve_3U(au,i))*Reserve(au)*Location(au,n)) + CurtailedPower(n,i)
          =E=
          +Demand("2U",n,i)
          -LL_3U(n,i)
@@ -912,7 +912,7 @@ EQ_Power_available(au,i)..
 EQ_Boundary_sector_only_power_available(n_bs,bsu,i)..
          PowerBoundarySector(n_bs,bsu,i)
          =L=
-         PowerCapacity(bsu)*LoadMaximum(bsu,i)*Committed(bsu,i)*Location_bs(bsu,n_bs)
+         PowerCapacity(bsu)*LoadMaximum(bsu,i)*Nunits(bsu)*Location_bs(bsu,n_bs)
 ;
 
 EQ_Boundary_sector_only_power_available_min(n_bs,bsu,i)..
@@ -1106,7 +1106,8 @@ EQ_P2X_Power_Balance(au,i)..
 EQ_Max_Power_Consumption(au,i)..
          PowerConsumption(au,i)$(p2h(au))
          =L=
-         PowerCapacity(au)$(p2h(au)) * Committed(au,i)$(p2h(au))
+*         PowerCapacity(au)$(p2h(au)) * Committed(au,i)$(p2h(au))
+         PowerCapacity(au)$(p2h(au)) * Nunits(au)$(p2h(au))
 ;
 
 * Power to boundary sector units
