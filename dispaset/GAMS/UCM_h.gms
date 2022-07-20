@@ -588,8 +588,6 @@ EQ_SystemCost(i)..
 $endIf
 ;
 
-
-
 EQ_Objective_function..
          SystemCostD
          =E=
@@ -623,26 +621,22 @@ EQ_MinDownTime(au,i)$(TimeStep <= TimeDownMinimum(au))..
 
 * ramp up constraints
 EQ_RampUp_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
-         Power(u,i-1)$(ord(i) > 1)
-         + PowerInitial(u)$(ord(i) = 1)
-         + (Committed(u,i) - StartUp(u,i)) * RampUpMaximum(u) * TimeStep
-         + RampStartUpMaximumH(u,i) * TimeStep *  StartUp(u,i)
+         Power(u,i-1)$(ord(i) > 1) + PowerInitial(u)$(ord(i) = 1) - Power(u,i)
+         =L=
+         (Committed(u,i) - StartUp(u,i)) * RampUpMaximum(u) * TimeStep
+         + RampStartUpMaximumH(u,i) * TimeStep * StartUp(u,i)
+         - PowerMustRun(u,i) * ShutDown(u,i)
          + LL_RampUp(u,i)
-         =G=
-         Power(u,i)
-         + PowerMustRun(u,i) * ShutDown(u,i)
 ;
 
 * ramp down constraints
 EQ_RampDown_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
-         Power(u,i)
-         + (Committed(u,i) - StartUp(u,i)) * RampDownMaximum(u) * TimeStep
+         Power(u,i) - Power(u,i-1)$(ord(i) > 1) - PowerInitial(u)$(ord(i) = 1)
+         =L=
+         (Committed(u,i) - StartUp(u,i)) * RampDownMaximum(u) * TimeStep
+         - PowerMustRun(u,i) * StartUp(u,i)
          + RampShutDownMaximumH(u,i) * TimeStep * ShutDown(u,i)
          + LL_RampDown(u,i)
-         =G=
-         Power(u,i-1)$(ord(i) > 1)
-         + PowerInitial(u)$(ord(i) = 1)
-         + PowerMustRun(u,i) * StartUp(u,i)
 ;
 
 * Start up cost
@@ -725,17 +719,18 @@ EQ_No_Flexible_Demand(n,i)..
 
 *Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(n,i)..
-         sum((au),Reserve_2U(au,i)*Reserve(au)*Location(au,n))
+         sum((au),Reserve_2U(au,i)*Reserve(au)*Location(au,n)) + CurtailedPower(n,i)
          =E=
-         +Demand("2U",n,i)*(1-K_QuickStart(n))
+         +(Demand("2U",n,i) + max(smax(u,PowerCapacity(u)$(sum(tr,Technology(u,tr)=0))*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))))*(1-K_QuickStart(n))
          -LL_2U(n,i)
 ;
 
 *Hourly demand balance in the upwards non-spinning reserve market for each node
 EQ_Demand_balance_3U(n,i)..
-         sum((au),(Reserve_2U(au,i) + Reserve_3U(au,i))*Reserve(au)*Location(au,n))
+         sum((au),(Reserve_2U(au,i) + Reserve_3U(au,i))*Reserve(au)*Location(au,n)) + CurtailedPower(n,i)
          =E=
-         +Demand("2U",n,i)
+         Demand("2U",n,i)
+         + max(smax(u,PowerCapacity(u)$(sum(tr,Technology(u,tr)=0))*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n)))
          -LL_3U(n,i)
 ;
 
@@ -758,13 +753,15 @@ EQ_Curtailed_Power(n,i)..
 EQ_Reserve_2U_capability(u,i)..
          Reserve_2U(u,i)
          =L=
-         PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i) - Power(u,i)
+         PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i)
+         - Power(u,i)
 ;
 
 EQ_Reserve_2D_capability(u,i)..
          Reserve_2D(u,i)
          =L=
-         (Power(u,i) - PowerMustRun(u,i) * Committed(u,i)) + (StorageChargingCapacity(u)*Nunits(u)-StorageInput(u,i))$(s(u))
+         (Power(u,i) - PowerMustRun(u,i) * Committed(u,i))
+         + (StorageChargingCapacity(u)*Nunits(u)-StorageInput(u,i))$(s(u))
 ;
 
 EQ_Reserve_3U_capability(u,i)$(QuickStartPower(u,i) > 0)..
@@ -834,7 +831,8 @@ EQ_3U_limit_chp(chp,i)..
 ;
 *Minimum power output is above the must-run output level for each unit in all periods
 EQ_Power_must_run(u,i)..
-         PowerMustRun(u,i) * Committed(u,i) - (StorageInput(u,i) * CHPPowerLossFactor(u) )$(chp(u) and (CHPType(u,'Extraction') or CHPType(u,'P2H')))
+         PowerMustRun(u,i) * Committed(u,i)
+         - (StorageInput(u,i) * CHPPowerLossFactor(u) )$(chp(u) and (CHPType(u,'Extraction') or CHPType(u,'P2H')))
          =L=
          Power(u,i)
 ;
@@ -843,9 +841,7 @@ EQ_Power_must_run(u,i)..
 EQ_Power_available(u,i)..
          Power(u,i)
          =L=
-         PowerCapacity(u)
-                 *LoadMaximum(u,i)
-                        *Committed(u,i)
+         PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i)
 ;
 
 * Maximum heat output is below the available capacity
