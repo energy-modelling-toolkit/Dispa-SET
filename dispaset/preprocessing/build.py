@@ -849,7 +849,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         for i in range(Nunits):
             # Nuclear and Fossil Gas greater than 350 MW are up (assumption):
             if Plants_merged['Fuel'][i] in ['GAS', 'NUC'] and Plants_merged['PowerCapacity'][i] > 350:
-                parameters['PowerInitial']['val'][i] = (Plants_merged['PartLoadMin'][i] + 1) / 2 * \
+                parameters['PowerInitial']['val'][i] = Plants_merged['PartLoadMin'][i] * \
                                                        Plants_merged['PowerCapacity'][i]
             # Config variables:
     sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead',
@@ -939,7 +939,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
                     os.path.join(sim, 'writeresults.gms'))
     # Create cplex option file
-    cplex_options = {'epgap': 0.0005,  # TODO: For the moment hardcoded, it has to be moved to a config file
+    cplex_options = {'epgap': 0.005,  # TODO: For the moment hardcoded, it has to be moved to a config file
                      'numericalemphasis': 0,
                      'scaind': 1,
                      'lpmethod': 0,
@@ -948,7 +948,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                      'epint': 0,
                      'heuristiceffort': 2,
                      'lbheur': 1,
-                     'probe': 1}
+                     'probe': 1,
+                     'cuts': 2,
+                     'covers': 3,
+                     'cliques': 3,
+                     'disjcuts': 3,
+                     'liftprojcuts': 3,
+                     'localimplied': 3,
+                     }
 
     lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
     with open(os.path.join(sim, 'cplex.opt'), 'w') as f:

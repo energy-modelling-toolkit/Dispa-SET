@@ -22,7 +22,7 @@ option
     solprint = off,     // solver's solution output printed
     sysout = off;       // solver's system output printed
 
-
+$onempty
 
 *===============================================================================
 *Definition of the dataset-related options
@@ -67,6 +67,7 @@ au               All Units
 u(au)            Generation units
 t                Generation technologies
 tr(t)            Renewable generation technologies
+tc(t)
 f                Fuel types
 p                Pollutants
 s(au)             Storage Units (with reservoir)
@@ -272,6 +273,7 @@ $LOAD H2Demand
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
 ;
 
+tc(t)$tr(t)=no;
 
 $If %Verbose% == 0 $goto skipdisplay
 
@@ -284,6 +286,7 @@ l,
 u,
 t,
 tr,
+tc,
 f,
 p,
 s,
@@ -373,6 +376,7 @@ CostShutDownH(u,h)         [EUR]   cost of shutting down
 CostRampUpH(u,h)           [EUR]   Ramping cost
 CostRampDownH(u,h)         [EUR]   Ramping cost
 CurtailedPower(n,h)        [MW]    Curtailed power at node n
+CurtailedPowerReserves(n,h) [MW]    Curtailed power used for reserves at node n
 CurtailedHeat(n_th,h)      [MW]    Curtailed heat at node n_th
 CurtailedH2(n_h2,h)        [MW]    Curtailed hydrogen at node n_h2
 Flow(l,h)                  [MW]    Flow through lines
@@ -719,32 +723,39 @@ EQ_No_Flexible_Demand(n,i)..
 
 *Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(n,i)..
-         sum((au),Reserve_2U(au,i)*Reserve(au)*Location(au,n)) + CurtailedPower(n,i)
+         sum((u),Reserve_2U(u,i)*Reserve(u)*Location(u,n))
+*         + sum((p2h),Reserve_2U(p2h,i)*Reserve(p2h)*Location(p2h,n))
+         + sum((chp),Reserve_2U(chp,i)*Reserve(chp)*Location(chp,n))
+         + CurtailedPowerReserves(n,i) + LL_2U(n,i)
          =E=
-         +(Demand("2U",n,i) + max(smax(u,PowerCapacity(u)$(sum(tr,Technology(u,tr)=0))*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))))*(1-K_QuickStart(n))
-         -LL_2U(n,i)
+         +(Demand("2U",n,i) + max(smax((u,tc),PowerCapacity(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0)))*(1-K_QuickStart(n))
 ;
 
 *Hourly demand balance in the upwards non-spinning reserve market for each node
 EQ_Demand_balance_3U(n,i)..
-         sum((au),(Reserve_2U(au,i) + Reserve_3U(au,i))*Reserve(au)*Location(au,n)) + CurtailedPower(n,i)
+         sum((u),(Reserve_2U(u,i) + Reserve_3U(u,i))*Reserve(u)*Location(u,n))
+*         + sum((p2h),(Reserve_2U(p2h,i) + Reserve_3U(p2h,i))*Reserve(p2h)*Location(p2h,n))
+         + sum((chp),(Reserve_2U(chp,i) + Reserve_3U(chp,i))*Reserve(chp)*Location(chp,n))
+         + CurtailedPowerReserves(n,i) + LL_3U(n,i)
          =E=
          Demand("2U",n,i)
-         + max(smax(u,PowerCapacity(u)$(sum(tr,Technology(u,tr)=0))*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n)))
-         -LL_3U(n,i)
+         + max(smax((u,tc),PowerCapacity(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0))
 ;
 
 *Hourly demand balance in the downwards reserve market for each node
 EQ_Demand_balance_2D(n,i)..
-         sum((au),Reserve_2D(au,i)*Reserve(au)*Location(au,n))
+         sum((u),Reserve_2D(u,i)*Reserve(u)*Location(u,n))
+*         + sum((p2h),Reserve_2D(p2h,i)*Reserve(p2h)*Location(p2h,n))
+         + sum((chp),Reserve_2D(chp,i)*Reserve(chp)*Location(chp,n))
+         + LL_2D(n,i)
          =E=
          Demand("2D",n,i)
-         - LL_2D(n,i)
+         + max(smax(s,StorageChargingCapacity(s)*Location(s,n)), smax(l,-FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0))
 ;
 
 *Curtailed power
 EQ_Curtailed_Power(n,i)..
-        CurtailedPower(n,i)
+        CurtailedPower(n,i) + CurtailedPowerReserves(n,i)
         =E=
         sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,i)-Power(u,i))$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
 ;
@@ -838,10 +849,12 @@ EQ_Power_must_run(u,i)..
 ;
 
 *Maximum power output is below the available capacity
-EQ_Power_available(u,i)..
-         Power(u,i)
+EQ_Power_available(au,i)..
+         Power(au,i)$(u(au))
+         + Power(au,i)$(p2h(au))
          =L=
-         PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i)
+         PowerCapacity(au)$(u(au))*LoadMaximum(au,i)$(u(au))*Committed(au,i)$(u(au))
+         + 0
 ;
 
 * Maximum heat output is below the available capacity
@@ -916,7 +929,7 @@ EQ_Storage_balance(au,i)..
          StorageLevel(au,i)$(s(au) or p2h2(au))
          +StorageOutflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
          +H2Output(au,i)$(p2h2(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(p2h2(au)),0.0001))
-         +spillage(au,i)$(s(au) or p2h2(au))
+         +spillage(au,i)$(wat(au))
          +Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
 ;
 
@@ -925,7 +938,7 @@ EQ_Storage_boundaries(au,i)$(ord(i) = card(i))..
          StorageFinalMin(au)$(s(au) or p2h2(au))
          =L=
          StorageLevel(au,i)$(s(au) or p2h2(au))
-         + WaterSlack(au)$(s(au) or p2h2(au))
+         + WaterSlack(au)$(s(au))
 ;
 
 *Total emissions are capped
@@ -1302,14 +1315,16 @@ $If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
 CurtailedHeat.L(n_th,z)=sum(hu,(Nunits(hu)*PowerCapacity(hu)*LoadMaximum(hu,z)-Heat.L(hu,z))$(sum(tr,Technology(hu,tr))>=1) * Location_th(hu,n_th));
 
 
-$If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
-$If %Verbose% == 1 Display Flow.L,Power.L,ShedLoad.L,CurtailedPower.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L;
+$If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,CurtailedPowerReserves.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
+$If %Verbose% == 1 Display Flow.L,Power.L,ShedLoad.L,CurtailedPower.L,CurtailedPowerReserves.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L;
 
 *===============================================================================
 *Result export
 *===============================================================================
 
 PARAMETER
+OutputMaxOutageUp(n,h)
+OutputMaxOutageDown(n,h)
 OutputCommitted(au,h)
 OutputFlow(l,h)
 OutputPower(u,h)
@@ -1322,6 +1337,7 @@ OutputSystemCost(h)
 OutputSpillage(au,h)
 OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
+OutputCurtailedPowerReserves(n,h)
 OutputCurtailedHeat(n_th,h)
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 ShadowPrice(n,h)
@@ -1362,8 +1378,11 @@ CapacityMargin(n,h)
 OutputSystemCostD(h)
 OutputOptimalityGap(h)
 OutputOptimizationError(h)
+OutputOptimizationCheck(h)
 ;
 
+OutputMaxOutageUp(n,z)=max(smax((au,tc),PowerCapacity(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n)), smax(l,FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
+OutputMaxOutageDown(n,z)=max(smax(s,StorageChargingCapacity(s)*Location(s,n)), smax(l,-FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
 OutputCommitted(au,z)=Committed.L(au,z);
 OutputFlow(l,z)=Flow.L(l,z);
 OutputPower(u,z)=Power.L(u,z);
@@ -1382,6 +1401,7 @@ OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(au,z)  = Spillage.L(au,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
+OutputCurtailedPowerReserves(n,z)=CurtailedPowerReserves.L(n,z);
 OutputCurtailedHeat(n_th,z)=CurtailedHeat.L(n_th,z);
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
 LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
@@ -1439,6 +1459,7 @@ CapacityMargin(n,z) = (sum(u, Nunits(u)*PowerCapacity(u)$(not s(u))*LoadMaximum(
 OutputSystemCostD(z) = ObjectiveFunction.L(z);
 OutputOptimalityGap(z) = OptimalityGap.L(z);
 OutputOptimizationError(z) = OptimizationError.L(z);
+OutputOptimizationCheck(z) = OptimizationError.L(z) - OptimalityGap.L(z);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
@@ -1455,6 +1476,7 @@ OutputSystemCost,
 OutputSpillage,
 OutputShedLoad,
 OutputCurtailedPower,
+OutputCurtailedPowerReserves,
 OutputCurtailedHeat,
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation,
 OutputGenMargin,
@@ -1496,6 +1518,9 @@ CapacityMargin,
 OutputSystemCostD,
 OutputOptimalityGap,
 OutputOptimizationError,
+OutputOptimizationCheck,
+OutputMaxOutageUp,
+OutputMaxOutageDown,
 status
 ;
 
