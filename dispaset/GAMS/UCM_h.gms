@@ -208,6 +208,7 @@ $LOAD p2h2
 $LOAD chp
 $LOAD p2h
 $LOAD th
+$LOAD tc
 $LOAD hu
 $LOAD thms
 $LOAD h
@@ -273,8 +274,6 @@ $LOAD H2Demand
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
 ;
 
-tc(t)$tr(t)=no;
-
 $If %Verbose% == 0 $goto skipdisplay
 
 Display
@@ -295,6 +294,7 @@ wat,
 chp,
 p2h,
 th,
+h2,
 hu,
 thms,
 h,
@@ -901,7 +901,7 @@ EQ_Storage_input(s,i)..
 *Discharge is limited by the storage level
 EQ_Storage_MaxDischarge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep or StorageCapacity(au)$(p2h2(au))>PowerCapacity(au)$(p2h2(au))*TimeStep)..
          Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
-         + H2Output(au,i)$(p2h2(au))*TimeStep
+         + H2Output(au,i)$(p2h2(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(p2h2(au)),0.0001))
          =L=
          StorageInitial(au)$(s(au) or p2h2(au))$(ord(i) = 1)
          + StorageLevel(au,i-1)$(s(au) or p2h2(au))$(ord(i) > 1)
@@ -922,12 +922,12 @@ EQ_Storage_MaxCharge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au)
 EQ_Storage_balance(au,i)..
          StorageInitial(au)$(s(au) or p2h2(au))$(ord(i) = 1)
          +StorageLevel(au,i-1)$(s(au) or p2h2(au))$(ord(i) > 1)
-         +StorageInflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
+         +StorageInflow(au,i)$(s(au) or p2h2(au))*Nunits(au)$(s(au) or p2h2(au))*TimeStep
          +StorageInput(au,i)$(s(au))*StorageChargingEfficiency(au)$(s(au))*TimeStep
          +StorageInput(au,i)$(p2h2(au))*TimeStep
          =E=
          StorageLevel(au,i)$(s(au) or p2h2(au))
-         +StorageOutflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
+         +StorageOutflow(au,i)$(s(au) or p2h2(au))*Nunits(au)$(s(au) or p2h2(au))*TimeStep
          +H2Output(au,i)$(p2h2(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(p2h2(au)),0.0001))
          +spillage(au,i)$(wat(au))
          +Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
@@ -1323,6 +1323,9 @@ $If %Verbose% == 1 Display Flow.L,Power.L,ShedLoad.L,CurtailedPower.L,CurtailedP
 *===============================================================================
 
 PARAMETER
+OutputDemand_2U(n,h)
+OutputDemand_3U(n,h)
+OutputDemand_2D(n,h)
 OutputMaxOutageUp(n,h)
 OutputMaxOutageDown(n,h)
 OutputCommitted(au,h)
@@ -1383,6 +1386,9 @@ OutputOptimizationCheck(h)
 
 OutputMaxOutageUp(n,z)=max(smax((au,tc),PowerCapacity(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n)), smax(l,FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
 OutputMaxOutageDown(n,z)=max(smax(s,StorageChargingCapacity(s)*Location(s,n)), smax(l,-FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
+OutputDemand_2U(n,z)=(Demand("2U",n,z) + OutputMaxOutageUp(n,z))*(1-K_QuickStart(n));
+OutputDemand_3U(n,z)=Demand("2U",n,z) + OutputMaxOutageUp(n,z);
+OutputDemand_2D(n,z)=Demand("2D",n,z) + OutputMaxOutageDown(n,z);
 OutputCommitted(au,z)=Committed.L(au,z);
 OutputFlow(l,z)=Flow.L(l,z);
 OutputPower(u,z)=Power.L(u,z);
@@ -1448,13 +1454,16 @@ OutputEmissions(n,p,z) = (sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n))
 
 CapacityMargin(n,z) = (sum(u, Nunits(u)*PowerCapacity(u)$(not s(u))*LoadMaximum(u,z)*Location(u,n))
                       + min(sum(s, Nunits(s)*PowerCapacity(s)*LoadMaximum(s,z)*Location(s,n)), sum(s, StorageLevel.L(s,z)*StorageCapacity(s)))
-                      + sum(l,FlowMaximum(l,z)*LineNode(l,n))
-*                      + sum(l,Flow.L(l,z)*LineNode(l,n))
+                      + sum(l, Flow.L(l,z)*LineNode(l,n))
+                      + CurtailedPower.L(n,z)
+*                      + sum(l,(FlowMaximum(l,z)-Flow.L(l,z))*LineNode(l,n))$(card(l)>0)
                       - Demand("DA",n,z)
-*                      + Demand("Flex",n,z)
-*                      + DemandModulation.L(n,z)
+                      - DemandModulation.L(n,z)
                       - sum(p2h,PowerConsumption.L(p2h,z)*Location(p2h,n))
                       - sum(p2h2,PowerConsumption.L(p2h2,z)*Location(p2h2,n))
+                      - sum(s, StorageInput.L(s,z)*Location(s,n))
+                      - sum(au, (Reserve_2U.L(au,z) + Reserve_3U.L(au,z))*Location(au,n))
+                      - CurtailedPowerReserves.L(n,z)
 );
 OutputSystemCostD(z) = ObjectiveFunction.L(z);
 OutputOptimalityGap(z) = OptimalityGap.L(z);
@@ -1521,6 +1530,9 @@ OutputOptimizationError,
 OutputOptimizationCheck,
 OutputMaxOutageUp,
 OutputMaxOutageDown,
+OutputDemand_2U,
+OutputDemand_3U,
+OutputDemand_2D,
 status
 ;
 
