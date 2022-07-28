@@ -959,8 +959,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                      'epint': 0,
                      # 'heuristiceffort': 2,
                      'lbheur': 1,
-                     # Probing parameters
-                     'probe': 3,
+                     # # Probing parameters
+                     # 'probe': 1,
                      # Cut parameters
                      'cuts': 5,
                      'covers': 3,

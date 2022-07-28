@@ -376,7 +376,8 @@ CostShutDownH(u,h)         [EUR]   cost of shutting down
 CostRampUpH(u,h)           [EUR]   Ramping cost
 CostRampDownH(u,h)         [EUR]   Ramping cost
 CurtailedPower(n,h)        [MW]    Curtailed power at node n
-CurtailedPowerReserves(n,h) [MW]    Curtailed power used for reserves at node n
+CurtailmentReserve_2U(n,h) [MW]    Curtailed power used for reserves at node n
+CurtailmentReserve_3U(n,h) [MW]    Curtailed power used for reserves at node n
 CurtailedHeat(n_th,h)      [MW]    Curtailed heat at node n_th
 CurtailedH2(n_h2,h)        [MW]    Curtailed hydrogen at node n_h2
 Flow(l,h)                  [MW]    Flow through lines
@@ -726,7 +727,7 @@ EQ_Demand_balance_2U(n,i)..
          sum((u),Reserve_2U(u,i)*Reserve(u)*Location(u,n))
 *         + sum((p2h),Reserve_2U(p2h,i)*Reserve(p2h)*Location(p2h,n))
          + sum((chp),Reserve_2U(chp,i)*Reserve(chp)*Location(chp,n))
-         + CurtailedPowerReserves(n,i) + LL_2U(n,i)
+         + CurtailmentReserve_2U(n,i) + LL_2U(n,i)
          =E=
          +(Demand("2U",n,i) + max(smax((u,tc),PowerCapacity(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0)))*(1-K_QuickStart(n))
 ;
@@ -736,7 +737,7 @@ EQ_Demand_balance_3U(n,i)..
          sum((u),(Reserve_2U(u,i) + Reserve_3U(u,i))*Reserve(u)*Location(u,n))
 *         + sum((p2h),(Reserve_2U(p2h,i) + Reserve_3U(p2h,i))*Reserve(p2h)*Location(p2h,n))
          + sum((chp),(Reserve_2U(chp,i) + Reserve_3U(chp,i))*Reserve(chp)*Location(chp,n))
-         + CurtailedPowerReserves(n,i) + LL_3U(n,i)
+         + CurtailmentReserve_2U(n,i) + CurtailmentReserve_3U(n,i) + LL_3U(n,i)
          =E=
          Demand("2U",n,i)
          + max(smax((u,tc),PowerCapacity(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0))
@@ -755,7 +756,7 @@ EQ_Demand_balance_2D(n,i)..
 
 *Curtailed power
 EQ_Curtailed_Power(n,i)..
-        CurtailedPower(n,i) + CurtailedPowerReserves(n,i)
+        CurtailedPower(n,i) + CurtailmentReserve_2U(n,i) + CurtailmentReserve_3U(n,i)
         =E=
         sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,i)-Power(u,i))$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
 ;
@@ -938,7 +939,7 @@ EQ_Storage_boundaries(au,i)$(ord(i) = card(i))..
          StorageFinalMin(au)$(s(au) or p2h2(au))
          =L=
          StorageLevel(au,i)$(s(au) or p2h2(au))
-         + WaterSlack(au)$(s(au))
+         + WaterSlack(au)$(s(au) or p2h2(au))
 ;
 
 *Total emissions are capped
@@ -1237,7 +1238,7 @@ if (mod(Config("RollingHorizon Length","day")*24,TimeStep) <> 0, abort "The roll
 
 * Some parameters used for debugging:
 failed=0;
-parameter CommittedInitial_dbg(au), PowerInitial_dbg(u), StorageInitial_dbg(au);
+parameter CommittedInitial_dbg(au), PowerInitial_dbg(u), StorageInitial_dbg(au), StorageFinalMin_dbg(au), AccumulatedOverSupply_inital_dbg(n);
 
 * Fixing the initial guesses:
 *PowerH.L(u,i)=PowerInitial(u);
@@ -1268,6 +1269,7 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
          StorageFinalMin(p2h2) =  sum(i$(ord(i)=card(i)),StorageProfile(p2h2,i)*StorageCapacity(p2h2)*Nunits(p2h2)*AvailabilityFactor(p2h2,i));
          StorageFinalMin(thms) =  sum(i$(ord(i)=card(i)),StorageProfile(thms,i)*StorageCapacity(thms)*Nunits(thms)*AvailabilityFactor(thms,i));
+         StorageFinalMin(chp) =  sum(i$(ord(i)=card(i)),StorageProfile(chp,i)*StorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,i));
 
 $If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
 $If %Verbose% == 1   Display PowerInitial,StorageFinalMin;
@@ -1282,11 +1284,18 @@ $label skipdisplay3
          status("model",i) = UCM_SIMPLE.Modelstat;
          status("solver",i) = UCM_SIMPLE.Solvestat;
 
-if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, CommittedInitial_dbg(au) = CommittedInitial(au); PowerInitial_dbg(u) = PowerInitial(u); StorageInitial_dbg(au) = StorageInitial(au);
-                                                                           EXECUTE_UNLOAD "debug.gdx" day, status, CommittedInitial_dbg, PowerInitial_dbg, StorageInitial_dbg;
-                                                                           failed=1;);
+*if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, CommittedInitial_dbg(au) = CommittedInitial(au); PowerInitial_dbg(u) = PowerInitial(u); StorageInitial_dbg(au) = StorageInitial(au);
+*                                                                           EXECUTE_UNLOAD "debug.gdx" day, status, CommittedInitial_dbg, PowerInitial_dbg, StorageInitial_dbg;
+*                                                                           failed=1;);
+         CommittedInitial_dbg(au) = CommittedInitial(au);
+         PowerInitial_dbg(u) = PowerInitial(u);
+         StorageInitial_dbg(au) = StorageInitial(au);
+         StorageFinalMin_dbg(au) = StorageFinalMin(au);
+$If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital_dbg(n) = AccumulatedOverSupply_inital(n);
+         EXECUTE_UNLOAD "debug.gdx" day, status, CommittedInitial_dbg, PowerInitial_dbg, StorageInitial_dbg, StorageFinalMin_dbg,
+$If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital_dbg;
 
-         CommittedInitial(au)=sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(au,i));
+         CommittedInitial(au) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(au,i));
          PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
          StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
          StorageInitial(p2h2) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(p2h2,i));
@@ -1315,8 +1324,8 @@ $If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
 CurtailedHeat.L(n_th,z)=sum(hu,(Nunits(hu)*PowerCapacity(hu)*LoadMaximum(hu,z)-Heat.L(hu,z))$(sum(tr,Technology(hu,tr))>=1) * Location_th(hu,n_th));
 
 
-$If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,CurtailedPowerReserves.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
-$If %Verbose% == 1 Display Flow.L,Power.L,ShedLoad.L,CurtailedPower.L,CurtailedPowerReserves.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L;
+$If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,CurtailmentReserve_2U.L, CurtailmentReserve_3U.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
+$If %Verbose% == 1 Display Flow.L,Power.L,ShedLoad.L,CurtailedPower.L,CurtailmentReserve.L,CurtailmentReserve_3U.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L;
 
 *===============================================================================
 *Result export
@@ -1340,7 +1349,8 @@ OutputSystemCost(h)
 OutputSpillage(au,h)
 OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
-OutputCurtailedPowerReserves(n,h)
+OutputCurtailmentReserve_2U(n,h)
+OutputCurtailmentReserve_3U(n,h)
 OutputCurtailedHeat(n_th,h)
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 ShadowPrice(n,h)
@@ -1407,7 +1417,8 @@ OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(au,z)  = Spillage.L(au,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
-OutputCurtailedPowerReserves(n,z)=CurtailedPowerReserves.L(n,z);
+OutputCurtailmentReserve_2U(n,z)=CurtailmentReserve_2U.L(n,z);
+OutputCurtailmentReserve_3U(n,z)=CurtailmentReserve_3U.L(n,z);
 OutputCurtailedHeat(n_th,z)=CurtailedHeat.L(n_th,z);
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
 LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
@@ -1463,7 +1474,8 @@ CapacityMargin(n,z) = (sum(u, Nunits(u)*PowerCapacity(u)$(not s(u))*LoadMaximum(
                       - sum(p2h2,PowerConsumption.L(p2h2,z)*Location(p2h2,n))
                       - sum(s, StorageInput.L(s,z)*Location(s,n))
                       - sum(au, (Reserve_2U.L(au,z) + Reserve_3U.L(au,z))*Location(au,n))
-                      - CurtailedPowerReserves.L(n,z)
+                      - CurtailmentReserve_2U.L(n,z)
+                      - CurtailmentReserve_3U.L(n,z)
 );
 OutputSystemCostD(z) = ObjectiveFunction.L(z);
 OutputOptimalityGap(z) = OptimalityGap.L(z);
@@ -1485,7 +1497,8 @@ OutputSystemCost,
 OutputSpillage,
 OutputShedLoad,
 OutputCurtailedPower,
-OutputCurtailedPowerReserves,
+OutputCurtailmentReserve_2U,
+OutputCurtailmentReserve_3U,
 OutputCurtailedHeat,
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation,
 OutputGenMargin,
@@ -1590,16 +1603,21 @@ $LOAD day
 $LOAD PowerInitial_dbg
 $If %MTS% == 0 $LOAD CommittedInitial_dbg
 $LOAD StorageInitial_dbg
+$LOAD StorageFinalMin_dbg
+$If %ActivateFlexibleDemand% == 1 $LOAD AccumulatedOverSupply_inital_dbg
 ;
 PowerInitial(u) = PowerInitial_dbg(u);
 $If %MTS%==0 CommittedInitial(au) = CommittedInitial_dbg(au);
-StorageInitial(s) = StorageInitial_dbg(s);
+StorageInitial(au) = StorageInitial_dbg(au);
+$If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = AccumulatedOverSupply_inital_dbg(n);
 FirstHour = (day-1)*24/TimeStep+1;
 LastHour = min(card(h),FirstHour + (Config("RollingHorizon Length","day")+Config("RollingHorizon LookAhead","day")) * 24/TimeStep - 1);
 LastKeptHour = LastHour - Config("RollingHorizon LookAhead","day") * 24/TimeStep;
 i(h) = no;
 i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
-StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
+*StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
+StorageFinalMin(au) =  sum(i$(ord(i)=card(i)),StorageProfile(au,i)*StorageCapacity(au)*Nunits(au)*AvailabilityFactor(au,i));
+*StorageFinalMin(au) = StorageFinalMin_dbg(au);
 
 display day,FirstHour,LastHour,LastKeptHour;
 Display PowerInitial,CommittedInitial,StorageInitial,StorageFinalMin;

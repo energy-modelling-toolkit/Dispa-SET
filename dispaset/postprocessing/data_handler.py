@@ -161,8 +161,8 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
                    'OutputReserve_2U', 'OutputReserve_2D', 'OutputReserve_3U', 'ShadowPrice_RampUp_TC',
                    'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown', 'HeatShadowPrice',
                    'H2ShadowPrice', 'OutputCurtailedHeat', 'OutputEmissions', 'CapacityMargin',
-                   'OutputCurtailedPowerReserves', 'OutputMaxOutageUp', 'OutputMaxOutageDown',
-                   'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D']
+                   'OutputCurtailmentReserve_2U', 'OutputCurtailmentReserve_3U', 'OutputMaxOutageUp',
+                   'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D']
 
     # Setting the proper index to the result dataframes:
     from itertools import chain
