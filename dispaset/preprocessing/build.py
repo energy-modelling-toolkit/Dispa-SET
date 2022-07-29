@@ -260,7 +260,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     ReservoirLevels = UnitBasedTable(plants_all_sto, 'ReservoirLevels', config,
                                      fallbacks=['Unit', 'Technology', 'Zone'],
                                      default=0)
-    ReservoirScaledInflows = UnitBasedTable(plants_sto, 'ReservoirScaledInflows', config,
+    ReservoirScaledInflows = UnitBasedTable(plants_all_sto, 'ReservoirScaledInflows', config,
                                             fallbacks=['Unit', 'Technology', 'Zone'], default=0)
     # HeatDemand = UnitBasedTable(plants_heat, 'HeatDemand', config, fallbacks=['Unit'], default=0)
     # CostHeatSlack = UnitBasedTable(plants_heat, 'CostHeatSlack', config, fallbacks=['Unit', 'Zone'],
@@ -459,9 +459,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     Plants_sto = Plants_merged[[u in commons['tech_storage'] for u in Plants_merged['Technology']]]
     # Defining the thermal storages:
     Plants_thms = Plants_merged[[u in commons['tech_thermal_storage'] for u in Plants_merged['Technology']]]
+    # Defining all storage units:
+    Plants_all_sto = Plants_merged[[u in [x for x in commons['Technologies'] if x in commons['tech_storage'] +
+                                          commons['tech_thermal_storage'] + commons['tech_p2h2']] for u in
+                                    Plants_merged['Technology']]]
     # check storage plants:
     check_sto(config, Plants_sto, raw_data=False)
     check_sto(config, Plants_thms, raw_data=False)
+    check_sto(config, Plants_all_sto, raw_data=False)
     # Defining the CHPs:
     Plants_chp = Plants_merged[[x.lower() in commons['types_CHP'] for x in Plants_merged['CHPType']]].copy()
     # check chp plants:
@@ -639,6 +644,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     sets['thms'] = Plants_thms.index.tolist()
     sets['t'] = commons['Technologies']
     sets['tr'] = commons['tech_renewables']
+    sets['tc'] = list(set(commons['Technologies']) - set(commons['tech_renewables']) - set(commons['tech_p2ht']) -
+                      set(commons['tech_thermal_storage']) - set(commons['tech_heat']) - set(commons['tech_p2h2']))
     sets['wat'] = Plants_wat.index.tolist()
     sets['hu'] = Plants_heat_only.index.tolist()
     sets['bsu'] = Plants_boundary_sector_only.index.tolist()
@@ -710,7 +717,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     sets_param['StorageChargingEfficiency'] = ['au']
     sets_param['StorageDischargeEfficiency'] = ['asu']
     sets_param['StorageSelfDischarge'] = ['au']
-    sets_param['StorageInflow'] = ['s', 'h']
+    sets_param['StorageInflow'] = ['asu', 'h']
     sets_param['StorageInitial'] = ['asu']
     sets_param['StorageMinimum'] = ['asu']
     sets_param['StorageOutflow'] = ['s', 'h']
@@ -828,10 +835,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
         #                                              Plants_h2['StorageCapacity'][s] * Plants_h2['Nunits'][s]
 
     # Storage Inflows:
-    for i, s in enumerate(sets['s']):
+    for i, s in enumerate(sets['asu']):
         if s in finalTS['ScaledInflows']:
             parameters['StorageInflow']['val'][i, :] = finalTS['ScaledInflows'][s][idx_sim].values * \
-                                                       Plants_sto['PowerCapacity'][s]
+                                                       Plants_all_sto['PowerCapacity'][s]
 
     # Heat demands:
     for i, u in enumerate(sets['n_th']):
@@ -1053,9 +1060,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
         for i in range(Nunits):
             # Nuclear and Fossil Gas greater than 350 MW are up (assumption):
             if Plants_merged['Fuel'][i] in ['GAS', 'NUC'] and Plants_merged['PowerCapacity'][i] > 350:
-                parameters['PowerInitial']['val'][i] = (Plants_merged['PartLoadMin'][i] + 1) / 2 * \
-                                                       Plants_merged['PowerCapacity'][i]
-            # Config variables:
+                assumptions = [(1 + Plants_merged['PartLoadMin'][i]) / 2 * Plants_merged['PowerCapacity'][i],
+                               (1 - Plants_merged['PartLoadMin'][i]) / 1.2 * Plants_merged['PowerCapacity'][i],
+                               Plants_merged['PowerCapacity'][i],
+                               Plants_merged['PowerCapacity'][i] * Plants_merged['PartLoadMin'][i]]
+                parameters['PowerInitial']['val'][i] = max(min([sum(assumptions) / len(assumptions),
+                                                                (1 + Plants_merged['PartLoadMin'][i]) / 2 *
+                                                                Plants_merged['PowerCapacity'][i],
+                                                                (1 - Plants_merged['PartLoadMin'][i]) / 1.2 *
+                                                                Plants_merged['PowerCapacity'][i]]),
+                                                           Plants_merged['PartLoadMin'][i] *
+                                                           Plants_merged['PowerCapacity'][i])
+
+                # Config variables:
     sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead',
                         'SimulationTimeStep', 'ValueOfLostLoad', 'QuickStartShare', 'CostOfSpillage', 'WaterValue',
                         'DemandFlexibility']
@@ -1086,7 +1103,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     sim = config['SimulationDirectory']
 
     # Simulation data:
-    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units_nonclustered': plants, 'units': Plants_merged,
+    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units_nonclustered': plants,
+               'units': Plants_merged,
                'geo': geo, 'version': dispa_version}
 
     # list_vars = []
@@ -1143,16 +1161,32 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
                     os.path.join(sim, 'writeresults.gms'))
     # Create cplex option file
-    cplex_options = {'epgap': 0.0005,  # TODO: For the moment hardcoded, it has to be moved to a config file
+    cplex_options = {'epgap': 0.005,  # TODO: For the moment hardcoded, it has to be moved to a config file
                      'numericalemphasis': 0,
+                     'mipdisplay': 4,
                      'scaind': 1,
                      'lpmethod': 0,
                      'relaxfixedinfeas': 0,
                      'mipstart': 1,
+                     'mircuts': 1,
+                     'quality': True,
+                     'bardisplay': 2,
                      'epint': 0,
-                     'heuristiceffort': 2,
+                     # 'heuristiceffort': 2,
                      'lbheur': 1,
-                     'probe': 1}
+                     # # Probing parameters
+                     # 'probe': 1,
+                     # Cut parameters
+                     'cuts': 5,
+                     'covers': 3,
+                     'cliques': 3,
+                     'disjcuts': 3,
+                     'liftprojcuts': 3,
+                     'localimplied': 3,
+                     'flowcovers': 2,
+                     'flowpaths': 2,
+                     'fraccuts': 2,
+                     }
 
     lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
     with open(os.path.join(sim, 'cplex.opt'), 'w') as f:

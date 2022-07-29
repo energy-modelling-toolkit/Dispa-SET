@@ -823,6 +823,60 @@ def adjust_storage(inputs, tech_fuel, scaling=1, value=None, write_gdx=False, de
     return SimData
 
 
+def adjust_unit_capacity(SimData, u_idx, scaling=1, value=None, singleunit=False):
+    """
+    Function used to modify the installed capacities in the Dispa-SET generated input data
+    The function update the Inputs.p file in the simulation directory at each call
+
+    :param SimData:     Input data dictionary
+    :param u_idx:         names of the units to be scaled
+    :param scaling:     Scaling factor to be applied to the installed capacity
+    :param value:       Absolute value of the desired capacity (! Applied only if scaling != 1 !)
+    :param singleunit:  Set to true if the technology should remain lumped in a single unit
+    :return:            New SimData dictionary
+    """
+
+    # find the units to be scaled:
+    units = SimData['units'].loc[u_idx,:]
+    cond = units.index.isin(u_idx)
+    idx = pd.Series(np.where(cond)[0], index=units.index)
+    TotalCapacity = (units.PowerCapacity * units.Nunits).sum()
+    if scaling != 1:
+        RequiredCapacity = TotalCapacity * scaling
+    elif value is not None:
+        RequiredCapacity = value
+    else:
+        RequiredCapacity = TotalCapacity
+    if singleunit:
+        Nunits_new = pd.Series(1, index=units.index)
+    else:
+        Nunits_new = (units.Nunits * RequiredCapacity / TotalCapacity).astype('float').round()
+    Nunits_new[Nunits_new < 1] = 1
+    Cap_new = units.PowerCapacity * RequiredCapacity / (units.PowerCapacity * Nunits_new).sum()
+    for u in units.index:
+        logging.info('Unit ' + u + ':')
+        logging.info('    PowerCapacity: ' + str(SimData['units'].PowerCapacity[u]) + ' --> ' + str(Cap_new[u]))
+        logging.info('    Nunits: ' + str(SimData['units'].Nunits[u]) + ' --> ' + str(Nunits_new[u]))
+        factor = Cap_new[u] / SimData['units'].PowerCapacity[u]
+        SimData['parameters']['PowerCapacity']['val'][idx[u]] = Cap_new[u]
+        SimData['parameters']['Nunits']['val'][idx[u]] = Nunits_new[u]
+        SimData['units'].loc[u, 'PowerCapacity'] = Cap_new[u]
+        SimData['units'].loc[u, 'Nunits'] = Nunits_new[u]
+        for col in ['CostStartUp', 'NoLoadCost', 'StorageCapacity', 'StorageChargingCapacity']:
+            SimData['units'].loc[u, col] = SimData['units'].loc[u, col] * factor
+        for param in ['CostShutDown', 'CostStartUp', 'PowerInitial', 'RampDownMaximum', 'RampShutDownMaximum',
+                      'RampStartUpMaximum', 'RampUpMaximum', 'StorageCapacity']:
+            SimData['parameters'][param]['val'][idx[u]] = SimData['parameters'][param]['val'][idx[u]] * factor
+        for param in ['StorageChargingCapacity']:
+            # find index, if any:
+            idx_s = np.where(np.array(SimData['sets']['s']) == u)[0]
+            if len(idx_s) == 1:
+                idx_s = idx_s[0]
+                SimData['parameters'][param]['val'][idx_s] = SimData['parameters'][param]['val'][idx_s] * factor
+    return SimData
+
+
+
 def adjust_capacity(inputs, tech_fuel, scaling=1, value=None, singleunit=False, write_gdx=False, dest_path=''):
     """
     Function used to modify the installed capacities in the Dispa-SET generated input data
@@ -858,41 +912,182 @@ def adjust_capacity(inputs, tech_fuel, scaling=1, value=None, singleunit=False, 
 
     # find the units to be scaled:
     cond = (SimData['units']['Technology'] == tech_fuel[0]) & (SimData['units']['Fuel'] == tech_fuel[1])
-    units = SimData['units'][cond]
-    idx = pd.Series(np.where(cond)[0], index=units.index)
-    TotalCapacity = (units.PowerCapacity * units.Nunits).sum()
-    if scaling != 1:
-        RequiredCapacity = TotalCapacity * scaling
-    elif value is not None:
-        RequiredCapacity = value
+    u_idx = SimData['units'][cond].index.tolist()
+    SimData = adjust_unit_capacity(SimData, u_idx, scaling=scaling, value=value, singleunit=singleunit)
+    if dest_path == '':
+        logging.info('Not writing any input data to the disk')
     else:
-        RequiredCapacity = TotalCapacity
-    if singleunit:
-        Nunits_new = pd.Series(1, index=units.index)
+        if not os.path.isdir(dest_path):
+            shutil.copytree(path, dest_path)
+            logging.info('Created simulation environment directory ' + dest_path)
+        logging.info('Writing input files to ' + dest_path)
+        with open(os.path.join(dest_path, 'Inputs.p'), 'wb') as pfile:
+            pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
+        if write_gdx:
+            write_variables(SimData['config'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
+            shutil.copy('Inputs.gdx', dest_path + '/')
+            os.remove('Inputs.gdx')
+    return SimData
+
+
+def adjust_flexibility(inputs, flex_units, slow_units, flex_ratio, singleunit=False, write_gdx=False, dest_path=''):
+    """
+    Function used to modify the share of the flexible capacity in the Dispa-SET input data
+    The function update the Inputs.p file in the simulation directory at each call
+
+    :param inputs:      Input data dictionary OR path to the simulation directory containing Inputs.p
+    :param flex_units:  Dispa-SET units table filtered with only the flexible ones
+    :param slow_units:  Dispa-SET units table filtered with only the slow ones
+    :param flex_ratio:  Target flexibility ratio (single number for all zones)
+    :param singleunit:  Set to true if the technology should remain lumped in a single unit
+    :param write_gdx:   boolean defining if Inputs.gdx should be also overwritten with the new data
+    :param dest_path:   Simulation environment path to write the new input data. If unspecified, no data is written!
+    :return:            New SimData dictionary
+    """
+    import pickle
+
+    if isinstance(inputs, str):
+        path = inputs
+        inputfile = path + '/Inputs.p'
+        if not os.path.exists(path):
+            sys.exit('Path + "' + path + '" not found')
+        with open(inputfile, 'rb') as f:
+            SimData = pickle.load(f)
+    elif isinstance(inputs, dict):
+        SimData = inputs
+        path = SimData['config']['SimulationDirectory']
     else:
-        Nunits_new = (units.Nunits * RequiredCapacity / TotalCapacity).astype('float').round()
-    Nunits_new[Nunits_new < 1] = 1
-    Cap_new = units.PowerCapacity * RequiredCapacity / (units.PowerCapacity * Nunits_new).sum()
-    for u in units.index:
-        logging.info('Unit ' + u + ':')
-        logging.info('    PowerCapacity: ' + str(SimData['units'].PowerCapacity[u]) + ' --> ' + str(Cap_new[u]))
-        logging.info('    Nunits: ' + str(SimData['units'].Nunits[u]) + ' --> ' + str(Nunits_new[u]))
-        factor = Cap_new[u] / SimData['units'].PowerCapacity[u]
-        SimData['parameters']['PowerCapacity']['val'][idx[u]] = Cap_new[u]
-        SimData['parameters']['Nunits']['val'][idx[u]] = Nunits_new[u]
-        SimData['units'].loc[u, 'PowerCapacity'] = Cap_new[u]
-        SimData['units'].loc[u, 'Nunits'] = Nunits_new[u]
-        for col in ['CostStartUp', 'NoLoadCost', 'StorageCapacity', 'StorageChargingCapacity']:
-            SimData['units'].loc[u, col] = SimData['units'].loc[u, col] * factor
-        for param in ['CostShutDown', 'CostStartUp', 'PowerInitial', 'RampDownMaximum', 'RampShutDownMaximum',
-                      'RampStartUpMaximum', 'RampUpMaximum', 'StorageCapacity']:
-            SimData['parameters'][param]['val'][idx[u]] = SimData['parameters'][param]['val'][idx[u]] * factor
-        for param in ['StorageChargingCapacity']:
-            # find index, if any:
-            idx_s = np.where(np.array(SimData['sets']['s']) == u)[0]
-            if len(idx_s) == 1:
-                idx_s = idx_s[0]
-                SimData['parameters'][param]['val'][idx_s] = SimData['parameters'][param]['val'][idx_s] * factor
+        logging.error('The input data must be either a dictionary or string containing a valid directory')
+        sys.exit(1)
+
+    # find the units to be scaled:
+    units = SimData['units']
+    
+    # current situation for all zones:"
+    current_flex_cap = units.PowerCapacity[flex_units].sum() 
+    current_total_cap = current_flex_cap + units.PowerCapacity[slow_units].sum()
+    current_flex_ratio = current_flex_cap / current_total_cap
+    
+    #make new dataframe with the current country flex,slow and total installed capacities:
+    zones = units.loc[flex_units.tolist()+slow_units.tolist(),:].Zone.unique().tolist()
+    current = pd.DataFrame(index=zones,columns=['flex','slow','total','ratio'])
+    for z in zones:
+        current.flex[z] = units.loc[flex_units,:][units.loc[flex_units,:].Zone==z].PowerCapacity.sum()
+        current.slow[z] = units.loc[slow_units,:][units.loc[slow_units,:].Zone==z].PowerCapacity.sum()
+        current.total[z] = current.flex[z] + current.slow[z]
+        current.ratio[z] = current.flex[z] / current.total[z]
+        
+    # target flexible capacity for all zones:"
+    target_flex_cap = flex_ratio * current_total_cap
+    
+    # flexibile capacity to be added (positive) or removed (negative)
+    delta_flex_cap = target_flex_cap - current_flex_cap
+    
+    if delta_flex_cap >0:
+        # sort the current dataframe, highest flexibility first:
+        current.sort_values('ratio',ascending=False,inplace=True)
+        current['cum_sum'] = current.total.cumsum()    # save the cumulative zone capacities in a column
+        # variable containing the remaining flexible capacity to be assigned to the zones:
+        remaining = delta_flex_cap
+        # Recursively add flexible capacity in each zone:
+        for z in current.index:
+            #weight of the current zone compared to the total of remaining zones
+            weight = current.total[z]/(current_total_cap - current.cum_sum[z] + current.total[z])
+            # added flexible capacity in this zone is bounded in order not to exceed the total capacity:
+            added_flex_cap = min(weight*remaining,current.total[z] - current.flex[z])
+            current.loc[z,'new_flex_cap'] = current.flex[z] + added_flex_cap
+            current.loc[z,'new_slow_cap'] = current.slow[z] - added_flex_cap
+            remaining -= added_flex_cap
+    elif delta_flex_cap < 0:
+        # sort the current dataframe, highest flexibility first:
+        current.sort_values('ratio',ascending=True,inplace=True)
+        current['cum_sum'] = current.total.cumsum()    # save the cumulative zone capacities in a column
+        # variable containing the remaining flexible capacity to be assigned to the zones:
+        remaining = -delta_flex_cap
+        # Recursively add flexible capacity in each zone:
+        for z in current.index:
+            #weight of the current zone compared to the total of remaining zones
+            weight = current.total[z]/(current_total_cap - current.cum_sum[z] + current.total[z])
+            # added flexible capacity in this zone is bounded in order not to exceed the total capacity:
+            removed_flex_cap = min(weight*remaining,current.flex[z])
+            current.loc[z,'new_flex_cap'] = current.flex[z] - removed_flex_cap
+            current.loc[z,'new_slow_cap'] = current.slow[z] + removed_flex_cap
+            remaining -= removed_flex_cap
+    else:
+        current.loc[z,'new_flex_cap'] = current.flex
+        current.loc[z,'new_slow_cap'] = current.slow
+    del current['cum_sum']
+    print(current)
+    
+    # last loop where units are actually scaled in each country:
+    for z in zones:
+        u_idx = units.loc[flex_units,:][units.loc[flex_units,:].Zone==z].index.tolist()
+        SimData = adjust_unit_capacity(SimData, u_idx, scaling=current.loc[z,'new_flex_cap']/current.loc[z,'flex'], singleunit=singleunit)
+        u_idx = units.loc[slow_units,:][units.loc[slow_units,:].Zone==z].index.tolist()
+        SimData = adjust_unit_capacity(SimData, u_idx, scaling=current.loc[z,'new_slow_cap']/current.loc[z,'slow'], singleunit=singleunit)
+    
+    # Checking
+    units_new = SimData['units']
+    
+    # current situation for all zones:"
+    new_flex_cap = units_new.PowerCapacity[flex_units].sum() 
+    new_total_cap = new_flex_cap + units_new.PowerCapacity[slow_units].sum()
+    new_flex_ratio = new_flex_cap / new_total_cap  
+    
+    if (new_flex_ratio - flex_ratio) > 0.01:
+        logging.error('the new flexbility ratio (' + str(new_flex_ratio) + ') is not equal to the desired one: ' + str(flex_ratio))
+    
+
+    if dest_path == '':
+        logging.info('Not writing any input data to the disk')
+    else:
+        if not os.path.isdir(dest_path):
+            shutil.copytree(path, dest_path)
+            logging.info('Created simulation environment directory ' + dest_path)
+        logging.info('Writing input files to ' + dest_path)
+        with open(os.path.join(dest_path, 'Inputs.p'), 'wb') as pfile:
+            pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
+        if write_gdx:
+            write_variables(SimData['config'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
+            shutil.copy('Inputs.gdx', dest_path + '/')
+            os.remove('Inputs.gdx')
+    return SimData
+
+
+
+def adjust_ntc(inputs, value=None, write_gdx=False, dest_path=''):
+    """
+    Function used to modify the net transfer capacities in the Dispa-SET generated input data
+    The function update the Inputs.p file in the simulation directory at each call
+
+    :param inputs:      Input data dictionary OR path to the simulation directory containing Inputs.p
+    :param value:       Absolute value of the desired capacity (! Applied only if scaling != 1 !)
+    :param write_gdx:   boolean defining if Inputs.gdx should be also overwritten with the new data
+    :param dest_path:   Simulation environment path to write the new input data. If unspecified, no data is written!
+    :return:            New SimData dictionary
+    @author: Carla Vidal
+    """
+    import pickle
+
+    if isinstance(inputs, str):
+        path = inputs
+        inputfile = path + '/Inputs.p'
+        if not os.path.exists(path):
+            sys.exit('Path + "' + path + '" not found')
+        with open(inputfile, 'rb') as f:
+            SimData = pickle.load(f)
+    elif isinstance(inputs, dict):
+        SimData = inputs
+        path = SimData['config']['SimulationDirectory']
+    else:
+        logging.error('The input data must be either a dictionary or string containing a valid directory')
+        sys.exit(1)
+
+    if value is not None:
+        SimData['parameters']['FlowMaximum']=SimData['parameters']['FlowMaximum'] * value
+    else:
+        pass
+
     if dest_path == '':
         logging.info('Not writing any input data to the disk')
     else:
