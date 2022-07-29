@@ -211,25 +211,25 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     # Total demand - including power consumption
     results['TotalDemand'] = inputs['param_df']['Demand']['DA'].add(results['NodalPowerConsumption'], fill_value=0)
     # Energy not served hourly
-    results['(ENSH)-EnergyNotServedHourly'] = results['OutputShedLoad'].add(
+    results['ENSH-EnergyNotServedHourly'] = results['OutputShedLoad'].add(
         results['LostLoad_MaxPower'], fill_value=0).add(results['LostLoad_MinPower'], fill_value=0)
-    results['(ENSR)-EnergyNotServedRamping'] = results['LostLoad_RampUp'].add(results['LostLoad_RampDown'],
-                                                                              fill_value=0)
+    results['ENSR-EnergyNotServedRamping'] = results['LostLoad_RampUp'].add(results['LostLoad_RampDown'],
+                                                                            fill_value=0)
     # Expected energy not served - the expectation energy loss caused to customers by insufficient power supply
-    results['(EENS)-ExpectedEnergyNotServed'] = results['(ENSH)-EnergyNotServedHourly'].sum()
+    results['EENS-ExpectedEnergyNotServed'] = results['ENSH-EnergyNotServedHourly'].sum()
     # Los of load hours - the total duration of increments when the loss of load is expected to occur,
     # should be < 0.1 to 0.3 day/year (2.4 - 7.2 hours)
-    results['(LOLH)-LosOfLoadHours'] = (results['(ENSH)-EnergyNotServedHourly'] > 0).apply(np.count_nonzero)
+    results['LOLH-LosOfLoadHours'] = (results['ENSH-EnergyNotServedHourly'] > 0).apply(np.count_nonzero)
     # Loss of load probability - a probability of an occurrence of an increment with a loss of load condition
-    results['(LOLP)-LosOfLoadProbability'] = results['(LOLH)-LosOfLoadHours'] / results['OutputPower'].index.size
+    results['LOLP-LosOfLoadProbability'] = results['LOLH-LosOfLoadHours'] / results['OutputPower'].index.size
     # Loss of load frequency - Frequency of power interruption
-    results['(LOLF)-LosOfLoadFrequency'] = results['(LOLP)-LosOfLoadProbability'] / results['(LOLH)-LosOfLoadHours']
+    results['LOLF-LosOfLoadFrequency'] = results['LOLP-LosOfLoadProbability'] / results['LOLH-LosOfLoadHours']
     # System minuses nominal load - the ratio of energy loss due to power interruption over maximum load
-    results['(SMNL)-SystemMinusesNominalLoad'] = results['(EENS)-ExpectedEnergyNotServed'] / \
-                                                 inputs['param_df']['Demand']['DA'].max()
+    results['SMNL-SystemMinusesNominalLoad'] = results['EENS-ExpectedEnergyNotServed'] / \
+                                               inputs['param_df']['Demand']['DA'].max()
     # System minuses maximal load - the ratio of energy loss due to power interruption over maximum load + power
     # consumption
-    results['(SMML)-SystemMinusesMaximalLoad'] = results['(EENS)-ExpectedEnergyNotServed'] / results[
+    results['SMML-SystemMinusesMaximalLoad'] = results['EENS-ExpectedEnergyNotServed'] / results[
         'TotalDemand'].max()
 
     status = {}

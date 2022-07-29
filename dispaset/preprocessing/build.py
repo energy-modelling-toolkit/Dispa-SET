@@ -150,7 +150,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     for key in ['StartUpCost', 'NoLoadCost']:
         if key in plants:
             if key + '_pu' in plants:
-                logging.warning('Column ' + key + '_pu found in the power plant table but not used since column ' + key + ' exists')
+                logging.warning(
+                    'Column ' + key + '_pu found in the power plant table but not used since column ' + key + ' exists')
         elif key + '_pu' in plants:
             plants[key] = plants[key + '_pu'] * plants['PowerCapacity']
         else:
@@ -856,9 +857,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         for i in range(Nunits):
             # Nuclear and Fossil Gas greater than 350 MW are up (assumption):
             if Plants_merged['Fuel'][i] in ['GAS', 'NUC'] and Plants_merged['PowerCapacity'][i] > 350:
-                parameters['PowerInitial']['val'][i] = Plants_merged['PartLoadMin'][i] * \
-                                                       Plants_merged['PowerCapacity'][i]
-            # Config variables:
+                assumptions = [(1 + Plants_merged['PartLoadMin'][i]) / 2 * Plants_merged['PowerCapacity'][i],
+                               (1 - Plants_merged['PartLoadMin'][i]) / 1.2 * Plants_merged['PowerCapacity'][i],
+                               Plants_merged['PowerCapacity'][i],
+                               Plants_merged['PowerCapacity'][i] * Plants_merged['PartLoadMin'][i]]
+                parameters['PowerInitial']['val'][i] = max(min([sum(assumptions) / len(assumptions),
+                                                                (1 + Plants_merged['PartLoadMin'][i]) / 2 *
+                                                                Plants_merged['PowerCapacity'][i],
+                                                                (1 - Plants_merged['PartLoadMin'][i]) / 1.2 *
+                                                                Plants_merged['PowerCapacity'][i]]),
+                                                           Plants_merged['PartLoadMin'][i] *
+                                                           Plants_merged['PowerCapacity'][i])
+
+                # Config variables:
     sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead',
                         'SimulationTimeStep', 'ValueOfLostLoad', 'QuickStartShare', 'CostOfSpillage', 'WaterValue',
                         'DemandFlexibility']
@@ -889,7 +900,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sim = config['SimulationDirectory']
 
     # Simulation data:
-    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units_nonclustered': plants, 'units': Plants_merged,
+    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units_nonclustered': plants,
+               'units': Plants_merged,
                'geo': geo, 'version': dispa_version}
 
     # list_vars = []
