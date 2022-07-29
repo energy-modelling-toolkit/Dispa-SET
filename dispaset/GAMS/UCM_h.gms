@@ -554,6 +554,8 @@ EQ_Storage_MaxDischarge
 EQ_Storage_MaxCharge
 EQ_Storage_balance
 EQ_Storage_boundaries
+EQ_Boundary_Sector_Storage_MaxDischarge
+EQ_Boundary_Sector_Storage_MaxCharge
 EQ_Boundary_Sector_Storage_minimum
 EQ_Boundary_Sector_Storage_level
 EQ_Boundary_Sector_Storage_balance
@@ -609,7 +611,7 @@ EQ_SystemCost(i)..
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
-         +Config("CostOfSpillage","val")*sum(au,spillage(au,i))
+         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i)) + sum(n_bs,BoundarySectorSpillage(n_bs,i)))
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
 $else
@@ -632,7 +634,7 @@ EQ_SystemCost(i)..
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
-         +Config("CostOfSpillage","val")*sum(au,spillage(au,i))
+         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i)) + sum(n_bs,BoundarySectorSpillage(n_bs,i)))
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
 
@@ -949,6 +951,22 @@ EQ_Boundary_Sector_Storage_level(n_bs,i)..
          BoundarySectorStorageCapacity(n_bs)
 ;
 
+*Discharge is limited by the storage level
+EQ_Boundary_Sector_Storage_MaxDischarge(n_bs,i)..
+         - BoundarySectorStorageInitial(n_bs)$(ord(i) = 1)
+         - BoundarySectorStorageLevel(n_bs,i-1)$(ord(i) > 1)
+         =L=
+         BoundarySectorStorageInput(n_bs,i)*TimeStep
+;
+
+EQ_Boundary_Sector_Storage_MaxCharge(n_bs,i)$(BoundarySectorStorageCapacity(n_bs)>0)..
+        BoundarySectorStorageInput(n_bs,i)*TimeStep
+        =L=
+        (BoundarySectorStorageCapacity(n_bs) - BoundarySectorStorageInitial(n_bs))$(ord(i) = 1)
+        + (BoundarySectorStorageCapacity(n_bs) - BoundarySectorStorageLevel(n_bs,i-1))$(ord(i) > 1)
+;
+
+
 *Storage balance
 EQ_Boundary_Sector_Storage_balance(n_bs,i)..
          BoundarySectorStorageInitial(n_bs)$(ord(i) = 1)
@@ -956,7 +974,6 @@ EQ_Boundary_Sector_Storage_balance(n_bs,i)..
          + BoundarySectorStorageInput(n_bs,i)*TimeStep
          =E=
          BoundarySectorStorageLevel(n_bs,i)
-         + BoundarySectorSpillage(n_bs,i)
 ;
 
 * Minimum level at the end of the optimization horizon:
@@ -1160,6 +1177,7 @@ EQ_BS_Demand_balance(n_bs,i)..
         BoundarySectorDemand(n_bs,i)
         + BSFlexDemand(n_bs,i)
         + BoundarySectorStorageInput(n_bs,i)
+        + BoundarySectorSpillage(n_bs,i)
 ;
 
 *Heat Storage balance
@@ -1302,6 +1320,8 @@ EQ_Storage_level,
 EQ_Storage_input,
 EQ_Storage_balance,
 EQ_Storage_boundaries,
+EQ_Boundary_Sector_Storage_MaxDischarge,
+EQ_Boundary_Sector_Storage_MaxCharge,
 EQ_Boundary_Sector_Storage_minimum,
 EQ_Boundary_Sector_Storage_level,
 EQ_Boundary_Sector_Storage_balance,
@@ -1457,6 +1477,7 @@ OutputBoundarySectorStorageLevel(n_bs,h)
 OutputBoundarySectorStorageShadowPrice(n_bs,h)
 OutputBoundarySectorStorageSlack(n_bs,h)
 OutputBoundarySectorStorageInput(n_bs,h)
+OutputBoundarySectorSpillage(n_bs,h)
 OutputSystemCost(h)
 OutputSpillage(au,h)
 OutputShedLoad(n,h)
@@ -1531,6 +1552,7 @@ OutputBoundarySectorStorageLevel(n_bs,z) = BoundarySectorStorageLevel.L(n_bs,z);
 OutputBoundarySectorStorageShadowPrice(n_bs,z) = EQ_Boundary_Sector_Storage_balance.m(n_bs,z);
 OutputBoundarySectorStorageSlack(n_bs,z) = BoundarySectorStorageSlack.l(n_bs,z);
 OutputBoundarySectorStorageInput(n_bs,z) = BoundarySectorStorageInput.l(n_bs,z);
+OutputBoundarySectorSpillage(n_bs,z) = BoundarySectorSpillage.l(n_bs,z);
 OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(au,z)  = Spillage.L(au,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
@@ -1616,6 +1638,7 @@ OutputBoundarySectorStorageLevel,
 OutputBoundarySectorStorageShadowPrice,
 OutputBoundarySectorStorageSlack,
 OutputBoundarySectorStorageInput,
+OutputBoundarySectorSpillage,
 OutputSystemCost,
 OutputSpillage,
 OutputShedLoad,

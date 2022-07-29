@@ -15,7 +15,7 @@ commons['TimeStep'] = '1h'
 # 4) P2HT
 # 5) Fuel cells
 # 6) Electrolyzers
-commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF', 'WTON',
+commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'HDAMC', 'HRORC', 'PHOT', 'WAVE', 'WHEN', 'WTOF', 'WTON',
                            'COMC', 'GTUR', 'ICEN', 'SCSP', 'STUR',
                            'BATS', 'BEVS', 'CAES', 'THMS', 'H2ST',
                            'ABHP', 'ASHP', 'GETH', 'GSHP', 'HOBO', 'HYHP', 'P2HT', 'REHE', 'SOTH', 'WSHP',
@@ -28,11 +28,9 @@ commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
 # List of power to heat technologies:
 commons['tech_p2ht'] = ['P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
-# # List of power to h2 technologies
-# commons['tech_p2h2'] = ['P2GS', 'ALKE', 'PEME', 'SOXE']
 # List of power to boundary sector technologies
 commons['tech_p2bs'] = ['P2GS', 'ALKE', 'PEME', 'SOXE', 'P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE', 'P2BS', 'PEFC',
-                        'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC']
+                        'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 'HDAMC', 'HRORC']
 # List of heat only technologies:
 commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
 # List of noundary sector only technologies:

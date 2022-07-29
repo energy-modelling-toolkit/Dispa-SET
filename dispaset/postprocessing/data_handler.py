@@ -165,7 +165,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
                    'OutputBoundarySectorSlack', 'OutputPowerBoundarySector', 'OutputBoundarySectorStorageLevel',
                    'OutputBoundarySectorStorageInput', 'OutputBoundarySectorStorageShadowPrice',
                    'BoundarySectorShadowPrice', 'OutputBoundarySectorSlack', 'OutputBoundarySectorStorageSlack',
-                   'OutputBSFlexDemand', 'OutputResidualLoad',
+                   'OutputBoundarySectorSpillage', 'OutputBSFlexDemand', 'OutputResidualLoad',
                    'OutputCurtailmentReserve_2U', 'OutputCurtailmentReserve_3U', 'OutputMaxOutageUp',
                    'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D']
 
@@ -389,11 +389,11 @@ def ds_to_df(inputs):
             len(sets['h'])) + ' time elements')
         sys.exit(1)
     elif len(dates) > len(sets['z']):
-        logging.warn(
+        logging.warning(
             'The provided index has a length of ' + str(len(dates)) + ' while the simulation was designed for ' + str(
                 len(sets['z'])) + ' time elements')
     elif len(dates) < len(sets['z']):
-        logging.warn(
+        logging.warning(
             'The provided index has a length of ' + str(len(dates)) + ' while the simulation was designed for ' + str(
                 len(sets['z'])) + ' time elements')
 

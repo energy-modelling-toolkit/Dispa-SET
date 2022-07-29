@@ -152,7 +152,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
         BoundarySector = pd.read_csv(config['BoundarySectorData'],
                                      na_values=commons['na_values'],
                                      keep_default_na=False, index_col='Sector')
-    BoundarySector.fillna(0, inplace=True)
 
     # Power plants:
     plants = pd.DataFrame()
@@ -235,15 +234,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     plants_heat = pd.concat([plants_heat, plants_chp])
     plants_heat = pd.concat([plants_heat, plants_p2h])
 
-    # # Defining the P2H2 units:
-    # # plants_h2 = plants[plants['Technology'] == 'P2GS']
-    # plants_h2 = plants[[u in commons['tech_p2h2'] for u in plants['Technology']]]
-    # check_h2(config, plants_h2)
-
-    # Merging all MTS storage units
-    # plants_all_sto = plants_all_sto.append(plants_h2)
-    # plants_all_sto = pd.concat([plants_all_sto, plants_h2])
-
     # Defining the P2BS units:
     # TODO: Check if plants should be grouped by technology or by energy in one of the boundary sectors
     plants_p2bs = plants[[u in commons['tech_p2bs'] for u in plants['Technology']]]
@@ -267,16 +257,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     #                                default=config['default']['CostHeatSlack'])
     Temperatures = NodeBasedTable('Temperatures', config)
 
-    # if plants_h2.empty is True:
-    #     H2RigidDemand = pd.DataFrame(index=config['idx_long'])
-    #     H2FlexibleDemand = pd.DataFrame(index=config['idx_long'])
-    #     CostH2Slack = pd.DataFrame(index=config['idx_long'])
-    # else:
-    #     H2RigidDemand = UnitBasedTable(plants_h2, 'H2RigidDemand', config, fallbacks=['Unit'], default=0)
-    #     H2FlexibleDemand = UnitBasedTable(plants_h2, 'H2FlexibleDemand', config, fallbacks=['Unit'], default=0)
-    #     CostH2Slack = UnitBasedTable(plants_h2, 'CostH2Slack', config, fallbacks=['Unit', 'Zone'],
-    #                                  default=config['default']['CostH2Slack'])
-
     # Detecting thermal zones:
     zones_th = plants_heat['Zone_th'].unique().tolist()
     if '' in zones_th:
@@ -284,15 +264,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
 
     HeatDemand = GenericTable(zones_th, 'HeatDemand', config, default=0)
     CostHeatSlack = GenericTable(zones_th, 'CostHeatSlack', config, default=config['default']['CostHeatSlack'])
-
-    # # Detecting h2 zones:
-    # zones_h2 = plants_h2['Zone_h2'].unique().tolist()
-    # if '' in zones_h2:
-    #     zones_h2.remove('')
-    #
-    # H2RigidDemand = GenericTable(zones_h2, 'H2RigidDemand', config, default=0)
-    # H2FlexibleDemand = GenericTable(zones_h2, 'H2FlexibleDemand', config, default=0)
-    # CostH2Slack = GenericTable(zones_h2, 'CostH2Slack', config, default=config['default']['CostH2Slack'])
 
     # Detecting boundary zones:
     filter_bs_cols = [col for col in plants_all_bs if col.startswith('Sector')]
@@ -312,6 +283,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
                                            default=config['default']['CostBoundarySectorSlack'])
 
     BoundarySector = BoundarySector.reindex(zones_bs)
+    BoundarySector.fillna(0, inplace=True)
 
     # Read BS Flexible demand
     BSFlexibleDemand = GenericTable(zones_bs, 'BSFlexibleDemand', config, default=0)
@@ -332,14 +304,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
                 ReservoirLevels[key].update(profiles[key])
                 logging.info(
                     'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
-    # # Update PtL demand (H2FlexibleDemand with demand from mid term scheduling)
-    # if PtLDemand is not None and any(H2FlexibleDemand) > 0:
-    #     for key in PtLDemand.columns:
-    #         if key not in H2FlexibleDemand.columns:
-    #             logging.warning('The H2 flexible demand "' + key + '" provided by the MTS is not found in the '
-    #                                                                'H2FlexibleDemand table')
-    #         else:
-    #             H2FlexibleDemand[key].update(PtLDemand[key])
 
     # Update BSFlexDemand (BSFlexibleDemand with demand from mid term scheduling)
     if BSFlexDemand is not None and any(BSFlexibleDemand) > 0:
@@ -461,7 +425,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     Plants_thms = Plants_merged[[u in commons['tech_thermal_storage'] for u in Plants_merged['Technology']]]
     # Defining all storage units:
     Plants_all_sto = Plants_merged[[u in [x for x in commons['Technologies'] if x in commons['tech_storage'] +
-                                          commons['tech_thermal_storage'] + commons['tech_p2h2']] for u in
+                                          commons['tech_thermal_storage']] for u in
                                     Plants_merged['Technology']]]
     # check storage plants:
     check_sto(config, Plants_sto, raw_data=False)
@@ -508,16 +472,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
 
     # All heating plants:
     Plants_heat = Plants_heat_only.copy()
-    # Plants_heat = Plants_heat.append(Plants_chp)
-    # Plants_heat = Plants_heat.append(Plants_p2h)
-    # Plants_heat = Plants_heat.append(Plants_thms)
     Plants_heat = pd.concat([Plants_heat, Plants_chp])
     Plants_heat = pd.concat([Plants_heat, Plants_p2h])
     Plants_heat = pd.concat([Plants_heat, Plants_thms])
-
-    # Plants_h2 = Plants_merged[Plants_merged['Technology'] == 'P2GS'].copy()
-    # # check chp plants:
-    # check_h2(config, Plants_h2)
 
     # Filter power to boundary sector plants
     Plants_p2bs = Plants_merged[[u in commons['tech_p2bs'] for u in Plants_merged['Technology']]].copy()
@@ -576,15 +533,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
                'BoundarySectorDemand': BoundarySectorDemand, 'CostBoundarySectorSlack': CostBoundarySectorSlack,
                'BSFlexibleDemand': BSFlexibleDemand}
 
-    # # Merge the following time series with weighted averages
-    # for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors', 'CostH2Slack']:
-    #     finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
-    # # Merge the following time series by summing
-    # for key in ['H2RigidDemand', 'H2FlexibleDemand']:
-    #     finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='Sum')
+
     # Merge the following time series by weighted average based on storage capacity
     for key in ['ReservoirLevels']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
@@ -624,7 +576,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     sets['mk'] = ['DA', '2U', '2D', 'Flex']
     sets['n'] = config['zones']
     sets['n_th'] = zones_th
-    # sets['n_h2'] = zones_h2
     sets['n_bs'] = zones_bs
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
@@ -638,14 +589,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
                                for u in Plants_merged['Technology']]].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
     sets['p2h'] = Plants_p2h.index.tolist()
-    # sets['p2h2'] = Plants_h2.index.tolist()
     sets['p2bs'] = Plants_p2bs.index.tolist()
     sets['th'] = Plants_heat.index.tolist()
     sets['thms'] = Plants_thms.index.tolist()
     sets['t'] = commons['Technologies']
     sets['tr'] = commons['tech_renewables']
     sets['tc'] = list(set(commons['Technologies']) - set(commons['tech_renewables']) - set(commons['tech_p2ht']) -
-                      set(commons['tech_thermal_storage']) - set(commons['tech_heat']) - set(commons['tech_p2h2']))
+                      set(commons['tech_thermal_storage']) - set(commons['tech_heat']))
     sets['wat'] = Plants_wat.index.tolist()
     sets['hu'] = Plants_heat_only.index.tolist()
     sets['bsu'] = Plants_boundary_sector_only.index.tolist()
@@ -668,7 +618,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     sets_param['CHPMaxHeat'] = ['chp']
     sets_param['CostFixed'] = ['au']
     sets_param['CostHeatSlack'] = ['n_th', 'h']
-    # sets_param['CostH2Slack'] = ['n_h2', 'h']
     sets_param['CostBoundarySectorSlack'] = ['n_bs', 'h']
     sets_param['CostLoadShedding'] = ['n', 'h']
     sets_param['CostRampUp'] = ['au']
@@ -696,7 +645,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     sets_param['LoadShedding'] = ['n', 'h']
     sets_param['Location'] = ['au', 'n']
     sets_param['Location_th'] = ['au', 'n_th']
-    # sets_param['Location_h2'] = ['au', 'n_h2']
     sets_param['Location_bs'] = ['au', 'n_bs']
     sets_param['Markup'] = ['au', 'h']
     sets_param['Nunits'] = ['au']
@@ -725,9 +673,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     sets_param['Technology'] = ['au', 't']
     sets_param['TimeUpMinimum'] = ['au']
     sets_param['TimeDownMinimum'] = ['au']
-    # sets_param['PtLDemandInput'] = ['n_h2', 'h']
-    # sets_param['MaxCapacityPtL'] = ['n_h2']
-    # sets_param['H2Demand'] = ['n_h2', 'h']
     sets_param['BSFlexDemandInput'] = ['n_bs', 'h']
     sets_param['BSFlexMaxCapacity'] = ['n_bs']
     sets_param['BoundarySectorStorageCapacity'] = ['n_bs']
@@ -751,7 +696,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
         parameters[var] = define_parameter(sets_param[var], sets, value=1e7)
 
     # Boolean parameters:
-    # for var in ['Technology', 'Fuel', 'Reserve', 'Location', 'Location_th', 'Location_h2', 'Location_bs']:
     for var in ['Technology', 'Fuel', 'Reserve', 'Location', 'Location_th', 'Location_bs']:
         parameters[var] = define_parameter(sets_param[var], sets, value='bool')
     # for var in [col for col in plants if col.startswith('Sector')]:
@@ -784,15 +728,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
     for var in ['CHPPowerToHeat', 'CHPPowerLossFactor', 'CHPMaxHeat']:
         parameters[var]['val'] = Plants_chp[var].values
-
-    # # Particular treatment of MaxCapacityPtL that is not a time-series and
-    # # that is given separetly from the Power plant database
-    # if 'H2FlexibleCapacity' in config and config['H2FlexibleCapacity'] != '':
-    #     MaxCapacityPtL = pd.read_csv(config['H2FlexibleCapacity'], index_col=0, keep_default_na=False)
-    #     for i, u in enumerate(sets['n_h2']):
-    #         for zone_h2 in MaxCapacityPtL.index:
-    #             if zone_h2 in zones_h2:
-    #                 parameters['MaxCapacityPtL']['val'][i] = MaxCapacityPtL.loc[zone_h2]
 
     # Particular treatment of BSFlexMaxCapacity that is not a time-series and
     # that is given separetly from the Power plant database
@@ -829,10 +764,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
             parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
                                                      finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
                                                      Plants_thms['StorageCapacity'][s] * Plants_thms['Nunits'][s]
-        # if s in Plants_h2.index:
-        #     parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
-        #                                              finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
-        #                                              Plants_h2['StorageCapacity'][s] * Plants_h2['Nunits'][s]
 
     # Storage Inflows:
     for i, s in enumerate(sets['asu']):
@@ -851,18 +782,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
         if u in finalTS['BoundarySectorDemand']:
             parameters['BoundarySectorDemand']['val'][i, :] = finalTS['BoundarySectorDemand'][u][idx_sim].values
             parameters['CostBoundarySectorSlack']['val'][i, :] = finalTS['CostBoundarySectorSlack'][u][idx_sim].values
-
-    # # H2 time series:
-    # for i, u in enumerate(sets['n_h2']):
-    #     if u in finalTS['H2RigidDemand']:
-    #         parameters['H2Demand']['val'][i, :] = finalTS['H2RigidDemand'][u][idx_sim].values
-    # for i, u in enumerate(sets['n_h2']):
-    #     if u in finalTS['CostH2Slack']:
-    #         parameters['CostH2Slack']['val'][i, :] = finalTS['CostH2Slack'][u][idx_sim].values
-    #     if u in finalTS['H2FlexibleDemand']:
-    #         parameters['PtLDemandInput']['val'][i, :] = finalTS['H2FlexibleDemand'][u][idx_sim].values
-    # if 'H2FlexibleCapacity' in config and config['H2FlexibleCapacity'] != '':
-    #     check_PtLDemand(parameters, config)
 
     # Boundary Sector time series
     for i, u in enumerate(sets['n_bs']):
@@ -895,10 +814,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     if len(finalTS['Efficiencies']) != 0:
         for i, u in enumerate(sets['au']):
             parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
-        # for i, u in enumerate(sets['p2h']):
-        #     parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
-        # for i, u in enumerate(sets['p2h2']):
-        #     parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
 
     # Assign charging and discharging efficiencies for boundary sectors
     values = np.ndarray([len(sets['n_bs']), len(sets['au']), len(sets['h'])])
@@ -1028,13 +943,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
         parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['zones'][i]).values
     for i in range(len(sets['n_th'])):
         parameters['Location_th']['val'][:, i] = (Plants_merged['Zone_th'] == zones_th[i]).values
-    # for i in range(len(sets['n_h2'])):
-    #     parameters['Location_h2']['val'][:, i] = (Plants_merged['Zone_h2'] == zones_h2[i]).values
 
     sectors = [col for col in plants if col.startswith('Sector')]
     for i in range(len(sets['n_bs'])):
         for s in sectors:
-            # parameters['Location_bs']['val'][:, i] = (Plants_merged[s] == zones_bs[i]).values
             parameters['Location_bs']['val'][:, i] = np.logical_or(parameters['Location_bs']['val'][:, i],
                                                                    (Plants_merged[s] == zones_bs[i]).values)
 
