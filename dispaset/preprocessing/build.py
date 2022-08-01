@@ -11,7 +11,7 @@ from future.builtins import int
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
     check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves, check_heat, check_p2bs, check_boundary_sector, \
-    check_BSFlexDemand
+    check_BSFlexDemand, check_BSFlexSupply
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
@@ -24,7 +24,7 @@ from ..misc.gdx_handler import write_variables
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
 
-def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, MTS=0):
+def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, BSFlexSupply=None, MTS=0):
     """
     This function reads the DispaSET config, loads the specified data,
     processes it when needed, and formats it in the proper DispaSET format.
@@ -35,6 +35,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     :param profiles:      Profiles from mid term scheduling simulations
     :param PtLDemand:     Profiles for PtL demand from mid term scheduling simulations
     :param BSFlexDemand:  Profiles for BS Flex demand from mid term scheduling simulations
+    :param BSFlexSupply:  Profiles for BS Flex supply from mid term scheduling simulations
     :param MTS:           Boolean, 1 if in MTS
     :PtLDemand:           PtLDemand from mid term scheduling simulations
     """
@@ -285,8 +286,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     BoundarySector = BoundarySector.reindex(zones_bs)
     BoundarySector.fillna(0, inplace=True)
 
-    # Read BS Flexible demand
+    # Read BS Flexible demand & supply
     BSFlexibleDemand = GenericTable(zones_bs, 'BSFlexibleDemand', config, default=0)
+    BSFlexibleSupply = GenericTable(zones_bs, 'BSFlexibleSupply', config, default=0)
 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
@@ -313,6 +315,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
                                                                    'BSFlexibleDemand table')
             else:
                 BSFlexibleDemand[key].update(BSFlexDemand[key])
+
+    # Update BSFlexSupply (BSFlexibleSupply with demand from mid term scheduling)
+    if BSFlexSupply is not None and any(BSFlexibleSupply) > 0:
+        for key in BSFlexSupply.columns:
+            if key not in BSFlexibleSupply.columns:
+                logging.warning('The BS flexible demand "' + key + '" provided by the MTS is not found in the '
+                                                                   'BSFlexibleSupply table')
+            else:
+                BSFlexibleSupply[key].update(BSFlexSupply[key])
 
     # data checks:
     check_AvailabilityFactors(plants, AF)
@@ -364,8 +375,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     # Renaming the columns to ease the production of parameters:
     BoundarySector.rename(columns={'STOCapacity': 'BoundarySectorStorageCapacity',
                                    'STOSelfDischarge': 'BoundarySectorStorageSelfDischarge',
-                                   'STOMaxChargingPower': 'BoundarySectorStorageChargingCapacity',
-                                   'STOMinSOC': 'BoundarySectorStorageSOC'}, inplace=True)
+                                   # 'STOMaxChargingPower': 'BoundarySectorStorageChargingCapacity',
+                                   'STOMinSOC': 'BoundarySectorStorageMinimum'}, inplace=True)
 
     Plants_merged.rename(columns={'StartUpCost': 'CostStartUp',
                                   'RampUpMax': 'RampUpMaximum',
@@ -531,7 +542,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
                'HeatDemand': HeatDemand, 'ShareOfFlexibleDemand': ShareOfFlexibleDemand,
                'PriceTransmission': PriceTransmission,
                'BoundarySectorDemand': BoundarySectorDemand, 'CostBoundarySectorSlack': CostBoundarySectorSlack,
-               'BSFlexibleDemand': BSFlexibleDemand}
+               'BSFlexibleDemand': BSFlexibleDemand, 'BSFlexibleSupply': BSFlexibleSupply}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors']:
@@ -674,7 +685,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     sets_param['TimeUpMinimum'] = ['au']
     sets_param['TimeDownMinimum'] = ['au']
     sets_param['BSFlexDemandInput'] = ['n_bs', 'h']
+    sets_param['BSFlexDemandInputInitial'] = ['n_bs']
     sets_param['BSFlexMaxCapacity'] = ['n_bs']
+    sets_param['BSFlexSupplyInput'] = ['n_bs', 'h']
+    sets_param['BSFlexSupplyInputInitial'] = ['n_bs']
+    sets_param['BSFlexMaxSupply'] = ['n_bs']
     sets_param['BoundarySectorStorageCapacity'] = ['n_bs']
     sets_param['BoundarySectorStorageSelfDischarge'] = ['n_bs']
     sets_param['BoundarySectorStorageMinimum'] = ['n_bs']
@@ -729,14 +744,25 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     for var in ['CHPPowerToHeat', 'CHPPowerLossFactor', 'CHPMaxHeat']:
         parameters[var]['val'] = Plants_chp[var].values
 
-    # Particular treatment of BSFlexMaxCapacity that is not a time-series and
-    # that is given separetly from the Power plant database
-    if 'BSFlexibleCapacity' in config and config['BSFlexibleCapacity'] != '':
-        BSFlexMaxCapacity = pd.read_csv(config['BSFlexibleCapacity'], index_col=0, keep_default_na=False)
+    # Particular treatment of BSFlexMaxCapacity that is not a time-series and that is given from the BS Inputs database
+    if 'BSFlexibleDemand' in config and config['BSFlexibleDemand'] != '':
         for i, u in enumerate(sets['n_bs']):
-            for zone_bs in BSFlexMaxCapacity.index:
-                if zone_bs in zones_bs:
-                    parameters['BSFlexMaxCapacity']['val'][i] = BSFlexMaxCapacity.loc[zone_bs]
+            if u in BoundarySector.index:
+                parameters['BSFlexMaxCapacity']['val'][i] = BoundarySector.loc[u, 'MaxFlexDemand']
+
+    # Particular treatment of BSFlexMaxCapacity that is not a time-series and that is given from the BS Inputs database
+    if 'BSFlexibleSupply' in config and config['BSFlexibleSupply'] != '':
+        for i, u in enumerate(sets['n_bs']):
+            if u in BoundarySector.index:
+                parameters['BSFlexMaxSupply']['val'][i] = BoundarySector.loc[u, 'MaxFlexSupply']
+
+    # Particular treatment of BoundarySectorStorageMinimum:
+    for i, u in enumerate(sets['n_bs']):
+        if u in BoundarySector.index:
+            parameters['BoundarySectorStorageMinimum']['val'][i] = BoundarySector.loc[
+                                                                       u, 'BoundarySectorStorageMinimum'] * \
+                                                                   BoundarySector.loc[
+                                                                       u, 'BoundarySectorStorageCapacity']
 
     # Storage profile and initial state:
     for i, s in enumerate(sets['asu']):
@@ -781,14 +807,21 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, M
     for i, u in enumerate(sets['n_bs']):
         if u in finalTS['BoundarySectorDemand']:
             parameters['BoundarySectorDemand']['val'][i, :] = finalTS['BoundarySectorDemand'][u][idx_sim].values
-            parameters['CostBoundarySectorSlack']['val'][i, :] = finalTS['CostBoundarySectorSlack'][u][idx_sim].values
+
+        parameters['CostBoundarySectorSlack']['val'][i, :] = finalTS['CostBoundarySectorSlack'][u][idx_sim].values
 
     # Boundary Sector time series
     for i, u in enumerate(sets['n_bs']):
         if u in finalTS['BSFlexibleDemand']:
             parameters['BSFlexDemandInput']['val'][i, :] = finalTS['BSFlexibleDemand'][u][idx_sim].values
-    if 'BSFlexibleCapacity' in config and config['BSFlexibleCapacity'] != '':
+        if u in finalTS['BSFlexibleSupply']:
+            parameters['BSFlexSupplyInput']['val'][i, :] = finalTS['BSFlexibleSupply'][u][idx_sim].values
+
+    if 'BSFlexibleDemand' in config:
         check_BSFlexDemand(parameters, config)
+
+    if 'BSFlexibleSupply' in config:
+        check_BSFlexSupply(parameters, config)
 
     # Ramping rates are reconstructed for the non dimensional value provided
     # (start-up and normal ramping are not differentiated)

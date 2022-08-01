@@ -696,6 +696,16 @@ def check_BSFlexDemand(parameters, config):
             sys.exit(1)
 
 
+def check_BSFlexSupply(parameters, config):
+    for i, u in enumerate(parameters['BSFlexMaxSupply']['val']):
+        TotSupply = parameters['BSFlexSupplyInput']['val'][i, :].sum() * config['SimulationTimeStep']
+        MaxSupply = parameters['BSFlexMaxSupply']['val'][i] * len(parameters['BSFlexSupplyInput']['val'][i, :]) * \
+                    config['SimulationTimeStep']
+        if TotSupply > MaxSupply:
+            logging.error('Unit ' + u + ' has a higher PtL supply than what the PtL max supply can provide')
+            sys.exit(1)
+
+
 def check_simulation_environment(SimulationPath, store_type='pickle', firstline=7):
     """
     Function to test the validity of disapset inputs

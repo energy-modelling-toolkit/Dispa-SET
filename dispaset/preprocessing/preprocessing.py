@@ -45,16 +45,23 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
         logging.info('Simulation without mid therm scheduling')
         SimData = build_single_run(config)
     else:
-        # if config['H2FlexibleDemand'] != '':
-        #     [new_profiles, new_PtLDemand] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
-        #     # Build simulation data with new profiles
-        #     logging.info('\n\nBuilding final simulation\n')
-        #     SimData = build_single_run(config, profiles=new_profiles, PtLDemand=new_PtLDemand)
-        if config['BSFlexibleDemand'] != '':
+        if (config['BSFlexibleDemand'] != '') and (config['BSFlexibleSupply'] == ''):
             [new_profiles, new_BSFlexDemand] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
             SimData = build_single_run(config, profiles=new_profiles, BSFlexDemand=new_BSFlexDemand)
+        elif (config['BSFlexibleSupply'] != '') and (config['BSFlexibleDemand'] == ''):
+            [new_profiles, new_BSFlexSupply] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
+            # Build simulation data with new profiles
+            logging.info('\n\nBuilding final simulation\n')
+            SimData = build_single_run(config, profiles=new_profiles, BSFlexSupply=new_BSFlexSupply)
+        elif (config['BSFlexibleSupply'] != '') and (config['BSFlexibleDemand'] != ''):
+            [new_profiles, new_BSFlexDemand, new_BSFlexSupply] = mid_term_scheduling(config, mts_plot=mts_plot,
+                                                                                     TimeStep=MTSTimeStep)
+            # Build simulation data with new profiles
+            logging.info('\n\nBuilding final simulation\n')
+            SimData = build_single_run(config, profiles=new_profiles, BSFlexDemand=new_BSFlexDemand,
+                                       BSFlexSupply=new_BSFlexSupply)
         else:
             new_profiles = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
@@ -165,8 +172,8 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         no_of_zones = len(config['mts_zones'])
         temp_results = {}
         profiles = pd.DataFrame(index=idx)
-        PtLDemand = pd.DataFrame(index=idx)
         BSFlexDemand = pd.DataFrame(index=idx)
+        BSFlexSupply = pd.DataFrame(index=idx)
         for i, c in enumerate(config['mts_zones']):
             logging.info(
                 '\n\nLaunching Mid-Term Scheduling for zone ' + c + ' (Number ' + str(i + 1) + ' out of ' + str(
@@ -202,25 +209,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                     sys.exit(1)
                 for u_old in units.loc[u, 'FormerUnits']:
                     profiles[u_old] = temp_results[c]['OutputStorageLevel'][u].values
-            # if config['H2FlexibleDemand'] != '':
-            #     if 'OutputPtLDemand' not in temp_results[c]:
-            #         logging.critical('PtL demand in zone ' + c + ' was not computed')
-            #         sys.exit(0)
-            #     elif len(temp_results[c]['OutputPtLDemand']) > len(idx):
-            #         logging.critical('The number of time steps in the mid-term simulation results (' + str(
-            #             len(temp_results[c]['OutputPtLDemand'])) +
-            #                          ') does not match the length of the index (' + str(len(idx)) + ')')
-            #         sys.exit(0)
-            #     elif len(temp_results[c]['OutputPtLDemand']) < len(idx):
-            #         temp_results[c]['OutputPtLDemand'] = temp_results[c]['OutputPtLDemand'].reindex(
-            #             range(1, len(idx) + 1)).fillna(0)
-            # for u in temp_results[c]['OutputPtLDemand']:
-            #     if u not in units.index:
-            #         logging.critical('Unit "' + u + '" is reported in the PtL demand of the result file but '
-            #                                         'does not appear in the units table')
-            #         sys.exit(1)
-            #     for u_old in units.loc[u, 'FormerUnits']:
-            #         PtLDemand[u_old] = temp_results[c]['OutputPtLDemand'][u].values
+
             if config['BSFlexibleDemand'] != '':
                 if 'OutputBSFlexDemand' not in temp_results[c]:
                     logging.critical('BS Flex demand in zone ' + c + ' was not computed')
@@ -234,6 +223,18 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                     temp_results[c]['OutputBSFLexDemand'] = temp_results[c]['OutputBSFLexDemand'].reindex(
                         range(1, len(idx) + 1)).fillna(0)
 
+            if config['BSFlexibleSupply'] != '':
+                if 'OutputBSFlexSupply' not in temp_results[c]:
+                    logging.critical('BS Flex demand in zone ' + c + ' was not computed')
+                    sys.exit(0)
+                elif len(temp_results[c]['OutputBSFLexSupply']) > len(idx):
+                    logging.critical('The number of time steps in the mid-term simulation results (' + str(
+                        len(temp_results[c]['OutputBSFLexSupply'])) +
+                                     ') does not match the length of the index (' + str(len(idx)) + ')')
+                    sys.exit(0)
+                elif len(temp_results[c]['OutputBSFLexSupply']) < len(idx):
+                    temp_results[c]['OutputBSFLexSupply'] = temp_results[c]['OutputBSFLexSupply'].reindex(
+                        range(1, len(idx) + 1)).fillna(0)
 
     # Solving reservoir levels for all regions simultaneously
     elif config['HydroScheduling'] == 'Regional':
@@ -258,15 +259,6 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         else:
             profiles = temp_results['OutputStorageLevel'].set_index(idx)
 
-        # if config['H2FlexibleDemand'] != '':
-        #     if 'OutputPtLDemand' not in temp_results:
-        #         logging.critical('PtL Demand in the selected region was not computed')
-        #         sys.exit(0)
-        #     if len(temp_results['OutputPtLDemand']) < len(idx):
-        #         PtLDemand = temp_results['OutputPtLDemand'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
-        #     else:
-        #         PtLDemand = temp_results['OutputPtLDemand'].set_index(idx)
-
         if config['BSFlexibleDemand'] != '':
             if 'OutputBSFlexDemand' not in temp_results:
                 logging.critical('PtL Demand in the selected region was not computed')
@@ -277,6 +269,16 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             else:
                 BSFlexDemand = temp_results['OutputBSFlexDemand'].set_index(idx)
 
+        if config['BSFlexibleSupply'] != '':
+            if 'OutputBSFlexSupply' not in temp_results:
+                logging.critical('PtL Demand in the selected region was not computed')
+                sys.exit(0)
+            if len(temp_results['OutputBSFlexSupply']) < len(idx):
+                BSFlexSupply = temp_results['OutputBSFlexSupply'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(
+                    idx)
+            else:
+                BSFlexSupply = temp_results['OutputBSFlexSupply'].set_index(idx)
+
         # Updating the profiles table with the original unit names:
         for u in profiles:
             if u not in units.index:
@@ -286,29 +288,18 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             for u_old in units.loc[u, 'FormerUnits']:
                 profiles[u_old] = profiles[u]
             profiles.drop(u, axis=1, inplace=True)
-        # if config['H2FlexibleDemand'] != '':
-        #     for u in PtLDemand:
-        #         if u not in units.index:
-        #             logging.critical('Unit "' + u + '" is reported in the PtL demand of the result file but '
-        #                                             'does not appear in the units table')
-        #             sys.exit(1)
-        #         # TODO: check if else statement should be used here, if its not everything currently in the else
-        #         #  statement is never used
-        #         else:
-        #             for u_old in units.loc[u, 'FormerUnits']:
-        #                 PtLDemand[u_old] = PtLDemand[u]
-        #                 PtLDemand.drop(u, axis=1, inplace=True)
     else:
         logging.error('HydroScheduling parameter should be either "Regional" or "Zonal" (case sensitive). ')
         sys.exit()
 
     # replace all 1.000000e+300 values by nan since they correspond to undefined in GAMS:
     profiles[profiles >= 1E300] = np.nan
-    # if config['H2FlexibleDemand'] != '':
-    #     PtLDemand[PtLDemand >= 1E300] = np.nan
 
     if config['BSFlexibleDemand'] != '':
         BSFlexDemand[BSFlexDemand >= 1E300] = np.nan
+
+    if config['BSFlexibleSupply'] != '':
+        BSFlexSupply[BSFlexSupply >= 1E300] = np.nan
 
     if mts_plot:
         profiles.plot()
@@ -324,16 +315,30 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
 
     if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
         profiles = profiles.reindex(idx_long, method='nearest')
-        # if config['H2FlexibleDemand'] != '':
-        #     PtLDemand = PtLDemand.resample(pd_timestep(config['SimulationTimeStep'])).pad()
-        #     PtLDemand = PtLDemand.iloc[0:len(idx_long), :]
+
+        temp_config['StartDate'] = (y_start, 1, 1, 00, 00, 00)  # updating start date to the beginning of the year
+        temp_config['StopDate'] = (y_start + 1, 1, 1, 00, 59, 00)
+        idx_tmp = pd.date_range(start=dt.datetime(*temp_config['StartDate']),
+                                end=dt.datetime(*temp_config['StopDate']),
+                                freq=pd_timestep(TimeStep)).tz_localize(None)
+
         if config['BSFlexibleDemand'] != '':
+            BSFlexDemand = pd.DataFrame(BSFlexDemand, index=idx_tmp).fillna(0)
             BSFlexDemand = BSFlexDemand.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
-            BSFlexDemand = BSFlexDemand.iloc[0:len(idx_long), :]
+            BSFlexDemand = BSFlexDemand.loc[idx_long, :]
+
+        if config['BSFlexibleSupply'] != '':
+            BSFlexSupply = pd.DataFrame(BSFlexSupply, index=idx_tmp).fillna(0)
+            BSFlexSupply = BSFlexSupply.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
+            BSFlexSupply = BSFlexSupply.loc[idx_long, :]
+
     pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'], "temp_profiles.p"), "wb"))
-    # if config['H2FlexibleDemand'] != '':
-    #     return profiles, PtLDemand
-    if config['BSFlexibleDemand'] != '':
+
+    if (config['BSFlexibleSupply'] == '') and (config['BSFlexibleDemand'] != ''):
         return profiles, BSFlexDemand
+    elif (config['BSFlexibleSupply'] != '') and (config['BSFlexibleDemand'] == ''):
+        return profiles, BSFlexSupply
+    elif (config['BSFlexibleSupply'] != '') and (config['BSFlexibleDemand'] != ''):
+        return profiles, BSFlexDemand, BSFlexSupply
     else:
         return profiles

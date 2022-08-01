@@ -1,5 +1,6 @@
-,Sector,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency,STOMinSOC,FlexibleDemand
-0,Z1_th,1000,,,,,
-1,Z1_h2,50,,,,,
-2,Z2_h2,2,,,,,
-3,Z2_w2,5000,,,,,
+,Sector,STOCapacity,STOSelfDischarge,STOMinSOC,MaxFlexDemand,MaxFlexSupply
+0,Z1_th,1000,0.001,,,
+1,Z1_h2,50,,,,
+2,Z2_h2,2,,,50,
+3,Z2_w2,5000,,0.1,,
+4,ZZ3_bio,,,,,1000

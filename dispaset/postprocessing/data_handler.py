@@ -165,9 +165,10 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
                    'OutputBoundarySectorSlack', 'OutputPowerBoundarySector', 'OutputBoundarySectorStorageLevel',
                    'OutputBoundarySectorStorageInput', 'OutputBoundarySectorStorageShadowPrice',
                    'BoundarySectorShadowPrice', 'OutputBoundarySectorSlack', 'OutputBoundarySectorStorageSlack',
-                   'OutputBoundarySectorSpillage', 'OutputBSFlexDemand', 'OutputResidualLoad',
+                   'OutputBoundarySectorSpillage', 'OutputBSFlexDemand', 'OutputBSFlexSupply', 'OutputResidualLoad',
                    'OutputCurtailmentReserve_2U', 'OutputCurtailmentReserve_3U', 'OutputMaxOutageUp',
-                   'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D']
+                   'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D',
+                   'OutputFlowBoundarySector']
 
     # Setting the proper index to the result dataframes:
     from itertools import chain
@@ -211,7 +212,10 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
         results['ShadowPrice_2U'][results['ShadowPrice_2U'] >= 1e300] = 0
         results['ShadowPrice_3U'][results['ShadowPrice_3U'] >= 1e300] = 0
         results['HeatShadowPrice'][results['HeatShadowPrice'] >= 1e300] = 0
-        # results['H2ShadowPrice'][results['H2ShadowPrice'] >= 1e300] = 0
+        results['BoundarySectorShadowPrice'][results['BoundarySectorShadowPrice'] >= 1e300] = 0
+
+    # Remove powerplants with no generation
+    results['OutputPower'] = results['OutputPower'].loc[:, (results['OutputPower'] != 0).any(axis=0)]
 
     # Total nodal power consumption
     results['NodalPowerConsumption'] = pd.DataFrame()

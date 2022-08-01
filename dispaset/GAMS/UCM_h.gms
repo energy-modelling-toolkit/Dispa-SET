@@ -165,7 +165,11 @@ Technology(au,t)                            [n.a.]          Technology type {1 0
 TimeDownMinimum(au)                         [h]             Minimum down time
 TimeUpMinimum(au)                           [h]             Minimum up time
 BSFlexDemandInput(n_bs,h)                   [MWh]           Flexible demand inside BS at each timestep (unless for MTS)
+BSFlexDemandInputInitial(n_bs)              [MWh]           Cumulative flexible demand inside the loop
 BSFlexMaxCapacity(n_bs)                     [MW]            Max capacity for BS Flexible demand
+BSFlexSupplyInput(n_bs,h)                   [MWh]           Flexible demand inside BS at each timestep (unless for MTS)
+BSFlexSupplyInputInitial(n_bs)              [MWh]           Cumulative flexible demand inside the loop
+BSFlexMaxSupply(n_bs)                       [MW]            Max capacity for BS Flexible demand
 $If %RetrieveStatus%==1 CommittedCalc(u,z)  [n.a.]          Committment status as for the MILP
 Nunits(au)                                  [n.a.]          Number of units inside the cluster (upper bound value for integer variables)
 K_QuickStart(n)                             [n.a.]          Part of the reserve that can be provided by offline quickstart units
@@ -290,7 +294,11 @@ $LOAD TimeUpMinimum
 $LOAD CostRampUp
 $LOAD CostRampDown
 $LOAD BSFlexDemandInput
+$LOAD BSFlexDemandInputInitial
 $LOAD BSFlexMaxCapacity
+$LOAD BSFlexSupplyInput
+$LOAD BSFlexSupplyInputInitial
+$LOAD BSFlexMaxSupply
 $LOAD BoundarySectorStorageCapacity
 $LOAD BoundarySectorStorageSelfDischarge
 $LOAD BoundarySectorStorageMinimum
@@ -376,7 +384,11 @@ Technology,
 TimeDownMinimum,
 TimeUpMinimum,
 BSFlexDemandInput,
+BSFlexDemandInputInitial,
 BSFlexMaxCapacity,
+BSFlexSupplyInput,
+BSFlexSupplyInputInitial,
+BSFlexMaxSupply,
 BoundarySectorStorageCapacity,
 BoundarySectorStorageSelfDischarge,
 BoundarySectorStorageMinimum,
@@ -443,6 +455,7 @@ StorageSlack(au,h)                  [MWh]   Unsatisfied storage level constraint
 BoundarySectorWaterSlack(n_bs)      [MWh]   Unsatisfied boundary sector water level constraint at end of optimization period
 BoundarySectorStorageSlack(n_bs,h)  [MWh]   Unsatisfied boundary sector storage level constraint at end of simulation timestep
 BSFlexDemand(n_bs,h)                [MW]    FLexible boundary sector demand at each time step of each n_bs node
+BSFlexSupply(n_bs,h)                [MW]    FLexible boundary sector supply at each time step of each n_bs node
 ;
 
 free variable
@@ -574,6 +587,8 @@ EQ_Flexible_Demand_Max
 EQ_Flexible_Demand_Modulation_Min
 EQ_Flexible_Demand_Modulation_Max
 EQ_No_Flexible_Demand
+EQ_Tot_Flex_Supply_BS
+EQ_Max_Flex_Supply_BS
 EQ_Tot_Flex_Demand_BS
 EQ_Max_Flex_Capacity_BS
 EQ_BS_Flex_Demand
@@ -974,6 +989,7 @@ EQ_Boundary_Sector_Storage_balance(n_bs,i)..
          + BoundarySectorStorageInput(n_bs,i)*TimeStep
          =E=
          BoundarySectorStorageLevel(n_bs,i)
+         + BoundarySectorStorageSelfDischarge(n_bs)*BoundarySectorStorageLevel(n_bs,i)*TimeStep
 ;
 
 * Minimum level at the end of the optimization horizon:
@@ -1035,6 +1051,7 @@ EQ_Storage_balance(au,i)..
          +StorageOutflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
          +spillage(au,i)$(s(au))
          +Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
+         +StorageSelfDischarge(au)$(s(au))*StorageLevel(au,i)$(s(au))*TimeStep
 ;
 
 * Minimum level at the end of the optimization horizon:
@@ -1173,6 +1190,7 @@ EQ_BS_Demand_balance(n_bs,i)..
         + sum(bsu, PowerBoundarySector(n_bs,bsu,i))
         + BoundarySectorSlack(n_bs,i)
         + sum(l_bs,FlowBS(l_bs,i)*BSLineNode(l_bs,n_bs))
+        + BSFlexSupply(n_bs,i)
         =E=
         BoundarySectorDemand(n_bs,i)
         + BSFlexDemand(n_bs,i)
@@ -1241,9 +1259,10 @@ EQ_Heat_Storage_boundaries(thms,i)$(ord(i) = card(i))..
 ;
 
 * Equations concerning boundary sector (PtL) flexible demand
-* If MTS=1: assures that total demand of boundary sector (PtL) is fulfilled
+* Only valid in old formulation!!! If MTS=1: assures that total demand of boundary sector (PtL) is fulfilled
 EQ_Tot_Flex_Demand_BS(n_bs)..
-         sum(i,BSFlexDemandInput(n_bs,i))
+         BSFlexDemandInputInitial(n_bs)
+         + sum(i,BSFlexDemandInput(n_bs,i))
          =E=
          sum(i,BSFlexDemand(n_bs,i))
 ;
@@ -1252,14 +1271,29 @@ EQ_Tot_Flex_Demand_BS(n_bs)..
 EQ_Max_Flex_Capacity_BS(n_bs,i)..
          BSFlexDemand(n_bs,i)
          =L=
-         BSFlexMaxCapacity(n_bs)
+         BSFlexMaxCapacity(n_bs)*TimeStep
 ;
 
-* If MTS = 0: Boundary sector (PtL) demand is not a variable anymore, but a parameter
+* Only valid in old formulation!!! If MTS = 0: Boundary sector (PtL) demand is not a variable anymore, but a parameter
 EQ_BS_Flex_Demand(n_bs,i)..
          BSFlexDemand(n_bs,i)
          =E=
          BSFlexDemandInput(n_bs,i)
+;
+
+
+EQ_Tot_Flex_Supply_BS(n_bs)..
+         BSFlexSupplyInputInitial(n_bs)
+         + sum(i,BSFlexSupplyInput(n_bs,i))
+         =G=
+         sum(i,BSFlexSupply(n_bs,i))
+;
+
+* Capacity of boundary sector (PtL) must not be exceeded
+EQ_Max_Flex_Supply_BS(n_bs,i)..
+         BSFlexSupply(n_bs,i)
+         =L=
+         BSFlexMaxSupply(n_bs)*TimeStep
 ;
 
 *===============================================================================
@@ -1343,9 +1377,13 @@ $If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand_Max,
 $if not %ActivateFlexibleDemand% == 1 EQ_No_Flexible_Demand,
 EQ_Flexible_Demand_Modulation_Min,
 EQ_Flexible_Demand_Modulation_Max,
-$If %MTS% == 1 EQ_Tot_Flex_Demand_BS,
-$If %MTS% == 1 EQ_Max_Flex_Capacity_BS,
-$If %MTS% == 0 EQ_BS_Flex_Demand,
+*$If %MTS% == 1 EQ_Tot_Flex_Demand_BS,
+*$If %MTS% == 1 EQ_Max_Flex_Capacity_BS,
+*$If %MTS% == 0 EQ_BS_Flex_Demand,
+EQ_Tot_Flex_Demand_BS,
+EQ_Max_Flex_Capacity_BS,
+EQ_Tot_Flex_Supply_BS,
+EQ_Max_Flex_Supply_BS,
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 /
 ;
@@ -1426,6 +1464,8 @@ $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital_dbg;
          StorageInitial(thms) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(thms,i));
          StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
          BoundarySectorStorageInitial(n_bs) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),BoundarySectorStorageLevel.L(n_bs,i));
+         BSFlexDemandInputInitial(n_bs) = sum(i$(ord(i)<LastKeptHour+1), BSFlexDemandInput(n_bs,i) - BSFlexDemand.L(n_bs,i));
+         BSFlexSupplyInputInitial(n_bs) = sum(i$(ord(i)<LastKeptHour+1), BSFlexSupplyInput(n_bs,i) - BSFlexSupply.L(n_bs,i));
 $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),AccumulatedOverSupply.L(n,i));
 
 * Assigning waterslack (one value per optimization horizon) to the last element of storageslack
@@ -1504,6 +1544,7 @@ LostLoad_WaterSlack(au)
 LostLoad_BoundarySectorWaterSlack(n_bs)
 StorageShadowPrice(au,h)
 OutputBSFlexDemand(n_bs,h)
+OutputBSFlexSupply(n_bs,h)
 OutputPowerMustRun(u,h)
 $If %MTS%==0 OutputCostStartUpH(u,h)
 $If %MTS%==0 OutputCostShutDownH(u,h)
@@ -1575,6 +1616,7 @@ LostLoad_WaterSlack(au) = WaterSlack.L(au);
 LostLoad_BoundarySectorWaterSlack(n_bs) = BoundarySectorWaterSlack.L(n_bs);
 StorageShadowPrice(s,z) = 0 ;
 OutputBSFlexDemand(n_bs,z) = BSFlexDemand.L(n_bs,z);
+OutputBSFlexSupply(n_bs,z) = BSFlexSupply.L(n_bs,z);
 StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
 StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
 OutputPowerMustRun(u,z) = PowerMustRun(u,z);
@@ -1664,6 +1706,7 @@ LostLoad_WaterSlack,
 LostLoad_BoundarySectorWaterSlack,
 StorageShadowPrice,
 OutputBSFlexDemand,
+OutputBSFlexSupply,
 BoundarySectorShadowPrice,
 OutputPowerMustRun,
 $If %MTS%==0 OutputCostStartUpH,
