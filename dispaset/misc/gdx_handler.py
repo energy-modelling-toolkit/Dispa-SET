@@ -14,14 +14,15 @@ Example:
 @author: Sylvain Quoilin (sylvain.quoilin@ec.europa.eu)
 
 """
-import platform
+import copy
+import logging
 import os
+import platform
 import sys
 import time as tm
+
 import numpy as np
 import pandas as pd
-import logging
-import copy
 
 from .str_handler import shrink_to_64, force_str
 
