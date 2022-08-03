@@ -2,6 +2,7 @@ import datetime as dt
 import logging
 import sys
 from collections import OrderedDict
+from itertools import chain
 
 import numpy as np
 import pandas as pd
@@ -106,7 +107,8 @@ def GAMSstatus(statustype, num):
     return str(msg[num])
 
 
-def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, return_status=False):
+def get_sim_results(config, cache=None, temp_path=None, return_xarray=False, return_status=False,
+                    inputs_file='Inputs.p', results_file='Results.gdx'):
     """
     This function reads the simulation environment folder once it has been solved and loads
     the input variables together with the results.
@@ -119,8 +121,9 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     :returns inputs,results:    Two dictionaries with all the input and outputs
     """
 
-    inputfile = path + '/Inputs.p'
-    resultfile = path + '/Results.gdx'
+    path = config['SimulationDirectory']
+    inputfile = path + '/' + inputs_file
+    resultfile = path + '/' + results_file
     if cache is not None or temp_path is not None:
         logging.warning(
             'Caching option has been removed. Try to save manually the results, e.g. results.to_netcdf("res.nc")')
@@ -148,12 +151,17 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     StartDate = inputs['config']['StartDate']
     StopDate = inputs['config']['StopDate']  # last day of the simulation with look-ahead period
     StopDate_long = dt.datetime(*StopDate) + dt.timedelta(days=inputs['config']['LookAhead'])
-    index = pd.date_range(start=dt.datetime(*StartDate), end=dt.datetime(*StopDate), freq='h')
-    index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
+    if 'MTS' in inputs_file:
+        index = pd.date_range(start=dt.datetime(*StartDate), end=dt.datetime(*StopDate), freq='d')
+        index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='d')
+    else:
+        index = pd.date_range(start=dt.datetime(*StartDate), end=dt.datetime(*StopDate), freq='h')
+        index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
 
     keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
             'LostLoad_RampDown', 'LostLoad_2D', 'ShadowPrice', 'StorageShadowPrice',
-            'OutputCostStartUpH', 'OutputCostRampUpH', 'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U', 'status']  # 'status'
+            'OutputCostStartUpH', 'OutputCostRampUpH', 'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U',
+            'status']  # 'status'
 
     keys_sparse = ['OutputPower', 'OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted',
                    'OutputCurtailedPower', 'OutputFlow', 'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel',
@@ -171,7 +179,6 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
                    'OutputFlowBoundarySector']
 
     # Setting the proper index to the result dataframes:
-    from itertools import chain
     for key in chain(keys, keys_sparse):
         if key in results:
             # Case of variables for which the look-ahead period is recorded (e.g. the lost loads)

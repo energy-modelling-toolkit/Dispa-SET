@@ -1151,8 +1151,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
             import cPickle as pickle
         except ImportError:
             import pickle
-        with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
-            pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
+        if MTS:
+            with open(os.path.join(sim, 'Inputs_MTS.p'), 'wb') as pfile:
+                pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
+        else:
+            with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
+                pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
     logging.info('Build finished')
 
     # Remove previously-created debug files:

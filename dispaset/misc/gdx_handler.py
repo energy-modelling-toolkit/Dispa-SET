@@ -14,14 +14,15 @@ Example:
 @author: Sylvain Quoilin (sylvain.quoilin@ec.europa.eu)
 
 """
-import platform
+import copy
+import logging
 import os
+import platform
 import sys
 import time as tm
+
 import numpy as np
 import pandas as pd
-import logging
-import copy
 
 from .str_handler import shrink_to_64, force_str
 
@@ -270,7 +271,7 @@ def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
     return out
 
 
-def gdx_to_dataframe(data, fixindex=False, verbose=False):
+def gdx_to_dataframe(data, fixindex=False, verbose=False, inputs=False):
     """
     This function structures the raw data extracted from a gdx file (using the function GdxToList)
     and outputs it as a dictionary of pandas dataframes (or series)
@@ -320,7 +321,10 @@ def gdx_to_dataframe(data, fixindex=False, verbose=False):
                 vars1 = list(vars1)
                 vars2 = list(vars2)
                 pd_index = pd.MultiIndex.from_product([vars1, vars2], names=('Zones', 'Emissions'))
-                out[symbol] = pd.DataFrame(columns=pd_index, index=out['OutputPower'].index)
+                if inputs:
+                    out[symbol] = pd.DataFrame(columns=pd_index)
+                else:
+                    out[symbol] = pd.DataFrame(columns=pd_index, index=out['OutputPower'].index)
                 for element1 in data[symbol]:
                     element = copy.deepcopy(element1)
                     for var1 in vars1:
