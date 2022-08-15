@@ -805,7 +805,7 @@ def adjust_unit_capacity(SimData, u_idx, scaling=1, value=None, singleunit=False
 
     # find the units to be scaled:
     units = SimData['units'].loc[u_idx,:]
-    cond = units.index.isin(u_idx)
+    cond = SimData['units'].index.isin(u_idx)
     idx = pd.Series(np.where(cond)[0], index=units.index)
     TotalCapacity = (units.PowerCapacity * units.Nunits).sum()
     if scaling != 1:
@@ -1021,7 +1021,6 @@ def adjust_flexibility(inputs, flex_units, slow_units, flex_ratio, singleunit=Fa
     return SimData
 
 
-
 def adjust_ntc(inputs, value=None, write_gdx=False, dest_path=''):
     """
     Function used to modify the net transfer capacities in the Dispa-SET generated input data
@@ -1032,7 +1031,6 @@ def adjust_ntc(inputs, value=None, write_gdx=False, dest_path=''):
     :param write_gdx:   boolean defining if Inputs.gdx should be also overwritten with the new data
     :param dest_path:   Simulation environment path to write the new input data. If unspecified, no data is written!
     :return:            New SimData dictionary
-    @author: Carla Vidal
     """
     import pickle
 
@@ -1051,7 +1049,7 @@ def adjust_ntc(inputs, value=None, write_gdx=False, dest_path=''):
         sys.exit(1)
 
     if value is not None:
-        SimData['parameters']['FlowMaximum']=SimData['parameters']['FlowMaximum'] * value
+        SimData['parameters']['FlowMaximum']['val']=SimData['parameters']['FlowMaximum']['val']*value
     else:
         pass
 
