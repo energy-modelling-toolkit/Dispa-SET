@@ -142,7 +142,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
             path = config['PowerPlantData'].replace('##', str(z))
             tmp = pd.read_csv(path, na_values=commons['na_values'],
                               keep_default_na=False)
-            plants = plants.append(tmp, ignore_index=True, sort=False)
+            # plants = plants.append(tmp, ignore_index=True, sort=False)
+            plants = pd.concat([plants, tmp], ignore_index=True, sort=False)
     # remove invalid power plants:
     plants = select_units(plants, config)
 
@@ -185,7 +186,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     check_sto(config, plants_thms)
 
     # Merging all MTS storage units
-    plants_all_sto = plants_sto.append(plants_thms)
+    # plants_all_sto = plants_sto.append(plants_thms)
+    plants_all_sto = pd.concat([plants_sto, plants_thms])
 
     # Defining the heat only units:
     plants_heat = plants[[u in commons['tech_heat'] for u in plants['Technology']]]
@@ -200,8 +202,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     check_p2h(config, plants_p2h)
 
     # All heating units:
-    plants_heat = plants_heat.append(plants_chp)
-    plants_heat = plants_heat.append(plants_p2h)
+    # plants_heat = plants_heat.append(plants_chp)
+    # plants_heat = plants_heat.append(plants_p2h)
+    plants_heat = pd.concat([plants_heat, plants_chp])
+    plants_heat = pd.concat([plants_heat, plants_p2h])
 
     # Defining the P2H2 units:
     # plants_h2 = plants[plants['Technology'] == 'P2GS']
@@ -209,7 +213,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     check_h2(config, plants_h2)
 
     # Merging all MTS storage units
-    plants_all_sto = plants_all_sto.append(plants_h2)
+    # plants_all_sto = plants_all_sto.append(plants_h2)
+    plants_all_sto = pd.concat([plants_all_sto, plants_h2])
 
     Outages = UnitBasedTable(plants, 'Outages', config, fallbacks=['Unit', 'Technology'])
     AF = UnitBasedTable(plants, 'RenewablesAF', config, fallbacks=['Unit', 'Technology'], default=1,
@@ -412,9 +417,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # All heating plants:
     Plants_heat = Plants_heat_only.copy()
-    Plants_heat = Plants_heat.append(Plants_chp)
-    Plants_heat = Plants_heat.append(Plants_p2h)
-    Plants_heat = Plants_heat.append(Plants_thms)
+    # Plants_heat = Plants_heat.append(Plants_chp)
+    # Plants_heat = Plants_heat.append(Plants_p2h)
+    # Plants_heat = Plants_heat.append(Plants_thms)
+
+    Plants_heat = pd.concat([Plants_heat, Plants_chp], axis=0)
+    Plants_heat = pd.concat([Plants_heat, Plants_p2h], axis=0)
+    Plants_heat = pd.concat([Plants_heat, Plants_thms], axis=0)
 
     Plants_h2 = Plants_merged[[u in commons['tech_p2h2'] for u in Plants_merged['Technology']]].copy()
     # check h2 plants:
@@ -974,15 +983,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                      # # Probing parameters
                      # 'probe': 1,
                      # Cut parameters
-                     'cuts': 5,
-                     'covers': 3,
-                     'cliques': 3,
-                     'disjcuts': 3,
-                     'liftprojcuts': 3,
-                     'localimplied': 3,
-                     'flowcovers': 2,
-                     'flowpaths': 2,
-                     'fraccuts': 2,
+                     # 'cuts': 5,
+                     # 'covers': 3,
+                     # 'cliques': 3,
+                     # 'disjcuts': 3,
+                     # 'liftprojcuts': 3,
+                     # 'localimplied': 3,
+                     # 'flowcovers': 2,
+                     # 'flowpaths': 2,
+                     # 'fraccuts': 2,
                      }
 
     lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]

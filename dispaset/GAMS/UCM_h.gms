@@ -54,6 +54,9 @@ $setglobal RetrieveStatus 0
 * Activate the flexible demand equations
 $setglobal ActivateFlexibleDemand 1
 
+* Activate advanced reserve demand
+$setglobal ActivateAdvancedReserves 0
+
 *===============================================================================
 *Definition of   sets and parameters
 *===============================================================================
@@ -729,7 +732,8 @@ EQ_Demand_balance_2U(n,i)..
          + sum((chp),Reserve_2U(chp,i)*Reserve(chp)*Location(chp,n))
          + CurtailmentReserve_2U(n,i) + LL_2U(n,i)
          =E=
-         +(Demand("2U",n,i) + max(smax((u,tc),PowerCapacity(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0)))*(1-K_QuickStart(n))
+$If %ActivateAdvancedReserves% == 1 +(Demand("2U",n,i) + max(smax((u,tc),PowerCapacity(u)/Nunits(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0)))*(1-K_QuickStart(n))
+$If %ActivateAdvancedReserves% == 0 +(Demand("2U",n,i))*(1-K_QuickStart(n))
 ;
 
 *Hourly demand balance in the upwards non-spinning reserve market for each node
@@ -740,7 +744,7 @@ EQ_Demand_balance_3U(n,i)..
          + CurtailmentReserve_2U(n,i) + CurtailmentReserve_3U(n,i) + LL_3U(n,i)
          =E=
          Demand("2U",n,i)
-         + max(smax((u,tc),PowerCapacity(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0))
+$If %ActivateAdvancedReserves% == 1 + max(smax((u,tc),PowerCapacity(u)/Nunits(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0))
 ;
 
 *Hourly demand balance in the downwards reserve market for each node
@@ -751,7 +755,7 @@ EQ_Demand_balance_2D(n,i)..
          + LL_2D(n,i)
          =E=
          Demand("2D",n,i)
-         + max(smax(s,StorageChargingCapacity(s)*Location(s,n)), smax(l,-FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0))
+$If %ActivateAdvancedReserves% == 1 + max(smax(s,StorageChargingCapacity(s)/Nunits(s)*Location(s,n)), smax(l,-FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0))
 ;
 
 *Curtailed power
@@ -1392,13 +1396,29 @@ OutputSystemCostD(h)
 OutputOptimalityGap(h)
 OutputOptimizationError(h)
 OutputOptimizationCheck(h)
+UnitHourlyPowerRevenue(au,h)
+UnitHourly2URevenue(au,h)
+UnitHourly2DRevenue(au,h)
+UnitHourly3URevenue(au,h)
+UnitHourlyHeatRevenue(au,h)
+UnitHourlyRevenue(au,h)
+UnitHourlyFixedCost(au,h)
+UnitHourlyVariableCost(au,h)
+UnitHourlyStartUpCost(au,h)
+UnitHourlyShutDownCost(au,h)
+UnitHourlyRampingCost(au,h)
+UnitHourlyProductionCost(au,h)
+UnitHourlyProfit(au,h)
 ;
 
-OutputMaxOutageUp(n,z)=max(smax((au,tc),PowerCapacity(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n)), smax(l,FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
-OutputMaxOutageDown(n,z)=max(smax(s,StorageChargingCapacity(s)*Location(s,n)), smax(l,-FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
-OutputDemand_2U(n,z)=(Demand("2U",n,z) + OutputMaxOutageUp(n,z))*(1-K_QuickStart(n));
-OutputDemand_3U(n,z)=Demand("2U",n,z) + OutputMaxOutageUp(n,z);
-OutputDemand_2D(n,z)=Demand("2D",n,z) + OutputMaxOutageDown(n,z);
+OutputMaxOutageUp(n,z)=max(smax((au,tc),PowerCapacity(au)/Nunits(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n)), smax(l,FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
+OutputMaxOutageDown(n,z)=max(smax(s,StorageChargingCapacity(s)/Nunits(s)*Location(s,n)), smax(l,-FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
+$If %ActivateAdvancedReserves% == 1 OutputDemand_2U(n,z)=(Demand("2U",n,z) + OutputMaxOutageUp(n,z))*(1-K_QuickStart(n));
+$If %ActivateAdvancedReserves% == 1 OutputDemand_3U(n,z)=Demand("2U",n,z) + OutputMaxOutageUp(n,z);
+$If %ActivateAdvancedReserves% == 1 OutputDemand_2D(n,z)=Demand("2D",n,z) + OutputMaxOutageDown(n,z);
+$If %ActivateAdvancedReserves% == 0 OutputDemand_2U(n,z)=(Demand("2U",n,z))*(1-K_QuickStart(n));
+$If %ActivateAdvancedReserves% == 0 OutputDemand_3U(n,z)=Demand("2U",n,z);
+$If %ActivateAdvancedReserves% == 0 OutputDemand_2D(n,z)=Demand("2D",n,z);
 OutputCommitted(au,z)=Committed.L(au,z);
 OutputFlow(l,z)=Flow.L(l,z);
 OutputPower(u,z)=Power.L(u,z);
@@ -1481,6 +1501,19 @@ OutputSystemCostD(z) = ObjectiveFunction.L(z);
 OutputOptimalityGap(z) = OptimalityGap.L(z);
 OutputOptimizationError(z) = OptimizationError.L(z);
 OutputOptimizationCheck(z) = OptimizationError.L(z) - OptimalityGap.L(z);
+UnitHourlyPowerRevenue(au,z) = sum(n, EQ_Demand_balance_DA.m(n,z) * Location(au,n) * Power.L(au,z));
+UnitHourly2URevenue(au,z) = sum(n, OutputReserve_2U(au,z) * ShadowPrice_2U(n,z) * Location(au,n));
+UnitHourly2DRevenue(au,z) = sum(n, OutputReserve_2D(au,z) * ShadowPrice_2D(n,z) * Location(au,n));
+UnitHourly3URevenue(au,z) = sum(n, OutputReserve_3U(au,z) * ShadowPrice_3U(n,z) * Location(au,n));
+UnitHourlyRevenue(au,z) = UnitHourlyPowerRevenue(au,z) + UnitHourly2URevenue(au,z) + UnitHourly2DRevenue(au,z) + UnitHourly3URevenue(au,z);
+UnitHourlyFixedCost(u,z) = Committed.L(u,z) * CostFixed(u);
+UnitHourlyVariableCost(au,z) = Power.L(au,z) * CostVariable(au,z);
+UnitHourlyStartUpCost(u,z) = StartUp.L(u,z) * CostStartUp(u);
+UnitHourlyShutDownCost(u,z) = ShutDown.L(u,z) * CostShutDown(u);
+UnitHourlyRampingCost(u,z) = CostRampUpH.L(u,z) + CostRampDownH.L(u,z);
+UnitHourlyProductionCost(au,z) = sum(u, UnitHourlyFixedCost(u,z) + UnitHourlyStartUpCost(u,z) + UnitHourlyShutDownCost(u,z) + UnitHourlyRampingCost(u,z))
+                                + UnitHourlyVariableCost(au,z);
+UnitHourlyProfit(au,z) = UnitHourlyRevenue(au,z) - UnitHourlyProductionCost(au,z);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
@@ -1546,7 +1579,19 @@ OutputMaxOutageDown,
 OutputDemand_2U,
 OutputDemand_3U,
 OutputDemand_2D,
-status
+status,
+UnitHourlyPowerRevenue
+UnitHourly2URevenue
+UnitHourly2DRevenue
+UnitHourly3URevenue
+UnitHourlyRevenue
+UnitHourlyFixedCost
+UnitHourlyVariableCost
+UnitHourlyStartUpCost
+UnitHourlyShutDownCost
+UnitHourlyRampingCost
+UnitHourlyProductionCost
+UnitHourlyProfit
 ;
 
 display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L, power.L;

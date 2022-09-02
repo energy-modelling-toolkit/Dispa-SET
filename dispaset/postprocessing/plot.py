@@ -52,11 +52,18 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
     # NTC plot data
     if (ntc is not None) and ('FlowIn' in plotdata) and ('FlowOut' in plotdata):
         ntc['FlowIn'], ntc['FlowOut'], ntc['ZeroLine'] = plotdata['FlowIn'], plotdata['FlowOut'], 0
+        plotdata['FlowOut'], plotdata['FlowIn'] = (np.minimum(0, ntc['FlowIn'] + ntc['FlowOut']),
+                                                   np.maximum(0, ntc['FlowOut'] + ntc['FlowIn']))
 
-    # Netting the interconnections:
-    if ('FlowIn' in plotdata) and ('FlowOut' in plotdata):
-        plotdata['FlowOut'], plotdata['FlowIn'] = (np.minimum(0, plotdata['FlowIn'] + plotdata['FlowOut']),
-                                                   np.maximum(0, plotdata['FlowOut'] + plotdata['FlowIn']))
+    if (ntc is not None) and ('FlowIn' in plotdata) and ('FlowOut' not in plotdata):
+        ntc['FlowIn'], ntc['FlowOut'], ntc['ZeroLine'] = plotdata['FlowIn'], 0, 0
+        plotdata['FlowOut'], plotdata['FlowIn'] = (np.minimum(0, ntc['FlowIn'] + ntc['FlowOut']),
+                                                   np.maximum(0, ntc['FlowOut'] + ntc['FlowIn']))
+
+    if (ntc is not None) and ('FlowIn' not in plotdata) and ('FlowOut' in plotdata):
+        ntc['FlowIn'], ntc['FlowOut'], ntc['ZeroLine'] = 0, plotdata['FlowOut'], 0
+        plotdata['FlowOut'], plotdata['FlowIn'] = (np.minimum(0, ntc['FlowIn'] + ntc['FlowOut']),
+                                                   np.maximum(0, ntc['FlowOut'] + ntc['FlowIn']))
 
     # find the zero line position:
     cols = plotdata.columns.tolist()
@@ -685,7 +692,10 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
         if from_node.strip() == z:
             ntc['NTCOut'] = ntc['NTCOut'] - inputs['param_df']['FlowMaximum'][col]
     ntc = ntc / 1e3  # GW
-    ntc = ntc.loc[:, (ntc != 0).any(axis=0)]
+    if any((ntc != 0).any(axis=0)):
+        logging.warning('NTC connections are present')
+    else:
+        ntc = None
 
     # Plot power dispatch
     demand.rename(z, inplace=True)

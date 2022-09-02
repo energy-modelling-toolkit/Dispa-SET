@@ -162,11 +162,13 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
             else:  # use the multi-index header with the zone
                 for key in tmp:
                     columns.append((z, key))
-                    data[z + ',' + key] = tmp[key]
+                tmp.columns = pd.MultiIndex.from_product([[z], tmp.columns])
+                data = pd.concat([data, tmp], axis=1)
         if not SingleFile:
             data.columns = pd.MultiIndex.from_tuples(columns, names=['Zone', 'Data'])
         # For each plant and each fallback key, try to find the corresponding column in the data
         out = pd.DataFrame(index=config['idx_long'])
+        new_header = []
         for j in plants.index:
             warning = True
             if RestrictWarning is not None:
@@ -181,7 +183,9 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
                 else:
                     header = (plants.loc[j, 'Zone'], plants.loc[j, key])
                 if header in data:
-                    out[u] = data[header]
+                    new_header.append(header[1])
+                    # out[u] = data[header]
+                    out = pd.concat([out, data[header]], axis=1)
                     found = True
                     if i > 0 and warning:
                         logging.warning(
@@ -194,7 +198,10 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
                         'No specific information was found for unit ' + u + ' in table ' + varname +
                         '. Using default value ' + str(default))
                 if default is not None:
-                    out[u] = default
+                    # out[u] = default
+                    out = pd.concat([out, pd.DataFrame(index=out.index, columns=[u]).fillna(default)], axis=1)
+                    new_header.append(u)
+        out.columns = new_header
     if not out.columns.is_unique:
         logging.critical(
             'The column headers of table "' + varname + '" are not unique!. The following headers are duplicated: ' +
@@ -314,15 +321,24 @@ def merge_series(plants, oldplants, data, method='WeightedAverage', tablename=''
                         value = value + subunits[name] * np.maximum(1e-9, oldplants['PowerCapacity'][name] *
                                                                     oldplants['Nunits'][name])
                     P_j = np.sum(np.maximum(1e-9, oldplants['PowerCapacity'][oldnames] * oldplants['Nunits'][oldnames]))
-                    merged[newunit] = value / P_j
+                    # merged[newunit] = value / P_j
+                    new_capacity = pd.DataFrame(value / P_j)
+                    new_capacity.columns = [newunit]
+                    merged = pd.concat([merged, new_capacity], axis=1)
                 elif method == 'StorageWeightedAverage':
                     for name in oldnames:
                         value = value + subunits[name] * np.maximum(1e-9, oldplants['STOCapacity'][name] *
                                                                     oldplants['Nunits'][name])
                     P_j = np.sum(np.maximum(1e-9, oldplants['STOCapacity'][oldnames] * oldplants['Nunits'][oldnames]))
-                    merged[newunit] = value / P_j
+                    # merged[newunit] = value / P_j
+                    new_capacity = pd.DataFrame(value / P_j)
+                    new_capacity.columns = [newunit]
+                    merged = pd.concat([merged, new_capacity], axis=1)
                 elif method == 'Sum':
-                    merged[newunit] = subunits.sum(axis=1)
+                    # merged[newunit] = subunits.sum(axis=1)
+                    new_capacity = subunits.sum(axis=1)
+                    new_capacity.columns = [newunit]
+                    merged = pd.concat([merged, new_capacity], axis=1)
                 else:
                     logging.critical('Method "' + str(method) + '" unknown in function MergeSeries')
                     sys.exit(1)
@@ -402,7 +418,7 @@ def load_time_series(config, path, header='infer'):
                              'allow guessing its timestamps. Please use a 8760 elements time series')
             sys.exit(1)
 
-    if data.index.is_all_dates:
+    if data.index.inferred_type == 'datetime64':
         data.index = data.index.tz_localize(None)  # removing locational data
         main_year = data.groupby(data.index.year).size()
         year = int(main_year[main_year >= 8759].index.values)

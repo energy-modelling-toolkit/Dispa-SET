@@ -350,7 +350,8 @@ def group_plants(plants, method, df_grouped=False, group_list=None):
     plants_merged = pd.DataFrame(columns=plants.columns)
     grouped = plants.groupby(group_list, as_index=False)
     agg_dict = create_agg_dict(plants, method=method)
-    plants_merged = plants_merged.append(grouped.agg(agg_dict))
+    # plants_merged = plants_merged.append(grouped.agg(agg_dict))
+    plants_merged = pd.concat([plants_merged, grouped.agg(agg_dict)])
     if method == "Integer clustering":
         plants_merged['StartUpCost'] = plants_merged['StartUpCost'] / plants_merged['Nunits']
         plants_merged['NoLoadCost'] = plants_merged['NoLoadCost'] / plants_merged['Nunits']
@@ -583,21 +584,22 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
             first_cluster = plants[condition]  # all data without other clustering
             first_cluster = group_plants(first_cluster, method, False, string_keys)
 
-            first_cluster = first_cluster.append(plants[~condition], ignore_index=True)
+            # first_cluster = first_cluster.append(plants[~condition], ignore_index=True)
+            first_cluster = pd.concat([first_cluster, plants[~condition]], ignore_index=True)
             # Slicing:
             bounds = {
-                    "PartLoadMin": np.linspace(0, 1, Nslices),
-                    "RampUpRate": np.linspace(0, 1, Nslices),
-                    "RampDownRate": np.linspace(0, 1, Nslices),
-                    "StartUpTime": _mylogspace(0, 36, Nslices),
-                    "MinUpTime": _mylogspace(0, 168, Nslices),
-                    "MinDownTime": _mylogspace(0, 168, Nslices),
-                    "NoLoadCost": np.linspace(0, 50, Nslices),
-                    "StartUpCost": np.linspace(0, 500, Nslices),
-                    "Efficiency": np.linspace(0, 1, Nslices),
-                    "WaterWithdrawal": np.linspace(0, 200, 250),
-                    "WaterConsumption": np.linspace(0, 20, Nslices),
-                    }
+                "PartLoadMin": np.linspace(0, 1, Nslices),
+                "RampUpRate": np.linspace(0, 1, Nslices),
+                "RampDownRate": np.linspace(0, 1, Nslices),
+                "StartUpTime": _mylogspace(0, 36, Nslices),
+                "MinUpTime": _mylogspace(0, 168, Nslices),
+                "MinDownTime": _mylogspace(0, 168, Nslices),
+                "NoLoadCost": np.linspace(0, 50, Nslices),
+                "StartUpCost": np.linspace(0, 500, Nslices),
+                "Efficiency": np.linspace(0, 1, Nslices),
+                "WaterWithdrawal": np.linspace(0, 200, 250),
+                "WaterConsumption": np.linspace(0, 20, Nslices),
+            }
 
             fingerprints = []
             for i in first_cluster.index:
@@ -624,7 +626,8 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
             low_pmin = first_cluster["PartLoadMin"] <= PartLoadMax
             if not first_cluster[low_pmin].empty:
                 second_cluster = group_plants(first_cluster[low_pmin], method, True, string_keys + ["fingerprints"])
-                plants_merged = second_cluster.append(first_cluster[~low_pmin], ignore_index=True)
+                # plants_merged = second_cluster.append(first_cluster[~low_pmin], ignore_index=True)
+                plants_merged = pd.concat([second_cluster, first_cluster[~low_pmin]], ignore_index=True)
             else:
                 plants_merged = first_cluster[:]
 
