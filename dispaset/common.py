@@ -28,7 +28,7 @@ commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
 # List of power to heat technologies:
 commons['tech_p2ht'] = ['P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
 # List of power to h2 technologies
-commons['tech_p2h2'] = ['P2GS', 'ALKE', 'PEME', 'SOXE']
+commons['tech_p2h2'] = ['PEFC', 'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 'P2GS', 'ALKE', 'PEME', 'SOXE']
 # List of heat only technologies:
 commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
 # List of thermal storage technologies:

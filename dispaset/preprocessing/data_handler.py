@@ -77,7 +77,8 @@ def NodeBasedTable(varname, config, default=None):
         else:
             for key in zones:
                 if key in tmp:
-                    data[key] = tmp[key]
+                    # data[key] = tmp[key]
+                    data = pd.concat([data, tmp[key]], axis=1)
                 else:
                     logging.error(
                         'Zone ' + key + ' could not be found in the file ' + path + '. Using default value ' + str(
@@ -157,8 +158,7 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
         for z in paths:
             tmp = load_time_series(config, paths[z])
             if SingleFile:
-                for key in tmp:
-                    data[key] = tmp[key]
+                data = tmp.copy()
             else:  # use the multi-index header with the zone
                 for key in tmp:
                     columns.append((z, key))
@@ -183,9 +183,13 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
                 else:
                     header = (plants.loc[j, 'Zone'], plants.loc[j, key])
                 if header in data:
-                    new_header.append(header[1])
-                    # out[u] = data[header]
-                    out = pd.concat([out, data[header]], axis=1)
+                    if SingleFile:
+                        new_header.append(u)
+                        out = pd.concat([out, data[header]], axis=1)
+                    else:
+                        new_header.append(u)
+                        # out[u] = data[header]
+                        out = pd.concat([out, data[header]], axis=1)
                     found = True
                     if i > 0 and warning:
                         logging.warning(

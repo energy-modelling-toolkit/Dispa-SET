@@ -578,7 +578,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['OutageFactor'] = ['au', 'h']
     sets_param['PartLoadMin'] = ['au']
     sets_param['PowerCapacity'] = ['au']
-    sets_param['PowerInitial'] = ['au']
+    sets_param['PowerInitial'] = ['u']
     sets_param['PriceTransmission'] = ['l', 'h']
     sets_param['RampUpMaximum'] = ['au']
     sets_param['RampDownMaximum'] = ['au']
@@ -860,25 +860,59 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                 sys.exit(1)
 
     # Initial Power
-    if 'InitialPower' in Plants_merged:
-        parameters['PowerInitial']['val'] = Plants_merged['InitialPower'].values
-    else:
-        for i in range(Nunits):
-            # Nuclear and Fossil Gas greater than 350 MW are up (assumption):
-            if Plants_merged['Fuel'][i] in ['GAS', 'NUC'] and Plants_merged['PowerCapacity'][i] > 350:
-                assumptions = [(1 + Plants_merged['PartLoadMin'][i]) / 2 * Plants_merged['PowerCapacity'][i],
-                               (1 - Plants_merged['PartLoadMin'][i]) / 1.2 * Plants_merged['PowerCapacity'][i],
-                               Plants_merged['PowerCapacity'][i],
-                               Plants_merged['PowerCapacity'][i] * Plants_merged['PartLoadMin'][i]]
-                parameters['PowerInitial']['val'][i] = max(min([sum(assumptions) / len(assumptions),
-                                                                (1 + Plants_merged['PartLoadMin'][i]) / 2 *
-                                                                Plants_merged['PowerCapacity'][i],
-                                                                (1 - Plants_merged['PartLoadMin'][i]) / 1.2 *
-                                                                Plants_merged['PowerCapacity'][i]]),
-                                                           Plants_merged['PartLoadMin'][i] *
-                                                           Plants_merged['PowerCapacity'][i])
+    Plants_merged['InitialPower'] = finalTS['AvailabilityFactors'].iloc[0, :] * Plants_merged['PowerCapacity']
 
-                # Config variables:
+    for z in config['zones']:
+        tmp_units = Plants_merged.loc[Plants_merged['Zone'] == z].copy()
+        tmp_load = finalTS['Load'].iloc[0, :].loc[z]
+        power_initial_res = tmp_units.loc[tmp_units['Fuel'].isin(['WAT', 'WIN', 'SUN']) &
+                                          tmp_units['Technology'].isin(['HROR', 'WTON', 'WTOF', 'PHOT'])][
+            'InitialPower'].sum()
+        if tmp_load > power_initial_res:
+            lack_of_power = tmp_load - power_initial_res
+            for f in ['NUC', 'GAS', 'HRD', 'LIG', 'BIO', 'OIL']:
+                for t in ['COMC', 'STUR', 'GTUR', 'ICEN']:
+                    n_units = tmp_units.loc[tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin([t])].shape[0]
+                    power_initial_ft = tmp_units.loc[
+                        tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin([t]), 'InitialPower'].sum()
+                    tmp_units.loc[:, 'Share'] = tmp_units.loc[
+                                                    tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin(
+                                                        [t]), 'InitialPower'] / power_initial_ft
+                    if lack_of_power - power_initial_ft > 0:
+                        lack_of_power = lack_of_power - power_initial_ft
+                    if lack_of_power - power_initial_ft < 0:
+                        tmp_units.loc[tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin(
+                            [t]), 'InitialPower'] = lack_of_power * tmp_units.loc[
+                            tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin(
+                                [t]), 'Share']
+                        lack_of_power = 0
+                    if lack_of_power == 0:
+                        tmp_units.loc[tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin(
+                            [t]), 'InitialPower'] = 0
+        else:
+            tmp_units.loc[~tmp_units['Fuel'].isin(['WAT', 'WIN', 'SUN']) &
+                          ~tmp_units['Technology'].isin(['HROR', 'WTON', 'WTOF', 'PHOT']), 'InitialPower'] = 0
+        Plants_merged.update(tmp_units)
+
+        if lack_of_power > 0:
+            logging.error('In zone: ' + z + ' there is insufficient conventional + renewable ' +
+                          'generation capacity of: ' + str(lack_of_power) +
+                          '. If NTC + storage is not sufficient ShedLoad in ' + z +
+                          ' is likely to occour. Check the inputs!')
+
+    Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_renewables']), 'InitialPower'] = 0
+    Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_heat']), 'InitialPower'] = 0
+    Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_p2ht']), 'InitialPower'] = 0
+    Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_p2h2']), 'InitialPower'] = 0
+    Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_thermal_storage']), 'InitialPower'] = 0
+
+    if 'InitialPower' in Plants_merged:
+        technologies = [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
+                        commons['tech_p2ht'] + commons['tech_thermal_storage'] + commons['tech_p2h2']]
+        parameters['PowerInitial']['val'] = Plants_merged.loc[Plants_merged['Technology'].isin(technologies)][
+            'InitialPower'].values
+
+    # Config variables:
     sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead',
                         'SimulationTimeStep', 'ValueOfLostLoad', 'QuickStartShare', 'CostOfSpillage', 'WaterValue',
                         'DemandFlexibility']

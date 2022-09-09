@@ -292,9 +292,18 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
 
     if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
         profiles = profiles.reindex(idx_long, method='nearest')
+
+        temp_config['StartDate'] = (y_start, 1, 1, 00, 00, 00)  # updating start date to the beginning of the year
+        temp_config['StopDate'] = (y_start + 1, 1, 1, 00, 59, 00)
+        idx_tmp = pd.date_range(start=dt.datetime(*temp_config['StartDate']),
+                                end=dt.datetime(*temp_config['StopDate']),
+                                freq=pd_timestep(TimeStep)).tz_localize(None)
+
         if config['H2FlexibleDemand'] != '':
-            PtLDemand = PtLDemand.resample(pd_timestep(config['SimulationTimeStep'])).pad()
-            PtLDemand = PtLDemand.iloc[0:len(idx_long), :]
+            PtLDemand = pd.DataFrame(PtLDemand, index=idx_tmp).fillna(0)
+            PtLDemand = PtLDemand.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
+            PtLDemand = PtLDemand.loc[idx_long, :]
+
     pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'], "temp_profiles.p"), "wb"))
     if config['H2FlexibleDemand'] != '':
         return profiles, PtLDemand
