@@ -213,8 +213,8 @@ def get_sim_results(config, cache=None, temp_path=None, return_xarray=False, ret
     # Total nodal power consumption
     results['NodalPowerConsumption'] = pd.DataFrame()
     for z in inputs['sets']['n']:
-        results['NodalPowerConsumption'].loc[:, z] = filter_by_zone(results['OutputPowerConsumption'], inputs, z=z).sum(
-            axis=1)
+        tmp = pd.DataFrame(filter_by_zone(results['OutputPowerConsumption'], inputs, z=z).sum(axis=1), columns=[z])
+        results['NodalPowerConsumption'] = pd.concat([results['NodalPowerConsumption'], tmp], axis=1)
     # Total demand - including power consumption
     results['TotalDemand'] = inputs['param_df']['Demand']['DA'].add(results['NodalPowerConsumption'], fill_value=0)
     # Energy not served hourly
