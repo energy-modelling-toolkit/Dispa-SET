@@ -579,8 +579,14 @@ def load_config_excel(ConfigFile, AbsPath=True):
         # True/Falst values:
         config['zones'] = read_truefalse(sheet, 225, 1, 247, 3)
         config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 247, 6)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 7, 247, 9)               #MARCO NAVIA
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 10, 247, 12)             #MARCO NAVIA
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 13, 247, 15)             #MARCO NAVIA
         config['mts_zones'] = read_truefalse(sheet, 225, 1, 247, 3, 2)
         config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 247, 6, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 7, 247, 9, 2)    #MARCO NAVIA
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 10, 247, 12, 2)  #MARCO NAVIA
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 13, 247, 15, 2)  #MARCO NAVIA
         config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 321, 3)
         config['ReserveParticipation_CHP'] = read_truefalse(sheet, 342, 1, 345, 3)
 
@@ -682,8 +688,14 @@ def load_config_excel(ConfigFile, AbsPath=True):
         # True/Falst values:
         config['zones'] = read_truefalse(sheet, 225, 1, 250, 3)
         config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 250, 6)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 7, 247, 9)               #MARCO NAVIA
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 10, 247, 12)             #MARCO NAVIA
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 13, 247, 15)             #MARCO NAVIA
         config['mts_zones'] = read_truefalse(sheet, 225, 1, 250, 3, 2)
         config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 250, 6, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 7, 247, 9, 2)    #MARCO NAVIA
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 10, 247, 12, 2)  #MARCO NAVIA
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 13, 247, 15, 2)  #MARCO NAVIA
         config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 321, 3)
         config['ReserveParticipation'] = config['ReserveParticipation'] + read_truefalse(sheet, 305, 4, 321, 6)
         config['ReserveParticipation_CHP'] = read_truefalse(sheet, 299, 1, 302, 3)
