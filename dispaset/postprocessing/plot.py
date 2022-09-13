@@ -493,9 +493,13 @@ def plot_zone_capacities(inputs, results, plot=True):
     power_consumption = pd.DataFrame(index=results['OutputPowerConsumption'].index)
     for z in inputs['sets']['n']:
         if filter_by_zone(results['OutputPowerConsumption'], inputs, z).empty:
-            power_consumption.loc[:, z] = 0
+            # power_consumption.loc[:, z] = 0
+            tmp = pd.DataFrame(0, index=results['OutputPowerConsumption'].index, columns=[z])
+            power_consumption = pd.concat([power_consumption, tmp], axis=1)
         else:
-            power_consumption.loc[:, z] = filter_by_zone(results['OutputPowerConsumption'], inputs, z).sum(axis=1)
+            # power_consumption.loc[:, z] = filter_by_zone(results['OutputPowerConsumption'], inputs, z).sum(axis=1)
+            tmp = pd.DataFrame(filter_by_zone(results['OutputPowerConsumption'], inputs, z).sum(axis=1), columns=[z])
+            power_consumption = pd.concat([power_consumption, tmp], axis=1)
 
     for u in units_chp.index:
         PowerCapacity = units_chp.loc[u, 'PowerCapacity']
@@ -699,7 +703,11 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
 
     # Plot power dispatch
     demand.rename(z, inplace=True)
-    if ntc.empty:
+    if ntc is None:
+        plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load,
+                      shiftedload=shifted_load, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
+                      storage_limits=storage_limits)
+    elif ntc.empty:
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load,
                       shiftedload=shifted_load, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
                       storage_limits=storage_limits)
@@ -731,11 +739,14 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
     # Generation plot:
     if rug_plot:
         ZoneGeneration = filter_by_zone(results['OutputPower'], inputs, z)
-        try:
-            import enlopy as el  # try to get latest version
-            el.plot_rug(ZoneGeneration, on_off=False, cmap='gist_heat_r', fig_title=z)
-        except ImportError:
-            plot_rug(ZoneGeneration, on_off=False, cmap='gist_heat_r', fig_title=z)
+        if ZoneGeneration.empty:
+            logging.warning('No generation present in zone:' + z + '. Rug plot can not be ploted. Skipping!')
+        else:
+            try:
+                import enlopy as el  # try to get latest version
+                el.plot_rug(ZoneGeneration, on_off=False, cmap='gist_heat_r', fig_title=z)
+            except ImportError:
+                plot_rug(ZoneGeneration, on_off=False, cmap='gist_heat_r', fig_title=z)
 
     return True
 

@@ -769,7 +769,7 @@ def adjust_unit_capacity(SimData, u_idx, scaling=1, value=None, singleunit=False
         for param in ['CostShutDown', 'CostStartUp', 'PowerInitial', 'RampDownMaximum', 'RampShutDownMaximum',
                       'RampStartUpMaximum', 'RampUpMaximum', 'StorageCapacity']:
             SimData['parameters'][param]['val'][idx[u]] = SimData['parameters'][param]['val'][idx[u]] * factor
-        for param in ['StorageChargingCapacity','StorageInitial']:
+        for param in ['StorageChargingCapacity', 'StorageInitial']:
             # find index, if any:
             idx_s = np.where(np.array(SimData['sets']['s']) == u)[0]
             if len(idx_s) == 1:

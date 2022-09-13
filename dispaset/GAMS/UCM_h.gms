@@ -626,10 +626,9 @@ EQ_MinDownTime(au,i)$(TimeStep <= TimeDownMinimum(au))..
          Nunits(au)-Committed(au,i)
 ;
 
-
 * ramp up constraints
 EQ_RampUp_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
-         Power(u,i-1)$(ord(i) > 1) + PowerInitial(u)$(ord(i) = 1) - Power(u,i)
+         Power(u,i) - Power(u,i-1)$(ord(i) > 1) - PowerInitial(u)$(ord(i) = 1)
          =L=
          (Committed(u,i) - StartUp(u,i)) * RampUpMaximum(u) * TimeStep
          + RampStartUpMaximumH(u,i) * TimeStep * StartUp(u,i)
@@ -639,7 +638,7 @@ EQ_RampUp_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
 
 * ramp down constraints
 EQ_RampDown_TC(u,i)$(sum(tr,Technology(u,tr))=0)..
-         Power(u,i) - Power(u,i-1)$(ord(i) > 1) - PowerInitial(u)$(ord(i) = 1)
+         Power(u,i-1)$(ord(i) > 1) + PowerInitial(u)$(ord(i) = 1) - Power(u,i)
          =L=
          (Committed(u,i) - StartUp(u,i)) * RampDownMaximum(u) * TimeStep
          - PowerMustRun(u,i) * StartUp(u,i)
@@ -1152,6 +1151,7 @@ EQ_PtL_Demand(n_h2,i)..
          =E=
          PtLDemandInput(n_h2,i)
 ;
+
 *===============================================================================
 *Definition of models
 *===============================================================================
@@ -1370,6 +1370,8 @@ LostLoad_2U(n,h)
 LostLoad_3U(n,h)
 $If %MTS%==0 LostLoad_RampUp(n,h)
 $If %MTS%==0 LostLoad_RampDown(n,h)
+$If %MTS%==0 LostLoad_RampUp_Unit(au,z)
+$If %MTS%==0 LostLoad_RampDown_Unit(au,z)
 OutputGenMargin(n,h)
 OutputHeat(au,h)
 OutputHeatSlack(n_th,h)
@@ -1456,6 +1458,8 @@ LostLoad_2U(n,z) = LL_2U.L(n,z);
 LostLoad_3U(n,z) = LL_3U.L(n,z);
 $If %MTS%==0 LostLoad_RampUp(n,z)    = sum(u,LL_RampUp.L(u,z)*Location(u,n));
 $If %MTS%==0 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
+$If %MTS%==0 LostLoad_RampUp_Unit(u,z) = LL_RampUp.L(u,z);
+$If %MTS%==0 LostLoad_RampDown_Unit(u,z) = LL_RampDown.L(u,z);
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
 HeatShadowPrice(n_th,z) = EQ_Heat_Demand_balance.m(n_th,z);
 H2ShadowPrice(n_h2,z) = EQ_H2_Demand_balance.m(n_h2,z);
@@ -1550,6 +1554,8 @@ LostLoad_2U,
 LostLoad_3U,
 $If %MTS%==0 LostLoad_RampUp,
 $If %MTS%==0 LostLoad_RampDown,
+$If %MTS%==0 LostLoad_RampUp_Unit,
+$If %MTS%==0 LostLoad_RampDown_Unit,
 ShadowPrice,
 ShadowPrice_2U,
 ShadowPrice_2D,
