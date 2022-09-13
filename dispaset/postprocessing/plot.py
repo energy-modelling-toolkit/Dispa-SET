@@ -68,7 +68,11 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
     # find the zero line position:
     cols = plotdata.columns.tolist()
     idx_zero = 0
-    tmp = plotdata.iloc[:, idx_zero].mean()
+    if plotdata.empty:
+        tmp = 0
+    else:
+        tmp = plotdata.iloc[:, idx_zero].mean()
+
     while tmp <= 0 and idx_zero < len(cols) - 1:
         idx_zero += 1
         tmp = plotdata.iloc[:, idx_zero].mean()
@@ -364,10 +368,12 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
     storage_input.sort_index(inplace=True)
 
     # Needs to be plotted in this order so that black line is always on top
-    ax.barh(power_consumption + storage_input + demand, left=ax.get_xticks() - 0.4,
+    total_power_consumption = power_consumption + storage_input + demand
+    storage_demand = storage_input + demand
+    ax.barh(total_power_consumption, left=ax.get_xticks() - 0.4,
             width=[0.8] * len(power_consumption),
             height=ax.get_ylim()[1] * 0.005, linewidth=2, color='b')
-    ax.barh(storage_input + demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(storage_input),
+    ax.barh(storage_demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(storage_input),
             height=ax.get_ylim()[1] * 0.005, linewidth=2, color='g')
     ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005, linewidth=2,
             color='k')
