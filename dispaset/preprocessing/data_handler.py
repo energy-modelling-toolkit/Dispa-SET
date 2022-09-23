@@ -530,6 +530,9 @@ def load_config_excel(ConfigFile, AbsPath=True):
     :param AbsPath:    If true, relative paths are automatically changed into absolute paths (recommended)
     """
     import xlrd
+    xlrd.xlsx.ensure_elementtree_imported(False, None)
+    xlrd.xlsx.Element_has_iter = True
+
     wb = xlrd.open_workbook(filename=ConfigFile)  # Option for csv to be added later
     sheet = wb.sheet_by_name('main')
     config = {}

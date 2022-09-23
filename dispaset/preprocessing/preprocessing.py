@@ -294,7 +294,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         profiles = profiles.reindex(idx_long, method='nearest')
 
         temp_config['StartDate'] = (y_start, 1, 1, 00, 00, 00)  # updating start date to the beginning of the year
-        temp_config['StopDate'] = (y_start + 1, 1, 1, 00, 59, 00)
+        temp_config['StopDate'] = (y_start + 1, 1, 2, 00, 59, 00)
         idx_tmp = pd.date_range(start=dt.datetime(*temp_config['StartDate']),
                                 end=dt.datetime(*temp_config['StopDate']),
                                 freq=pd_timestep(TimeStep)).tz_localize(None)

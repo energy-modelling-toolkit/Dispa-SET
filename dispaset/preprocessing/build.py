@@ -1006,7 +1006,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
                     os.path.join(sim, 'writeresults.gms'))
     # Create cplex option file
-    cplex_options = {'epgap': 0.005,  # TODO: For the moment hardcoded, it has to be moved to a config file
+    cplex_options = {'epgap': 0.0005,  # TODO: For the moment hardcoded, it has to be moved to a config file
                      'numericalemphasis': 0,
                      'mipdisplay': 4,
                      'scaind': 1,
