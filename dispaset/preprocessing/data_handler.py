@@ -626,7 +626,8 @@ def load_config_excel(ConfigFile, AbsPath=True):
         config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(57, 2), wb.datemode)
         config['HorizonLength'] = int(sheet.cell_value(58, 2))
         config['LookAhead'] = int(sheet.cell_value(59, 2))
-
+        config['CplexAccuracy'] = sheet.cell_value(38, 2)
+        config['CplexSetting'] = sheet.cell_value(39, 2)
         # Defning the input locations in the config file:
         StdParameters = {
             # Scenario options
@@ -922,5 +923,5 @@ def load_geo_data(path, header=None):
     :param path:    absolute path to the geo data file
     :param header:  load header
     """
-    data = pd.read_csv(path, index_col=4, header=header, keep_default_na=False)
+    data = pd.read_csv(path, index_col='CountryCode', header=header, keep_default_na=False)
     return data

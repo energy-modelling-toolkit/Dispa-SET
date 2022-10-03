@@ -1006,32 +1006,82 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
                     os.path.join(sim, 'writeresults.gms'))
     # Create cplex option file
-    cplex_options = {'epgap': 0.0005,  # TODO: For the moment hardcoded, it has to be moved to a config file
-                     'numericalemphasis': 0,
-                     'mipdisplay': 4,
-                     'scaind': 1,
-                     'lpmethod': 0,
-                     'relaxfixedinfeas': 0,
-                     'mipstart': 1,
-                     'mircuts': 1,
-                     'quality': True,
-                     'bardisplay': 2,
-                     'epint': 0,
-                     # 'heuristiceffort': 2,
-                     'lbheur': 1,
-                     # # Probing parameters
-                     # 'probe': 1,
-                     # Cut parameters
-                     # 'cuts': 5,
-                     # 'covers': 3,
-                     # 'cliques': 3,
-                     # 'disjcuts': 3,
-                     # 'liftprojcuts': 3,
-                     # 'localimplied': 3,
-                     # 'flowcovers': 2,
-                     # 'flowpaths': 2,
-                     # 'fraccuts': 2,
-                     }
+    if config['CplexSetting'] == '' and config['CplexAccuracy'] == '':
+        cplex_options = {'epgap': 0.0005,
+                         # TODO: For the moment hardcoded, it has to be moved to a config file
+                         'numericalemphasis': 0,
+                         'mipdisplay': 4,
+                         'scaind': 1,
+                         'lpmethod': 0,
+                         'relaxfixedinfeas': 0,
+                         'mipstart': 1,
+                         'mircuts': 1,
+                         'quality': True,
+                         'bardisplay': 2,
+                         'epint': 0,
+                         'lbheur': 1,
+                         }
+        logging.info('Default Cplex setting used')
+    elif config['CplexSetting'] == '' and config['CplexAccuracy'] != '':
+        cplex_options = {'epgap': float(config['CplexAccuracy']),  # TODO: For the moment hardcoded, it has to be moved to a config file
+                         'numericalemphasis': 0,
+                         'mipdisplay': 4,
+                         'scaind': 1,
+                         'lpmethod': 0,
+                         'relaxfixedinfeas': 0,
+                         'mipstart': 1,
+                         'mircuts': 1,
+                         'quality': True,
+                         'bardisplay': 2,
+                         'epint': 0,
+                         'lbheur': 1,
+                         }
+    elif config['CplexSetting'] == 'Default':
+        cplex_options = {'epgap': float(config['CplexAccuracy']),  # TODO: For the moment hardcoded, it has to be moved to a config file
+                         'numericalemphasis': 0,
+                         'mipdisplay': 4,
+                         'scaind': 1,
+                         'lpmethod': 0,
+                         'relaxfixedinfeas': 0,
+                         'mipstart': 1,
+                         'mircuts': 1,
+                         'quality': True,
+                         'bardisplay': 2,
+                         'epint': 0,
+                         'lbheur': 1,
+                         }
+        logging.info('Default Cplex setting used')
+    elif config['CplexSetting'] == 'Agressive':
+        cplex_options = {'epgap': config['CplexAccuracy'],  # TODO: For the moment hardcoded, it has to be moved to a config file
+                         'numericalemphasis': 0,
+                         'mipdisplay': 4,
+                         'scaind': 1,
+                         'lpmethod': 0,
+                         'relaxfixedinfeas': 0,
+                         'mipstart': 1,
+                         'mircuts': 1,
+                         'quality': True,
+                         'bardisplay': 2,
+                         'epint': 0,
+                         'heuristiceffort': 2,
+                         'lbheur': 1,
+                         # Probing parameters
+                         'probe': 1,
+                         # Cut parameters
+                         'cuts': 5,
+                         'covers': 3,
+                         'cliques': 3,
+                         'disjcuts': 3,
+                         'liftprojcuts': 3,
+                         'localimplied': 3,
+                         'flowcovers': 2,
+                         'flowpaths': 2,
+                         'fraccuts': 2,
+                         }
+        logging.info('Agressive Cplex setting used')
+    else:
+        logging.critical('Cplex setting must be specified Default or Agressive')
+        sys.exit(1)
 
     lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
     with open(os.path.join(sim, 'cplex.opt'), 'w') as f:

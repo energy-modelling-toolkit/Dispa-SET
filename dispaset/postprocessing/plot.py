@@ -326,14 +326,17 @@ def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=Fal
     plt.show()
 
 
-def plot_energy_zone_fuel(inputs, results, PPindicators):
+def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones = ''):
     """
-    Plots the generation for each zone, disaggregated by fuel type
+    Plots the generation for a selection of zones, disaggregated by fuel type
 
     :param inputs:          Dictionary with the inputs of the model
     :param results:         Dictionary with the outputs of the model (output of the function GetResults)
+    :param ListZones:       Selection of the zones to plot
     :param PPindicators:    Por powerplant statistics (output of the function get_indicators_powerplant)
     """
+    if ListZones == '':
+        ListZones = inputs['sets']['n']
     fuels = PPindicators[[u in [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
                                 commons['tech_p2ht'] + commons['tech_thermal_storage']]
                           for u in PPindicators['Technology']]].Fuel.unique()
@@ -369,6 +372,8 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
 
     cols = [col for col in commons['MeritOrder'] if col in GenPerZone]
     GenPerZone = GenPerZone[cols] / 1E6
+    GenPerZone = pd.DataFrame(GenPerZone, index = inputs['sets']['n'])
+    GenPerZone = GenPerZone.loc[ListZones]
     GenPerZone.sort_index(inplace=True)
     colors = [commons['colors'][tech] for tech in GenPerZone.columns]
     ax = GenPerZone.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
@@ -376,21 +381,27 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
                                '[green] & power consumption [blue])')
     ax.set_ylabel('Generation [TWh]')
     demand = inputs['param_df']['Demand']['DA'].sum() / 1E6
+    demand = pd.DataFrame(demand.loc[ListZones])
     demand.sort_index(inplace=True)
     power_consumption = power_consumption.sum() / 1E6
+    power_consumption = pd.DataFrame(power_consumption, index=inputs['sets']['n'])
+    power_consumption = power_consumption.loc[ListZones]
     power_consumption.sort_index(inplace=True)
     storage_input = storage_input.sum() / 1e6
+    storage_input = pd.DataFrame(storage_input, index=inputs['sets']['n'])
+    storage_input = storage_input.loc[ListZones]
     storage_input.sort_index(inplace=True)
 
     # Needs to be plotted in this order so that black line is always on top
     total_power_consumption = power_consumption + storage_input + demand
     storage_demand = storage_input + demand
-    ax.barh(total_power_consumption, left=ax.get_xticks() - 0.4,
-            width=[0.8] * len(power_consumption),
+
+    ax.barh(total_power_consumption.squeeze(), left=ax.get_xticks() - 0.4,
+            width=[0.8] * len(total_power_consumption),
             height=ax.get_ylim()[1] * 0.005, linewidth=2, color='b')
-    ax.barh(storage_demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(storage_input),
+    ax.barh(storage_demand.squeeze(), left=ax.get_xticks() - 0.4, width=[0.8] * len(storage_demand),
             height=ax.get_ylim()[1] * 0.005, linewidth=2, color='g')
-    ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005, linewidth=2,
+    ax.barh(demand.squeeze(), left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005, linewidth=2,
             color='k')
 
     ZonePosition = GenPerZone.copy()
@@ -409,10 +420,11 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
     plt.show()
 
     # Generation share plot
-    GenPerZone_prct = GenPerZone.div(ZonePosition.sum(axis=1), axis=0)
+    GenPerZone_prct = GenPerZone.fillna(0).div(ZonePosition.sum(axis=1), axis=0)
+    GenPerZone_prct.replace(0, np.nan, inplace=True)
     ShedLoad = ZonePosition.loc[:, 'ShedLoad'] / ZonePosition.sum(axis=1)
-    demand_prct = demand / ZonePosition.sum(axis=1)
-    power_consumption_prct = (demand + power_consumption) / ZonePosition.sum(axis=1)
+    demand_prct = demand / pd.DataFrame(ZonePosition.sum(axis=1))
+    power_consumption_prct = (demand + power_consumption) / pd.DataFrame(ZonePosition.sum(axis=1))
     colors2 = [commons['colors'][tech] for tech in GenPerZone_prct.columns]
 
     ax2 = GenPerZone_prct.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors2, alpha=0.8, legend='reverse',
@@ -420,9 +432,9 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
     ax2.set_ylabel('Generation share [%]')
     ax2.bar(range(0, ShedLoad.index.size), ShedLoad.values, bottom=GenPerZone_prct.sum(axis=1).values,
             edgecolor='black', hatch='X', color='w', width=[0.4])
-    ax2.barh(power_consumption_prct, left=ax2.get_xticks() - 0.4, width=[0.8] * len(power_consumption_prct),
+    ax2.barh(power_consumption_prct.fillna(0).squeeze(), left=ax2.get_xticks() - 0.4, width=[0.8] * len(power_consumption_prct),
              height=ax2.get_ylim()[1] * 0.005, linewidth=2, color='b')
-    ax2.barh(demand_prct, left=ax2.get_xticks() - 0.4, width=[0.8] * len(demand_prct), height=ax2.get_ylim()[1] * 0.005,
+    ax2.barh(demand_prct.squeeze(), left=ax2.get_xticks() - 0.4, width=[0.8] * len(demand_prct), height=ax2.get_ylim()[1] * 0.005,
              linewidth=2, color='k')
     handles, labels = ax2.get_legend_handles_labels()  # get the handles
     ax2.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.14, 0.25))
@@ -458,10 +470,12 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
                                         commons['tech_thermal_storage']), inputs, z).sum(axis=1)
 
         heat_storage_input = heat_storage_input.sum() / 1e6
+        power_consumption = power_consumption.loc[ListZones]
         heat_storage_input.sort_index(inplace=True)
 
         cols_heat = [col for col in commons['MeritOrderHeat'] if col in HeatPerZone_th]
         HeatPerZone_th = HeatPerZone_th[cols_heat] / 1e6
+        power_consumption = power_consumption.loc[ListZones]
         HeatPerZone_th.sort_index(inplace=True)
         colors = [commons['colors'][tech] for tech in HeatPerZone_th.columns]
         ax = HeatPerZone_th.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
@@ -472,12 +486,14 @@ def plot_energy_zone_fuel(inputs, results, PPindicators):
         # Check for heat slack and plot it
         Slack = results['OutputHeatSlack'].sum() / 1e6
         Slack = Slack.reindex(inputs['sets']['n_th']).fillna(0)
+        power_consumption = power_consumption.loc[ListZones]
         Slack.sort_index(inplace=True)
         ax.bar(range(0, Slack.index.size), Slack.values, bottom=HeatPerZone_th.sum(axis=1).values,
                edgecolor='black', hatch='X', color='#943126ff', width=[0.4])
 
         # Identify heat demand and plot it
         demand = inputs['param_df']['HeatDemand'].sum() / 1E6
+        power_consumption = power_consumption.loc[ListZones]
         demand.sort_index(inplace=True)
         ax.barh(demand + heat_storage_input, left=ax.get_xticks() - 0.4, width=[0.8] * len(heat_storage_input),
                 height=ax.get_ylim()[1] * 0.005, linewidth=2, color='g')
@@ -564,6 +580,8 @@ def plot_zone_capacities(inputs, results, plot=True):
     cols = [col for col in commons['MeritOrder'] if col in PowerCapacity]
     PowerCapacity = PowerCapacity[cols]
     PowerCapacity.sort_index(inplace=True)
+    rows_with_nan = [i for i, row in PowerCapacity.iterrows() if row.isnull().all()]
+    PowerCapacity=PowerCapacity.dropna(how='all')
     if plot:
         colors = [commons['colors'][tech] for tech in PowerCapacity.columns]
         ax = PowerCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
@@ -574,6 +592,9 @@ def plot_zone_capacities(inputs, results, plot=True):
         demand.sort_index(inplace=True)
         power_consumption = power_consumption.max()
         power_consumption.sort_index(inplace=True)
+        for z in rows_with_nan:
+            demand = demand.drop(z)
+            power_consumption = power_consumption.drop(z)
 
         # Needs to be plotted in this order so that black line is always on top
         ax.barh(power_consumption + demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(power_consumption),
@@ -713,9 +734,12 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
         shifted_load = pd.Series(0, index=demand.index) / 1000  # GW
     diff = (sum_generation - demand + shifted_load + shed_load).abs()
 
-    if diff.max() > 0.01 * demand.max():
+    if (diff.max() > 0.01 * demand.max()) and (demand.max() != 0):
         logging.critical('There is up to ' + str(
             diff.max() / demand.max() * 100) + '% difference in the instantaneous energy balance of zone ' + z)
+    else:
+        logging.critical('There is up to ' + str(0) + '% difference in the instantaneous energy balance of zone ' + z)
+#********************************************************
 
     if 'OutputCurtailedPower' in results and z in results['OutputCurtailedPower']:
         curtailment = results['OutputCurtailedPower'][z] / 1000  # GW
@@ -1079,6 +1103,7 @@ def plot_tech_cap(inputs, plot=True, figsize=(10, 7), alpha=0.8, width=0.5):
                                              inputs['param_df']['Nunits'].iloc[i, 0]
 
     Cap = Cap / 1000
+    Cap = Cap.loc[(Cap != 0).any(axis=1)]
     x = [i for i in range(len(Cap.index))]  # the label locations
     colors = ['#57D53B', '#A0522D', '#00a0e1ff', '#C04000ff', 'black']
     fig, ax = plt.subplots(figsize=figsize)
@@ -1289,7 +1314,6 @@ def plot_co2(inputs, results, idx=None, figsize=(10, 7), width=0.9, alpha=0.8, p
     ax.set_title('$CO_{2}$ Emissions')
     fig.tight_layout()
     plt.show()
-
 
 def set_axis_style(ax, labels, xlabel='', ylabel=''):
     ax.xaxis.set_tick_params(direction='out')

@@ -457,10 +457,10 @@ def get_result_analysis(inputs, results):
     WaterData['ZoneLevel']['WaterWithdrawal'] = pd.DataFrame()
     WaterData['ZoneLevel']['WaterConsumption'] = pd.DataFrame()
     for z in inputs['sets']['n']:
-        WaterData['ZoneLevel']['WaterWithdrawal'][z] = filter_by_zone(WaterData['UnitLevel']['WaterWithdrawal'],
-                                                                      inputs, z).sum(axis=1)
-        WaterData['ZoneLevel']['WaterConsumption'][z] = filter_by_zone(WaterData['UnitLevel']['WaterConsumption'],
-                                                                       inputs, z).sum(axis=1)
+        tmp = pd.DataFrame(filter_by_zone(WaterData['UnitLevel']['WaterWithdrawal'], inputs, z).sum(axis=1), columns=[z])
+        WaterData['ZoneLevel']['WaterWithdrawal'] = pd.concat([WaterData['ZoneLevel']['WaterWithdrawal'], tmp], axis=1)
+        tmp = pd.DataFrame(filter_by_zone(WaterData['UnitLevel']['WaterConsumption'], inputs, z).sum(axis=1), columns=[z])
+        WaterData['ZoneLevel']['WaterConsumption'] = pd.concat([WaterData['ZoneLevel']['WaterConsumption'], tmp], axis=1)
 
     if not inputs['param_df']['HeatDemand'].empty:
         return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
@@ -806,20 +806,27 @@ def get_power_flow_tracing(inputs, results, idx=None, type=None):
     flows = flows.reindex(columns=lines).fillna(0)
     # Predefine dataframes
     NetExports = pd.DataFrame(index=flows.index)
-    Generation = pd.DataFrame()
+    Generation = pd.DataFrame(index=flows.index)
+    NetExportsZ = [0]
     for z in zones:
-        Generation.loc[:, z] = filter_by_zone(results['OutputPower'], inputs, z).sum(axis=1)
-        NetExports.loc[:, z] = 0
+        Generation = pd.concat([Generation, pd.DataFrame(filter_by_zone(results['OutputPower'], inputs, z).sum(axis=1)).set_axis([z], axis=1)], axis=1)
+        NetExportsZ= [0]
         for key in flows:
             if key[:len(z)] == z:
-                NetExports.loc[:, z] += flows.loc[:, key]
+                NetExportsZ += flows.loc[:, key].copy()
+        if any(NetExportsZ):
+            NetExports = pd.concat([NetExports, pd.DataFrame(NetExportsZ).set_axis([z], axis=1)], axis=1)
+        else:
+            NetExports = pd.concat([NetExports, pd.DataFrame(np.zeros((len(flows), 1))).set_axis([z], axis=1).set_axis(flows.index, axis=0)], axis=1)
+    Demand = Demand.loc[:, (Demand != 0).any(axis=0)]
 
     if ShedLoad.empty:
-        P = Demand.loc[idx].sum() + NetExports.loc[idx].sum()
+        P = (Demand.loc[idx].sum() + NetExports.loc[idx].sum()).dropna()
     # TODO: Check if lost load and curtailment are messing up the P and resulting in NaN
     else:
         ShedLoad = ShedLoad.reindex(columns=zones).fillna(0)
-        P = Demand.loc[idx].sum() + NetExports.loc[idx].sum() - ShedLoad.loc[idx].sum()
+        P = (Demand.loc[idx].sum() + NetExports.loc[idx].sum() - ShedLoad.loc[idx].sum()).dropna()
+
     D = pd.DataFrame(index=zones, columns=zones).fillna(0).astype(float)
     B = pd.DataFrame(index=zones, columns=zones).fillna(0).astype(float)
     np.fill_diagonal(D.values, P.values)
@@ -831,15 +838,15 @@ def get_power_flow_tracing(inputs, results, idx=None, type=None):
                 B.loc[from_node, to_node] = flows.loc[idx, l].sum()
         else:
             logging.info('Line ' + l + ' was probably not used. Skipping!')
-    A = D.T / P.values
-    A.fillna(0, inplace=True)
+    A = D.loc[Demand.columns][Demand.columns].T / P.values
+    # A.fillna(0, inplace=True)
     A_T = pd.DataFrame(np.linalg.inv(A.values), A.columns, A.index)
 
     Share = Demand.loc[idx].sum() / P
     gen = A_T * Generation.loc[idx].sum()
-    Trace = pd.DataFrame(index=zones, columns=zones)
-    for z in zones:
-        tmp = gen.loc[z, :] * Share.loc[z]
+    Trace = pd.DataFrame(index=Demand.columns, columns=Demand.columns)
+    for z in Demand.columns:
+        tmp = gen[Demand.columns].loc[z, :] * Share.loc[z]
         Trace[z] = tmp
     Trace = Trace.T
     Trace_prct = Trace.div(Trace.sum(axis=1), axis=0)
