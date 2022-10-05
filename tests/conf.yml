@@ -8,7 +8,7 @@ cplex_path:  ''
 
 #-----------------
 StartDate: !!python/tuple [2015, 1, 1, 0, 0, 0]
-StopDate: !!python/tuple [2015, 1, 31, 0, 0, 0]
+StopDate: !!python/tuple [2015, 1, 8, 0, 0, 0]
 HorizonLength: 3
 LookAhead: 1
 
@@ -26,21 +26,26 @@ HeatDemand:  'tests/dummy_data/HeatDemand.csv'
 Interconnections:  'tests/dummy_data/CrossBorderFlows.csv'
 LoadShedding:  ''
 NTC:  'tests/dummy_data/NTCs.csv'
-Outages:  ''
+Outages:  'tests/dummy_data/Outages.csv'
 PowerPlantData: 'tests/dummy_data/Units_testcase.csv'
+PriceTransmission: 'tests/dummy_data/PriceTransmission.csv'
 PriceOfBiomass:  'Database/FuelPrices/Biomass/2015.csv'
-PriceOfBlackCoal:  ''
+PriceOfBlackCoal:  'Database/FuelPrices/Coal/2015.csv'
 PriceOfCO2:  ''
 PriceOfFuelOil:  'Database/FuelPrices/Oil/2015.csv'
-PriceOfGas:  ''
+PriceOfGas:  'Database/FuelPrices/Gas/2015.csv'
 PriceOfLignite:  ''
 PriceOfNuclear:  ''
 PriceOfPeat:  'Database/FuelPrices/Biomass/2015.csv'
 RenewablesAF:  'tests/dummy_data/AvailabilityFactors/##/2015.csv'
-ReservoirLevels:  ''
-ReservoirScaledInflows:  ''
+ReservoirLevels:  'tests/dummy_data/ReservoirLevels.csv'
+ReservoirScaledInflows:  'tests/dummy_data/ScaledInflows.csv'
 Temperatures: 'tests/dummy_data/Temperatures.csv'
 ShareOfFlexibleDemand: 'tests/dummy_data/ShareFlex.csv'
+GeoData: 'tests/dummy_data/Geo_Coordinates.csv'
+H2RigidDemand: 'tests/dummy_data/H2Demand.csv'
+H2FlexibleDemand: 'tests/dummy_data/H2PtLDemand.csv'
+H2FlexibleCapacity: 'tests/dummy_data/PtLCapacities.csv'
 
 #----------------
 zones: [ 'Z1', 'Z2', 'ZZ3']
@@ -51,7 +56,7 @@ ReserveParticipation: [ 'GTUR',  'HDAM',  'HPHS', 'ICEN',  'CAES',  'BATS',  'BE
 #----------------
 default: {CostHeatSlack: 51.0, CostLoadShedding: 400.0, LoadShedding: 0.05, PriceOfBiomass: 37.0,
   PriceOfBlackCoal: 10.62, PriceOfCO2: 7.5, PriceOfFuelOil: 35.0, PriceOfGas: 25.0,
-  PriceOfLignite: 8.0, PriceOfNuclear: 3.0, PriceOfPeat: 0.0}
+  PriceOfLignite: 8.0, PriceOfNuclear: 3.0, PriceOfPeat: 0.0, PriceTransmission: 1}
 
 #----------------
-modifiers: {Demand: 1.0, Solar: 1.0, Storage: 1.0, Wind: 1.0}
+modifiers: {Demand: 0.12, Solar: 1.05, Storage: 1.01, Wind: 0.99}

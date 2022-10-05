@@ -2,89 +2,113 @@ import datetime as dt
 import logging
 import sys
 from collections import OrderedDict
+from itertools import chain
 
 import numpy as np
 import pandas as pd
 
+from .postprocessing import filter_by_zone
 from ..misc.gdx_handler import get_gams_path, gdx_to_dataframe, gdx_to_list
 from ..misc.str_handler import clean_strings
 
-col_keys = {'OutputCommitted':('u','h'),
-            'OutputFlow':('l','h'),
-            'OutputPower':('u','h'),
-            'OutputPowerConsumption':('u','h'),
-            'OutputHeat':('u','h'),
-            'OutputHeatSlack':('u','h'),
-            'OutputStorageInput':('u','h'),
-            'OutputStorageLevel':('u','h'),
-            'OutputSystemCost':('h'),
-            'OutputSpillage':('u','h'),
-            'OutputShedLoad':('n','h'),
-            'OutputCurtailedPower':('n','h'),
-            'OutputDemandModulation':('n','h'),
-            'LostLoad_MaxPower':('n','h'),
-            'LostLoad_MinPower':('n','h'),
-            'LostLoad_2D':('n','h'),
-            'LostLoad_2U':('n','h'),
-            'LostLoad_3U':('n','h'),
-            'LostLoad_RampUp':('n','h'),
-            'LostLoad_RampDown':('n','h'),
-            'ShadowPrice':('n','h'),
-            'StorageShadowPrice':('u','h'),
-            'LostLoad_WaterSlack':('u'),
-            'status':tuple(),
-            '*':tuple()
-          }
+col_keys = {'OutputCommitted': ('u', 'h'),
+            'OutputFlow': ('l', 'h'),
+            'OutputPower': ('u', 'h'),
+            'OutputPowerConsumption': ('u', 'h'),
+            'OutputHeat': ('u', 'h'),
+            'OutputHeatSlack': ('n_th', 'h'),
+            'OutputStorageInput': ('u', 'h'),
+            'OutputStorageLevel': ('u', 'h'),
+            'OutputSystemCost': ('h'),
+            'OutputSpillage': ('u', 'h'),
+            'OutputShedLoad': ('n', 'h'),
+            'OutputCurtailedPower': ('n', 'h'),
+            'OutputCurtailedHeat': ('n_th','h'),
+            'OutputDemandModulation': ('n', 'h'),
+            'LostLoad_MaxPower': ('n', 'h'),
+            'LostLoad_MinPower': ('n', 'h'),
+            'LostLoad_2D': ('n', 'h'),
+            'LostLoad_2U': ('n', 'h'),
+            'LostLoad_3U': ('n', 'h'),
+            'LostLoad_RampUp': ('n', 'h'),
+            'LostLoad_RampDown': ('n', 'h'),
+            'ShadowPrice': ('n', 'h'),
+            'StorageShadowPrice': ('u', 'h'),
+            'LostLoad_WaterSlack': ('u'),
+            'OutputH2Output': ('u', 'h'),
+            'OutputStorageSlack': ('u', 'h'),
+            'OutputPtLDemand': ('u', 'h'),
+            'HeatShadowPrice': ('n_th', 'h'),
+            'H2ShadowPrice': ('u', 'h'),
+            'ShadowPrice_2U': ('u', 'h'),
+            'ShadowPrice_2D': ('u', 'h'),
+            'ShadowPrice_3U': ('u', 'h'),
+            'OutputReserve_2U': ('u', 'h'),
+            'OutputReserve_2D': ('u', 'h'),
+            'OutputReserve_3U': ('u', 'h'),
+            'ShadowPrice_RampUp_TC': ('u', 'h'),
+            'ShadowPrice_RampDown_TC': ('u', 'h'),
+            'OutputRampRate': ('u', 'h'),
+            'OutputStartUp': ('u', 'h'),
+            'OutputShutDown': ('u', 'h'),
+            'OutputPowerMustRun': ('u', 'h'),
+            'OutputCostStartUpH': ('u', 'h'),
+            'OutputCostRampUpH': ('u', 'h'),
+            'OutputCostRampDownH': ('u', 'h'),
+            'status': tuple(),
+            '*': tuple()
+            }
 
 
 def GAMSstatus(statustype, num):
-    '''
+    """
     Function that returns the model status or the solve status from gams
 
     :param statustype: String with the type of status to retrieve ("solver" or "model")
     :param num:     Indicated termination condition (Integer)
     :returns:       String with the status
-    '''
-    if statustype=="model":
-        msg =   {1: u'Optimal solution achieved',
-                 2: u'Local optimal solution achieved',
-                 3: u'Unbounded model found',
-                 4: u'Infeasible model found',
-                 5: u'Locally infeasible model found (in NLPs)',
-                 6: u'Solver terminated early and model was infeasible',
-                 7: u'Solver terminated early and model was feasible but not yet optimal',
-                 8: u'Integer solution model found',
-                 9: u'Solver terminated early with a non integer solution found (only in MIPs)',
-                 10: u'No feasible integer solution could be found',
-                 11: u'Licensing problem',
-                 12: u'Error achieved \u2013 No cause known',
-                 13: u'Error achieved \u2013 No solution attained',
-                 14: u'No solution returned',
-                 15: u'Feasible in a CNS models',
-                 16: u'Locally feasible in a CNS models',
-                 17: u'Singular in a CNS models',
-                 18: u'Unbounded \u2013 no solution',
-                 19: u'Infeasible \u2013 no solution'}
-    elif statustype=="solver":
-        msg =   {1: u'Normal termination',
-                 2: u'Solver ran out of iterations (fix with iterlim)',
-                 3: u'Solver exceeded time limit (fix with reslim)',
-                 4: u'Solver quit with a problem (see LST file) found',
-                 5: u'Solver quit with excessive nonlinear term evaluation errors (see LST file and fix with bounds or domlim)',
-                 6: u'Solver terminated for unknown reason (see LST file)',
-                 7: u'Solver terminated with preprocessor error (see LST file)',
-                 8: u'User interrupt',
-                 9: u'Solver terminated with some type of failure (see LST file)',
-                 10: u'Solver terminated with some type of failure (see LST file)',
-                 11: u'Solver terminated with some type of failure (see LST file)',
-                 12: u'Solver terminated with some type of failure (see LST file)',
-                 13: u'Solver terminated with some type of failure (see LST file)'}
+    """
+    if statustype == "model":
+        msg = {1: u'Optimal solution achieved',
+               2: u'Local optimal solution achieved',
+               3: u'Unbounded model found',
+               4: u'Infeasible model found',
+               5: u'Locally infeasible model found (in NLPs)',
+               6: u'Solver terminated early and model was infeasible',
+               7: u'Solver terminated early and model was feasible but not yet optimal',
+               8: u'Integer solution model found',
+               9: u'Solver terminated early with a non integer solution found (only in MIPs)',
+               10: u'No feasible integer solution could be found',
+               11: u'Licensing problem',
+               12: u'Error achieved \u2013 No cause known',
+               13: u'Error achieved \u2013 No solution attained',
+               14: u'No solution returned',
+               15: u'Feasible in a CNS models',
+               16: u'Locally feasible in a CNS models',
+               17: u'Singular in a CNS models',
+               18: u'Unbounded \u2013 no solution',
+               19: u'Infeasible \u2013 no solution'}
+    elif statustype == "solver":
+        msg = {1: u'Normal termination',
+               2: u'Solver ran out of iterations (fix with iterlim)',
+               3: u'Solver exceeded time limit (fix with reslim)',
+               4: u'Solver quit with a problem (see LST file) found',
+               5: u'Solver quit with excessive nonlinear term evaluation errors (see LST file and fix with bounds or domlim)',
+               6: u'Solver terminated for unknown reason (see LST file)',
+               7: u'Solver terminated with preprocessor error (see LST file)',
+               8: u'User interrupt',
+               9: u'Solver terminated with some type of failure (see LST file)',
+               10: u'Solver terminated with some type of failure (see LST file)',
+               11: u'Solver terminated with some type of failure (see LST file)',
+               12: u'Solver terminated with some type of failure (see LST file)',
+               13: u'Solver terminated with some type of failure (see LST file)'}
     else:
         sys.exit('Incorrect GAMS status type')
     return str(msg[num])
 
 
-def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, return_status=False):
+def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, return_status=False,
+                    inputs_file='Inputs.p', results_file='Results.gdx'):
     """
     This function reads the simulation environment folder once it has been solved and loads
     the input variables together with the results.
@@ -97,10 +121,11 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     :returns inputs,results:    Two dictionaries with all the input and outputs
     """
 
-    inputfile = path + '/Inputs.p'
-    resultfile = path + '/Results.gdx'
+    inputfile = path + '/' + inputs_file
+    resultfile = path + '/' + results_file
     if cache is not None or temp_path is not None:
-        logging.warning('Caching option has been removed. Try to save manually the results, e.g. results.to_netcdf("res.nc")')
+        logging.warning(
+            'Caching option has been removed. Try to save manually the results, e.g. results.to_netcdf("res.nc")')
 
     inputs = pd.read_pickle(inputfile)
 
@@ -114,130 +139,194 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
 
     # We need to pass the dir in config if we run it in clusters. PBS script fail to autolocate
     gams_dir = get_gams_path(gams_dir=inputs['config']['GAMS_folder'].encode())
-    if not gams_dir: # couldn't locate
+    if not gams_dir:  # couldn't locate
         logging.error('GAMS path cannot be located. Cannot parse gdx files')
         return False
 
     results = gdx_to_dataframe(gdx_to_list(gams_dir, resultfile, varname='all', verbose=True),
-                                   fixindex=True, verbose=True)
+                               fixindex=True, verbose=True)
 
     # Set datetime index:
     StartDate = inputs['config']['StartDate']
     StopDate = inputs['config']['StopDate']  # last day of the simulation with look-ahead period
     StopDate_long = dt.datetime(*StopDate) + dt.timedelta(days=inputs['config']['LookAhead'])
-    index = pd.date_range(start=dt.datetime(*StartDate), end=dt.datetime(*StopDate), freq='h')
-    index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
+    if 'MTS' in inputs_file:
+        index = pd.date_range(start=dt.datetime(*StartDate), end=dt.datetime(*StopDate), freq='d')
+        index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='d')
+    else:
+        index = pd.date_range(start=dt.datetime(*StartDate), end=dt.datetime(*StopDate), freq='h')
+        index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
 
     keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
-            'LostLoad_RampDown', 'LostLoad_2D','ShadowPrice', 'StorageShadowPrice'] #'status'
+            'LostLoad_RampDown', 'LostLoad_2D', 'ShadowPrice', 'StorageShadowPrice',
+            'OutputCostStartUpH', 'OutputCostRampUpH', 'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U',
+            'status']  # 'status'
 
-    keys_sparse = ['OutputPower','OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted', 'OutputCurtailedPower', 'OutputFlow',
-                   'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel', 'OutputStorageInput', 'OutputHeat',
-                   'OutputHeatSlack','OutputDemandModulation']
-    
+    keys_sparse = ['OutputPower', 'OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted',
+                   'OutputCurtailedPower', 'OutputFlow', 'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel',
+                   'OutputStorageInput', 'OutputHeat', 'OutputHeatSlack', 'OutputDemandModulation',
+                   'OutputStorageSlack', 'OutputPtLDemand', 'OutputH2Output', 'OutputH2Slack', 'OutputPowerMustRun',
+                   'OutputReserve_2U', 'OutputReserve_2D', 'OutputReserve_3U', 'ShadowPrice_RampUp_TC',
+                   'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown', 'HeatShadowPrice',
+                   'H2ShadowPrice', 'OutputCurtailedHeat', 'OutputEmissions', 'CapacityMargin',
+                   'OutputCurtailmentReserve_2U', 'OutputCurtailmentReserve_3U', 'OutputMaxOutageUp',
+                   'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D']
+
     # Setting the proper index to the result dataframes:
-    from itertools import chain
     for key in chain(keys, keys_sparse):
         if key in results:
-            if len(results[key]) == len(
-                    index_long):  # Case of variables for which the look-ahead period recorded (e.g. the lost loads)
+            # Case of variables for which the look-ahead period is recorded (e.g. the lost loads)
+            if len(results[key]) == len(index_long):
                 results[key].index = index_long
-            elif len(results[key]) == len(
-                    index):  # Case of variables for which the look-ahead is not recorded (standard case)
+            # Case of variables for which the look-ahead is not recorded (standard case)
+            elif len(results[key]) == len(index):
                 results[key].index = index
-            else:  # Variables whose index is not complete (sparse formulation)
+            # Variables whose index is not complete (sparse formulation)
+            else:
                 results[key].index = index_long[results[key].index - 1]
                 if key in keys_sparse:
                     results[key] = results[key].reindex(index).fillna(0)
         else:
             results[key] = pd.DataFrame(index=index)
-    
+        if isinstance(results[key], type(pd.DataFrame())):
+            results[key] = results[key].reindex(sorted(results[key].columns), axis=1)
+
     # Include water slack in the results (only one number)
     if 'LostLoad_WaterSlack' in results:
         results['LostLoad_WaterSlack'] = results['LostLoad_WaterSlack']
     else:
         results['LostLoad_WaterSlack'] = 0
-        
+
     # Clean power plant names:
     results['OutputPower'].columns = clean_strings(results['OutputPower'].columns.tolist())
     # Remove epsilons:
     if 'ShadowPrice' in results:
         results['ShadowPrice'][results['ShadowPrice'] >= 1e300] = 0
         results['StorageShadowPrice'][results['StorageShadowPrice'] >= 1e300] = 0
+        results['ShadowPrice_2D'][results['ShadowPrice_2D'] >= 1e300] = 0
+        results['ShadowPrice_2U'][results['ShadowPrice_2U'] >= 1e300] = 0
+        results['ShadowPrice_3U'][results['ShadowPrice_3U'] >= 1e300] = 0
+        results['HeatShadowPrice'][results['HeatShadowPrice'] >= 1e300] = 0
+        results['H2ShadowPrice'][results['H2ShadowPrice'] >= 1e300] = 0
+
+    # Total nodal power consumption
+    results['NodalPowerConsumption'] = pd.DataFrame()
+    for z in inputs['sets']['n']:
+        tmp = pd.DataFrame(filter_by_zone(results['OutputPowerConsumption'], inputs, z=z).sum(axis=1), columns=[z])
+        results['NodalPowerConsumption'] = pd.concat([results['NodalPowerConsumption'], tmp], axis=1)
+    # Total demand - including power consumption
+    results['TotalDemand'] = inputs['param_df']['Demand']['DA'].add(results['NodalPowerConsumption'], fill_value=0)
+    # Energy not served hourly
+    results['ENSH-EnergyNotServedHourly'] = results['OutputShedLoad'].add(
+        results['LostLoad_MaxPower'], fill_value=0).add(results['LostLoad_MinPower'], fill_value=0)
+    results['ENSR-EnergyNotServedRamping'] = results['LostLoad_RampUp'].add(results['LostLoad_RampDown'],
+                                                                            fill_value=0)
+    # Expected energy not served - the expectation energy loss caused to customers by insufficient power supply
+    results['EENS-ExpectedEnergyNotServed'] = results['ENSH-EnergyNotServedHourly'].sum()
+    # Los of load hours - the total duration of increments when the loss of load is expected to occur,
+    # should be < 0.1 to 0.3 day/year (2.4 - 7.2 hours)
+    results['LOLH-LosOfLoadHours'] = (results['ENSH-EnergyNotServedHourly'] > 0).apply(np.count_nonzero)
+    # Loss of load probability - a probability of an occurrence of an increment with a loss of load condition
+    results['LOLP-LosOfLoadProbability'] = results['LOLH-LosOfLoadHours'] / results['OutputPower'].index.size
+    # Loss of load frequency - Frequency of power interruption
+    results['LOLF-LosOfLoadFrequency'] = results['LOLP-LosOfLoadProbability'] / results['LOLH-LosOfLoadHours']
+    # System minuses nominal load - the ratio of energy loss due to power interruption over maximum load
+    results['SMNL-SystemMinusesNominalLoad'] = results['EENS-ExpectedEnergyNotServed'] / \
+                                               inputs['param_df']['Demand']['DA'].max()
+    # System minuses maximal load - the ratio of energy loss due to power interruption over maximum load + power
+    # consumption
+    results['SMML-SystemMinusesMaximalLoad'] = results['EENS-ExpectedEnergyNotServed'] / results[
+        'TotalDemand'].max()
 
     status = {}
     if "model" in results['status']:
         errors = results['status'][(results['status']['model'] != 1) & (results['status']['model'] != 8)]
         if len(errors) > 0:
             logging.critical('Some simulation errors were encountered. Some results could not be computed, for example at \n \
-                            time ' + str(errors.index[0]) + ', with the error message: "' + GAMSstatus('model', errors['model'].iloc[0]) + '". \n \
+                            time ' + str(errors.index[0]) + ', with the error message: "' + GAMSstatus('model', errors[
+                'model'].iloc[0]) + '". \n \
                             The complete list is available in results["errors"] \n \
                             The optimization might be debugged by activating the Debug flag in the GAMS simulation file and running it')
             for i in errors.index:
-                errors.loc[i,'Error Message'] = GAMSstatus('model',errors['model'][i])
+                errors.loc[i, 'Error Message'] = GAMSstatus('model', errors['model'][i])
             status['errors'] = errors
-    status['*'] = results.pop('*')
-    status['status'] = results.pop('status')
 
     if return_xarray:
+        if return_status:
+            status['*'] = results.pop('*')
+            status['status'] = results.pop('status')
         results = results_to_xarray(results)
         inputs = inputs_to_xarray(inputs)
-    out = (inputs, results)
-
-    if return_status:
-        return out + (status,)
+        out = (inputs, results)
+        if return_status:
+            return out + (status)
+        else:
+            return out
     else:
-        return out
+        return (inputs, results)
 
 
 def results_to_xarray(results):
-    #Convert to xarray:
-        try:
-            import xarray as xr
-            all_ds = []
+    """
+    Convert results to xarray format
 
-            for k, v in results.items():
-                df = v
-                var_name = k
-                ind = col_keys[k]
-                if len(ind) == 2:
-                    ds = xr.DataArray(df.values,
-                                      coords={ind[1]: df.index.values,
-                                              ind[0]: df.columns.values},
-                                      dims=[ind[1], ind[0]],
-                                      name=var_name)
-                elif len(ind) == 1:
-                    if k == 'LostLoad_WaterSlack':
-                        ds = xr.DataArray(df,
-                                          name=var_name)
-                    else:
-                        ds = xr.DataArray(df.values,
-                                          coords={ind[0]: df.index.values,},
-                                          dims=[ind[0]],
-                                          name=var_name)
-                else:
-                    pass #print('Ignoring ', var_name)
+    :param results:     Dispa-SET results
+    :return:            results in xarray format
+    """
+
+    try:
+        import xarray as xr
+        all_ds = []
+
+        for k, v in results.items():
+            df = v
+            var_name = k
+            ind = col_keys[k]
+            if len(ind) == 2:
+                ds = xr.DataArray(df.values,
+                                  coords={ind[1]: df.index.values,
+                                          ind[0]: df.columns.values},
+                                  dims=[ind[1], ind[0]],
+                                  name=var_name)
                 all_ds.append(ds)
-            results = xr.merge(all_ds)
-        except ImportError:
-            logging.warn('Cannot find xarray package. Falling back to dict of dataframes')
+            elif len(ind) == 1:
+                if k == 'LostLoad_WaterSlack':
+                    ds = xr.DataArray(df,
+                                      name=var_name)
+                else:
+                    ds = xr.DataArray(df.values,
+                                      coords={ind[0]: df.index.values, },
+                                      dims=[ind[0]],
+                                      name=var_name)
+                all_ds.append(ds)
+            else:
+                pass  # print('Ignoring ', var_name)
+        results = xr.merge(all_ds)
         return results
+    except ImportError:
+        logging.warn('Cannot find xarray package. Falling back to dict of dataframes')
+
 
 def inputs_to_xarray(inputs):
-    """Read crude input dispaset dictionary and return a structured xarray dataset"""
+    """Read crude input dispaset dictionary and return a structured xarray dataset
+
+    :param inputs:  Dispa-SET inputs
+    :return:        Inputs in xarray format
+    """
+
     try:
         import xarray as xr
         # build set dictionary {parameter:set}
         in_keys = {}
-        for k,v in inputs['parameters'].items():
+        for k, v in inputs['parameters'].items():
             in_keys[k] = tuple(v['sets'])
-        #Remove config from dict and add it later as dataset attribute (metadata)
+        # Remove config from dict and add it later as dataset attribute (metadata)
         __ = in_keys.pop('Config')
         config = inputs['config']
-        version = inputs.get('version','')
+        version = inputs.get('version', '')
         all_ds = []
         # Iterate all and build values nad coordinates
-        for k,v in in_keys.items():
+        for k, v in in_keys.items():
             val = inputs['parameters'][k]['val']
             var_name = k
             ind = v
@@ -248,15 +337,15 @@ def inputs_to_xarray(inputs):
             dims = coords.keys()
 
             ds = xr.DataArray(val,
-                           coords=coords,
-                           dims=dims,
-                           name=var_name)
+                              coords=coords,
+                              dims=dims,
+                              name=var_name)
 
             all_ds.append(ds)
         inputs = xr.merge(all_ds)
         inputs.attrs['version'] = version
         for key in config:
-            if isinstance(config[key], (float,int,str)):
+            if isinstance(config[key], (float, int, str)):
                 inputs.attrs[key] = config[key]
         # Replace h with DateTimeIndex
         StartDate = config['StartDate']
@@ -269,12 +358,13 @@ def inputs_to_xarray(inputs):
         logging.warn('Cannot find xarray package. Falling back to dict of dataframes')
     return inputs
 
+
 def ds_to_df(inputs):
     """
     Function that converts the dispaset data format into a dictionary of dataframes
 
-    :param inputs: input file
-    :return: dictionary of dataframes
+    :param inputs:      input file
+    :return:            dictionary of dataframes
     """
 
     sets, parameters = inputs['sets'], inputs['parameters']
@@ -284,10 +374,10 @@ def ds_to_df(inputs):
         config = inputs['config']
         first_day = dt.datetime(config['StartDate'][0], config['StartDate'][1], config['StartDate'][2], 0)
         last_day = dt.datetime(config['StopDate'][0], config['StopDate'][1], config['StopDate'][2], 23)
-        dates = pd.date_range(start=first_day, end=last_day, freq='1h')
+        dates = pd.date_range(start=first_day, end=last_day,
+                              freq=str(int(inputs['config']['SimulationTimeStep'])) + 'h')
         timeindex = True
     except KeyError:
-        logging.warn('Could not find the start/stop date information in the inputs. Using an integer index')
         dates = range(1, len(sets['z']) + 1)
         timeindex = False
     if len(dates) > len(sets['h']):
@@ -295,11 +385,13 @@ def ds_to_df(inputs):
             len(sets['h'])) + ' time elements')
         sys.exit(1)
     elif len(dates) > len(sets['z']):
-        logging.warn('The provided index has a length of ' + str(len(dates)) + ' while the simulation was designed for ' + str(
-            len(sets['z'])) + ' time elements')
+        logging.warn(
+            'The provided index has a length of ' + str(len(dates)) + ' while the simulation was designed for ' + str(
+                len(sets['z'])) + ' time elements')
     elif len(dates) < len(sets['z']):
-        logging.warn('The provided index has a length of ' + str(len(dates)) + ' while the simulation was designed for ' + str(
-            len(sets['z'])) + ' time elements')
+        logging.warn(
+            'The provided index has a length of ' + str(len(dates)) + ' while the simulation was designed for ' + str(
+                len(sets['z'])) + ' time elements')
 
     idx = range(len(dates))
 
@@ -344,6 +436,7 @@ def ds_to_df(inputs):
             else:
                 out[p] = pd.DataFrame(values2.transpose(), index=list_sets[2], columns=columns)
         else:
-            logging.error('Only three dimensions currently supported. Parameter ' + p + ' has ' + str(dim) + ' dimensions.')
+            logging.error(
+                'Only three dimensions currently supported. Parameter ' + p + ' has ' + str(dim) + ' dimensions.')
             sys.exit(1)
     return out

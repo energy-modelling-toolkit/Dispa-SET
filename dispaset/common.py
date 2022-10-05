@@ -4,24 +4,46 @@ This file defines a dictionary with global variables to be used in Dispa-SET suc
 """
 import datetime
 
-commons={}
+commons = {}
 # Timestep
 commons['TimeStep'] = '1h'
 
 # DispaSET technologies:
-commons['Technologies'] = ['COMC', 'GTUR', 'HDAM', 'HROR', 'HPHS', 'ICEN', 'PHOT', 'STUR', 'WTOF', 'WTON', 'CAES', 'BATS',
-                'BEVS', 'THMS', 'P2GS','P2HT']
-# List of renewable technologies:
-commons['tech_renewables'] = ['WTON', 'WTOF', 'PHOT', 'HROR']
+# 1) Hydro and renewables
+# 2) Thermal
+# 3) Storage
+# 4) P2HT
+# 5) Fuel cells
+# 6) Electrolyzers
+commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF', 'WTON',
+                           'COMC', 'GTUR', 'ICEN', 'SCSP', 'STUR',
+                           'BATS', 'BEVS', 'CAES', 'THMS', 'H2ST',
+                           'ABHP', 'ASHP', 'GETH', 'GSHP', 'HOBO', 'HYHP', 'P2HT', 'REHE', 'SOTH', 'WSHP',
+                           'PEFC', 'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC',
+                           'P2GS', 'ALKE', 'PEME', 'SOXE']
+# List of VRES technologies:
+commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 # List of storage technologies:
-commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'THMS']
+commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
+# List of power to heat technologies:
+commons['tech_p2ht'] = ['P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
+# List of power to h2 technologies
+commons['tech_p2h2'] = ['PEFC', 'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 'P2GS', 'ALKE', 'PEME', 'SOXE']
+# List of heat only technologies:
+commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
+# List of thermal storage technologies:
+commons['tech_thermal_storage'] = ['THMS']
 # List of CHP types:
-commons['types_CHP'] = ['extraction','back-pressure', 'p2h']
+commons['types_CHP'] = ['extraction', 'back-pressure', 'p2h']
 # DispaSET fuels:
-commons['Fuels'] = ['BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH', 'GEO']
+commons['Fuels'] = ['AIR', 'AMO', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH',
+                    'GEO', 'HYD', 'WHT', 'ELE', 'THE']
 # Ordered list of fuels for plotting (the first ones are negative):
-# commons['MeritOrder'] = ['Storage','FlowOut','GEO','NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT']
-commons['MeritOrder'] = ['THMS','BATS','BEVS','HDAM','HPHS','FlowOut','GEO','NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT']
+commons['MeritOrder'] = ['SCSP', 'BATS', 'BEVS', 'HDAM', 'HPHS', 'P2GS', 'FlowOut', 'GEO', 'NUC', 'LIG',
+                         'HRD', 'BIO', 'AMO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT',
+                         'HYD', 'AIR', 'WHT']
+commons['MeritOrderHeat'] = ['GEO', 'NUC', 'LIG', 'HRD', 'BIO', 'AMO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN',
+                             'WAT', 'HYD', 'AIR', 'WHT', 'ELE', 'THE', 'HeatSlack', 'THMS']
 
 # Colors associated with each fuel:
 # commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': '#af4b91b2', 'OIL': '#af4b91ff',
@@ -38,26 +60,50 @@ commons['MeritOrder'] = ['THMS','BATS','BEVS','HDAM','HPHS','FlowOut','GEO','NUC
 # #                      'THMS': '#C04000ff',
 # #                      'BATS': '#41A317ff',
 # #                      'BEVS': '#CC80FFff'}
-commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': 'darkviolet', 'OIL': 'magenta',
+commons['colors'] = {'LIG': '#af4b9180',
+                     'PEA': '#af4b9199',
+                     'HRD': 'darkviolet',
+                     'OIL': 'magenta',
                      'GAS': '#d7642dff',
                      'NUC': '#466eb4ff',
                      'SUN': '#e6a532ff',
                      'WIN': '#41afaaff',
                      'WAT': '#00a0e1ff',
-                     'BIO': '#7daf4bff', 'GEO': '#7daf4bbf',
-                     'Storage': '#b93c46ff', 'FlowIn': '#b93c46b2', 'FlowOut': '#b93c4666',
-                     'OTH': '#b9c33799', 'WST': '#b9c337ff',
+                     'HYD': '#A0522D',
+                     'BIO': '#7daf4bff',
+                     'AMO': '#ffff00ff',
+                     'GEO': '#7daf4bbf',
+                     'Storage': '#b93c46ff',
+                     'FlowIn': 'red',
+                     'FlowOut': 'green',
+                     # 'FlowIn': '#b93c46b2',
+                     # 'FlowOut': '#b93c4666',
+                     'OTH': '#57D53B',
+                     'WST': '#b9c337ff',
                      'HDAM': '#00a0e1ff',
                      'HPHS': 'blue',
                      'THMS': '#C04000ff',
                      'BATS': '#41A317ff',
-                     'BEVS': '#b9c33799'}
+                     'BEVS': '#b9c33799',
+                     'SCSP': '#e6a532ff',
+                     'P2GS': '#A0522D',
+                     'ShedLoad': '#ffffffff',
+                     'AIR': '#aed6f1ff',
+                     'WHT': '#a93226ff',
+                     'ELE': '#2C75FFff',
+                     'THE': '#c70509ff',
+                     'HeatSlack': '#943126ff'}
 
 commons['colors']['curtailment'] = 'red'
 # Hatches associated with each fuel:
 commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '', 'GAS': '', 'NUC': '', 'SUN': '', 'WIN': '', 'WAT': '',
-                      'BIO': '', 'GEO': '', 'Storage': '', 'WST': '', 'OTH': '',
-                      'FlowIn': '/', 'FlowOut': '\\', 'HDAM': '/','HPHS': '/','THMS': '','BATS': '/','BEVS': '/'
+                      'BIO': '', 'AMO': '', 'GEO': '', 'Storage': '', 'WST': '', 'OTH': '', 'HYD': '',
+                      'FlowIn': '//', 'FlowOut': '//', 'HDAM': '/', 'HPHS': '/', 'SCSP': '/', 'THMS': '', 'BATS': '/',
+                      'BEVS': '/', 'P2GS': '/', 'AIR': '', 'WHT': '', 'HeatSlack': '/', 'ELE': '', 'THE': ''
                       }
 
-commons['logfile'] = str(datetime.datetime.now()).replace(':','-').replace(' ','_') + '.dispa.log'
+commons['logfile'] = str(datetime.datetime.now()).replace(':', '-').replace(' ', '_') + '.dispa.log'
+
+# Specifying the na value is required to avoid configusion with the 'NA' (Namibia) country code
+commons['na_values']=['', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan',
+                                        '1.#IND', '1.#QNAN', 'N/A', 'NULL', 'NaN', 'nan']

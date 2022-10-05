@@ -9,30 +9,35 @@ import pandas as pd
 from future.builtins import int
 
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
-    check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows, \
-    check_FlexibleDemand, check_reserves
-from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter
+    check_temperatures, check_clustering, isStorage, check_chp, check_p2h, check_h2, check_df, check_MinMaxFlows, \
+    check_FlexibleDemand, check_reserves, check_PtLDemand, check_heat
+from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
+    load_geo_data, GenericTable
+from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, incidence_matrix, pd_timestep
-
 from .. import __version__
 from ..common import commons
 from ..misc.gdx_handler import write_variables
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
-def build_single_run(config, profiles=None):
+
+def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     """
     This function reads the DispaSET config, loads the specified data,
     processes it when needed, and formats it in the proper DispaSET format.
     The output of the function is a directory with all inputs and simulation files required to run a DispaSET simulation
 
-    :param config:        Dictionary with all the configuration fields loaded from the excel file. Output of the 'LoadConfig' function.
-    :param plot_load:     Boolean used to display a plot of the demand curves in the different zones
+    :param config:        Dictionary with all the configuration fields loaded from the excel file. Output of the
+                          'LoadConfig' function.
     :param profiles:      Profiles from mid term scheduling simulations
+    :param PtLDemand:     Profiles for PtL demand from mid ter scheduling simulations
+    :param MTS:           Boolean, 1 if in MTS
+    :PtLDemand:           PtLDemand from mid term scheduling simulations
     """
     dispa_version = __version__
     logging.info('New build started. DispaSET version: ' + dispa_version)
-    # %%################################################################################################################
+    # %%###############################################################################################################
     #####################################   Main Inputs    ############################################################
     ###################################################################################################################
 
@@ -41,40 +46,41 @@ def build_single_run(config, profiles=None):
 
     # check time steps:
     if config['DataTimeStep'] != 1:
-        logging.critical('The data time step can only be 1 hour in this version of Dispa-SET. A value of ' + str(config['DataTimeStep'])  + ' hours was provided')
+        logging.critical('The data time step can only be 1 hour in this version of Dispa-SET. A value of ' + str(
+            config['DataTimeStep']) + ' hours was provided')
         sys.exit(1)
-    if config['SimulationTimeStep'] not in (1,24):
-        logging.critical('The simulation time step can only be 1 or 24 hour in this version of Dispa-SET. A value of ' + str(config['DataTimeStep'])  + ' hours was provided')
+    if config['SimulationTimeStep'] not in (1, 24):
+        logging.critical(
+            'The simulation time step can only be 1 or 24 hour in this version of Dispa-SET. A value of ' + str(
+                config['DataTimeStep']) + ' hours was provided')
         sys.exit(1)
     # Day/hour corresponding to the first and last days of the simulation:
     __, m_start, d_start, __, __, __ = config['StartDate']
     y_end, m_end, d_end, _, _, _ = config['StopDate']
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
-    
+
     # Indexes of the simulation:
     config['idx'] = pd.date_range(start=dt.datetime(*config['StartDate']),
                                   end=dt.datetime(*config['StopDate']),
                                   freq=commons['TimeStep']).tz_localize(None)
 
-
     # Indexes for the whole year considered in StartDate
-    idx_year = pd.date_range(start=dt.datetime(*(config['StartDate'][0],1,1,0,0)),
-                             end=dt.datetime(*(config['StartDate'][0],12,31,23,59,59)),
+    idx_year = pd.date_range(start=dt.datetime(*(config['StartDate'][0], 1, 1, 0, 0)),
+                             end=dt.datetime(*(config['StartDate'][0], 12, 31, 23, 59, 59)),
                              freq=commons['TimeStep'])
 
-    
     # Indexes including the last look-ahead period
     enddate_long = config['idx'][-1] + dt.timedelta(days=config['LookAhead'])
     idx_long = pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep'])
     Nhours_long = len(idx_long)
     config['idx_long'] = idx_long
-    
+
     # Indexes of with the specified simulation time step:
     idx_sim = pd.date_range(start=config['idx'][0], end=enddate_long, freq=pd_timestep(config['SimulationTimeStep']))
     config['idx_sim'] = idx_sim
     Nsim = len(idx_sim)
-    
-    # %%#################################################################################################################
+
+    # %%###############################################################################################################
     #####################################   Data Loading    ###########################################################
     ###################################################################################################################
 
@@ -83,7 +89,7 @@ def build_single_run(config, profiles=None):
     days_simulation = delta.days + 1
 
     # Load :
-    Load = NodeBasedTable('Demand',config)
+    Load = NodeBasedTable('Demand', config)
     PeakLoad = Load.max()
 
     if config['modifiers']['Demand'] != 1:
@@ -93,101 +99,203 @@ def build_single_run(config, profiles=None):
 
     # Interconnections:
     if os.path.isfile(config['Interconnections']):
-        flows = load_time_series(config,config['Interconnections']).fillna(0)
+        flows = load_time_series(config, config['Interconnections']).fillna(0)
     else:
         logging.warning('No historical flows will be considered (no valid file provided)')
         flows = pd.DataFrame(index=config['idx_long'])
     if os.path.isfile(config['NTC']):
-        NTC = load_time_series(config,config['NTC']).fillna(0)
+        NTC = load_time_series(config, config['NTC']).fillna(0)
     else:
         logging.warning('No NTC values will be considered (no valid file provided)')
         NTC = pd.DataFrame(index=config['idx_long'])
     if os.path.isfile(config['PriceTransmission']):
-        PriceTransmission_raw = load_time_series(config,config['PriceTransmission'])
+        PriceTransmission_raw = load_time_series(config, config['PriceTransmission'])
     else:
-        PriceTransmission_raw = pd.DataFrame(index=config['idx_long'])    
+        PriceTransmission_raw = pd.DataFrame(index=config['idx_long'])
+
+    # Geo data
+    if 'GeoData' in config and os.path.isfile(config['GeoData']):
+        geo = load_geo_data(config['GeoData'], header=0)
+    else:
+        logging.warning('No geo spatial data available')
+        geo = None
 
     # Load Shedding:
-    LoadShedding = NodeBasedTable('LoadShedding',config,default=config['default']['LoadShedding'])
-    CostLoadShedding = NodeBasedTable('CostLoadShedding',config,default=config['default']['CostLoadShedding'])
-    ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand',config,default=config['default']['ShareOfFlexibleDemand'])
-    Reserve2D = NodeBasedTable('Reserve2D',config,default=None)
-    Reserve2U = NodeBasedTable('Reserve2U',config,default=None)
-    
+    LoadShedding = NodeBasedTable('LoadShedding', config, default=config['default']['LoadShedding'])
+    CostLoadShedding = NodeBasedTable('CostLoadShedding', config, default=config['default']['CostLoadShedding'])
+    ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand', config,
+                                           default=config['default']['ShareOfFlexibleDemand'])
+    Reserve2D = NodeBasedTable('Reserve2D', config, default=None)
+    Reserve2U = NodeBasedTable('Reserve2U', config, default=None)
+
+    # Curtailment:
+    CostCurtailment = NodeBasedTable('CostCurtailment', config, default=config['default']['CostCurtailment'])
+
     # Power plants:
     plants = pd.DataFrame()
     if os.path.isfile(config['PowerPlantData']):
-        plants = pd.read_csv(config['PowerPlantData'])
+        plants = pd.read_csv(config['PowerPlantData'],
+                             na_values=commons['na_values'],
+                             keep_default_na=False)
     elif '##' in config['PowerPlantData']:
         for z in config['zones']:
             path = config['PowerPlantData'].replace('##', str(z))
-            tmp = pd.read_csv(path)
-            plants = plants.append(tmp, ignore_index=True, sort = False)
-    # remove invalide power plants:
-    plants = select_units(plants,config)
+            tmp = pd.read_csv(path, na_values=commons['na_values'],
+                              keep_default_na=False)
+            # plants = plants.append(tmp, ignore_index=True, sort=False)
+            plants = pd.concat([plants, tmp], ignore_index=True, sort=False)
+    # remove invalid power plants:
+    plants = select_units(plants, config)
 
     # Some columns can be in two format (absolute or per unit). If not specified, they are set to zero:
-    for key in ['StartUpCost','NoLoadCost']:
+    for key in ['StartUpCost', 'NoLoadCost']:
         if key in plants:
-            pass
-        elif key+'_pu' in plants:
-            plants[key] = plants[key+'_pu'] * plants['PowerCapacity']
+            if key + '_pu' in plants:
+                logging.warning(
+                    'Column ' + key + '_pu found in the power plant table but not used since column ' + key + ' exists')
+        elif key + '_pu' in plants:
+            plants[key] = plants[key + '_pu'] * plants['PowerCapacity']
         else:
             plants[key] = 0
-    # check plant list:
-    check_units(config, plants)
+
     # If not present, add the non-compulsory fields to the units table:
-    for key in ['CHPPowerLossFactor','CHPPowerToHeat','CHPType','STOCapacity','STOSelfDischarge','STOMaxChargingPower','STOChargingEfficiency', 'CHPMaxHeat']:
+    for key in ['CHPPowerLossFactor', 'CHPPowerToHeat', 'CHPType', 'STOCapacity', 'STOSelfDischarge',
+                'STOMaxChargingPower', 'STOChargingEfficiency', 'CHPMaxHeat', 'WaterWithdrawal',
+                'WaterConsumption']:
         if key not in plants.columns:
             plants[key] = np.nan
 
+    # If the thermal and h2 zones are not defined in the units table, define one individual zone per power plant:
+    for key in ['Zone_th', 'Zone_h2']:
+        if key in plants.columns:
+            plants[key] = plants[key].fillna('')
+        else:
+            plants[key] = plants['Unit']
+            logging.info('No "' + key + '" header was found in the units table. One individual zone is defined per '
+                                        'power plant')
+
+    # check plant list:
+    check_units(config, plants)
 
     # Defining the hydro storages:
     plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
-    # check storage plants:
     check_sto(config, plants_sto)
-    
+
+    # Defining the thermal storages:
+    plants_thms = plants[[u in commons['tech_thermal_storage'] for u in plants['Technology']]]
+    check_sto(config, plants_thms)
+
+    # Merging all MTS storage units
+    # plants_all_sto = plants_sto.append(plants_thms)
+    plants_all_sto = pd.concat([plants_sto, plants_thms])
+
+    # Defining the heat only units:
+    plants_heat = plants[[u in commons['tech_heat'] for u in plants['Technology']]]
+    check_heat(config, plants_heat)
+
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
+    check_chp(config, plants_chp)
 
     # Defining the P2H units:
-    plants_p2h = plants[plants['Technology']=='P2HT']
-    
+    plants_p2h = plants[[u in commons['tech_p2ht'] for u in plants['Technology']]]
+    check_p2h(config, plants_p2h)
+
     # All heating units:
-    plants_heat = plants_chp.append(plants_p2h)
+    # plants_heat = plants_heat.append(plants_chp)
+    # plants_heat = plants_heat.append(plants_p2h)
+    plants_heat = pd.concat([plants_heat, plants_chp])
+    plants_heat = pd.concat([plants_heat, plants_p2h])
 
-    Outages = UnitBasedTable(plants,'Outages',config,fallbacks=['Unit','Technology'])
-    AF = UnitBasedTable(plants,'RenewablesAF',config,fallbacks=['Unit','Technology'],default=1,RestrictWarning=commons['tech_renewables'])
+    # Defining the P2H2 units:
+    # plants_h2 = plants[plants['Technology'] == 'P2GS']
+    plants_h2 = plants[[u in commons['tech_p2h2'] for u in plants['Technology']]]
+    check_h2(config, plants_h2)
 
-    ReservoirLevels = UnitBasedTable(plants_sto,'ReservoirLevels',config,fallbacks=['Unit','Technology','Zone'],default=0)
-    ReservoirScaledInflows = UnitBasedTable(plants_sto,'ReservoirScaledInflows',config,fallbacks=['Unit','Technology','Zone'],default=0)
-    HeatDemand = UnitBasedTable(plants_heat,'HeatDemand',config,fallbacks=['Unit'],default=0)
-    CostHeatSlack = UnitBasedTable(plants_heat,'CostHeatSlack',config,fallbacks=['Unit','Zone'],default=config['default']['CostHeatSlack'])
-    Temperatures = NodeBasedTable('Temperatures',config)
-    
+    # Merging all MTS storage units
+    # plants_all_sto = plants_all_sto.append(plants_h2)
+    plants_all_sto = pd.concat([plants_all_sto, plants_h2])
+
+    Outages = UnitBasedTable(plants, 'Outages', config, fallbacks=['Unit', 'Technology'])
+    AF = UnitBasedTable(plants, 'RenewablesAF', config, fallbacks=['Unit', 'Technology'], default=1,
+                        RestrictWarning=commons['tech_renewables'])
+    AF = AF.apply(pd.to_numeric)
+
+    ReservoirLevels = UnitBasedTable(plants_all_sto, 'ReservoirLevels', config,
+                                     fallbacks=['Unit', 'Technology', 'Zone'],
+                                     default=0)
+    ReservoirScaledInflows = UnitBasedTable(plants_all_sto, 'ReservoirScaledInflows', config,
+                                            fallbacks=['Unit', 'Technology', 'Zone'], default=0)
+    # HeatDemand = UnitBasedTable(plants_heat, 'HeatDemand', config, fallbacks=['Unit'], default=0)
+    # CostHeatSlack = UnitBasedTable(plants_heat, 'CostHeatSlack', config, fallbacks=['Unit', 'Zone'],
+    #                                default=config['default']['CostHeatSlack'])
+    Temperatures = NodeBasedTable('Temperatures', config)
+
+    # if plants_h2.empty is True:
+    #     H2RigidDemand = pd.DataFrame(index=config['idx_long'])
+    #     H2FlexibleDemand = pd.DataFrame(index=config['idx_long'])
+    #     CostH2Slack = pd.DataFrame(index=config['idx_long'])
+    # else:
+    #     H2RigidDemand = UnitBasedTable(plants_h2, 'H2RigidDemand', config, fallbacks=['Unit'], default=0)
+    #     H2FlexibleDemand = UnitBasedTable(plants_h2, 'H2FlexibleDemand', config, fallbacks=['Unit'], default=0)
+    #     CostH2Slack = UnitBasedTable(plants_h2, 'CostH2Slack', config, fallbacks=['Unit', 'Zone'],
+    #                                  default=config['default']['CostH2Slack'])
+
+    # Detecting thermal zones:
+    zones_th = plants_heat['Zone_th'].unique().tolist()
+    if '' in zones_th:
+        zones_th.remove('')
+
+    HeatDemand = GenericTable(zones_th, 'HeatDemand', config, default=0)
+    CostHeatSlack = GenericTable(zones_th, 'CostHeatSlack', config, default=config['default']['CostHeatSlack'])
+
+    # Detecting h2 zones:
+    zones_h2 = plants_h2['Zone_h2'].unique().tolist()
+    if '' in zones_h2:
+        zones_h2.remove('')
+
+    H2RigidDemand = GenericTable(zones_h2, 'H2RigidDemand', config, default=0)
+    H2FlexibleDemand = GenericTable(zones_h2, 'H2FlexibleDemand', config, default=0)
+    CostH2Slack = GenericTable(zones_h2, 'CostH2Slack', config, default=config['default']['CostH2Slack'])
+
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
+        plants_all_sto.set_index(plants_all_sto.loc[:, 'Unit'], inplace=True, drop=True)
         for key in profiles.columns:
             if key not in ReservoirLevels.columns:
-                logging.error('The reservoir profile "' + key + '" provided by the MTS is not found in the ReservoirLevels table')
-                print(ReservoirLevels.columns)
+                logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the '
+                                                                  'ReservoirLevels table')
+            elif key in list(ReservoirLevels.loc[:, plants_all_sto['Technology'] == 'SCSP'].columns):
+                ReservoirLevels[key] = config['default']['ReservoirLevelInitial']
+                logging.info('The reservoir profile "' + key + '" can not be seleceted for MTS, instead, default value '
+                                                               'of: ' + str(
+                    config['default']['ReservoirLevelInitial']) + ' will be used')
             else:
                 ReservoirLevels[key].update(profiles[key])
-                logging.info('The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
-
+                logging.info(
+                    'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
+    # Update PtL demand (H2FlexibleDemand with demand from mid term scheduling)
+    if PtLDemand is not None and any(H2FlexibleDemand) > 0:
+        for key in PtLDemand.columns:
+            if key not in H2FlexibleDemand.columns:
+                logging.warning('The H2 flexible demand "' + key + '" provided by the MTS is not found in the '
+                                                                   'H2FlexibleDemand table')
+            else:
+                H2FlexibleDemand[key].update(PtLDemand[key])
 
     # data checks:
-    check_AvailabilityFactors(plants,AF)
-    check_heat_demand(plants,HeatDemand)
-    check_temperatures(plants,Temperatures)
+    check_AvailabilityFactors(plants, AF)
+    check_heat_demand(plants, HeatDemand, zones_th)
+    check_temperatures(plants, Temperatures)
     check_FlexibleDemand(ShareOfFlexibleDemand)
-    check_reserves(Reserve2D,Reserve2U,Load)
+    check_reserves(Reserve2D, Reserve2U, Load)
 
     # Fuel prices:
-    fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
+    fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2',
+             'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia']
     FuelPrices = {}
     for fuel in fuels:
-        FuelPrices[fuel] = NodeBasedTable(fuel,config,default=config['default'][fuel])
+        FuelPrices[fuel] = NodeBasedTable(fuel, config, default=config['default'][fuel])
 
     # Interconnections:
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], NTC, flows)
@@ -197,19 +305,20 @@ def build_single_run(config, profiles=None):
     else:
         NTCs = pd.DataFrame(index=config['idx_long'])
     Inter_RoW = Interconnections_RoW.reindex(config['idx_long'])
-    PriceTransmission = pd.DataFrame(index=NTCs.index,columns=NTCs.columns)
-    for l in (NTCs.columns.tolist()+Inter_RoW.columns.tolist()):
+    PriceTransmission = pd.DataFrame(index=NTCs.index, columns=NTCs.columns)
+    for l in (NTCs.columns.tolist() + Inter_RoW.columns.tolist()):
         if l in PriceTransmission_raw:
             PriceTransmission[l] = PriceTransmission_raw[l].reindex(PriceTransmission.index)
         else:
             PriceTransmission[l] = config['default']['PriceTransmission']
             if config['default']['PriceTransmission'] > 0:
-                logging.warning('No detailed values were found the transmission prices of line ' + l + '. Using default value ' + str(config['default']['PriceTransmission']))
+                logging.warning('No detailed values were found the transmission prices of line ' + l +
+                                '. Using default value ' + str(config['default']['PriceTransmission']))
 
     # Clustering of the plants:
     Plants_merged, mapping = clustering(plants, method=config['SimulationType'])
     # Check clustering:
-    check_clustering(plants,Plants_merged)
+    check_clustering(plants, Plants_merged)
 
     # Renaming the columns to ease the production of parameters:
     Plants_merged.rename(columns={'StartUpCost': 'CostStartUp',
@@ -223,11 +332,11 @@ def build_single_run(config, profiles=None):
                                   'STOChargingEfficiency': 'StorageChargingEfficiency',
                                   'STOSelfDischarge': 'StorageSelfDischarge',
                                   'CO2Intensity': 'EmissionRate'}, inplace=True)
-    
-    for key in ['TimeUpMinimum','TimeDownMinimum']:
+
+    for key in ['TimeUpMinimum', 'TimeDownMinimum']:
         if any([not x.is_integer() for x in Plants_merged[key].fillna(0).values.astype('float')]):
             logging.warning(key + ' in the power plant data has been rounded to the nearest integer value')
-            Plants_merged.loc[:,key] = Plants_merged[key].fillna(0).values.astype('int32')
+            Plants_merged.loc[:, key] = Plants_merged[key].fillna(0).values.astype('int32')
 
     if not len(Plants_merged.index.unique()) == len(Plants_merged):
         # Very unlikely case:
@@ -239,125 +348,193 @@ def build_single_run(config, profiles=None):
         logging.info('Scaling Solar Capacity by a factor ' + str(config['modifiers']['Solar']))
         for u in Plants_merged.index:
             if Plants_merged.Technology[u] == 'PHOT':
-                Plants_merged.loc[u, 'PowerCapacity'] = Plants_merged.loc[u, 'PowerCapacity'] * config['modifiers']['Solar']
+                Plants_merged.loc[u, 'PowerCapacity'] = Plants_merged.loc[u, 'PowerCapacity'] * config['modifiers'][
+                    'Solar']
+            if Plants_merged.Technology[u] == 'SOTH':
+                Plants_merged.loc[u, 'PowerCapacity'] = Plants_merged.loc[u, 'PowerCapacity'] * config['modifiers'][
+                    'Solar']
     if config['modifiers']['Wind'] != 1:
         logging.info('Scaling Wind Capacity by a factor ' + str(config['modifiers']['Wind']))
         for u in Plants_merged.index:
             if Plants_merged.Technology[u] == 'WTON' or Plants_merged.Technology[u] == 'WTOF':
-                Plants_merged.loc[u, 'PowerCapacity'] = Plants_merged.loc[u, 'PowerCapacity'] * config['modifiers']['Wind']
+                Plants_merged.loc[u, 'PowerCapacity'] = Plants_merged.loc[u, 'PowerCapacity'] * config['modifiers'][
+                    'Wind']
     if config['modifiers']['Storage'] != 1:
         logging.info('Scaling Storage Power and Capacity by a factor ' + str(config['modifiers']['Storage']))
         for u in Plants_merged.index:
             if isStorage(Plants_merged.Technology[u]):
-                Plants_merged.loc[u, 'PowerCapacity'] = Plants_merged.loc[u, 'PowerCapacity'] * config['modifiers']['Storage']
-                Plants_merged.loc[u, 'StorageCapacity'] = Plants_merged.loc[u, 'StorageCapacity'] * config['modifiers']['Storage']
-                Plants_merged.loc[u, 'StorageChargingCapacity'] = Plants_merged.loc[u, 'StorageChargingCapacity'] * config['modifiers']['Storage']
+                Plants_merged.loc[u, 'PowerCapacity'] = Plants_merged.loc[u, 'PowerCapacity'] * config['modifiers'][
+                    'Storage']
+                Plants_merged.loc[u, 'StorageCapacity'] = Plants_merged.loc[u, 'StorageCapacity'] * config['modifiers'][
+                    'Storage']
+                Plants_merged.loc[u, 'StorageChargingCapacity'] = Plants_merged.loc[u, 'StorageChargingCapacity'] * \
+                                                                  config['modifiers']['Storage']
 
     # Defining the hydro storages:
     Plants_sto = Plants_merged[[u in commons['tech_storage'] for u in Plants_merged['Technology']]]
+    # Defining the thermal storages:
+    Plants_thms = Plants_merged[[u in commons['tech_thermal_storage'] for u in Plants_merged['Technology']]]
+    # Defining all storage units:
+    Plants_all_sto = Plants_merged[[u in [x for x in commons['Technologies'] if x in commons['tech_storage'] +
+                                          commons['tech_thermal_storage'] + commons['tech_p2h2']] for u in
+                                    Plants_merged['Technology']]]
     # check storage plants:
-    check_sto(config, Plants_sto,raw_data=False)
+    check_sto(config, Plants_sto, raw_data=False)
+    check_sto(config, Plants_thms, raw_data=False)
+    check_sto(config, Plants_all_sto, raw_data=False)
     # Defining the CHPs:
     Plants_chp = Plants_merged[[x.lower() in commons['types_CHP'] for x in Plants_merged['CHPType']]].copy()
     # check chp plants:
     check_chp(config, Plants_chp)
-    # For all the chp plants correct the PowerCapacity, which is defined in cogeneration mode in the inputs and in power generation model in the optimization model
+    # For all the chp plants correct the PowerCapacity, which is defined in cogeneration mode in the inputs and
+    # in power generation model in the optimization model
     for u in Plants_chp.index:
         PowerCapacity = Plants_chp.loc[u, 'PowerCapacity']
 
-        if Plants_chp.loc[u,'CHPType'].lower() == 'p2h':
+        if Plants_chp.loc[u, 'CHPType'].lower() == 'p2h':
             PurePowerCapacity = PowerCapacity
         else:
-            if pd.isnull(Plants_chp.loc[u,'CHPMaxHeat']):  # If maximum heat is not defined, then it is defined as the intersection between two lines
-                MaxHeat = PowerCapacity / Plants_chp.loc[u,'CHPPowerToHeat']
+            # If maximum heat is not defined, then it is defined as the intersection between two lines
+            if pd.isnull(Plants_chp.loc[u, 'CHPMaxHeat']):
+                MaxHeat = PowerCapacity / Plants_chp.loc[u, 'CHPPowerToHeat']
                 Plants_chp.loc[u, 'CHPMaxHeat'] = 'inf'
             else:
                 MaxHeat = Plants_chp.loc[u, 'CHPMaxHeat']
-            PurePowerCapacity = PowerCapacity + Plants_chp.loc[u,'CHPPowerLossFactor'] * MaxHeat
-        Plants_merged.loc[u,'PartLoadMin'] = Plants_merged.loc[u,'PartLoadMin'] * PowerCapacity / PurePowerCapacity  # FIXME: Is this correct?
-        Plants_merged.loc[u,'PowerCapacity'] = PurePowerCapacity
-    
-    Plants_p2h = Plants_merged[Plants_merged['Technology']=='P2HT'].copy()
-    # check chp plants:
+            PurePowerCapacity = PowerCapacity + Plants_chp.loc[u, 'CHPPowerLossFactor'] * MaxHeat
+        # FIXME: Is this correct?
+        Plants_merged.loc[u, 'PartLoadMin'] = Plants_merged.loc[u, 'PartLoadMin'] * PowerCapacity / PurePowerCapacity
+        Plants_merged.loc[u, 'PowerCapacity'] = PurePowerCapacity
+
+    # Filter power to heat units
+    Plants_p2h = Plants_merged[[u in commons['tech_p2ht'] for u in Plants_merged['Technology']]].copy()
+    # check power to heat plants:
     check_p2h(config, Plants_p2h)
+
+    # Filter heat only plants
+    Plants_heat_only = Plants_merged[[u in commons['tech_heat'] for u in Plants_merged['Technology']]].copy()
+    # Check heat only units
+    check_heat(config, Plants_heat_only)
+
     # All heating plants:
-    Plants_heat = Plants_chp.append(Plants_p2h)
-    
+    Plants_heat = Plants_heat_only.copy()
+    # Plants_heat = Plants_heat.append(Plants_chp)
+    # Plants_heat = Plants_heat.append(Plants_p2h)
+    # Plants_heat = Plants_heat.append(Plants_thms)
+
+    Plants_heat = pd.concat([Plants_heat, Plants_chp], axis=0)
+    Plants_heat = pd.concat([Plants_heat, Plants_p2h], axis=0)
+    Plants_heat = pd.concat([Plants_heat, Plants_thms], axis=0)
+
+    Plants_h2 = Plants_merged[[u in commons['tech_p2h2'] for u in Plants_merged['Technology']]].copy()
+    # check h2 plants:
+    check_h2(config, Plants_h2)
+
+    # Water storage
+    Plants_wat = Plants_merged[(Plants_merged['Fuel'] == 'WAT') & (Plants_merged['Technology'] != 'HROR')].copy()
+
     # Calculating the efficiency time series for each unit:
-    Efficiencies = EfficiencyTimeSeries(config,Plants_merged,Temperatures)
-    
+    Efficiencies = EfficiencyTimeSeries(config, Plants_merged, Temperatures)
+
     # Reserve calculation
-    reserve_2U_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
-    reserve_2D_tot = pd.DataFrame(index=Load.index,columns=Load.columns)
+    reserve_2U_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
+    reserve_2D_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     for z in Load.columns:
-        if z in Reserve2U:
-            reserve_2U_tot[z] = Reserve2U[z]
+        if config['ReserveCalculation'] == 'Exogenous':
+            if z in Reserve2U and z in Reserve2D:
+                reserve_2U_tot[z] = Reserve2U[z]
+                reserve_2D_tot[z] = Reserve2D[z]
+            else:
+                logging.critical('Exogenous reserve requirements (2D and 2U) not found for zone ' + z)
+                sys.exit(1)
         else:
-            reserve_2U_tot[z] = np.sqrt(10 * PeakLoad[z] + 150 ** 2) - 150
-        if z in Reserve2D:
-            reserve_2D_tot[z] = Reserve2D[z]
-        else:
-            reserve_2D_tot[z] = 0.5 * reserve_2U_tot[z]
+            if z in Reserve2U and z in Reserve2D:
+                logging.info('Using exogenous reserve data for zone ' + z)
+                reserve_2U_tot[z] = Reserve2U[z]
+                reserve_2D_tot[z] = Reserve2D[z]
+            elif config['ReserveCalculation'] == 'Percentage':
+                logging.info('Using percentage-based reserve sizing for zone ' + z)
+                reserve_2U_tot[z], reserve_2D_tot[z] = percentage_reserve(config, plants, Load, AF, z)
+            elif config['ReserveCalculation'] == 'Probabilistic':
+                logging.info('Using probabilistic reserve sizing for zone ' + z)
+                reserve_2U_tot[z], reserve_2D_tot[z] = probabilistic_reserve(config, plants, Load, AF, z)
+            else:
+                logging.info('Using generic reserve calculation for zone ' + z)
+                reserve_2U_tot[z], reserve_2D_tot[z] = generic_reserve(Load[z])
 
-
-    # %% Store all times series and format
+                # %% Store all times series and format
 
     # Formatting all time series (merging, resempling) and store in the FinalTS dict
-    finalTS = {'Load':Load,'Reserve2D':reserve_2D_tot,'Reserve2U':reserve_2U_tot,
-               'Efficiencies':Efficiencies,'NTCs':NTCs,'Inter_RoW':Inter_RoW,
-               'LoadShedding':LoadShedding,'CostLoadShedding':CostLoadShedding,
-               'ScaledInflows':ReservoirScaledInflows,'ReservoirLevels':ReservoirLevels,
-               'Outages':Outages,'AvailabilityFactors':AF,'CostHeatSlack':CostHeatSlack,
-               'HeatDemand':HeatDemand,'ShareOfFlexibleDemand':ShareOfFlexibleDemand,
-               'PriceTransmission':PriceTransmission}
-    
+    finalTS = {'Load': Load, 'Reserve2D': reserve_2D_tot, 'Reserve2U': reserve_2U_tot,
+               'Efficiencies': Efficiencies, 'NTCs': NTCs, 'Inter_RoW': Inter_RoW,
+               'LoadShedding': LoadShedding, 'CostLoadShedding': CostLoadShedding, 'CostCurtailment': CostCurtailment,
+               'ScaledInflows': ReservoirScaledInflows, 'ReservoirLevels': ReservoirLevels,
+               'Outages': Outages, 'AvailabilityFactors': AF, 'CostHeatSlack': CostHeatSlack,
+               'HeatDemand': HeatDemand, 'ShareOfFlexibleDemand': ShareOfFlexibleDemand,
+               'PriceTransmission': PriceTransmission, 'CostH2Slack': CostH2Slack,
+               'H2RigidDemand': H2RigidDemand, 'H2FlexibleDemand': H2FlexibleDemand}
+
+    # # Merge the following time series with weighted averages
+    # for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors', 'CostH2Slack']:
+    #     finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
     # Merge the following time series with weighted averages
-    for key in ['ScaledInflows','Outages','AvailabilityFactors','CostHeatSlack']:
+    for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
-    # Merge the following time series by summing
-    for key in ['HeatDemand']:
-        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='Sum')
+    # # Merge the following time series by summing
+    # for key in ['H2RigidDemand', 'H2FlexibleDemand']:
+    #     finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='Sum')
     # Merge the following time series by weighted average based on storage capacity
     for key in ['ReservoirLevels']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
 
-# Check that all times series data is available with the specified data time step:
+    # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:
         check_df(FuelPrices[key], StartDate=config['idx'][0], StopDate=config['idx'][-1], name=key)
     for key in finalTS:
         check_df(finalTS[key], StartDate=config['idx'][0], StopDate=config['idx'][-1], name=key)
-        
-# Resemple to the required time step
+
+    # Resemple to the required time step
     if config['DataTimeStep'] != config['SimulationTimeStep']:
         for key in FuelPrices:
-            if len(FuelPrices[key].columns)>0:
+            if len(FuelPrices[key].columns) > 0:
                 FuelPrices[key] = FuelPrices[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
         for key in finalTS:
-            if len(finalTS[key].columns)>0:
+            if len(finalTS[key].columns) > 0:
                 finalTS[key] = finalTS[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
 
-              
-    # %%################################################################################################################
+    # %%###############################################################################################################
     ############################################   Sets    ############################################################
     ###################################################################################################################
 
     # The sets are defined within a dictionary:
     sets = {}
     sets['h'] = [str(x + 1) for x in range(Nsim)]
-    sets['z'] = [str(x + 1) for x in range(int(Nsim - config['LookAhead'] * config['SimulationTimeStep'])) ]
-    sets['mk'] = ['DA', '2U', '2D','Flex']
+    sets['z'] = [str(x + 1) for x in range(int(Nsim - config['LookAhead'] * 24 / config['SimulationTimeStep']))]
+    sets['mk'] = ['DA', '2U', '2D', 'Flex']
     sets['n'] = config['zones']
+    sets['n_th'] = zones_th
+    sets['n_h2'] = zones_h2
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
-    sets['u'] = Plants_merged[Plants_merged['Technology']!='P2HT'].index.tolist()
+    sets['u'] = Plants_merged[[u in [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
+                                     commons['tech_p2ht'] + commons['tech_thermal_storage'] + commons['tech_p2h2']]
+                               for u in Plants_merged['Technology']]].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
     sets['p2h'] = Plants_p2h.index.tolist()
+    sets['p2h2'] = Plants_h2.index.tolist()
     sets['th'] = Plants_heat.index.tolist()
+    sets['thms'] = Plants_thms.index.tolist()
     sets['t'] = commons['Technologies']
     sets['tr'] = commons['tech_renewables']
+    sets['tc'] = list(set(commons['Technologies']) - set(commons['tech_renewables']) - set(commons['tech_p2ht']) -
+                      set(commons['tech_thermal_storage']) - set(commons['tech_heat']) - set(commons['tech_p2h2']))
+    sets['wat'] = Plants_wat.index.tolist()
+    sets['hu'] = Plants_heat_only.index.tolist()
+    sets['asu'] = Plants_merged[[u in [x for x in commons['Technologies'] if x in commons['tech_storage'] +
+                                       commons['tech_thermal_storage'] + commons['tech_p2h2']] for u in
+                                 Plants_merged['Technology']]].index.tolist()
 
     ###################################################################################################################
     ############################################   Parameters    ######################################################
@@ -373,50 +550,58 @@ def build_single_run(config, profiles=None):
     sets_param['CHPPowerLossFactor'] = ['chp']
     sets_param['CHPMaxHeat'] = ['chp']
     sets_param['CostFixed'] = ['au']
-    sets_param['CostHeatSlack'] = ['th','h']
-    sets_param['CostLoadShedding'] = ['n','h']
+    sets_param['CostHeatSlack'] = ['n_th', 'h']
+    sets_param['CostH2Slack'] = ['n_h2', 'h']
+    sets_param['CostLoadShedding'] = ['n', 'h']
     sets_param['CostRampUp'] = ['au']
     sets_param['CostRampDown'] = ['au']
     sets_param['CostShutDown'] = ['au']
     sets_param['CostStartUp'] = ['au']
     sets_param['CostVariable'] = ['au', 'h']
     sets_param['Curtailment'] = ['n']
+    sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
-    sets_param['Efficiency'] = ['p2h','h']
+    sets_param['Efficiency'] = ['au', 'h']
     sets_param['EmissionMaximum'] = ['n', 'p']
     sets_param['EmissionRate'] = ['au', 'p']
     sets_param['FlowMaximum'] = ['l', 'h']
     sets_param['FlowMinimum'] = ['l', 'h']
     sets_param['Fuel'] = ['au', 'f']
-    sets_param['HeatDemand'] = ['th','h']
+    sets_param['HeatDemand'] = ['n_th', 'h']
     sets_param['LineNode'] = ['l', 'n']
-    sets_param['LoadShedding'] = ['n','h']
+    sets_param['LoadShedding'] = ['n', 'h']
     sets_param['Location'] = ['au', 'n']
+    sets_param['Location_th'] = ['au', 'n_th']
+    sets_param['Location_h2'] = ['au', 'n_h2']
     sets_param['Markup'] = ['au', 'h']
     sets_param['Nunits'] = ['au']
     sets_param['OutageFactor'] = ['au', 'h']
     sets_param['PartLoadMin'] = ['au']
     sets_param['PowerCapacity'] = ['au']
-    sets_param['PowerInitial'] = ['au']
+    sets_param['PowerInitial'] = ['u']
     sets_param['PriceTransmission'] = ['l', 'h']
     sets_param['RampUpMaximum'] = ['au']
     sets_param['RampDownMaximum'] = ['au']
     sets_param['RampStartUpMaximum'] = ['au']
     sets_param['RampShutDownMaximum'] = ['au']
-    sets_param['Reserve'] = ['t']
+    sets_param['Reserve'] = [
+        'au']  # changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
     sets_param['StorageCapacity'] = ['au']
-    sets_param['StorageChargingCapacity'] = ['s']
-    sets_param['StorageChargingEfficiency'] = ['s']
-    sets_param['StorageDischargeEfficiency'] = ['s']
+    sets_param['StorageChargingCapacity'] = ['au']
+    sets_param['StorageChargingEfficiency'] = ['au']
+    sets_param['StorageDischargeEfficiency'] = ['asu']
     sets_param['StorageSelfDischarge'] = ['au']
-    sets_param['StorageInflow'] = ['s', 'h']
-    sets_param['StorageInitial'] = ['s']
-    sets_param['StorageMinimum'] = ['s']
+    sets_param['StorageInflow'] = ['asu', 'h']
+    sets_param['StorageInitial'] = ['asu']
+    sets_param['StorageMinimum'] = ['asu']
     sets_param['StorageOutflow'] = ['s', 'h']
-    sets_param['StorageProfile'] = ['s', 'h']
+    sets_param['StorageProfile'] = ['asu', 'h']
     sets_param['Technology'] = ['au', 't']
     sets_param['TimeUpMinimum'] = ['au']
     sets_param['TimeDownMinimum'] = ['au']
+    sets_param['PtLDemandInput'] = ['n_h2', 'h']
+    sets_param['MaxCapacityPtL'] = ['n_h2']
+    sets_param['H2Demand'] = ['n_h2', 'h']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -433,13 +618,13 @@ def build_single_run(config, profiles=None):
         parameters[var] = define_parameter(sets_param[var], sets, value=1e7)
 
     # Boolean parameters:
-    for var in ['Technology', 'Fuel', 'Reserve', 'Location']:
+    for var in ['Technology', 'Fuel', 'Reserve', 'Location', 'Location_th', 'Location_h2']:
         parameters[var] = define_parameter(sets_param[var], sets, value='bool')
 
     # %%
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
     for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
-                'CostRampUp','StorageCapacity', 'StorageSelfDischarge']:
+                'CostRampUp', 'StorageCapacity', 'StorageSelfDischarge', 'StorageChargingCapacity']:
         parameters[var]['val'] = Plants_merged[var].values
 
     # List of parameters whose value is not necessarily specified in the dataframe Plants_merged
@@ -447,74 +632,93 @@ def build_single_run(config, profiles=None):
         if var in Plants_merged:
             parameters[var]['val'] = Plants_merged[var].values
 
-
     # List of parameters whose value is known, and provided in the dataframe Plants_sto.
-    for var in ['StorageChargingCapacity', 'StorageChargingEfficiency']:
-        parameters[var]['val'] = Plants_sto[var].values
+    for var in ['StorageChargingEfficiency']:
+        # parameters[var]['val'] = Plants_sto[var].values
+        parameters[var]['val'] = Plants_merged[var].values
 
     # The storage discharge efficiency is actually given by the unit efficiency:
-    parameters['StorageDischargeEfficiency']['val'] = Plants_sto['Efficiency'].values
-    
+    parameters['StorageDischargeEfficiency']['val'] = np.concatenate((Plants_sto['Efficiency'].values,
+                                                                      Plants_thms['Efficiency'].values,
+                                                                      Plants_h2['Efficiency'].values), axis=None)
+
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
-    for var in ['CHPPowerToHeat','CHPPowerLossFactor', 'CHPMaxHeat']:
+    for var in ['CHPPowerToHeat', 'CHPPowerLossFactor', 'CHPMaxHeat']:
         parameters[var]['val'] = Plants_chp[var].values
 
-    # Storage profile and initial state:
-    for i, s in enumerate(sets['s']):
-        if profiles is None:
-            if (config['InitialFinalReservoirLevel'] == 0) or (config['InitialFinalReservoirLevel'] == ""):
-                if s in finalTS['ReservoirLevels']:
-                    # get the time
-                    parameters['StorageInitial']['val'][i] = finalTS['ReservoirLevels'][s][idx_sim[0]] * \
-                                                             Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
-                    parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
-                    if any(finalTS['ReservoirLevels'][s] > 1):
-                        logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
-                else:
-                    logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
-                    parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
-                    parameters['StorageProfile']['val'][i, :] = 0.5
-            else:
-                if (config['default']['ReservoirLevelInitial'] > 1) or (config['default']['ReservoirLevelFinal'] > 1):
-                    logging.critical(s + ': The initial or final reservoir levels are higher than its capacity!' )
-                    sys.exit(1)
-                else:
-                    parameters['StorageInitial']['val'][i] = config['default']['ReservoirLevelInitial'] * Plants_sto['StorageCapacity'][s]
-                    parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelFinal']
-                    logging.info(s + ': New initial reservoir level is set to: ' + str(config['default']['ReservoirLevelInitial']) +
-                                    ', new final reservoir level is set to: ' + str(config['default']['ReservoirLevelFinal']))
+    # Particular treatment of MaxCapacityPtL that is not a time-series and
+    # that is given separetly from the Power plant database 
+    if 'H2FlexibleCapacity' in config and config['H2FlexibleCapacity'] != '':
+        MaxCapacityPtL = pd.read_csv(config['H2FlexibleCapacity'], index_col=0, keep_default_na=False)
+        for i, u in enumerate(sets['n_h2']):
+            for zone_h2 in MaxCapacityPtL.index:
+                if zone_h2 in zones_h2:
+                    parameters['MaxCapacityPtL']['val'][i] = MaxCapacityPtL.loc[zone_h2]
+
+                    # Storage profile and initial state:
+    for i, s in enumerate(sets['asu']):
+        if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(
+                finalTS['ReservoirLevels'][s] - 1 <= 1e-11):
+            # get the time series
+            parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
+        elif s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and any(
+                finalTS['ReservoirLevels'][s] - 1 > 1e-11):
+            logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
+            sys.exit(1)
         else:
-            if s in finalTS['ReservoirLevels']:
-                # get the time
-                parameters['StorageInitial']['val'][i] = finalTS['ReservoirLevels'][s][idx_sim[0]] * \
-                                                         Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
-                parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
-                if any(finalTS['ReservoirLevels'][s] > 1):
-                    logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
-            else:
-                logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
-                parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
-                parameters['StorageProfile']['val'][i, :] = 0.5
+            logging.warning(
+                'Could not find reservoir level data for storage plant ' + s + '. Using the provided default initial '
+                                                                               'and final values')
+            parameters['StorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],
+                                                                    config['default']['ReservoirLevelFinal'],
+                                                                    len(idx_sim))
+        # The initial level is the same as the first value of the profile:
+        if s in Plants_sto.index:
+            parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
+                                                     finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
+                                                     Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
+        if s in Plants_thms.index:
+            parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
+                                                     finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
+                                                     Plants_thms['StorageCapacity'][s] * Plants_thms['Nunits'][s]
+        if s in Plants_h2.index:
+            parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
+                                                     finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
+                                                     Plants_h2['StorageCapacity'][s] * Plants_h2['Nunits'][s]
 
     # Storage Inflows:
-    for i, s in enumerate(sets['s']):
+    for i, s in enumerate(sets['asu']):
         if s in finalTS['ScaledInflows']:
             parameters['StorageInflow']['val'][i, :] = finalTS['ScaledInflows'][s][idx_sim].values * \
-                                                       Plants_sto['PowerCapacity'][s]
-    # CHP time series:
-    for i, u in enumerate(sets['th']):
+                                                       Plants_all_sto['PowerCapacity'][s]
+
+    # Heat demands:
+    for i, u in enumerate(sets['n_th']):
         if u in finalTS['HeatDemand']:
             parameters['HeatDemand']['val'][i, :] = finalTS['HeatDemand'][u][idx_sim].values
             parameters['CostHeatSlack']['val'][i, :] = finalTS['CostHeatSlack'][u][idx_sim].values
 
-    # Ramping rates are reconstructed for the non dimensional value provided (start-up and normal ramping are not differentiated)
+    # H2 time series:
+    for i, u in enumerate(sets['n_h2']):
+        if u in finalTS['H2RigidDemand']:
+            parameters['H2Demand']['val'][i, :] = finalTS['H2RigidDemand'][u][idx_sim].values
+    for i, u in enumerate(sets['n_h2']):
+        if u in finalTS['CostH2Slack']:
+            parameters['CostH2Slack']['val'][i, :] = finalTS['CostH2Slack'][u][idx_sim].values
+        if u in finalTS['H2FlexibleDemand']:
+            parameters['PtLDemandInput']['val'][i, :] = finalTS['H2FlexibleDemand'][u][idx_sim].values
+    if 'H2FlexibleCapacity' in config and config['H2FlexibleCapacity'] != '':
+        check_PtLDemand(parameters, config)
+
+    # Ramping rates are reconstructed for the non dimensional value provided
+    # (start-up and normal ramping are not differentiated)
     parameters['RampUpMaximum']['val'] = Plants_merged['RampUpRate'].values * Plants_merged['PowerCapacity'].values * 60
     parameters['RampDownMaximum']['val'] = Plants_merged['RampDownRate'].values * Plants_merged[
         'PowerCapacity'].values * 60
     parameters['RampStartUpMaximum']['val'] = Plants_merged['RampUpRate'].values * Plants_merged[
-        'PowerCapacity'].values * 60
+        'PowerCapacity'].values * 60 + Plants_merged['PartLoadMin'].values * Plants_merged['PowerCapacity'].values
     parameters['RampShutDownMaximum']['val'] = Plants_merged['RampDownRate'].values * Plants_merged[
-        'PowerCapacity'].values * 60
+        'PowerCapacity'].values * 60 + Plants_merged['PartLoadMin'].values * Plants_merged['PowerCapacity'].values
 
     # If Curtailment is not allowed, set to 0:
     if config['AllowCurtailment'] == 0:
@@ -528,8 +732,12 @@ def build_single_run(config, profiles=None):
 
     # Efficiencies (currently limited to p2h units, but can be extended to all units):
     if len(finalTS['Efficiencies']) != 0:
-        for i, u in enumerate(sets['p2h']):
+        for i, u in enumerate(sets['au']):
             parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
+        # for i, u in enumerate(sets['p2h']):
+        #     parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
+        # for i, u in enumerate(sets['p2h2']):
+        #     parameters['Efficiency']['val'][i, :] = finalTS['Efficiencies'][u].values
 
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])
     for i in range(len(sets['n'])):
@@ -546,29 +754,40 @@ def build_single_run(config, profiles=None):
     for i, c in enumerate(sets['n']):
         parameters['LoadShedding']['val'][i] = finalTS['LoadShedding'][c] * PeakLoad[c]
         parameters['CostLoadShedding']['val'][i] = finalTS['CostLoadShedding'][c]
+        parameters['CostCurtailment']['val'][i] = finalTS['CostCurtailment'][c]
 
-    # %%#################################################################################################################################################################################################
+    # %%###############################################################################################################
     # Variable Cost
     # Equivalence dictionary between fuel types and price entries in the config sheet:
-    FuelEntries = {'BIO':'PriceOfBiomass', 'GAS':'PriceOfGas', 'HRD':'PriceOfBlackCoal', 'LIG':'PriceOfLignite', 'NUC':'PriceOfNuclear', 'OIL':'PriceOfFuelOil', 'PEA':'PriceOfPeat'}
+    FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
+                   'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia'}
     for unit in range(Nunits):
-        c = Plants_merged['Zone'][unit]    # zone to which the unit belongs
+        c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
         found = False
         for FuelEntry in FuelEntries:
             if Plants_merged['Fuel'][unit] == FuelEntry:
-                parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / Plants_merged['Efficiency'][unit] + \
-                                                             Plants_merged['EmissionRate'][unit] * FuelPrices['PriceOfCO2'][c]
-                found = True
+                if Plants_merged['Technology'][unit] == 'ABHP':
+                    parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
+                                                                 Plants_merged['Efficiency'][unit] + \
+                                                                 Plants_merged['EmissionRate'][unit] * \
+                                                                 FuelPrices['PriceOfCO2'][c]
+                    found = True
+                else:
+                    parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
+                                                                 Plants_merged['Efficiency'][unit] + \
+                                                                 Plants_merged['EmissionRate'][unit] * \
+                                                                 FuelPrices['PriceOfCO2'][c]
+                    found = True
         # Special case for biomass plants, which are not included in EU ETS:
         if Plants_merged['Fuel'][unit] == 'BIO':
-            parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'][c] / Plants_merged['Efficiency'][
-                unit]
+            parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'][c] / \
+                                                         Plants_merged['Efficiency'][unit]
             found = True
         if not found:
-            logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] + ' in unit ' + \
-                  Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
+            logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] +
+                            ' in unit ' + Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
 
-    # %%#################################################################################################################################################################################################
+    # %%###############################################################################################################
 
     # Maximum Line Capacity
     for i, l in enumerate(sets['l']):
@@ -578,10 +797,10 @@ def build_single_run(config, profiles=None):
             parameters['FlowMaximum']['val'][i, :] = finalTS['Inter_RoW'][l]
             parameters['FlowMinimum']['val'][i, :] = finalTS['Inter_RoW'][l]
         parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
-            
+
     # Check values:
-    check_MinMaxFlows(parameters['FlowMinimum']['val'],parameters['FlowMaximum']['val'])
-    
+    check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
+
     parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
 
     # Outage Factors
@@ -593,7 +812,18 @@ def build_single_run(config, profiles=None):
                 logging.warning('Outages factors not found for unit ' + u + '. Assuming no outages')
 
     # Participation to the reserve market
-    values = np.array([s in config['ReserveParticipation'] for s in sets['t']], dtype='bool')
+    list_of_participating_units = []  # new list
+    for unit in Plants_merged.index:
+        tech = Plants_merged.loc[unit, 'Technology']
+        if tech in config['ReserveParticipation'] and Plants_merged.loc[unit, 'CHPType'] == '':
+            list_of_participating_units.append(
+                unit)  # if unit same technology as allowed without CHP and unit is no CHP then add to list
+        elif tech in config['ReserveParticipation_CHP'] and Plants_merged.loc[unit, 'CHPType'] != '':
+            list_of_participating_units.append(
+                unit)  # if unit same technology as allowed with CHP and unit is CHP then add to list
+
+    values = np.array([s in list_of_participating_units for s in sets['au']],
+                      dtype='bool')  # same as before but with new list
     parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
 
     # Technologies
@@ -609,53 +839,108 @@ def build_single_run(config, profiles=None):
     # Location
     for i in range(len(sets['n'])):
         parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['zones'][i]).values
+    for i in range(len(sets['n_th'])):
+        parameters['Location_th']['val'][:, i] = (Plants_merged['Zone_th'] == zones_th[i]).values
+    for i in range(len(sets['n_h2'])):
+        parameters['Location_h2']['val'][:, i] = (Plants_merged['Zone_h2'] == zones_h2[i]).values
 
     # CHPType parameter:
-    sets['chp_type'] = ['Extraction','Back-Pressure', 'P2H']
-    parameters['CHPType'] = define_parameter(['chp','chp_type'],sets,value=0)
-    for i,u in enumerate(sets['chp']):
+    sets['chp_type'] = ['Extraction', 'Back-Pressure', 'P2H']
+    parameters['CHPType'] = define_parameter(['chp', 'chp_type'], sets, value=0)
+    for i, u in enumerate(sets['chp']):
         if u in Plants_chp.index:
-            if Plants_chp.loc[u,'CHPType'].lower() == 'extraction':
-                parameters['CHPType']['val'][i,0] = 1
-            elif Plants_chp.loc[u,'CHPType'].lower() == 'back-pressure':
-                parameters['CHPType']['val'][i,1] = 1
-            elif Plants_chp.loc[u,'CHPType'].lower() == 'p2h':
-                parameters['CHPType']['val'][i,2] = 1
+            if Plants_chp.loc[u, 'CHPType'].lower() == 'extraction':
+                parameters['CHPType']['val'][i, 0] = 1
+            elif Plants_chp.loc[u, 'CHPType'].lower() == 'back-pressure':
+                parameters['CHPType']['val'][i, 1] = 1
+            elif Plants_chp.loc[u, 'CHPType'].lower() == 'p2h':
+                parameters['CHPType']['val'][i, 2] = 1
             else:
                 logging.error('CHPType not valid for plant ' + u)
                 sys.exit(1)
 
     # Initial Power
-    if 'InitialPower' in Plants_merged:
-        parameters['PowerInitial']['val'] = Plants_merged['InitialPower'].values
+    if 'InitialPower' in Plants_merged.columns and Plants_merged['InitialPower'].notna().any():
+        Plants_merged['InitialPower'].fillna(0, inplace=True)
     else:
-        for i in range(Nunits):
-            # Nuclear and Fossil Gas greater than 350 MW are up (assumption):
-            if Plants_merged['Fuel'][i] in ['GAS', 'NUC'] and Plants_merged['PowerCapacity'][i] > 350:
-                parameters['PowerInitial']['val'][i] = (Plants_merged['PartLoadMin'][i] + 1) / 2 * \
-                                                       Plants_merged['PowerCapacity'][i]
-            # Config variables:
-    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead','SimulationTimeStep','ValueOfLostLoad','QuickStartShare','CostOfSpillage','WaterValue','DemandFlexibility']
+        Plants_merged['InitialPower'] = finalTS['AvailabilityFactors'].iloc[0, :] * Plants_merged['PowerCapacity']
+
+        for z in config['zones']:
+            tmp_units = Plants_merged.loc[Plants_merged['Zone'] == z].copy()
+            tmp_load = finalTS['Load'].iloc[0, :].loc[z]
+            power_initial_res = tmp_units.loc[tmp_units['Fuel'].isin(['WAT', 'WIN', 'SUN']) &
+                                              tmp_units['Technology'].isin(['HROR', 'WTON', 'WTOF', 'PHOT'])][
+                'InitialPower'].sum()
+            if tmp_load > power_initial_res:
+                lack_of_power = tmp_load - power_initial_res
+                for f in ['NUC', 'GAS', 'HRD', 'LIG', 'BIO', 'OIL']:
+                    for t in ['COMC', 'STUR', 'GTUR', 'ICEN']:
+                        n_units = tmp_units.loc[tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin([t])].shape[
+                            0]
+                        power_initial_ft = tmp_units.loc[
+                            tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin([t]), 'InitialPower'].sum()
+                        tmp_units.loc[:, 'Share'] = tmp_units.loc[
+                                                        tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin(
+                                                            [t]), 'InitialPower'] / power_initial_ft
+                        if lack_of_power - power_initial_ft > 0:
+                            lack_of_power = lack_of_power - power_initial_ft
+                        if lack_of_power - power_initial_ft < 0:
+                            tmp_units.loc[tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin(
+                                [t]), 'InitialPower'] = lack_of_power * tmp_units.loc[
+                                tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin(
+                                    [t]), 'Share']
+                            lack_of_power = 0
+                        if lack_of_power == 0:
+                            tmp_units.loc[tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin(
+                                [t]), 'InitialPower'] = 0
+            else:
+                tmp_units.loc[~tmp_units['Fuel'].isin(['WAT', 'WIN', 'SUN']) &
+                              ~tmp_units['Technology'].isin(['HROR', 'WTON', 'WTOF', 'PHOT']), 'InitialPower'] = 0
+                lack_of_power = 0
+            Plants_merged.update(tmp_units)
+
+            if lack_of_power > 0:
+                logging.error('In zone: ' + z + ' there is insufficient conventional + renewable ' +
+                              'generation capacity of: ' + str(lack_of_power) +
+                              '. If NTC + storage is not sufficient ShedLoad in ' + z +
+                              ' is likely to occour. Check the inputs!')
+
+        Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_renewables']), 'InitialPower'] = 0
+        Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_heat']), 'InitialPower'] = 0
+        Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_p2ht']), 'InitialPower'] = 0
+        Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_p2h2']), 'InitialPower'] = 0
+        Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_thermal_storage']), 'InitialPower'] = 0
+
+    if 'InitialPower' in Plants_merged:
+        technologies = [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
+                        commons['tech_p2ht'] + commons['tech_thermal_storage'] + commons['tech_p2h2']]
+        parameters['PowerInitial']['val'] = Plants_merged.loc[Plants_merged['Technology'].isin(technologies)][
+            'InitialPower'].values
+
+    # Config variables:
+    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead',
+                        'SimulationTimeStep', 'ValueOfLostLoad', 'QuickStartShare', 'CostOfSpillage', 'WaterValue',
+                        'DemandFlexibility']
     sets['y_config'] = ['year', 'month', 'day', 'val']
     dd_begin = idx_sim[0]
     dd_end = idx_sim[-1]
 
     values = np.array(
-            [[dd_begin.year,    dd_begin.month,     dd_begin.day,           0],
-             [dd_end.year,      dd_end.month,       dd_end.day,             0],
-             [1e-5,             0,                  config['HorizonLength'], 0],
-             [1e-5,             0,                  config['LookAhead'],    0],
-             [1e-5,             0,                  0,                      config['SimulationTimeStep']],
-             [1e-5,             0,                  0,                      config['default']['ValueOfLostLoad']],
-             [1e-5,             0,                  0,                      config['default']['ShareOfQuickStartUnits']],
-             [1e-5,             0,                  0,                      config['default']['PriceOfSpillage']],
-             [1e-5,             0,                  0,                      config['default']['WaterValue']],
-             [1e-5,             0,                  0,                      config['default']['DemandFlexibility']]]
-            )
+        [[dd_begin.year, dd_begin.month, dd_begin.day, 0],
+         [dd_end.year, dd_end.month, dd_end.day, 0],
+         [1e-5, 0, config['HorizonLength'], 0],
+         [1e-5, 0, config['LookAhead'], 0],
+         [1e-5, 0, 0, config['SimulationTimeStep']],
+         [1e-5, 0, 0, config['default']['ValueOfLostLoad']],
+         [1e-5, 0, 0, config['default']['ShareOfQuickStartUnits']],
+         [1e-5, 0, 0, config['default']['PriceOfSpillage']],
+         [1e-5, 0, 0, config['default']['WaterValue']],
+         [1e-5, 0, 0, config['default']['DemandFlexibility']]]
+    )
     # the 1E-5 values are needed to be sure that all sets are written with the config parameter
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
-    # %%#################################################################################################################
+    # %%################################################################################################################
     ######################################   Simulation Environment     ################################################
     ####################################################################################################################
 
@@ -663,7 +948,9 @@ def build_single_run(config, profiles=None):
     sim = config['SimulationDirectory']
 
     # Simulation data:
-    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units': Plants_merged, 'version': dispa_version}
+    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units_nonclustered': plants,
+               'units': Plants_merged,
+               'geo': geo, 'version': dispa_version}
 
     # list_vars = []
     gdx_out = "Inputs.gdx"
@@ -677,11 +964,30 @@ def build_single_run(config, profiles=None):
 
     if not os.path.exists(sim):
         os.makedirs(sim)
-    if LP:
+
+    if MTS:
+        if not LP:
+            logging.error('Simulation in MTS must be LP')
+            sys.exit(1)
+        else:
+            fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
+            fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
+            for line in fin:
+                line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+                line = line.replace('$setglobal MTS 0', '$setglobal MTS 1')
+                fout.write(line)
+            fin.close()
+            fout.close()
+            # additionally allso copy UCM_h_simple.gms
+            shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+                            os.path.join(sim, 'UCM_h_simple.gms'))
+
+    elif LP:
         fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
-        fout = open(os.path.join(sim,'UCM_h.gms'), "wt")
+        fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
         for line in fin:
-            fout.write(line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1'))
+            line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+            fout.write(line)
         fin.close()
         fout.close()
         # additionally allso copy UCM_h_simple.gms
@@ -700,13 +1006,32 @@ def build_single_run(config, profiles=None):
     shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
                     os.path.join(sim, 'writeresults.gms'))
     # Create cplex option file
-    cplex_options = {'epgap': 0.05, # TODO: For the moment hardcoded, it has to be moved to a config file
+    cplex_options = {'epgap': 0.0005,  # TODO: For the moment hardcoded, it has to be moved to a config file
                      'numericalemphasis': 0,
+                     'mipdisplay': 4,
                      'scaind': 1,
                      'lpmethod': 0,
                      'relaxfixedinfeas': 0,
-                     'mipstart':1,
-                     'epint':0}
+                     'mipstart': 1,
+                     'mircuts': 1,
+                     'quality': True,
+                     'bardisplay': 2,
+                     'epint': 0,
+                     # 'heuristiceffort': 2,
+                     'lbheur': 1,
+                     # # Probing parameters
+                     # 'probe': 1,
+                     # Cut parameters
+                     # 'cuts': 5,
+                     # 'covers': 3,
+                     # 'cliques': 3,
+                     # 'disjcuts': 3,
+                     # 'liftprojcuts': 3,
+                     # 'localimplied': 3,
+                     # 'flowcovers': 2,
+                     # 'flowpaths': 2,
+                     # 'fraccuts': 2,
+                     }
 
     lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
     with open(os.path.join(sim, 'cplex.opt'), 'w') as f:
@@ -726,16 +1051,20 @@ def build_single_run(config, profiles=None):
             import cPickle as pickle
         except ImportError:
             import pickle
-        with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
-            pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
+        if MTS:
+            with open(os.path.join(sim, 'Inputs_MTS.p'), 'wb') as pfile:
+                pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
+        else:
+            with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
+                pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
     logging.info('Build finished')
-    
+
     # Remove previously-created debug files:
     debugfile = os.path.join(sim, 'debug.gdx')
     if os.path.isfile(debugfile):
         try:
             os.remove(debugfile)
         except OSError:
-            print ('Could not erase previous debug file ' + debugfile)
-            
+            print('Could not erase previous debug file ' + debugfile)
+
     return SimData

@@ -53,26 +53,75 @@ The Dispa-SET input distinguishes between the technologies defined in the table 
 
 .. table:: Dispa-SET technologies
 
-	=============== ======================================= ======= ========
-	Technology	Description				VRES	Storage
-	=============== ======================================= ======= ========
-	COMC		Combined cycle				N	N
-	GTUR		Gas turbine				N	N
-	HDAM		Conventional hydro dam			N	Y
-	HROR		Hydro run-of-river			Y	N
-	HPHS		Pumped hydro storage			N	Y
-	ICEN 		Internal combustion engine		N	N
-	PHOT		Solar photovoltaic			Y	N
-	STUR		Steam turbine				N	N
-	WTOF		Offshore wind turbine			Y	N
-	WTON		Onshore wind turbine			Y	N
-	CAES		Compressed air energy storage		N	Y
-	BATS		Stationary batteries			N	Y
-	BEVS		Battery-powered electric vehicles	N	Y
-	THMS		Thermal storage				N	Y
-	P2GS		Power-to-gas storage			N	Y
-	P2HT		Power-to-heat				N	Y
-	=============== ======================================= ======= ========
+   +---------------+-------------------------------------------+-------+--------+
+   |Technology     |Description                                |VRES   |Storage |
+   +===============+===========================================+=======+========+
+   |**Power only**                                                              |
+   +---------------+-------------------------------------------+-------+--------+
+   |HDAM           |Conventional hydro dam                     |N      |Y       |
+   +---------------+-------------------------------------------+-------+--------+
+   |HROR           |Hydro run-of-river                         |Y      |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |HPHS           |Pumped hydro storage                       |N      |Y       |
+   +---------------+-------------------------------------------+-------+--------+
+   |PHOT           |Solar photovoltaic                         |Y      |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |WAVE           |Wave energy                                |Y      |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |WHEN           |Waste heat engine                          |N      |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |WTOF           |Offshore wind turbine                      |Y      |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |WTON           |Onshore wind turbine                       |Y      |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |**Combined heat and power**                                                 |
+   +---------------+-------------------------------------------+-------+--------+
+   |COMC           |Combined cycle                             |N      |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |GTUR           |Gas turbine                                |N      |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |ICEN           |Internal combustion engine                 |N      |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |SCSP           |Concentrated Solar Power                   |Y      |Y       |
+   +---------------+-------------------------------------------+-------+--------+
+   |STUR           |Steam turbine                              |N      |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |**Storage**                                                                 |
+   +---------------+-------------------------------------------+-------+--------+
+   |BATS           |Stationary batteries                       |N      |Y       |
+   +---------------+-------------------------------------------+-------+--------+
+   |BEVS           |Battery-powered electric vehicles          |N      |Y       |
+   +---------------+-------------------------------------------+-------+--------+
+   |CAES           |Compressed air energy storage              |N      |Y       |
+   +---------------+-------------------------------------------+-------+--------+
+   |P2GS           |Power-to-gas storage                       |N      |Y       |
+   +---------------+-------------------------------------------+-------+--------+
+   |THMS           |Thermal storage                            |N      |Y       |
+   +---------------+-------------------------------------------+-------+--------+
+   |**Heat only**                                                               |
+   +---------------+-------------------------------------------+-------+--------+
+   |GETH           |Geothermal district heating                |Y      |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |HOBO           |Heat only boiler                           |N      |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |SOTH           |Solar thermal district heating             |Y      |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |**Power to heat**                                                           |
+   +---------------+-------------------------------------------+-------+--------+
+   |ABHP           |Absorption heat pump (solar/geothermal/gas)|Y/N    |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |ASHP           |Air source heat pump                       |Y/N    |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |GSHP           |Ground source heat pump                    |Y/N    |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |HYHP           |Hybrid heat pump (Ground/air & HP/GAS-OIL  |Y/N    |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |P2HT           |Power-to-heat                              |Y/N    |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |REHE           |Resistive heater                           |Y/N    |N       |
+   +---------------+-------------------------------------------+-------+--------+
+   |WSHP           |Water source heat pump                     |Y/N    |N       |
+   +---------------+-------------------------------------------+-------+--------+
 
 Fuels
 -----
@@ -84,19 +133,23 @@ Dispa-SET only considers a limited number of different fuel types. They are summ
 	======= =============
 	Fuel	Examples
 	======= =============
-	BIO	Bagasse, Biodiesel, Gas From Biomass, Gasification, Biomass, Briquettes, Cattle Residues, Rice Hulls Or Padi Husk, Straw, Wood Gas (From Wood Gasification), Wood Waste Liquids Excl Blk Liq (Incl Red Liquor, Sludge, Wood,Spent Sulfite Liquor And Oth Liquids, Wood And Wood Waste
-	GAS	Blast Furnace Gas, Boiler Natural Gas, Butane, Coal Bed Methane, Coke Oven Gas, Flare Gas, Gas (Generic), Methane, Mine Gas, Natural Gas, Propane, Refinery Gas, Sour Gas, Synthetic Natural Gas, Top Gas, Voc Gas & Vapor, Waste Gas, Wellhead Gas
-	GEO	Geothermal steam
-	HRD	Anthracite, Other Anthracite, Bituminous Coal, Coker By-Product, Coal Gas (From Coal Gasification), Coke, Coal (Generic), Coal-Oil Mixture, Other Coal, Coal And Pet Coke Mi, Coal Tar Oil, Anthracite Coal Waste, Coal-Water Mixture, Gob, Hard Coal / Anthracite, Imported Coal, Other Solids, Soft Coal, Anthracite Silt, Steam Coal, Subbituminous, Pelletized Synthetic Fuel From Coal, Bituminous Coal Waste)
-	HYD	Hydrogen
-	LIG	Lignite black, Lignite brown, lignite
-	NUC	U, Pu
-	OIL	Crude Oil, Distillate Oil, Diesel Fuel, No. 1 Fuel Oil, No. 2 Fuel Oil, No. 3 Fuel Oil, No. 4 Fuel Oil, No. 5 Fuel Oil, No. 6 Fuel Oil, Furnace Fuel, Gas Oil, Gasoline, Heavy Oil Mixture, Jet Fuel, Kerosene, Light Fuel Oil, Liquefied Propane Gas, Methanol, Naphtha, ,Gas From Fuel Oil Gasification, Fuel Oil, Other Liquid, Orimulsion, Petroleum Coke, Petroleum Coke Synthetic Gas, Black Liquor, Residual Oils, Re-Refined Motor Oil, Oil Shale, Tar, Topped Crude Oil, Waste Oil
-	PEA	Peat Moss
-	SUN	Solar energy
-	WAT	Hydro energy
-	WIN	Wind energy
-	WST	Digester Gas (Sewage Sludge Gas), Gas From Refuse Gasification, Hazardous Waste, Industrial Waste, Landfill Gas, Poultry Litter, Manure, Medical Waste, Refused Derived Fuel, Refuse, Waste Paper And Waste Plastic, Refinery Waste, Tires, Agricultural Waste, Waste Coal, Waste Water Sludge, Waste
+	AIR     Air energy from the surrounding environment (used by heat pumps and other heat generation technologies)
+	AMO	    Ammonia
+	BIO	    Bagasse, Biodiesel, Gas From Biomass, Gasification, Biomass, Briquettes, Cattle Residues, Rice Hulls Or Padi Husk, Straw, Wood Gas (From Wood Gasification), Wood Waste Liquids Excl Blk Liq (Incl Red Liquor, Sludge, Wood,Spent Sulfite Liquor And Oth Liquids, Wood And Wood Waste
+	GAS	    Blast Furnace Gas, Boiler Natural Gas, Butane, Coal Bed Methane, Coke Oven Gas, Flare Gas, Gas (Generic), Methane, Mine Gas, Natural Gas, Propane, Refinery Gas, Sour Gas, Synthetic Natural Gas, Top Gas, Voc Gas & Vapor, Waste Gas, Wellhead Gas
+	GEO	    Geothermal steam
+	HRD	    Anthracite, Other Anthracite, Bituminous Coal, Coker By-Product, Coal Gas (From Coal Gasification), Coke, Coal (Generic), Coal-Oil Mixture, Other Coal, Coal And Pet Coke Mi, Coal Tar Oil, Anthracite Coal Waste, Coal-Water Mixture, Gob, Hard Coal / Anthracite, Imported Coal, Other Solids, Soft Coal, Anthracite Silt, Steam Coal, Subbituminous, Pelletized Synthetic Fuel From Coal, Bituminous Coal Waste)
+	HYD	    Hydrogen
+	LIG	    Lignite black, Lignite brown, lignite
+	NUC	    U (Uranium), Pu (Plutonium)
+	OIL	    Crude Oil, Distillate Oil, Diesel Fuel, No. 1 Fuel Oil, No. 2 Fuel Oil, No. 3 Fuel Oil, No. 4 Fuel Oil, No. 5 Fuel Oil, No. 6 Fuel Oil, Furnace Fuel, Gas Oil, Gasoline, Heavy Oil Mixture, Jet Fuel, Kerosene, Light Fuel Oil, Liquefied Propane Gas, Methanol, Naphtha, ,Gas From Fuel Oil Gasification, Fuel Oil, Other Liquid, Orimulsion, Petroleum Coke, Petroleum Coke Synthetic Gas, Black Liquor, Residual Oils, Re-Refined Motor Oil, Oil Shale, Tar, Topped Crude Oil, Waste Oil
+	OTH     All other energy carriers
+	PEA	    Peat Moss
+	SUN	    Solar energy
+	WAT	    Hydro energy
+	WIN	    Wind energy
+	WST	    Digester Gas (Sewage Sludge Gas), Gas From Refuse Gasification, Hazardous Waste, Industrial Waste, Landfill Gas, Poultry Litter, Manure, Medical Waste, Refused Derived Fuel, Refuse, Waste Paper And Waste Plastic, Refinery Waste, Tires, Agricultural Waste, Waste Coal, Waste Water Sludge, Waste
+	WHT     Waste heat, Excess heat
 	======= =============
 
 Different fuels may be used to power a given technology, e.g. steam turbines may be fired with almost any fuel type. In Dispa-SET, each unit must be defined with the pair of values (technology,fuel). The next tables is derived from a commercial power plant database and indicates the number of occurences of each combination. It appears clearly that, even through some combinations are irrelevant, both characteristics are needed to define a power plant type.
@@ -104,6 +157,7 @@ Different fuels may be used to power a given technology, e.g. steam turbines may
 ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ==========
 f/t	COMC	GTUR	HDAM	HPHS	HROR	ICEN	PHOT	STUR	WTOF	WTON	Total
 ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ==========
+AMO	1	1
 BIO		2				10		79			91
 GAS	485	188				28		97			798
 GEO								10			10
@@ -187,28 +241,29 @@ The following fields must be defined for all units:
 
 .. table:: Common fields for all units
 
-	=============================== =============== ===========
-	Description			Field name	Units
-	=============================== =============== ===========
-	Unit name			Unit
-	Power Capacity (for one unit) 	PowerCapacity	MW		
-	Number of units			Nunits	
-	Technology			Technology	
-	Primary fuel			Fuel		
-	Zone				Zone		
-	Efficiency 			Efficiency	%
-	Efficiency at minimum load 	MinEfficiency	%
-	CO2 intensity 			CO2Intensity	TCO2/MWh
-	Minimum load 			PartLoadMin	%
-	Ramp up rate			RampUpRate	%/min
-	Ramp down rate 			RampDownRate	%/min)
-	Start-up time			StartUPTime	h
-	Minimum up time 		MinUpTime	h
-	Minimum down time		MinDownTime	h
-	No load cost 			NoLoadCost	EUR/h
-	Start-up cost 			StartUpCost	EUR
-	Ramping cost			RampingCost	EUR/MW
-	=============================== =============== ===========
+	================================================ =============== ===========
+	Description                                      Field name      Units
+	================================================ =============== ===========
+	Unit name                                        Unit            n.a.
+	Installed Power or Heat Capacity (for one unit)  PowerCapacity   MW		
+	Number of thermal blocks belonging to one unit   Nunits          n.a.
+	Technology                                       Technology      n.a.	
+	Primary fuel                                     Fuel            n.a.		
+	Zone (Power)                                     Zone            n.a.		
+	Zone (Heat)                                      Zone_th         n.a.
+	Efficiency                                       Efficiency      %
+	Efficiency at minimum load                       MinEfficiency   %
+	CO2 intensity                                    CO2Intensity    TCO2/MWh
+	Minimum load                                     PartLoadMin     %
+	Ramp up rate                                     RampUpRate      %/min
+	Ramp down rate                                   RampDownRate    %/min)
+	Start-up time                                    StartUPTime     h
+	Minimum up time                                  MinUpTime       h
+	Minimum down time                                MinDownTime     h
+	No load cost                                     NoLoadCost      EUR/h
+	Start-up cost                                    StartUpCost     EUR
+	Ramping cost                                     RampingCost     EUR/MW
+	================================================ =============== ===========
 
 
 NB: the fields indicated with % as unit must be entered in a non-dimensional way (i.e. 90% should be written 0.9).
@@ -224,7 +279,7 @@ Some parameters must only be defined for the units equipped with storage. They c
 	Description			Field name		Units
 	=============================== =======================	===========
 	Storage capacity 		STOCapacity		MWh
-	Self-discharge rate		STOSelfDischarge	%/h
+	Self-discharge rate		STOSelfDischarge	%/d
 	Maximum charging power 		STOMaxChargingPower	MW
 	Charging efficiency 		STOChargingEfficiency	%
 	=============================== =======================	===========
@@ -247,7 +302,7 @@ Some parameters must only be defined for the units equipped with CHP. They can b
     Power Loss factor                         CHPPowerLossFactor -
     Maximum heat production                   CHPMaxHeat         MW(th)
     Capacity of heat Storage                  STOCapacity        MWh(th)
-    % of storage heat losses per timestep     STOSelfDischarge   %
+    % of storage heat losses per day          STOSelfDischarge   %/d
     ========================================= ================== ===========
 
 In the current version of DispaSet three type of combined heat and power units are supported:
@@ -292,7 +347,7 @@ Some parameters must only be defined for the power-to-heat units (heat pumps, el
     First coefficient                         coef_COP_a         -
     Second coefficient	                      coef_COP_b         - 
     Capacity of heat Storage                  STOCapacity        MWh(th)
-    % of storage heat losses per timestep     STOSelfDischarge   %
+    % of storage heat losses per day	      STOSelfDischarge   %/d
     ========================================= ================== ===========
 
 NB:
@@ -323,7 +378,7 @@ In the database, the time series are provided as column vectors with the technol
 Storage and hydro data
 ----------------------
 
-Storage units are an extension of the regular units, including additional constraints and parameters. In the power plant table, four additional parameters are required: storage capacity (in MWh), self-discharge (in %/h), discharge power (in MW) and discharge efficiency (in %). 
+Storage units are an extension of the regular units, including additional constraints and parameters. In the power plant table, four additional parameters are required: storage capacity (in MWh), self-discharge (in %/d), discharge power (in MW) and discharge efficiency (in %). 
 
 Some other parameters must be introduced in the form of time series in the "HydroData" section of the Dispa-SET database. There are described hereunder.
 
@@ -333,7 +388,7 @@ Inflows
 ^^^^^^^
 The Inflows are defined as the contribution of exogenous sources to the level (or state of charge) or the reservoir. They are expressed in MWh of potential energy. If the inflows are provided as m³/h, they must be converted.
 
-The input to dispaset is defined as "ScaledInflows". It is the normalized values of the inflow with respect to the nominal power of the storage unit (in discharge mode). As an example, if the inflow value at a certain time is 100MWh/h and if the turbining capacity of the hydro plant is 200 MW, the scaled inflow value must be defined as 0.5.
+The input to dispaset is defined as "StorageInflows". It is the normalized values of the inflow with respect to the nominal power of the storage unit (in discharge mode). As an example, if the inflow value at a certain time is 100MWh/h and if the turbining capacity of the hydro plant is 200 MW, the scaled inflow value must be defined as 0.5.
 
 Scaled inflows should be provided in the form of time series with the unit name or the technology as columns header.
 
@@ -348,8 +403,11 @@ Variable capacity storage
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 In special cases, it might be necessary to simulate a storage unit whose capacity varies in time. A typical example is the simulation of the storage capacity provided by electric vehicles: depending on the time of the day, the connected battery capacity varies. 
 
-This special case can be simulated using the "AvailabilityFactor" input. In the case of a storage unit, reduces the avaiable capacity by a factor varying from 0 to 1. 
+This special case can be simulated using the "AvailabilityFactor" input. In the case of a storage unit, reduces the available capacity by a factor varying from 0 to 1. 
 
+Other storage units
+-------------------
+Other storage units include H2 storage, batteries (BATS) and electric vehicles (BEVS). In case of H2 storage, the parameter StorageInflow are defined null at all times whereas StorageOutflow corresponds to the hydrogen demand at each timsestep. For batteries and BEVS, both parameters are set to 0 all the time. 
 
 Power plant outages
 -------------------
@@ -361,7 +419,7 @@ The outages are provided in the dedicated section of the Database for each unit.
 Interconnections
 ----------------
 
-Two case should be distinguished when considering interconnections:
+Two cases should be distinguished when considering interconnections:
 
 * Interconnections occuring between the simulated zones
 * Interconnections occuring between the simulated zones and the Rest of the World (RoW)
