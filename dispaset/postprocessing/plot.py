@@ -7,6 +7,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import datetime
 from matplotlib.patches import Patch
 
 from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage, \
@@ -48,6 +49,12 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
         pdrng = plotdata.index[:min(len(plotdata) - 1, 7 * 24)]
     else:
         pdrng = rng
+        
+    if (pdrng[-1] - pdrng[0]) > datetime.timedelta(days=32): # if the range is too big, don't plot the lines
+        plot_lines = False
+        logging.warn('The plotting range for the dispatch plot is too big to plot the lines')
+    else:
+        plot_lines = True
 
     # NTC plot data
     if (ntc is not None) and ('FlowIn' in plotdata) and ('FlowOut' in plotdata):
@@ -98,10 +105,10 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
         axes[2].set_xlim(pdrng[0], pdrng[-1])
         axes[2].fill_between(pdrng, ntc.loc[pdrng, 'FlowIn'], ntc.loc[pdrng, 'ZeroLine'],
                              facecolor=commons['colors']['FlowIn'],
-                             alpha=alpha, hatch=commons['hatches']['FlowIn'])
+                             alpha=alpha)
         axes[2].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'],
                              facecolor=commons['colors']['FlowOut'],
-                             alpha=alpha, hatch=commons['hatches']['FlowOut'])
+                             alpha=alpha)
         axes[2].set_ylabel('NTC [GW]')
         if ntc_limits is not None:
             axes[2].set_ylim(ntc_limits[0], ntc_limits[1])
@@ -110,7 +117,8 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
                                  gridspec_kw={'height_ratios': [2.7, .8], 'hspace': 0.04})
 
     # Create left axis:
-    axes[0].plot(pdrng, demand[pdrng], color='k')
+    if plot_lines:
+        axes[0].plot(pdrng, demand[pdrng], color='k')
     axes[0].set_xlim(pdrng[0], pdrng[-1])
 
     fig.suptitle(y_ax + ' dispatch for zone ' + demand.name)
@@ -131,7 +139,6 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
                 col3 = sumplot_lev.columns[j]
                 col4 = sumplot_lev.columns[j + 1]
                 rez_color = commons['colors'][col4]
-                rez_hatch = commons['hatches'][col4]
                 axes[1].plot(pdrng, sumplot_lev.loc[pdrng, col4], color='k', alpha=alpha, linestyle=':')
                 axes[1].fill_between(pdrng, sumplot_lev.loc[pdrng, col3], sumplot_lev.loc[pdrng, col4],
                                      facecolor=rez_color, alpha=0.3)
@@ -153,7 +160,10 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
         col1 = sumplot_neg.columns[j]
         col2 = sumplot_neg.columns[j + 1]
         color = commons['colors'][col2]
-        hatch = commons['hatches'][col2]
+        if plot_lines:
+            hatch = commons['hatches'][col2]
+        else:
+            hatch = ''
         axes[0].fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2], facecolor=color,
                              alpha=alpha, hatch=hatch)
         if col2 not in labels:
@@ -166,10 +176,12 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
         col1 = sumplot_pos.columns[j]
         col2 = sumplot_pos.columns[j + 1]
         color = commons['colors'][col2]
-        hatch = commons['hatches'][col2]
+        if plot_lines:
+            hatch = commons['hatches'][col2]
+        else:
+            hatch = ''
         axes[0].fill_between(pdrng, sumplot_pos.loc[pdrng, col1], sumplot_pos.loc[pdrng, col2], facecolor=color,
-                             alpha=alpha,
-                             hatch=hatch)
+                             alpha=alpha, hatch=hatch)
         labels.append(col2)
         patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
@@ -204,11 +216,11 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
         load_change += -shiftedload
         load_changed = True
     reduced_demand = demand + load_change
-    axes[0].plot(pdrng, reduced_demand[pdrng], color='k', alpha=alpha, linestyle='dashed')
+    if plot_lines:
+        axes[0].plot(pdrng, reduced_demand[pdrng], color='k', alpha=alpha, linestyle='dashed')
+        
     line_shedload = mlines.Line2D([], [], color='black', alpha=alpha, label='New load', linestyle='dashed')
-
     line_demand = mlines.Line2D([], [], color='black', label='Load')
-    # plt.legend(handles=[line_demand] + patches[::-1], loc=4)
 
     if not load_changed and level is None:
         plt.legend(handles=[line_demand] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
@@ -216,13 +228,15 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
         plt.legend(handles=[line_demand] + [line_SOC] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
     elif level is None:
         plt.legend(handles=[line_demand] + [line_shedload] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
-        axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
-                             linestyle='dashed')
+        if plot_lines:
+            axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
+                                 linestyle='dashed')
     else:
         plt.legend(title='Dispatch for ' + demand.name, handles=[line_demand] + [line_shedload] + [line_SOC] +
                                                                 patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
-        axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
-                             linestyle='dashed')
+        if plot_lines:
+            axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
+                                 linestyle='dashed')
 
     plt.subplots_adjust(right=0.8)
     plt.show()
