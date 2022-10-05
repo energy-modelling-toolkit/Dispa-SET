@@ -15,7 +15,7 @@ from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_b
 from ..common import commons
 
 
-def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedload=None, shiftedload=None, rng=None,
+def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailment=None, shedload=None, shiftedload=None, rng=None,
                   alpha=None, figsize=(13, 7), ntc=None, dispatch_limits=None, storage_limits=None, ntc_limits=None):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
@@ -25,6 +25,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
                         Output of the function GetPlotData
     :param y_ax:        Y axis label
     :param level:       Optional pandas series/dataframe with an (dis)aggregated reservoir level for the considered zone
+    :param minlevel:    Optional pandas series with the minimum level for the considered zone
     :param curtailment: Optional pandas series with the value of the curtailment
     :param shedload:    Optional pandas series with the value of the shed load
     :param shiftedload: Optional pandas series with the value of the shifted load
@@ -139,7 +140,6 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
                 col3 = sumplot_lev.columns[j]
                 col4 = sumplot_lev.columns[j + 1]
                 rez_color = commons['colors'][col4]
-                axes[1].plot(pdrng, sumplot_lev.loc[pdrng, col4], color='k', alpha=alpha, linestyle=':')
                 axes[1].fill_between(pdrng, sumplot_lev.loc[pdrng, col3], sumplot_lev.loc[pdrng, col4],
                                      facecolor=rez_color, alpha=0.3)
                 labels.append(col4)
@@ -147,11 +147,12 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, curtailment=None, shedl
                 colorlist.append(rez_color)
         elif isinstance(level, pd.Series):
             # Create lower axis:
-            axes[1].plot(pdrng, level[pdrng], color='k', alpha=alpha, linestyle=':')
             axes[1].fill_between(pdrng, 0, level[pdrng], facecolor=commons['colors']['WAT'], alpha=.3)
+        if isinstance(minlevel, pd.Series):
+            axes[1].plot(pdrng, minlevel[pdrng], color='k', alpha=alpha, linestyle=':')
         axes[1].set_ylabel('Level [GWh]')
         axes[1].yaxis.label.set_fontsize(12)
-        line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Reservoir', linestyle=':')
+        line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Min level', linestyle=':')
         if storage_limits is not None:
             axes[1].set_ylim(storage_limits[0], storage_limits[1])
 
@@ -632,11 +633,18 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
         lev = filter_by_zone(results['OutputStorageLevel'], inputs, z)
         lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] * inputs['units']['Nunits'].loc[
             lev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:, lev.columns] / 1e3  # GWh of storage
+        level = filter_by_storage(lev, inputs, StorageSubset='s')
+        levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
+        # the same for the minimum level:
+        minlev = filter_by_zone(inputs['param_df']['StorageProfile'], inputs, z)
+        minlev = minlev * inputs['units']['StorageCapacity'].loc[minlev.columns] * inputs['units']['Nunits'].loc[
+            minlev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:, minlev.columns] / 1e3  # GWh of storage   
+        minlevel = filter_by_storage(minlev, inputs, StorageSubset='s').sum(axis=1)
+
         # for col in lev.columns:
         #     if 'BEVS' in col:
         #         lev[col] = lev[col] * inputs['param_df']['AvailabilityFactor'][col]
-        level = filter_by_storage(lev, inputs, StorageSubset='s')
-        levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
+
         for t in commons['tech_storage']:
             temp = filter_by_tech(level, inputs, t)
             levels[t] = temp.sum(axis=1)
@@ -651,6 +659,11 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
         # Filter storage levels for thermal storage
         level_heat = filter_by_storage(lev_heat, inputs, StorageSubset='thms')
         levels_heat = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
+        # the same for the minimum level:
+        minlev_heat = filter_by_heating_zone(results['OutputStorageLevel'], inputs, z_th)
+        minlev_heat = minlev_heat * inputs['units']['StorageCapacity'].loc[minlev_heat.columns] * inputs['units']['Nunits'].loc[
+            minlev_heat.columns] / 1e3  # GWh of storage     
+        minlevel_heat = filter_by_storage(minlev_heat, inputs, StorageSubset='thms').sum(axis=1)
         for t in commons['tech_thermal_storage']:
             temp = filter_by_tech(level_heat, inputs, t)
             levels_heat[t] = temp.sum(axis=1)
@@ -667,8 +680,10 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
             level = levels
             level_heat = levels_heat
     else:
-        level = pd.Series(0, index=results['OutputPower'].index)
-        level_heat = pd.Series(0, index=results['OutputPower'].index)
+        level = None
+        level_heat = None
+        minlevel = None
+        minlevel_heat = None
 
     if 'OutputPowerConsumption' in results:
         demand_p2h = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1000  # GW
@@ -724,15 +739,15 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
     # Plot power dispatch
     demand.rename(z, inplace=True)
     if ntc is None:
-        plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load,
+        plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment, shedload=shed_load,
                       shiftedload=shifted_load, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
                       storage_limits=storage_limits)
     elif ntc.empty:
-        plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load,
+        plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment, shedload=shed_load,
                       shiftedload=shifted_load, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
                       storage_limits=storage_limits)
     else:
-        plot_dispatch(demand, plotdata, y_ax='Power', level=level, curtailment=curtailment, shedload=shed_load,
+        plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment, shedload=shed_load,
                       shiftedload=shifted_load, ntc=ntc, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
                       storage_limits=storage_limits, ntc_limits=ntc_limits)
 
@@ -753,7 +768,7 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
         else:
             heat_curtailment = None
 
-        plot_dispatch(heat_demand, heat_plotdata, y_ax='Heat', level=level_heat, curtailment=heat_curtailment, rng=rng,
+        plot_dispatch(heat_demand, heat_plotdata, y_ax='Heat', level=level_heat, minlevel=minlevel_heat, curtailment=heat_curtailment, rng=rng,
                       alpha=0.5)
 
     # Generation plot:
