@@ -54,7 +54,7 @@ setup(
         "gamsxcc",
         "optcc",
         "networkx",
-        "cartopy"
+        "cartopy >= 0.20"
     ],
     entry_points={
         'console_scripts': [
