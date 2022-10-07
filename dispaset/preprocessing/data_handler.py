@@ -77,7 +77,8 @@ def NodeBasedTable(varname, config, default=None):
         else:
             for key in zones:
                 if key in tmp:
-                    data[key] = tmp[key]
+                    # data[key] = tmp[key]
+                    data = pd.concat([data, tmp[key]], axis=1)
                 else:
                     logging.error(
                         'Zone ' + key + ' could not be found in the file ' + path + '. Using default value ' + str(
@@ -157,16 +158,17 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
         for z in paths:
             tmp = load_time_series(config, paths[z])
             if SingleFile:
-                for key in tmp:
-                    data[key] = tmp[key]
+                data = tmp.copy()
             else:  # use the multi-index header with the zone
                 for key in tmp:
                     columns.append((z, key))
-                    data[z + ',' + key] = tmp[key]
+                tmp.columns = pd.MultiIndex.from_product([[z], tmp.columns])
+                data = pd.concat([data, tmp], axis=1)
         if not SingleFile:
             data.columns = pd.MultiIndex.from_tuples(columns, names=['Zone', 'Data'])
         # For each plant and each fallback key, try to find the corresponding column in the data
         out = pd.DataFrame(index=config['idx_long'])
+        new_header = []
         for j in plants.index:
             warning = True
             if RestrictWarning is not None:
@@ -181,7 +183,13 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
                 else:
                     header = (plants.loc[j, 'Zone'], plants.loc[j, key])
                 if header in data:
-                    out[u] = data[header]
+                    if SingleFile:
+                        new_header.append(u)
+                        out = pd.concat([out, data[header]], axis=1)
+                    else:
+                        new_header.append(u)
+                        # out[u] = data[header]
+                        out = pd.concat([out, data[header]], axis=1)
                     found = True
                     if i > 0 and warning:
                         logging.warning(
@@ -194,7 +202,10 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
                         'No specific information was found for unit ' + u + ' in table ' + varname +
                         '. Using default value ' + str(default))
                 if default is not None:
-                    out[u] = default
+                    # out[u] = default
+                    out = pd.concat([out, pd.DataFrame(index=out.index, columns=[u]).fillna(default)], axis=1)
+                    new_header.append(u)
+        out.columns = new_header
     if not out.columns.is_unique:
         logging.critical(
             'The column headers of table "' + varname + '" are not unique!. The following headers are duplicated: ' +
@@ -314,15 +325,24 @@ def merge_series(plants, oldplants, data, method='WeightedAverage', tablename=''
                         value = value + subunits[name] * np.maximum(1e-9, oldplants['PowerCapacity'][name] *
                                                                     oldplants['Nunits'][name])
                     P_j = np.sum(np.maximum(1e-9, oldplants['PowerCapacity'][oldnames] * oldplants['Nunits'][oldnames]))
-                    merged[newunit] = value / P_j
+                    # merged[newunit] = value / P_j
+                    new_capacity = pd.DataFrame(value / P_j)
+                    new_capacity.columns = [newunit]
+                    merged = pd.concat([merged, new_capacity], axis=1)
                 elif method == 'StorageWeightedAverage':
                     for name in oldnames:
                         value = value + subunits[name] * np.maximum(1e-9, oldplants['STOCapacity'][name] *
                                                                     oldplants['Nunits'][name])
                     P_j = np.sum(np.maximum(1e-9, oldplants['STOCapacity'][oldnames] * oldplants['Nunits'][oldnames]))
-                    merged[newunit] = value / P_j
+                    # merged[newunit] = value / P_j
+                    new_capacity = pd.DataFrame(value / P_j)
+                    new_capacity.columns = [newunit]
+                    merged = pd.concat([merged, new_capacity], axis=1)
                 elif method == 'Sum':
-                    merged[newunit] = subunits.sum(axis=1)
+                    # merged[newunit] = subunits.sum(axis=1)
+                    new_capacity = subunits.sum(axis=1)
+                    new_capacity.columns = [newunit]
+                    merged = pd.concat([merged, new_capacity], axis=1)
                 else:
                     logging.critical('Method "' + str(method) + '" unknown in function MergeSeries')
                     sys.exit(1)
@@ -510,6 +530,9 @@ def load_config_excel(ConfigFile, AbsPath=True):
     :param AbsPath:    If true, relative paths are automatically changed into absolute paths (recommended)
     """
     import xlrd
+    xlrd.xlsx.ensure_elementtree_imported(False, None)
+    xlrd.xlsx.Element_has_iter = True
+
     wb = xlrd.open_workbook(filename=ConfigFile)  # Option for csv to be added later
     sheet = wb.sheet_by_name('main')
     config = {}
@@ -555,8 +578,14 @@ def load_config_excel(ConfigFile, AbsPath=True):
         # True/Falst values:
         config['zones'] = read_truefalse(sheet, 225, 1, 247, 3)
         config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 247, 6)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 7, 247, 9)               #MARCO NAVIA
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 10, 247, 12)             #MARCO NAVIA
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 13, 247, 15)             #MARCO NAVIA
         config['mts_zones'] = read_truefalse(sheet, 225, 1, 247, 3, 2)
         config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 247, 6, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 7, 247, 9, 2)    #MARCO NAVIA
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 10, 247, 12, 2)  #MARCO NAVIA
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 13, 247, 15, 2)  #MARCO NAVIA
         config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 321, 3)
         config['ReserveParticipation_CHP'] = read_truefalse(sheet, 342, 1, 345, 3)
 
@@ -593,7 +622,8 @@ def load_config_excel(ConfigFile, AbsPath=True):
         config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(57, 2), wb.datemode)
         config['HorizonLength'] = int(sheet.cell_value(58, 2))
         config['LookAhead'] = int(sheet.cell_value(59, 2))
-
+        config['CplexAccuracy'] = sheet.cell_value(38, 2)
+        config['CplexSetting'] = sheet.cell_value(39, 2)
         # Defning the input locations in the config file:
         StdParameters = commons['StdParameters']
         PathParameters = commons['PathParameters']
@@ -623,8 +653,16 @@ def load_config_excel(ConfigFile, AbsPath=True):
         # True/Falst values:
         config['zones'] = read_truefalse(sheet, 225, 1, 250, 3)
         config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 250, 6)
+        if sheet.cell_value(225, 7) != '':
+            config['zones'] = config['zones'] + read_truefalse(sheet, 225, 7, 247, 9)
+            config['zones'] = config['zones'] + read_truefalse(sheet, 225, 10, 247, 12)
+            config['zones'] = config['zones'] + read_truefalse(sheet, 225, 13, 247, 15)
         config['mts_zones'] = read_truefalse(sheet, 225, 1, 250, 3, 2)
         config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 250, 6, 2)
+        if sheet.cell_value(225, 7) != '':
+            config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 7, 247, 9, 2)
+            config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 10, 247, 12, 2)
+            config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 13, 247, 15, 2)
         config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 321, 3)
         config['ReserveParticipation'] = config['ReserveParticipation'] + read_truefalse(sheet, 305, 4, 321, 6)
         config['ReserveParticipation_CHP'] = read_truefalse(sheet, 299, 1, 302, 3)
@@ -662,6 +700,8 @@ def load_config_excel(ConfigFile, AbsPath=True):
         config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(57, 2), wb.datemode)
         config['HorizonLength'] = int(sheet.cell_value(58, 2))
         config['LookAhead'] = int(sheet.cell_value(59, 2))
+        config['CplexAccuracy'] = sheet.cell_value(38, 2)
+        config['CplexSetting'] = sheet.cell_value(39, 2)
 
         # Defning the input locations in the config file:
         StdParameters = commons['StdParameters']
@@ -918,5 +958,5 @@ def load_geo_data(path, header=None):
     :param path:    absolute path to the geo data file
     :param header:  load header
     """
-    data = pd.read_csv(path, index_col=4, header=header, keep_default_na=False)
+    data = pd.read_csv(path, index_col='CountryCode', header=header, keep_default_na=False)
     return data

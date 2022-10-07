@@ -165,7 +165,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
             path = config['PowerPlantData'].replace('##', str(z))
             tmp = pd.read_csv(path, na_values=commons['na_values'],
                               keep_default_na=False)
-            plants = plants.append(tmp, ignore_index=True, sort=False)
+            # plants = plants.append(tmp, ignore_index=True, sort=False)
+            plants = pd.concat([plants, tmp], ignore_index=True, sort=False)
     # remove invalid power plants:
     plants = select_units(plants, config)
     filter_col = [col for col in plants if col.startswith('Sector')]
@@ -663,7 +664,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
     sets_param['PartLoadMin'] = ['au']
     sets_param['PowerCapacity'] = ['au']
     sets_param['PowerCapacityBoundarySector'] = ['au', 'n_bs']
-    sets_param['PowerInitial'] = ['au']
+    sets_param['PowerInitial'] = ['u']
     sets_param['PriceTransmission'] = ['l', 'h']
     sets_param['RampUpMaximum'] = ['au']
     sets_param['RampDownMaximum'] = ['au']
@@ -829,9 +830,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
     parameters['RampDownMaximum']['val'] = Plants_merged['RampDownRate'].values * Plants_merged[
         'PowerCapacity'].values * 60
     parameters['RampStartUpMaximum']['val'] = Plants_merged['RampUpRate'].values * Plants_merged[
-        'PowerCapacity'].values * 60
+        'PowerCapacity'].values * 60 + Plants_merged['PartLoadMin'].values * Plants_merged['PowerCapacity'].values
     parameters['RampShutDownMaximum']['val'] = Plants_merged['RampDownRate'].values * Plants_merged[
-        'PowerCapacity'].values * 60
+        'PowerCapacity'].values * 60 + Plants_merged['PartLoadMin'].values * Plants_merged['PowerCapacity'].values
 
     # If Curtailment is not allowed, set to 0:
     if config['AllowCurtailment'] == 0:
@@ -999,25 +1000,65 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
                 sys.exit(1)
 
     # Initial Power
-    if 'InitialPower' in Plants_merged:
-        parameters['PowerInitial']['val'] = Plants_merged['InitialPower'].values
+    if 'InitialPower' in Plants_merged.columns and Plants_merged['InitialPower'].notna().any():
+        Plants_merged['InitialPower'].fillna(0, inplace=True)
     else:
-        for i in range(Nunits):
-            # Nuclear and Fossil Gas greater than 350 MW are up (assumption):
-            if Plants_merged['Fuel'][i] in ['GAS', 'NUC'] and Plants_merged['PowerCapacity'][i] > 350:
-                assumptions = [(1 + Plants_merged['PartLoadMin'][i]) / 2 * Plants_merged['PowerCapacity'][i],
-                               (1 - Plants_merged['PartLoadMin'][i]) / 1.2 * Plants_merged['PowerCapacity'][i],
-                               Plants_merged['PowerCapacity'][i],
-                               Plants_merged['PowerCapacity'][i] * Plants_merged['PartLoadMin'][i]]
-                parameters['PowerInitial']['val'][i] = max(min([sum(assumptions) / len(assumptions),
-                                                                (1 + Plants_merged['PartLoadMin'][i]) / 2 *
-                                                                Plants_merged['PowerCapacity'][i],
-                                                                (1 - Plants_merged['PartLoadMin'][i]) / 1.2 *
-                                                                Plants_merged['PowerCapacity'][i]]),
-                                                           Plants_merged['PartLoadMin'][i] *
-                                                           Plants_merged['PowerCapacity'][i])
+        Plants_merged['InitialPower'] = finalTS['AvailabilityFactors'].iloc[0, :] * Plants_merged['PowerCapacity']
 
-                # Config variables:
+        for z in config['zones']:
+            tmp_units = Plants_merged.loc[Plants_merged['Zone'] == z].copy()
+            tmp_load = finalTS['Load'].iloc[0, :].loc[z]
+            power_initial_res = tmp_units.loc[tmp_units['Fuel'].isin(['WAT', 'WIN', 'SUN']) &
+                                              tmp_units['Technology'].isin(['HROR', 'WTON', 'WTOF', 'PHOT'])][
+                'InitialPower'].sum()
+            if tmp_load > power_initial_res:
+                lack_of_power = tmp_load - power_initial_res
+                for f in ['NUC', 'GAS', 'HRD', 'LIG', 'BIO', 'OIL']:
+                    for t in ['COMC', 'STUR', 'GTUR', 'ICEN']:
+                        n_units = tmp_units.loc[tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin([t])].shape[
+                            0]
+                        power_initial_ft = tmp_units.loc[
+                            tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin([t]), 'InitialPower'].sum()
+                        tmp_units.loc[:, 'Share'] = tmp_units.loc[
+                                                        tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin(
+                                                            [t]), 'InitialPower'] / power_initial_ft
+                        if lack_of_power - power_initial_ft > 0:
+                            lack_of_power = lack_of_power - power_initial_ft
+                        if lack_of_power - power_initial_ft < 0:
+                            tmp_units.loc[tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin(
+                                [t]), 'InitialPower'] = lack_of_power * tmp_units.loc[
+                                tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin(
+                                    [t]), 'Share']
+                            lack_of_power = 0
+                        if lack_of_power == 0:
+                            tmp_units.loc[tmp_units['Fuel'].isin([f]) & tmp_units['Technology'].isin(
+                                [t]), 'InitialPower'] = 0
+            else:
+                tmp_units.loc[~tmp_units['Fuel'].isin(['WAT', 'WIN', 'SUN']) &
+                              ~tmp_units['Technology'].isin(['HROR', 'WTON', 'WTOF', 'PHOT']), 'InitialPower'] = 0
+                lack_of_power = 0
+            Plants_merged.update(tmp_units)
+
+            if lack_of_power > 0:
+                logging.error('In zone: ' + z + ' there is insufficient conventional + renewable ' +
+                              'generation capacity of: ' + str(lack_of_power) +
+                              '. If NTC + storage is not sufficient ShedLoad in ' + z +
+                              ' is likely to occour. Check the inputs!')
+
+        Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_renewables']), 'InitialPower'] = 0
+        Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_heat']), 'InitialPower'] = 0
+        Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_p2ht']), 'InitialPower'] = 0
+        Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_p2bs']), 'InitialPower'] = 0
+        Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_thermal_storage']), 'InitialPower'] = 0
+
+    if 'InitialPower' in Plants_merged:
+        technologies = [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
+                        commons['tech_p2ht'] + commons['tech_thermal_storage'] + commons['tech_p2bs'] +
+                        commons['tech_boundary_sector']]
+        parameters['PowerInitial']['val'] = Plants_merged.loc[Plants_merged['Technology'].isin(technologies)][
+            'InitialPower'].values
+
+    # Config variables:
     sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead',
                         'SimulationTimeStep', 'ValueOfLostLoad', 'QuickStartShare', 'CostOfSpillage', 'WaterValue',
                         'DemandFlexibility']
@@ -1106,32 +1147,82 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
     shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
                     os.path.join(sim, 'writeresults.gms'))
     # Create cplex option file
-    cplex_options = {'epgap': 0.005,  # TODO: For the moment hardcoded, it has to be moved to a config file
-                     'numericalemphasis': 0,
-                     'mipdisplay': 4,
-                     'scaind': 1,
-                     'lpmethod': 0,
-                     'relaxfixedinfeas': 0,
-                     'mipstart': 1,
-                     'mircuts': 1,
-                     'quality': True,
-                     'bardisplay': 2,
-                     'epint': 0,
-                     # 'heuristiceffort': 2,
-                     'lbheur': 1,
-                     # # Probing parameters
-                     # 'probe': 1,
-                     # Cut parameters
-                     'cuts': 5,
-                     'covers': 3,
-                     'cliques': 3,
-                     'disjcuts': 3,
-                     'liftprojcuts': 3,
-                     'localimplied': 3,
-                     'flowcovers': 2,
-                     'flowpaths': 2,
-                     'fraccuts': 2,
-                     }
+    if config['CplexSetting'] == '' and config['CplexAccuracy'] == '':
+        cplex_options = {'epgap': 0.0005,
+                         # TODO: For the moment hardcoded, it has to be moved to a config file
+                         'numericalemphasis': 0,
+                         'mipdisplay': 4,
+                         'scaind': 1,
+                         'lpmethod': 0,
+                         'relaxfixedinfeas': 0,
+                         'mipstart': 1,
+                         'mircuts': 1,
+                         'quality': True,
+                         'bardisplay': 2,
+                         'epint': 0,
+                         'lbheur': 1,
+                         }
+        logging.info('Default Cplex setting used')
+    elif config['CplexSetting'] == '' and config['CplexAccuracy'] != '':
+        cplex_options = {'epgap': float(config['CplexAccuracy']),  # TODO: For the moment hardcoded, it has to be moved to a config file
+                         'numericalemphasis': 0,
+                         'mipdisplay': 4,
+                         'scaind': 1,
+                         'lpmethod': 0,
+                         'relaxfixedinfeas': 0,
+                         'mipstart': 1,
+                         'mircuts': 1,
+                         'quality': True,
+                         'bardisplay': 2,
+                         'epint': 0,
+                         'lbheur': 1,
+                         }
+    elif config['CplexSetting'] == 'Default':
+        cplex_options = {'epgap': float(config['CplexAccuracy']),  # TODO: For the moment hardcoded, it has to be moved to a config file
+                         'numericalemphasis': 0,
+                         'mipdisplay': 4,
+                         'scaind': 1,
+                         'lpmethod': 0,
+                         'relaxfixedinfeas': 0,
+                         'mipstart': 1,
+                         'mircuts': 1,
+                         'quality': True,
+                         'bardisplay': 2,
+                         'epint': 0,
+                         'lbheur': 1,
+                         }
+        logging.info('Default Cplex setting used')
+    elif config['CplexSetting'] == 'Agressive':
+        cplex_options = {'epgap': config['CplexAccuracy'],  # TODO: For the moment hardcoded, it has to be moved to a config file
+                         'numericalemphasis': 0,
+                         'mipdisplay': 4,
+                         'scaind': 1,
+                         'lpmethod': 0,
+                         'relaxfixedinfeas': 0,
+                         'mipstart': 1,
+                         'mircuts': 1,
+                         'quality': True,
+                         'bardisplay': 2,
+                         'epint': 0,
+                         'heuristiceffort': 2,
+                         'lbheur': 1,
+                         # Probing parameters
+                         'probe': 1,
+                         # Cut parameters
+                         'cuts': 5,
+                         'covers': 3,
+                         'cliques': 3,
+                         'disjcuts': 3,
+                         'liftprojcuts': 3,
+                         'localimplied': 3,
+                         'flowcovers': 2,
+                         'flowpaths': 2,
+                         'fraccuts': 2,
+                         }
+        logging.info('Agressive Cplex setting used')
+    else:
+        logging.critical('Cplex setting must be specified Default or Agressive')
+        sys.exit(1)
 
     lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
     with open(os.path.join(sim, 'cplex.opt'), 'w') as f:

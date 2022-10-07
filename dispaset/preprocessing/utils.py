@@ -616,21 +616,22 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
             first_cluster = plants[condition]  # all data without other clustering
             first_cluster = group_plants(first_cluster, method, False, string_keys)
 
-            first_cluster = first_cluster.append(plants[~condition], ignore_index=True)
+            # first_cluster = first_cluster.append(plants[~condition], ignore_index=True)
+            first_cluster = pd.concat([first_cluster, plants[~condition]], ignore_index=True)
             # Slicing:
             bounds = {
-                    "PartLoadMin": np.linspace(0, 1, Nslices),
-                    "RampUpRate": np.linspace(0, 1, Nslices),
-                    "RampDownRate": np.linspace(0, 1, Nslices),
-                    "StartUpTime": _mylogspace(0, 36, Nslices),
-                    "MinUpTime": _mylogspace(0, 168, Nslices),
-                    "MinDownTime": _mylogspace(0, 168, Nslices),
-                    "NoLoadCost": np.linspace(0, 50, Nslices),
-                    "StartUpCost": np.linspace(0, 500, Nslices),
-                    "Efficiency": np.linspace(0, 1, Nslices),
-                    "WaterWithdrawal": np.linspace(0, 200, 250),
-                    "WaterConsumption": np.linspace(0, 20, Nslices),
-                    }
+                "PartLoadMin": np.linspace(0, 1, Nslices),
+                "RampUpRate": np.linspace(0, 1, Nslices),
+                "RampDownRate": np.linspace(0, 1, Nslices),
+                "StartUpTime": _mylogspace(0, 36, Nslices),
+                "MinUpTime": _mylogspace(0, 168, Nslices),
+                "MinDownTime": _mylogspace(0, 168, Nslices),
+                "NoLoadCost": np.linspace(0, 50, Nslices),
+                "StartUpCost": np.linspace(0, 500, Nslices),
+                "Efficiency": np.linspace(0, 1, Nslices),
+                "WaterWithdrawal": np.linspace(0, 200, 250),
+                "WaterConsumption": np.linspace(0, 20, Nslices),
+            }
 
             fingerprints = []
             for i in first_cluster.index:
@@ -657,7 +658,8 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
             low_pmin = first_cluster["PartLoadMin"] <= PartLoadMax
             if not first_cluster[low_pmin].empty:
                 second_cluster = group_plants(first_cluster[low_pmin], method, True, string_keys + ["fingerprints"])
-                plants_merged = second_cluster.append(first_cluster[~low_pmin], ignore_index=True)
+                # plants_merged = second_cluster.append(first_cluster[~low_pmin], ignore_index=True)
+                plants_merged = pd.concat([second_cluster, first_cluster[~low_pmin]], ignore_index=True)
             else:
                 plants_merged = first_cluster[:]
 
@@ -754,74 +756,6 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
     return plants_merged, mapping
 
 
-def adjust_storage(inputs, tech_fuel, scaling=1, value=None, write_gdx=False, dest_path=''):
-    """
-    Function used to modify the storage capacities in the Dispa-SET generated input data
-    The function update the Inputs.p file in the simulation directory at each call
-
-    :param inputs:      Input data dictionary OR path to the simulation directory containing Inputs.p
-    :param tech_fuel:   tuple with the technology and fuel type for which the capacity should be modified
-    :param scaling:     Scaling factor to be applied to the installed capacity
-    :param value:       Absolute value of the desired capacity (! Applied only if scaling != 1 !)
-    :param write_gdx:   boolean defining if Inputs.gdx should be also overwritten with the new data
-    :param dest_path:   Simulation environment path to write the new input data. If unspecified, no data is written!
-    :return:            New SimData dictionary
-    """
-    import pickle
-
-    if isinstance(inputs, str):
-        path = inputs
-        inputfile = path + '/Inputs.p'
-        if not os.path.exists(path):
-            sys.exit('Path + "' + path + '" not found')
-        with open(inputfile, 'rb') as f:
-            SimData = pickle.load(f)
-    elif isinstance(inputs, dict):
-        SimData = inputs
-    else:
-        logging.error('The input data must be either a dictionary or string containing a valid directory')
-        sys.exit(1)
-
-    if not isinstance(tech_fuel, tuple):
-        sys.exit('tech_fuel must be a tuple')
-
-    # find the units to be scaled:
-    cond = (SimData['units']['Technology'] == tech_fuel[0]) & (SimData['units']['Fuel'] == tech_fuel[1]) & (
-                SimData['units']['StorageCapacity'] > 0)
-    units = SimData['units'][cond]
-    idx = pd.Series(np.where(cond)[0], index=units.index)
-    TotalCapacity = (units.StorageCapacity * units.Nunits).sum()
-    if scaling != 1:
-        RequiredCapacity = TotalCapacity * scaling
-    elif value is not None:
-        RequiredCapacity = value
-    else:
-        RequiredCapacity = TotalCapacity
-    factor = RequiredCapacity / TotalCapacity
-    for u in units.index:
-        logging.info('Unit ' + u + ':')
-        logging.info('StorageCapacity: ' + str(SimData['units'].StorageCapacity[u]) + ' --> ' +
-                     str(SimData['units'].StorageCapacity[u] * factor))
-        SimData['units'].loc[u, 'StorageCapacity'] = SimData['units'].loc[u, 'StorageCapacity'] * factor
-        SimData['parameters']['StorageCapacity']['val'][idx[u]] = SimData['parameters']['StorageCapacity']['val'][
-                                                                      idx[u]] * factor
-
-    if dest_path == '':
-        logging.info('Not writing any input data to the disk')
-    else:
-        if not os.path.isdir(dest_path):
-            shutil.copytree(path, dest_path)
-            logging.info('Created simulation environment directory ' + dest_path)
-        logging.info('Writing input files to ' + dest_path)
-        import cPickle
-        with open(os.path.join(dest_path, 'Inputs.p'), 'wb') as pfile:
-            cPickle.dump(SimData, pfile, protocol=cPickle.HIGHEST_PROTOCOL)
-        if write_gdx:
-            write_variables(SimData['config'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
-            shutil.copy('Inputs.gdx', dest_path + '/')
-            os.remove('Inputs.gdx')
-    return SimData
-
 
 def adjust_unit_capacity(SimData, u_idx, scaling=1, value=None, singleunit=False):
     """
@@ -838,7 +772,7 @@ def adjust_unit_capacity(SimData, u_idx, scaling=1, value=None, singleunit=False
 
     # find the units to be scaled:
     units = SimData['units'].loc[u_idx,:]
-    cond = units.index.isin(u_idx)
+    cond = SimData['units'].index.isin(u_idx)
     idx = pd.Series(np.where(cond)[0], index=units.index)
     TotalCapacity = (units.PowerCapacity * units.Nunits).sum()
     if scaling != 1:
@@ -867,7 +801,7 @@ def adjust_unit_capacity(SimData, u_idx, scaling=1, value=None, singleunit=False
         for param in ['CostShutDown', 'CostStartUp', 'PowerInitial', 'RampDownMaximum', 'RampShutDownMaximum',
                       'RampStartUpMaximum', 'RampUpMaximum', 'StorageCapacity']:
             SimData['parameters'][param]['val'][idx[u]] = SimData['parameters'][param]['val'][idx[u]] * factor
-        for param in ['StorageChargingCapacity']:
+        for param in ['StorageChargingCapacity', 'StorageInitial']:
             # find index, if any:
             idx_s = np.where(np.array(SimData['sets']['s']) == u)[0]
             if len(idx_s) == 1:
@@ -1054,7 +988,6 @@ def adjust_flexibility(inputs, flex_units, slow_units, flex_ratio, singleunit=Fa
     return SimData
 
 
-
 def adjust_ntc(inputs, value=None, write_gdx=False, dest_path=''):
     """
     Function used to modify the net transfer capacities in the Dispa-SET generated input data
@@ -1065,7 +998,6 @@ def adjust_ntc(inputs, value=None, write_gdx=False, dest_path=''):
     :param write_gdx:   boolean defining if Inputs.gdx should be also overwritten with the new data
     :param dest_path:   Simulation environment path to write the new input data. If unspecified, no data is written!
     :return:            New SimData dictionary
-    @author: Carla Vidal
     """
     import pickle
 
@@ -1084,7 +1016,7 @@ def adjust_ntc(inputs, value=None, write_gdx=False, dest_path=''):
         sys.exit(1)
 
     if value is not None:
-        SimData['parameters']['FlowMaximum']=SimData['parameters']['FlowMaximum'] * value
+        SimData['parameters']['FlowMaximum']['val']=SimData['parameters']['FlowMaximum']['val']*value
     else:
         pass
 

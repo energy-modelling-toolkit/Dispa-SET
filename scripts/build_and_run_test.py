@@ -46,26 +46,26 @@ ds.plot_zone(inputs, results, z='Z2', rng=rng)
 # Generate country-specific plots
 ds.plot_zone(inputs, results)
 
-# Bar plot with the installed capacities in all countries:
-cap = ds.plot_zone_capacities(inputs, results)
-
-# Bar plot with installed storage capacity
-sto = ds.plot_tech_cap(inputs)
-
-# Violin plot for CO2 emissions
-ds.plot_co2(inputs, results, figsize=(9, 6), width=0.9)
-
-# Bar plot with the energy balances in all countries:
-ds.plot_energy_zone_fuel(inputs, results, ds.get_indicators_powerplant(inputs, results))
-
-# Analyse the results for each country and provide quantitative indicators:
-r = ds.get_result_analysis(inputs, results)
-
-# Analyze power flow tracing
-pft, pft_prct = ds.plot_power_flow_tracing_matrix(inputs, results, cmap="magma_r", figsize=(15, 10))
-
-# Plot net flows on a map
-ds.plot_net_flows_map(inputs, results, terrain=True, margin=3, bublesize=5000, figsize=(8, 7))
-
-# Plot congestion in the interconnection lines on a map
-ds.plot_line_congestion_map(inputs, results, terrain=True, margin=3, figsize=(9, 7), edge_width=3.5, bublesize=100)
+# # Bar plot with the installed capacities in all countries:
+# cap = ds.plot_zone_capacities(inputs, results)
+#
+# # Bar plot with installed storage capacity
+# sto = ds.plot_tech_cap(inputs)
+#
+# # Violin plot for CO2 emissions
+# ds.plot_co2(inputs, results, figsize=(9, 6), width=0.9)
+#
+# # Bar plot with the energy balances in all countries:
+# ds.plot_energy_zone_fuel(inputs, results, ds.get_indicators_powerplant(inputs, results))
+#
+# # Analyse the results for each country and provide quantitative indicators:
+# r = ds.get_result_analysis(inputs, results)
+#
+# # Analyze power flow tracing
+# pft, pft_prct = ds.plot_power_flow_tracing_matrix(inputs, results, cmap="magma_r", figsize=(15, 10))
+#
+# # Plot net flows on a map
+# ds.plot_net_flows_map(inputs, results, terrain=True, margin=3, bublesize=5000, figsize=(8, 7))
+#
+# # Plot congestion in the interconnection lines on a map
+# ds.plot_line_congestion_map(inputs, results, terrain=True, margin=3, figsize=(9, 7), edge_width=3.5, bublesize=100)
