@@ -172,7 +172,8 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'OutputBoundarySectorSlack', 'OutputPowerBoundarySector', 'OutputBoundarySectorStorageLevel',
                    'OutputBoundarySectorStorageInput', 'OutputBoundarySectorStorageShadowPrice',
                    'BoundarySectorShadowPrice', 'OutputBoundarySectorSlack', 'OutputBoundarySectorStorageSlack',
-                   'OutputBoundarySectorSpillage', 'OutputBSFlexDemand', 'OutputBSFlexSupply', 'OutputResidualLoad',
+                   'OutputBoundarySectorSpillage', 'LostLoad_BoundarySectorSpillage',
+                   'OutputBSFlexDemand', 'OutputBSFlexSupply', 'OutputResidualLoad',
                    'OutputCurtailmentReserve_2U', 'OutputCurtailmentReserve_3U', 'OutputMaxOutageUp',
                    'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D',
                    'OutputFlowBoundarySector']

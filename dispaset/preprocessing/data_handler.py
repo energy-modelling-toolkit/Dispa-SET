@@ -718,6 +718,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
         PathParameters['BoundarySectorInterconnections'] = 140
         PathParameters['BSFlexibleDemand'] = 141
         PathParameters['BSFlexibleSupply'] = 142
+        PathParameters['BoundarySectorMaxSpillage'] = 143
         PathParameters['CostBoundarySectorSlack'] = 170
         default['CostBoundarySectorSlack'] = 170
 

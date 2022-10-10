@@ -287,6 +287,17 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
     BoundarySector = BoundarySector.reindex(zones_bs)
     BoundarySector.fillna(0, inplace=True)
 
+    # Boundary Sector Max Spillage
+    if os.path.isfile(config['BoundarySectorMaxSpillage']):
+        BS_spillage = load_time_series(config, config['BoundarySectorMaxSpillage']).fillna(0)
+    else:
+        logging.warning('No maximum spillage capacity provided.')
+        sys.exit('No maximum spillage capacity provided. This parameter is necessary.')
+
+    # Boundary Sector Forced Spillage
+    if os.path.isfile(config['BoundarySectorMaxSpillage']):
+        BS_forced_spillage = pd.DataFrame(0, index=BS_spillage.index, columns=BS_spillage.columns)
+
     # Read BS Flexible demand & supply
     BSFlexibleDemand = GenericTable(zones_bs, 'BSFlexibleDemand', config, default=0)
     BSFlexibleSupply = GenericTable(zones_bs, 'BSFlexibleSupply', config, default=0)
@@ -347,6 +358,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
     # Boundary Sector Interconnections:
     [BSInterconnections_sim, BSInterconnections_RoW, BSInterconnections] = interconnections(zones_bs, BS_NTC, BS_flows)
 
+    # Boundary Sector Spillage:
+    [BSSpillage_sim, BSSpillage_RoW, BSSpillage] = interconnections(zones_bs, BS_spillage, BS_forced_spillage)
+
     if len(Interconnections_sim.columns) > 0:
         NTCs = Interconnections_sim.reindex(config['idx_long'])
     else:
@@ -367,6 +381,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
     else:
         BS_NTCs = pd.DataFrame(index=config['idx_long'])
     BS_Inter_RoW = BSInterconnections_RoW.reindex(config['idx_long'])
+
+    if len(BSSpillage_sim.columns) > 0:
+        BS_Spillages = BSSpillage_sim.reindex(config['idx_long'])
+    else:
+        BS_Spilagess = pd.DataFrame(index=config['idx_long'])
+    BS_Spillage_RoW = BSSpillage_RoW.reindex(config['idx_long'])
 
     # Clustering of the plants:
     Plants_merged, mapping = clustering(plants, method=config['SimulationType'])
@@ -543,7 +563,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
                'HeatDemand': HeatDemand, 'ShareOfFlexibleDemand': ShareOfFlexibleDemand,
                'PriceTransmission': PriceTransmission,
                'BoundarySectorDemand': BoundarySectorDemand, 'CostBoundarySectorSlack': CostBoundarySectorSlack,
-               'BSFlexibleDemand': BSFlexibleDemand, 'BSFlexibleSupply': BSFlexibleSupply}
+               'BSFlexibleDemand': BSFlexibleDemand, 'BSFlexibleSupply': BSFlexibleSupply,
+               'BSMaxSpillage': BS_Spillages}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors']:
@@ -592,6 +613,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['l_bs'] = BSInterconnections
+    sets['s_bs'] = BSSpillage
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
@@ -654,6 +676,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
     sets_param['BoundarySectorDemand'] = ['n_bs', 'h']
     sets_param['LineNode'] = ['l', 'n']
     sets_param['BSLineNode'] = ['l_bs', 'n_bs']
+    sets_param['BSSpillageNode'] = ['s_bs', 'n_bs']
+    sets_param['BSMaximumSpillage'] = ['s_bs', 'h']
     sets_param['LoadShedding'] = ['n', 'h']
     sets_param['Location'] = ['au', 'n']
     sets_param['Location_th'] = ['au', 'n_th']
@@ -933,11 +957,16 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
         if l_bs in BS_Inter_RoW.columns:
             parameters['FlowBSMaximum']['val'][i, :] = finalTS['BS_Inter_RoW'][l_bs]
             parameters['FlowBSMinimum']['val'][i, :] = finalTS['BS_Inter_RoW'][l_bs]
+    for i, s_bs in enumerate(sets['s_bs']):
+        if s_bs in BS_Spillages.columns:
+            parameters['BSMaximumSpillage']['val'][i, :] = finalTS['BSMaxSpillage'][l_bs]
 
     # Check values:
     check_MinMaxFlows(parameters['FlowBSMinimum']['val'], parameters['FlowBSMaximum']['val'])
 
     parameters['BSLineNode'] = incidence_matrix(sets, 'l_bs', parameters, 'BSLineNode', nodes='n_bs')
+
+    parameters['BSSpillageNode'] = incidence_matrix(sets, 's_bs', parameters, 'BSSpillageNode', nodes='n_bs')
 
     # Outage Factors
     if len(finalTS['Outages'].columns) != 0:

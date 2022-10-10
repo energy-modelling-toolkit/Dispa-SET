@@ -67,6 +67,7 @@ n_th             Thermal nodes
 n_bs             Boundary sector nodes
 l                Lines
 l_bs             Boundary sector lines
+s_bs             Boundary sector spillage lines
 au               All Units
 u(au)            Generation units
 t                Generation technologies
@@ -136,6 +137,8 @@ HeatDemand(n_th,h)                          [MWh\u]         Heat demand profile 
 BoundarySectorDemand(n_bs,h)                [MWh\n_bs]      Demand profile in boundary sectors
 LineNode(l,n)                               [n.a.]          Incidence matrix {-1 +1}
 BSLineNode(l_bs,n_bs)                       [n.a.]          Incidence matrix {-1 +1}
+BSSpillageNode(s_bs,n_bs)                   [n.a.]          Incidence matrix {-1 +1}
+BSMaximumSpillage(s_bs,h)                   [MW]            Maximum allowed spillage
 LoadShedding(n,h)                           [MW]            Load shedding capacity
 Location(au,n)                              [n.a.]          Location {1 0}
 Location_th(au,n_th)                        [n.a.]          Location {1 0}
@@ -217,6 +220,7 @@ $LOAD n_th
 $LOAD n_bs
 $LOAD l
 $LOAD l_bs
+$LOAD s_bs
 $LOAD au
 $LOAD u
 $LOAD t
@@ -266,6 +270,8 @@ $LOAD Fuel
 $LOAD HeatDemand
 $LOAD LineNode
 $LOAD BSLineNode
+$LOAD BSSpillageNode
+$LOAD BSMaximumSpillage
 $LOAD LoadShedding
 $LOAD Location
 $LOAD Location_th
@@ -359,6 +365,8 @@ Fuel,
 HeatDemand,
 LineNode,
 BSLineNode,
+BSSpillageNode,
+BSMaximumSpillage,
 Location,
 Location_th,
 Location_bs,
@@ -437,7 +445,8 @@ ShedLoad(n,h)                       [MW]    Shed load
 StorageInput(au,h)                  [MWh]   Charging input for storage units
 StorageLevel(au,h)                  [MWh]   Storage level of charge
 BoundarySectorStorageLevel(n_bs,h)  [MWh]   Storage level of charge of the boundary sector
-BoundarySectorSpillage(n_bs,h)      [MWh]   Spillage from boundary sector storage
+BoundarySectorSpillage(s_bs,h)      [MW]    Spillage from boundary sector x to boundary sector y
+LL_BoundarySectorSpillage(n_bs,h)   [MWh]   Spillage from boundary sector storage
 LL_MaxPower(n,h)                    [MW]    Deficit in terms of maximum power
 LL_RampUp(u,h)                      [MW]    Deficit in terms of ramping up for each plant
 LL_RampDown(u,h)                    [MW]    Deficit in terms of ramping down
@@ -597,6 +606,7 @@ EQ_Max_Flex_Capacity_BS
 EQ_BS_Flex_Demand
 EQ_Curtailed_Power
 EQ_Residual_Load
+EQ_BS_Spillage_limits_upper
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 ;
 
@@ -629,7 +639,8 @@ EQ_SystemCost(i)..
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
-         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i)) + sum(n_bs,BoundarySectorSpillage(n_bs,i)))
+         +0.7*Config("ValueOfLostLoad","val")*(sum(n_bs,(LL_BoundarySectorSpillage(n_bs,i))*TimeStep))
+         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep + sum(s_bs,BoundarySectorSpillage(s_bs,i))*TimeStep)
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
 $else
@@ -652,7 +663,8 @@ EQ_SystemCost(i)..
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
-         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i)) + sum(n_bs,BoundarySectorSpillage(n_bs,i)))
+         +0.7*Config("ValueOfLostLoad","val")*(sum(n_bs,(LL_BoundarySectorSpillage(n_bs,i))*TimeStep))
+         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep + sum(s_bs,BoundarySectorSpillage(s_bs,i))*TimeStep)
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
 
@@ -1104,6 +1116,14 @@ EQ_BS_Flow_limits_upper(l_bs,i)..
          FlowBSMaximum(l_bs,i)
 ;
 
+
+*Boundary Sector Spillages are below maximum values
+EQ_BS_Spillage_limits_upper(s_bs,i)..
+         BoundarySectorSpillage(s_bs,i)
+         =L=
+         BSMaximumSpillage(s_bs,i)
+;
+
 *Force Unit commitment/decommitment:
 * E.g: renewable units with AF>0 must be committed
 EQ_Force_Commitment(u,i)$((sum(tr,Technology(u,tr))>=1 and LoadMaximum(u,i)>0))..
@@ -1198,11 +1218,12 @@ EQ_BS_Demand_balance(n_bs,i)..
         + BoundarySectorSlack(n_bs,i)
         + sum(l_bs,FlowBS(l_bs,i)*BSLineNode(l_bs,n_bs))
         + BSFlexSupply(n_bs,i)
+        + sum(s_bs,BoundarySectorSpillage(s_bs,i)*BSSpillageNode(s_bs,n_bs))
         =E=
         BoundarySectorDemand(n_bs,i)
         + BSFlexDemand(n_bs,i)
         + BoundarySectorStorageInput(n_bs,i)
-        + BoundarySectorSpillage(n_bs,i)
+        + LL_BoundarySectorSpillage(n_bs,i)
 ;
 
 *Heat Storage balance
@@ -1391,6 +1412,7 @@ EQ_Tot_Flex_Demand_BS,
 EQ_Max_Flex_Capacity_BS,
 EQ_Tot_Flex_Supply_BS,
 EQ_Max_Flex_Supply_BS,
+EQ_BS_Spillage_limits_upper,
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 /
 ;
@@ -1524,7 +1546,8 @@ OutputBoundarySectorStorageLevel(n_bs,h)
 OutputBoundarySectorStorageShadowPrice(n_bs,h)
 OutputBoundarySectorStorageSlack(n_bs,h)
 OutputBoundarySectorStorageInput(n_bs,h)
-OutputBoundarySectorSpillage(n_bs,h)
+LostLoad_BoundarySectorSpillage(n_bs,h)
+OutputBoundarySectorSpillage(s_bs,h)
 OutputSystemCost(h)
 OutputSpillage(au,h)
 OutputShedLoad(n,h)
@@ -1623,7 +1646,8 @@ OutputBoundarySectorStorageLevel(n_bs,z) = BoundarySectorStorageLevel.L(n_bs,z);
 OutputBoundarySectorStorageShadowPrice(n_bs,z) = EQ_Boundary_Sector_Storage_balance.m(n_bs,z);
 OutputBoundarySectorStorageSlack(n_bs,z) = BoundarySectorStorageSlack.l(n_bs,z);
 OutputBoundarySectorStorageInput(n_bs,z) = BoundarySectorStorageInput.l(n_bs,z);
-OutputBoundarySectorSpillage(n_bs,z) = BoundarySectorSpillage.l(n_bs,z);
+LostLoad_BoundarySectorSpillage(n_bs,z) = LL_BoundarySectorSpillage.l(n_bs,z);
+OutputBoundarySectorSpillage(s_bs,z) = BoundarySectorSpillage.l(s_bs,z);
 OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(au,z)  = Spillage.L(au,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
@@ -1725,6 +1749,7 @@ OutputBoundarySectorStorageLevel,
 OutputBoundarySectorStorageShadowPrice,
 OutputBoundarySectorStorageSlack,
 OutputBoundarySectorStorageInput,
+LostLoad_BoundarySectorSpillage,
 OutputBoundarySectorSpillage,
 OutputSystemCost,
 OutputSpillage,
