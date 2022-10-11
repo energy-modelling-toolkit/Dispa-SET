@@ -1181,8 +1181,8 @@ EQ_P2X_Power_Balance(au,i)..
 EQ_Max_Power_Consumption(au,i)..
          PowerConsumption(au,i)$(p2h(au))
          =L=
-*         PowerCapacity(au)$(p2h(au)) * Committed(au,i)$(p2h(au))
-         PowerCapacity(au)$(p2h(au)) * Nunits(au)$(p2h(au))
+         PowerCapacity(au)$(p2h(au)) * Committed(au,i)$(p2h(au))
+*         PowerCapacity(au)$(p2h(au)) * Nunits(au)$(p2h(au))
 ;
 
 * Power to boundary sector units
@@ -1201,9 +1201,9 @@ EQ_Max_Power_Consumption_of_BS_units(p2bs,i)..
 
 
 EQ_Heat_Demand_balance(n_th,i)..
-         sum(chp, Heat(chp,i)*Location_th(chp,n_th))
-         + sum(p2h, Heat(p2h,i)*Location_th(p2h,n_th))
-         + sum(hu, Heat(hu,i)*Location_th(hu,n_th))
+*         sum(chp, Heat(chp,i)*Location_th(chp,n_th))
+*         + sum(p2h, Heat(p2h,i)*Location_th(p2h,n_th))
+         sum(hu, Heat(hu,i)*Location_th(hu,n_th))
          + sum(thms, Heat(thms,i)*Location_th(thms,n_th))
          =E=
          HeatDemand(n_th, i)
@@ -1219,6 +1219,8 @@ EQ_BS_Demand_balance(n_bs,i)..
         + sum(l_bs,FlowBS(l_bs,i)*BSLineNode(l_bs,n_bs))
         + BSFlexSupply(n_bs,i)
         + sum(s_bs,BoundarySectorSpillage(s_bs,i)*BSSpillageNode(s_bs,n_bs))
+        + sum(chp, Heat(chp,i)*Location_bs(chp,n_bs))
+        + sum(p2h, Heat(p2h,i)*Location_bs(p2h,n_bs))
         =E=
         BoundarySectorDemand(n_bs,i)
         + BSFlexDemand(n_bs,i)
@@ -1490,6 +1492,7 @@ $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital_dbg;
          CommittedInitial(au) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(au,i));
          PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
          StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
+         StorageInitial(p2h) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(p2h,i));
          StorageInitial(thms) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(thms,i));
          StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
          BoundarySectorStorageInitial(n_bs) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),BoundarySectorStorageLevel.L(n_bs,i));

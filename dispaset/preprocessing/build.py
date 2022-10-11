@@ -231,10 +231,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
     check_p2h(config, plants_p2h)
 
     # All heating units:
-    # plants_heat = plants_heat.append(plants_chp)
-    # plants_heat = plants_heat.append(plants_p2h)
-    plants_heat = pd.concat([plants_heat, plants_chp])
-    plants_heat = pd.concat([plants_heat, plants_p2h])
+    # plants_heat = pd.concat([plants_heat, plants_chp])
+    # plants_heat = pd.concat([plants_heat, plants_p2h])
 
     # Defining the P2BS units:
     # TODO: Check if plants should be grouped by technology or by energy in one of the boundary sectors
@@ -243,6 +241,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
 
     # Define all Boundary Sector units:
     plants_all_bs = pd.concat([plants_p2bs, plants_bs])
+    plants_all_bs = pd.concat([plants_all_bs, plants_p2h])
+    plants_all_bs = pd.concat([plants_all_bs, plants_chp])
 
     Outages = UnitBasedTable(plants, 'Outages', config, fallbacks=['Unit', 'Technology'])
     AF = UnitBasedTable(plants, 'RenewablesAF', config, fallbacks=['Unit', 'Technology'], default=1,
@@ -254,9 +254,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
                                      default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_all_sto, 'ReservoirScaledInflows', config,
                                             fallbacks=['Unit', 'Technology', 'Zone'], default=0)
-    # HeatDemand = UnitBasedTable(plants_heat, 'HeatDemand', config, fallbacks=['Unit'], default=0)
-    # CostHeatSlack = UnitBasedTable(plants_heat, 'CostHeatSlack', config, fallbacks=['Unit', 'Zone'],
-    #                                default=config['default']['CostHeatSlack'])
     Temperatures = NodeBasedTable('Temperatures', config)
 
     # Detecting thermal zones:
