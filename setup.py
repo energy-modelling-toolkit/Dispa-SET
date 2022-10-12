@@ -39,7 +39,7 @@ setup(
         'local_scheme': lambda version: version.format_choice("" if version.exact else "+{node}", "+dirty"),
         'fallback_version': FINAL_RELEASE,
     },
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     setup_requires=["setuptools_scm"],
     install_requires=[
         "setuptools_scm",
@@ -53,8 +53,7 @@ setup(
         "xlrd == 1.2.0",
         "gamsxcc",
         "optcc",
-        "networkx",
-        "cartopy"
+        "networkx"
     ],
     entry_points={
         'console_scripts': [
