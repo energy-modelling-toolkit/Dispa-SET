@@ -53,8 +53,7 @@ setup(
         "xlrd == 1.2.0",
         "gamsxcc",
         "optcc",
-        "networkx",
-        "cartopy >= 0.20"
+        "networkx"
     ],
     entry_points={
         'console_scripts': [
