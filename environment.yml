@@ -1,7 +1,7 @@
 name: dispaset
 
 dependencies:
-  - python >= 3.7
+  - python >= 3.8
   - future >= 0.15
   - click >= 3.3
   - numpy >= 1.10
@@ -14,8 +14,8 @@ dependencies:
   - pyyaml >= 5.1
   - pytest
   - networkx
-  - cartopy
-  - pip
+  - cartopy >= 0.20
+  - pip >= 9.0.1
   - pip:
     - gdxcc
     - gamsxcc
