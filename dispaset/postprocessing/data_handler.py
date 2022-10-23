@@ -16,14 +16,14 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'OutputPower': ('u', 'h'),
             'OutputPowerConsumption': ('u', 'h'),
             'OutputHeat': ('u', 'h'),
-            'OutputHeatSlack': ('n_th', 'h'),
+            # 'OutputHeatSlack': ('n_th', 'h'),
             'OutputStorageInput': ('u', 'h'),
             'OutputStorageLevel': ('u', 'h'),
             'OutputSystemCost': ('h'),
             'OutputSpillage': ('u', 'h'),
             'OutputShedLoad': ('n', 'h'),
             'OutputCurtailedPower': ('n', 'h'),
-            'OutputCurtailedHeat': ('n_th','h'),
+            # 'OutputCurtailedHeat': ('n_th','h'),
             'OutputDemandModulation': ('n', 'h'),
             'LostLoad_MaxPower': ('n', 'h'),
             'LostLoad_MinPower': ('n', 'h'),
@@ -38,7 +38,7 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             # 'OutputH2Output': ('u', 'h'),
             'OutputStorageSlack': ('u', 'h'),
             # 'OutputPtLDemand': ('u', 'h'),
-            'HeatShadowPrice': ('n_th', 'h'),
+            # 'HeatShadowPrice': ('n_th', 'h'),
             # 'H2ShadowPrice': ('u', 'h'),
             'ShadowPrice_2U': ('u', 'h'),
             'ShadowPrice_2D': ('u', 'h'),
@@ -164,11 +164,13 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
 
     keys_sparse = ['OutputPower', 'OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted',
                    'OutputCurtailedPower', 'OutputFlow', 'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel',
-                   'OutputStorageInput', 'OutputHeat', 'OutputHeatSlack', 'OutputDemandModulation',
+                   'OutputStorageInput', 'OutputHeat',
+                   # 'OutputHeatSlack', 'HeatShadowPrice', 'OutputCurtailedHeat',
+                   'OutputDemandModulation',
                    'OutputStorageSlack', 'OutputPowerMustRun',
                    'OutputReserve_2U', 'OutputReserve_2D', 'OutputReserve_3U', 'ShadowPrice_RampUp_TC',
-                   'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown', 'HeatShadowPrice',
-                   'OutputCurtailedHeat', 'OutputEmissions', 'CapacityMargin',
+                   'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown',
+                   'OutputEmissions', 'CapacityMargin',
                    'OutputBoundarySectorSlack', 'OutputPowerBoundarySector', 'OutputBoundarySectorStorageLevel',
                    'OutputBoundarySectorStorageInput', 'OutputBoundarySectorStorageShadowPrice',
                    'BoundarySectorShadowPrice', 'OutputBoundarySectorSlack', 'OutputBoundarySectorStorageSlack',
@@ -218,7 +220,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
         results['ShadowPrice_2D'][results['ShadowPrice_2D'] >= 1e300] = 0
         results['ShadowPrice_2U'][results['ShadowPrice_2U'] >= 1e300] = 0
         results['ShadowPrice_3U'][results['ShadowPrice_3U'] >= 1e300] = 0
-        results['HeatShadowPrice'][results['HeatShadowPrice'] >= 1e300] = 0
+        # results['HeatShadowPrice'][results['HeatShadowPrice'] >= 1e300] = 0
         results['BoundarySectorShadowPrice'][results['BoundarySectorShadowPrice'] >= 1e300] = 0
 
     # Remove powerplants with no generation

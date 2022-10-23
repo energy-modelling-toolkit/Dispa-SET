@@ -2,14 +2,14 @@
 
 import logging
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import networkx as nx
 import cartopy
 import cartopy.crs as ccrs
-import cartopy.mpl.geoaxes
 import cartopy.io.img_tiles as cimgt
+import cartopy.mpl.geoaxes
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+import pandas as pd
 import requests
 
 from .postprocessing import get_from_to_flows, get_net_positions
@@ -233,7 +233,7 @@ def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, mar
                      pos=pos,
                      node_color=color_map,
                      cmap=plt.cm.autumn,
-                     arrows=True, arrowstyle='-|>', arrowsize=20, connectionstyle='arc3, rad=0.1',
+                     arrows=True, arrowstyle='-|>', arrowsize=20, connectionstyle='arc3, rad=0.05',
                      )
 
     ax.update_datalim(compute_bbox_with_margins(x, y, margin_type, margin))
@@ -340,7 +340,7 @@ def plot_line_congestion_map(inputs, results, idx=None, crs=4326, boundaries=Non
                      edge_color=weights,
                      edge_cmap=edge_cmap,
                      cmap=cmap,
-                     arrows=True, arrowstyle='-|>', arrowsize=20, connectionstyle='arc3, rad=0.1',
+                     arrows=True, arrowstyle='-|>', arrowsize=20, connectionstyle='arc3, rad=0.05',
                      edge_vmin=edge_vmin, edge_vmax=edge_vmax
                      )
 

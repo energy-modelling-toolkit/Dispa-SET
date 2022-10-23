@@ -31,10 +31,10 @@ commons['tech_p2ht'] = ['P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
 # List of power to boundary sector technologies
 commons['tech_p2bs'] = ['P2GS', 'ALKE', 'PEME', 'SOXE', 'P2BS', 'PEFC',
                         'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 'HDAMC', 'HRORC']
-# List of heat only technologies:
-commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
+# # List of heat only technologies:
+# commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
 # List of noundary sector only technologies:
-commons['tech_boundary_sector'] = ['BSPG']
+commons['tech_boundary_sector'] = ['BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP']
 # List of thermal storage technologies:
 commons['tech_thermal_storage'] = ['THMS']
 # List of CHP types:

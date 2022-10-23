@@ -63,7 +63,7 @@ $setglobal ActivateAdvancedReserves 0
 SETS
 mk               Markets
 n                Nodes
-n_th             Thermal nodes
+*n_th             Thermal nodes
 n_bs             Boundary sector nodes
 l                Lines
 l_bs             Boundary sector lines
@@ -81,7 +81,7 @@ s(au)             Storage Units (with reservoir)
 chp(u)           CHP units
 p2h(au)          Power to heat units
 th(au)           Units with thermal storage
-hu(au)           Heat only units
+*hu(au)           Heat only units
 thms(au)         Thermal storage units only
 h                Hours
 i(h)             Subset of simulated hours for one iteration
@@ -117,7 +117,7 @@ CostRampDown(u)                             [EUR\MW]        Ramp-down costs
 CostShutDown(u)                             [EUR\u]         Shut-down costs
 CostStartUp(u)                              [EUR\u]         Start-up costs
 CostVariable(au,h)                          [EUR\MW]        Variable costs
-CostHeatSlack(n_th,h)                       [EUR\MWh]       Cost of supplying heat via other means
+*CostHeatSlack(n_th,h)                       [EUR\MWh]       Cost of supplying heat via other means
 CostBoundarySectorSlack(n_bs,h)             [EUR\MWh]       Cost of supplying energy to boundary sector via other means
 CostLoadShedding(n,h)                       [EUR\MWh]       Cost of load shedding
 Curtailment(n)                              [n.a]           Curtailment allowed or not {1 0} at node n
@@ -133,7 +133,7 @@ FlowMinimum(l,h)                            [MW]            Minimum flow
 FlowBSMaximum(l_bs,h)                       [MW]            Boundary sector line limits
 FlowBSMinimum(l_bs,h)                       [MW]            Boundary sector line minimum flow
 Fuel(u,f)                                   [n.a.]          Fuel type {1 0}
-HeatDemand(n_th,h)                          [MWh\u]         Heat demand profile for chp units
+*HeatDemand(n_th,h)                          [MWh\u]         Heat demand profile for chp units
 BoundarySectorDemand(n_bs,h)                [MWh\n_bs]      Demand profile in boundary sectors
 LineNode(l,n)                               [n.a.]          Incidence matrix {-1 +1}
 BSLineNode(l_bs,n_bs)                       [n.a.]          Incidence matrix {-1 +1}
@@ -141,7 +141,7 @@ BSSpillageNode(s_bs,n_bs)                   [n.a.]          Incidence matrix {-1
 BSMaximumSpillage(s_bs,h)                   [MW]            Maximum allowed spillage
 LoadShedding(n,h)                           [MW]            Load shedding capacity
 Location(au,n)                              [n.a.]          Location {1 0}
-Location_th(au,n_th)                        [n.a.]          Location {1 0}
+*Location_th(au,n_th)                        [n.a.]          Location {1 0}
 Location_bs(au,n_bs)                        [n.a.]          Location {1 0}
 Markup(u,h)                                 [EUR\MW]        Markup
 OutageFactor(au,h)                          [%]             Outage Factor (100% = full outage)
@@ -216,7 +216,7 @@ $gdxin %inputfilename%
 
 $LOAD mk
 $LOAD n
-$LOAD n_th
+*$LOAD n_th
 $LOAD n_bs
 $LOAD l
 $LOAD l_bs
@@ -234,7 +234,7 @@ $LOAD chp
 $LOAD p2h
 $LOAD th
 $LOAD tc
-$LOAD hu
+*$LOAD hu
 $LOAD bsu
 $LOAD thms
 $LOAD h
@@ -246,7 +246,7 @@ $LOAD CHPMaxHeat
 $LOAD CHPType
 $LOAD Config
 $LOAD CostFixed
-$LOAD CostHeatSlack
+*$LOAD CostHeatSlack
 $LOAD CostBoundarySectorSlack
 $LOAD CostLoadShedding
 $LOAD CostShutDown
@@ -267,14 +267,14 @@ $LOAD FlowMinimum
 $LOAD FlowBSMaximum
 $LOAD FlowBSMinimum
 $LOAD Fuel
-$LOAD HeatDemand
+*$LOAD HeatDemand
 $LOAD LineNode
 $LOAD BSLineNode
 $LOAD BSSpillageNode
 $LOAD BSMaximumSpillage
 $LOAD LoadShedding
 $LOAD Location
-$LOAD Location_th
+*$LOAD Location_th
 $LOAD Location_bs
 $LOAD Markup
 $LOAD Nunits
@@ -321,7 +321,7 @@ $If %Verbose% == 0 $goto skipdisplay
 Display
 mk,
 n,
-n_th,
+*n_th,
 n_bs,
 l,
 l_bs,
@@ -338,7 +338,7 @@ chp,
 p2h,
 th,
 h2,
-hu,
+*hu,
 thms,
 h,
 AvailabilityFactor,
@@ -362,13 +362,13 @@ FlowMinimum,
 FlowBSMaximum,
 FlowBSMinimum,
 Fuel,
-HeatDemand,
+*HeatDemand,
 LineNode,
 BSLineNode,
 BSSpillageNode,
 BSMaximumSpillage,
 Location,
-Location_th,
+*Location_th,
 Location_bs,
 LoadShedding,
 Markup,
@@ -434,7 +434,7 @@ CostRampDownH(u,h)                  [EUR]   Ramping cost
 CurtailedPower(n,h)                 [MW]    Curtailed power at node n
 CurtailmentReserve_2U(n,h) 			[MW]    Curtailed power used for reserves at node n
 CurtailmentReserve_3U(n,h) 			[MW]    Curtailed power used for reserves at node n
-CurtailedHeat(n_th,h)               [MW]    Curtailed heat at node n_th
+*CurtailedHeat(n_th,h)               [MW]    Curtailed heat at node n_th
 Flow(l,h)                           [MW]    Flow through lines
 FlowBS(l_bs,h)                      [MW]    Flow through boundary sector lines
 Power(au,h)                         [MW]    Power output
@@ -460,7 +460,7 @@ Reserve_2U(au,h)                    [MW]    Spinning reserve up
 Reserve_2D(au,h)                    [MW]    Spinning reserve down
 Reserve_3U(au,h)                    [MW]    Non spinning quick start reserve up
 Heat(au,h)                          [MW]    Heat output by chp plant
-HeatSlack(n_th,h)                   [MW]    Heat satisfied by other sources
+*HeatSlack(n_th,h)                   [MW]    Heat satisfied by other sources
 BoundarySectorSlack(n_bs,h)         [MW]    Boundary sector demand satisfied by other sources
 WaterSlack(au)                      [MWh]   Unsatisfied water level constraint at end of optimization period
 StorageSlack(au,h)                  [MWh]   Unsatisfied storage level constraint at end of simulation timestep
@@ -529,7 +529,7 @@ EQ_CHP_extraction_Pmax
 EQ_CHP_extraction
 EQ_CHP_backpressure
 *EQ_CHP_demand_satisfaction
-EQ_Heat_Demand_balance
+*EQ_Heat_Demand_balance
 EQ_BS_Demand_balance
 EQ_CHP_max_heat
 EQ_Heat_Storage_balance
@@ -628,12 +628,12 @@ EQ_SystemCost(i)..
          sum(au,CostFixed(au)*TimeStep*Committed(au,i))
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
-         +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
+*         +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
          +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
          +sum((n_bs,bsu),CostVariable(bsu,i) * PowerBoundarySector(n_bs,bsu,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
-         +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
+*         +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
          +sum(n_bs, CostBoundarySectorSlack(n_bs,i) * BoundarySectorSlack(n_bs,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
@@ -652,12 +652,12 @@ EQ_SystemCost(i)..
          +sum(u,CostStartUpH(u,i) + CostShutDownH(u,i))
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
-         +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
+*         +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
          +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
          +sum((n_bs,bsu),CostVariable(bsu,i) * PowerBoundarySector(n_bs,bsu,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
-         +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
+*         +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
          +sum(n_bs, CostBoundarySectorSlack(n_bs,i) * BoundarySectorSlack(n_bs,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
@@ -947,13 +947,13 @@ EQ_Power_must_run(u,i)..
 EQ_Power_available(au,i)..
          Power(au,i)$(u(au))
          + Power(au,i)$(p2bs(au))
-         + Heat(au,i)$(hu(au))
+*         + Heat(au,i)$(hu(au))
          + Heat(au,i)$(thms(au))
          + Power(au,i)$(p2h(au))
          =L=
          PowerCapacity(au)$(u(au))*LoadMaximum(au,i)$(u(au))*Committed(au,i)$(u(au))
          + PowerCapacity(au)$(p2bs(au))*LoadMaximum(au,i)$(p2bs(au))*Nunits(au)$(p2bs(au))
-         + PowerCapacity(au)$(hu(au))*LoadMaximum(au,i)$(hu(au))*Committed(au,i)$(hu(au))
+*         + PowerCapacity(au)$(hu(au))*LoadMaximum(au,i)$(hu(au))*Committed(au,i)$(hu(au))
          + PowerCapacity(au)$(thms(au))*LoadMaximum(au,i)$(thms(au))*Committed(au,i)$(thms(au))
 		 + 0
 ;
@@ -1200,16 +1200,16 @@ EQ_Max_Power_Consumption_of_BS_units(p2bs,i)..
 ;
 
 
-EQ_Heat_Demand_balance(n_th,i)..
+*EQ_Heat_Demand_balance(n_th,i)..
 *         sum(chp, Heat(chp,i)*Location_th(chp,n_th))
 *         + sum(p2h, Heat(p2h,i)*Location_th(p2h,n_th))
-         sum(hu, Heat(hu,i)*Location_th(hu,n_th))
-         + sum(thms, Heat(thms,i)*Location_th(thms,n_th))
-         =E=
-         HeatDemand(n_th, i)
-         - HeatSlack(n_th,i)
-         + sum(thms, StorageInput(thms,i)*Location_th(thms,n_th))
-;
+*         sum(hu, Heat(hu,i)*Location_th(hu,n_th))
+*         + sum(thms, Heat(thms,i)*Location_th(thms,n_th))
+*         =E=
+*         HeatDemand(n_th, i)
+*         - HeatSlack(n_th,i)
+*         + sum(thms, StorageInput(thms,i)*Location_th(thms,n_th))
+*;
 
 
 EQ_BS_Demand_balance(n_bs,i)..
@@ -1221,8 +1221,10 @@ EQ_BS_Demand_balance(n_bs,i)..
         + sum(s_bs,BoundarySectorSpillage(s_bs,i)*BSSpillageNode(s_bs,n_bs))
         + sum(chp, Heat(chp,i)*Location_bs(chp,n_bs))
         + sum(p2h, Heat(p2h,i)*Location_bs(p2h,n_bs))
+        + sum(thms, Heat(thms,i)*Location_bs(thms,n_bs))
         =E=
         BoundarySectorDemand(n_bs,i)
+        + sum(thms, StorageInput(thms,i)*Location_bs(thms,n_bs))
         + BSFlexDemand(n_bs,i)
         + BoundarySectorStorageInput(n_bs,i)
         + LL_BoundarySectorSpillage(n_bs,i)
@@ -1336,7 +1338,7 @@ EQ_CHP_extraction_Pmax,
 EQ_CHP_extraction,
 EQ_CHP_backpressure,
 *EQ_CHP_demand_satisfaction,
-EQ_Heat_Demand_balance,
+*EQ_Heat_Demand_balance,
 EQ_BS_Demand_balance,
 EQ_CHP_max_heat,
 EQ_CostRampUp,
@@ -1508,7 +1510,7 @@ Error.L = sum((i,n), CostLoadShedding(n,i)*ShedLoad.L(n,i)
                                +Config("ValueOfLostLoad","val")*(LL_MaxPower.L(n,i)+LL_MinPower.L(n,i))
                                +0.8*Config("ValueOfLostLoad","val")*(LL_2U.L(n,i)+LL_2D.L(n,i)+LL_3U.L(n,i)))
                       +sum((u,i), 0.7*Config("ValueOfLostLoad","val")*(LL_RampUp.L(u,i)+LL_RampDown.L(u,i)))
-                      +sum((i,n_th), CostHeatSlack(n_th,i) * HeatSlack.L(n_th,i))
+*                      +sum((i,n_th), CostHeatSlack(n_th,i) * HeatSlack.L(n_th,i))
 ;
 OptimalityGap.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = UCM_SIMPLE.objVal - UCM_SIMPLE.objEst;
 OptimizationError.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = Error.L - OptimalityGap.L(i);
@@ -1519,7 +1521,7 @@ $If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
 );
 
 *CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n)) + sum(s,spillage.L(s,z)* Location(s,n));
-CurtailedHeat.L(n_th,z)=sum(hu,(Nunits(hu)*PowerCapacity(hu)*LoadMaximum(hu,z)-Heat.L(hu,z))$(sum(tr,Technology(hu,tr))>=1) * Location_th(hu,n_th));
+*CurtailedHeat.L(n_th,z)=sum(hu,(Nunits(hu)*PowerCapacity(hu)*LoadMaximum(hu,z)-Heat.L(hu,z))$(sum(tr,Technology(hu,tr))>=1) * Location_th(hu,n_th));
 
 
 $If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,CurtailmentReserve_2U.L, CurtailmentReserve_3U.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
@@ -1557,10 +1559,10 @@ OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
 OutputCurtailmentReserve_2U(n,h)
 OutputCurtailmentReserve_3U(n,h)
-OutputCurtailedHeat(n_th,h)
+*OutputCurtailedHeat(n_th,h)
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 ShadowPrice(n,h)
-HeatShadowPrice(n_th,h)
+*HeatShadowPrice(n_th,h)
 BoundarySectorShadowPrice(n_bs,h)
 LostLoad_MaxPower(n,h)
 LostLoad_MinPower(n,h)
@@ -1573,7 +1575,7 @@ $If %MTS%==0 LostLoad_RampUp_Unit(au,z)
 $If %MTS%==0 LostLoad_RampDown_Unit(au,z)
 OutputGenMargin(n,h)
 OutputHeat(au,h)
-OutputHeatSlack(n_th,h)
+*OutputHeatSlack(n_th,h)
 OutputBoundarySectorSlack(n_bs,h)
 LostLoad_WaterSlack(au)
 LostLoad_BoundarySectorWaterSlack(n_bs)
@@ -1638,7 +1640,7 @@ OutputPowerBoundarySector(n_bs,au,z)=PowerBoundarySector.L(n_bs,au,z);
 OutputPowerConsumption(au,z)=PowerConsumption.L(au,z);
 OutputResidualLoad(n,z)=ResidualLoad.L(n,z);
 OutputHeat(au,z)=Heat.L(au,z);
-OutputHeatSlack(n_th,z)=HeatSlack.L(n_th,z);
+*OutputHeatSlack(n_th,z)=HeatSlack.L(n_th,z);
 OutputBoundarySectorSlack(n_bs,z) = BoundarySectorSlack.L(n_bs,z);
 OutputStorageInput(s,z)=StorageInput.L(s,z);
 OutputStorageInput(th,z)=StorageInput.L(th,z);
@@ -1657,7 +1659,7 @@ OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
 OutputCurtailmentReserve_2U(n,z)=CurtailmentReserve_2U.L(n,z);
 OutputCurtailmentReserve_3U(n,z)=CurtailmentReserve_3U.L(n,z);
-OutputCurtailedHeat(n_th,z)=CurtailedHeat.L(n_th,z);
+*OutputCurtailedHeat(n_th,z)=CurtailedHeat.L(n_th,z);
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
 LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
 LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
@@ -1669,7 +1671,7 @@ $If %MTS%==0 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 $If %MTS%==0 LostLoad_RampUp_Unit(u,z) = LL_RampUp.L(u,z);
 $If %MTS%==0 LostLoad_RampDown_Unit(u,z) = LL_RampDown.L(u,z);
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
-HeatShadowPrice(n_th,z) = EQ_Heat_Demand_balance.m(n_th,z);
+*HeatShadowPrice(n_th,z) = EQ_Heat_Demand_balance.m(n_th,z);
 BoundarySectorShadowPrice(n_bs,z) = EQ_BS_Demand_balance.m(n_bs,z);
 LostLoad_WaterSlack(au) = WaterSlack.L(au);
 LostLoad_BoundarySectorWaterSlack(n_bs) = BoundarySectorWaterSlack.L(n_bs);
@@ -1695,13 +1697,15 @@ OutputReserve_3U(au,z) = Reserve_3U.L(au,z);
 ShadowPrice_RampUp_TC(u,z) = EQ_RampUp_TC.m(u,z);
 ShadowPrice_RampDown_TC(u,z) = EQ_RampDown_TC.m(u,z);
 OutputRampRate(u,z) = - Power.L(u,z-1)$(ord(z) > 1) - PowerInitial(u)$(ord(z) = 1) + Power.L(u,z);
-OutputRampRate(hu,z) = - Heat.L(hu,z-1)$(ord(z) > 1) + Heat.L(hu,z);
+*OutputRampRate(hu,z) = - Heat.L(hu,z-1)$(ord(z) > 1) + Heat.L(hu,z);
 OutputStartUp(au,z) = StartUp.L(au,z);
 OutputShutDown(au,z) = ShutDown.L(au,z);
 
-OutputEmissions(n,p,z) = (sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n))
-                        + sum(hu,Heat.L(hu,z)*EmissionRate(hu,p)*Location(hu,n)))
-                        / (sum(u,Power.L(u,z)*Location(u,n)) + sum(hu,Heat.L(hu,z)*Location(hu,n)));
+*FIXME: what about other sectors
+OutputEmissions(n,p,z) = sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n))
+*                        + sum(hu,Heat.L(hu,z)*EmissionRate(hu,p)*Location(hu,n)))
+                        / sum(u,Power.L(u,z)*Location(u,n));
+*                        / (sum(u,Power.L(u,z)*Location(u,n)) + sum(hu,Heat.L(hu,z)*Location(hu,n)));
 
 CapacityMargin(n,z) = (sum(u, Nunits(u)*PowerCapacity(u)$(not s(u))*LoadMaximum(u,z)*Location(u,n))
                       + min(sum(s, Nunits(s)*PowerCapacity(s)*LoadMaximum(s,z)*Location(s,n)), sum(s, StorageLevel.L(s,z)*StorageCapacity(s)))
@@ -1743,7 +1747,7 @@ OutputPowerBoundarySector,
 OutputPowerConsumption,
 OutputResidualLoad,
 OutputHeat,
-OutputHeatSlack,
+*OutputHeatSlack,
 OutputBoundarySectorSlack,
 OutputStorageInput,
 OutputStorageLevel,
@@ -1760,7 +1764,7 @@ OutputShedLoad,
 OutputCurtailedPower,
 OutputCurtailmentReserve_2U,
 OutputCurtailmentReserve_3U,
-OutputCurtailedHeat,
+*OutputCurtailedHeat,
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation,
 OutputGenMargin,
 LostLoad_MaxPower,
@@ -1776,7 +1780,7 @@ ShadowPrice,
 ShadowPrice_2U,
 ShadowPrice_2D,
 ShadowPrice_3U,
-HeatShadowPrice,
+*HeatShadowPrice,
 LostLoad_WaterSlack,
 LostLoad_BoundarySectorWaterSlack,
 StorageShadowPrice,
@@ -1825,7 +1829,8 @@ UnitHourlyProductionCost
 UnitHourlyProfit
 ;
 
-display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L, power.L;
+*display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L, power.L;
+display OutputPowerConsumption, heat.L, powerconsumption.L, power.L;
 
 $onorder
 * Exit here if the PrintResult option is set to 0:

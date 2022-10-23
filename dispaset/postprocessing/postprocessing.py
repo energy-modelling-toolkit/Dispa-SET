@@ -287,12 +287,12 @@ def get_result_analysis(inputs, results):
             demand_flex = pd.Series(0, index=results['OutputPower'].index)
         demand_da = inputs['param_df']['Demand'][('DA', z)]
         demand[z] = pd.DataFrame(demand_da + demand_p2h + demand_flex, columns=[('DA', z)])
-    for z_th in inputs['sets']['n_th']:
-        if 'OutputHeat' in results:
-            demand_th[z_th] = filter_by_zone(results['OutputHeat'], inputs, z_th, thermal=True)
-            demand_th[z_th] = demand_th[z_th].sum(axis=1)
-        else:
-            demand_th[z_th] = pd.Series(0, index=results['OutputPower'].index)
+    # for z_th in inputs['sets']['n_th']:
+    #     if 'OutputHeat' in results:
+    #         demand_th[z_th] = filter_by_zone(results['OutputHeat'], inputs, z_th, thermal=True)
+    #         demand_th[z_th] = demand_th[z_th].sum(axis=1)
+    #     else:
+    #         demand_th[z_th] = pd.Series(0, index=results['OutputPower'].index)
 
     demand = pd.concat(demand, axis=1)
     demand.columns = demand.columns.droplevel(-1)
@@ -304,12 +304,12 @@ def get_result_analysis(inputs, results):
     MaxCurtailemnt = results['OutputCurtailedPower'].sum(axis=1).max() / 1e6
     MaxLoadShedding = results['OutputShedLoad'].sum(axis=1).max()
 
-    if not inputs['param_df']['HeatDemand'].empty:
-        demand_th = pd.concat(demand_th, axis=1)
-        TotalHeatLoad = demand_th.sum().sum()
-        PeakHeatLoad = demand_th.sum(axis=1).max(axis=0)
-        HeatCurtailment = results['OutputCurtailedHeat'].sum().sum()
-        MaxHeatCurtailemnt = results['OutputCurtailedHeat'].sum(axis=1).max() / 1e6
+    # if not inputs['param_df']['HeatDemand'].empty:
+    #     demand_th = pd.concat(demand_th, axis=1)
+    #     TotalHeatLoad = demand_th.sum().sum()
+    #     PeakHeatLoad = demand_th.sum(axis=1).max(axis=0)
+    #     HeatCurtailment = results['OutputCurtailedHeat'].sum().sum()
+    #     MaxHeatCurtailemnt = results['OutputCurtailedHeat'].sum(axis=1).max() / 1e6
 
     if 'OutputDemandModulation' in results:
         ShiftedLoad_net = results['OutputDemandModulation'].sum().sum() / 1E6
@@ -322,10 +322,11 @@ def get_result_analysis(inputs, results):
 
     NetImports = -get_imports(results['OutputFlow'], 'RoW')
 
-    if not inputs['param_df']['HeatDemand'].empty:
-        Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports + TotalHeatLoad)
-    else:
-        Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports)
+    # if not inputs['param_df']['HeatDemand'].empty:
+    #     Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports + TotalHeatLoad)
+    # else:
+    #     Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports)
+    Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports)
 
     print('\nAverage electricity cost : ' + str(Cost_kwh) + ' EUR/MWh')
 
@@ -456,27 +457,30 @@ def get_result_analysis(inputs, results):
     WaterData['ZoneLevel']['WaterWithdrawal'] = pd.DataFrame()
     WaterData['ZoneLevel']['WaterConsumption'] = pd.DataFrame()
     for z in inputs['sets']['n']:
-        tmp = pd.DataFrame(filter_by_zone(WaterData['UnitLevel']['WaterWithdrawal'], inputs, z).sum(axis=1), columns=[z])
+        tmp = pd.DataFrame(filter_by_zone(WaterData['UnitLevel']['WaterWithdrawal'], inputs, z).sum(axis=1),
+                           columns=[z])
         WaterData['ZoneLevel']['WaterWithdrawal'] = pd.concat([WaterData['ZoneLevel']['WaterWithdrawal'], tmp], axis=1)
-        tmp = pd.DataFrame(filter_by_zone(WaterData['UnitLevel']['WaterConsumption'], inputs, z).sum(axis=1), columns=[z])
-        WaterData['ZoneLevel']['WaterConsumption'] = pd.concat([WaterData['ZoneLevel']['WaterConsumption'], tmp], axis=1)
+        tmp = pd.DataFrame(filter_by_zone(WaterData['UnitLevel']['WaterConsumption'], inputs, z).sum(axis=1),
+                           columns=[z])
+        WaterData['ZoneLevel']['WaterConsumption'] = pd.concat([WaterData['ZoneLevel']['WaterConsumption'], tmp],
+                                                               axis=1)
 
-    if not inputs['param_df']['HeatDemand'].empty:
-        return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-                'TotalHeatLoad': TotalHeatLoad, 'PeakHeatLoad': PeakHeatLoad,
-                'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt,
-                'HeatCurtailment': HeatCurtailment, 'MaxHeatCurtailment': MaxHeatCurtailemnt,
-                'ShedLoad': LoadShedding, 'MaxShedLoad': MaxLoadShedding,
-                'ShiftedLoad': ShiftedLoad_tot,
-                'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
-                'UnitData': UnitData, 'FuelData': FuelData, 'WaterConsumptionData': WaterData}
-    else:
-        return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-                'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt,
-                'ShedLoad': LoadShedding, 'MaxShedLoad': MaxLoadShedding,
-                'ShiftedLoad': ShiftedLoad_tot,
-                'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
-                'UnitData': UnitData, 'FuelData': FuelData, 'WaterConsumptionData': WaterData}
+    # if not inputs['param_df']['HeatDemand'].empty:
+    #     return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
+    #             'TotalHeatLoad': TotalHeatLoad, 'PeakHeatLoad': PeakHeatLoad,
+    #             'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt,
+    #             'HeatCurtailment': HeatCurtailment, 'MaxHeatCurtailment': MaxHeatCurtailemnt,
+    #             'ShedLoad': LoadShedding, 'MaxShedLoad': MaxLoadShedding,
+    #             'ShiftedLoad': ShiftedLoad_tot,
+    #             'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
+    #             'UnitData': UnitData, 'FuelData': FuelData, 'WaterConsumptionData': WaterData}
+    # else:
+    return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
+            'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt,
+            'ShedLoad': LoadShedding, 'MaxShedLoad': MaxLoadShedding,
+            'ShiftedLoad': ShiftedLoad_tot,
+            'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
+            'UnitData': UnitData, 'FuelData': FuelData, 'WaterConsumptionData': WaterData}
 
 
 def get_indicators_powerplant(inputs, results):
@@ -508,9 +512,9 @@ def get_indicators_powerplant(inputs, results):
             out.loc[u, 'Generation'] = results['OutputPower'][u].sum()
         if u in results['OutputHeat']:
             out.loc[u, 'HeatGeneration'] = results['OutputHeat'][u].sum()
-    if inputs['param_df']['HeatDemand'].empty:
-        # out.drop(['Zone_th'], axis=1, inplace=True)
-        out.loc[:, 'Zone_th'] = ''
+    # if inputs['param_df']['HeatDemand'].empty:
+    #     # out.drop(['Zone_th'], axis=1, inplace=True)
+    #     out.loc[:, 'Zone_th'] = ''
     return out
 
 
@@ -618,7 +622,7 @@ def CostExPost(inputs, results):
     costs['CostLoadShedding'] = (results['OutputShedLoad'] * dfin['CostLoadShedding']).fillna(0).sum(axis=1)
 
     # %% Heating costs:
-    costs['CostHeatSlack'] = (results['OutputHeatSlack'] * dfin['CostHeatSlack']).fillna(0).sum(axis=1)
+    # costs['CostHeatSlack'] = (results['OutputHeatSlack'] * dfin['CostHeatSlack']).fillna(0).sum(axis=1)
     CostHeat = pd.DataFrame(index=results['OutputHeat'].index, columns=results['OutputHeat'].columns)
     for u in CostHeat:
         if u in dfin['CHPPowerLossFactor'].index:
