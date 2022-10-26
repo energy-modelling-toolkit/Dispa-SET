@@ -289,12 +289,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
     if os.path.isfile(config['BoundarySectorMaxSpillage']):
         BS_spillage = load_time_series(config, config['BoundarySectorMaxSpillage']).fillna(0)
     else:
+        BS_spillage = pd.DataFrame(index=idx_long)
         logging.warning('No maximum spillage capacity provided.')
-        sys.exit('No maximum spillage capacity provided. This parameter is necessary.')
+        # sys.exit('No maximum spillage capacity provided. This parameter is necessary.')
 
     # Boundary Sector Forced Spillage
     if os.path.isfile(config['BoundarySectorMaxSpillage']):
         BS_forced_spillage = pd.DataFrame(0, index=BS_spillage.index, columns=BS_spillage.columns)
+    else:
+        BS_forced_spillage = pd.DataFrame(index=idx_long)
 
     # Read BS Flexible demand & supply
     BSFlexibleDemand = GenericTable(zones_bs, 'BSFlexibleDemand', config, default=0)
@@ -383,7 +386,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, BSFlexDemand=None, B
     if len(BSSpillage_sim.columns) > 0:
         BS_Spillages = BSSpillage_sim.reindex(config['idx_long'])
     else:
-        BS_Spilagess = pd.DataFrame(index=config['idx_long'])
+        BS_Spillages = pd.DataFrame(index=config['idx_long'])
     BS_Spillage_RoW = BSSpillage_RoW.reindex(config['idx_long'])
 
     # Clustering of the plants:

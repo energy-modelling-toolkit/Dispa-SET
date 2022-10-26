@@ -454,6 +454,7 @@ LL_MinPower(n,h)                    [MW]    Power exceeding the demand
 LL_2U(n,h)                          [MW]    Deficit in reserve up
 LL_3U(n,h)                          [MW]    Deficit in reserve up - non spinning
 LL_2D(n,h)                          [MW]    Deficit in reserve down
+LL_BSFlexDemand(n_bs)
 spillage(au,h)                      [MWh]   spillage from water reservoirs
 SystemCost(h)                       [EUR]   Hourly system cost
 Reserve_2U(au,h)                    [MW]    Spinning reserve up
@@ -677,6 +678,7 @@ EQ_Objective_function..
          sum(i,SystemCost(i))
          +Config("WaterValue","val")*sum(au,WaterSlack(au))
          +Config("WaterValue","val")*sum(n_bs,BoundarySectorWaterSlack(n_bs))
+         +Config("ValueOfLostLoad","val")*sum(n_bs,LL_BSFlexDemand(n_bs))
 ;
 
 * 3 binary commitment status
@@ -1295,6 +1297,7 @@ EQ_Heat_Storage_boundaries(thms,i)$(ord(i) = card(i))..
 EQ_Tot_Flex_Demand_BS(n_bs)..
          BSFlexDemandInputInitial(n_bs)
          + sum(i,BSFlexDemandInput(n_bs,i))
+         + LL_BSFlexDemand(n_bs)
          =E=
          sum(i,BSFlexDemand(n_bs,i))
 ;

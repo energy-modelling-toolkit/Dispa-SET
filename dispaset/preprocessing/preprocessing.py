@@ -323,7 +323,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                                 freq=pd_timestep(TimeStep)).tz_localize(None)
 
         if config['BSFlexibleDemand'] != '':
-            BSFlexDemand = pd.DataFrame(BSFlexDemand, index=idx_tmp).fillna(0)
+            BSFlexDemand = pd.DataFrame(BSFlexDemand, index=idx_tmp).fillna(0) / temp_config['SimulationTimeStep']
             BSFlexDemand = BSFlexDemand.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
             BSFlexDemand = BSFlexDemand.loc[idx_long, :]
 
