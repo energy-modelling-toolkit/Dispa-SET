@@ -331,8 +331,9 @@ def get_result_analysis(inputs, results):
     print('\nAverage electricity cost : ' + str(Cost_kwh) + ' EUR/MWh')
 
     for key in ['LostLoad_RampUp', 'LostLoad_2D', 'LostLoad_MinPower',
-                'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_WaterSlack']:
-        if key == 'LostLoad_WaterSlack':
+                'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower',
+                'LostLoad_StorageLevelViolation']:
+        if key == 'LostLoad_StorageLevelViolation':
             if isinstance(results[key], pd.Series):
                 LL = results[key].sum()
             else:

@@ -643,8 +643,8 @@ def load_config_excel(ConfigFile, AbsPath=True):
         for p in default:
             config['default'][p] = sheet.cell_value(default[p], 5)
 
-        params2 = ['BoundarySectorDemand', 'BoundarySectorData', 'CostBoundarySectorSlack']
-        defaults2 = ['CostBoundarySectorSlack']
+        params2 = ['SectorXDemand', 'BoundarySectorData', 'CostXNotServed']
+        defaults2 = ['CostXNotServed']
         for param in params2:
             config[param] = ''
         for param in defaults2:
@@ -712,15 +712,15 @@ def load_config_excel(ConfigFile, AbsPath=True):
         default = commons['default']
 
         # Also include boundary sector data
-        PathParameters['BoundarySectorDemand'] = 137
+        PathParameters['SectorXDemand'] = 137
         PathParameters['BoundarySectorData'] = 138
         PathParameters['BoundarySectorNTC'] = 139
         PathParameters['BoundarySectorInterconnections'] = 140
-        PathParameters['BSFlexibleDemand'] = 141
-        PathParameters['BSFlexibleSupply'] = 142
+        PathParameters['SectorXFlexibleDemand'] = 141
+        PathParameters['SectorXFlexibleSupply'] = 142
         PathParameters['BoundarySectorMaxSpillage'] = 143
-        PathParameters['CostBoundarySectorSlack'] = 170
-        default['CostBoundarySectorSlack'] = 170
+        PathParameters['CostXNotServed'] = 170
+        default['CostXNotServed'] = 170
 
         for p in StdParameters:
             config[p] = sheet.cell_value(StdParameters[p], 2)

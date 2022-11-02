@@ -61,31 +61,35 @@ $setglobal ActivateAdvancedReserves 0
 *Definition of   sets and parameters
 *===============================================================================
 SETS
+*Markets
 mk               Markets
-n                Nodes
-*n_th             Thermal nodes
-n_bs             Boundary sector nodes
-l                Lines
-l_bs             Boundary sector lines
-s_bs             Boundary sector spillage lines
+*Units
 au               All Units
 u(au)            Generation units
-t                Generation technologies
-tr(t)            Renewable generation technologies
-tc(t)
-f                Fuel types
-p                Pollutants
+chp(u)           CHP units
 p2bs(au)         Power to X
 bsu(au)          Boundary sector only units
-s(au)             Storage Units (with reservoir)
-chp(u)           CHP units
+s(au)            Storage Units (with reservoir)
 p2h(au)          Power to heat units
 th(au)           Units with thermal storage
-*hu(au)           Heat only units
 thms(au)         Thermal storage units only
+*Fuels
+f                Fuel types
+*Technologies
+t                Generation technologies
+tr(t)            Renewable generation technologies
+*Pollutants
+p                Pollutants
+*Nodes
+n                Nodes
+nx             Boundary sector nodes
+*Lines
+l                Lines
+lx             Boundary sector lines
+slx             Boundary sector spillage lines
+*Simulations options
 h                Hours
 i(h)             Subset of simulated hours for one iteration
-wat(au)           hydro technologies
 z(h)             Subset of every simulated hour
 ;
 
@@ -110,39 +114,35 @@ CHPMaxHeat(chp)                             [MW\u]          Maximum heat capacit
 CHPType
 CommittedInitial(au)                        [n.a.]          Initial committment status
 Config
-*CostCurtailment(n,h)                       [EUR\MW]        Curtailment costs
 CostFixed(au)                               [EUR\h]         Fixed costs
 CostRampUp(u)                               [EUR\MW]        Ramp-up costs
 CostRampDown(u)                             [EUR\MW]        Ramp-down costs
 CostShutDown(u)                             [EUR\u]         Shut-down costs
 CostStartUp(u)                              [EUR\u]         Start-up costs
 CostVariable(au,h)                          [EUR\MW]        Variable costs
-*CostHeatSlack(n_th,h)                       [EUR\MWh]       Cost of supplying heat via other means
-CostBoundarySectorSlack(n_bs,h)             [EUR\MWh]       Cost of supplying energy to boundary sector via other means
+CostXNotServed(nx,h)                      [EUR\MWh]       Cost of supplying energy to boundary sector via other means
 CostLoadShedding(n,h)                       [EUR\MWh]       Cost of load shedding
 Curtailment(n)                              [n.a]           Curtailment allowed or not {1 0} at node n
 CostCurtailment(n,h)                        [EUR\MWh]       Cost of VRES curtailment
 Demand(mk,n,h)                              [MW]            Demand
 Efficiency(au,h)                            [%]             Efficiency
-EfficiencyBoundarySector(n_bs,au,h)         [%]             Discharge Efficiency boundary sector
-ChargingEfficiencyBoundarySector(n_bs,au,h) [%]             Charging Efficiency boundary sector
+X2PowerConversionMultiplier(nx,au,h)      [%]             Discharge Efficiency boundary sector
+Power2XConversionMultiplier(nx,au,h)      [%]             Charging Efficiency boundary sector
 EmissionMaximum(n,p)                        [tP]            Emission limit
 EmissionRate(au,p)                          [tP\MWh]        P emission rate
 FlowMaximum(l,h)                            [MW]            Line limits
 FlowMinimum(l,h)                            [MW]            Minimum flow
-FlowBSMaximum(l_bs,h)                       [MW]            Boundary sector line limits
-FlowBSMinimum(l_bs,h)                       [MW]            Boundary sector line minimum flow
+FlowXMaximum(lx,h)                        [MW]            Boundary sector line limits
+FlowXMinimum(lx,h)                        [MW]            Boundary sector line minimum flow
 Fuel(u,f)                                   [n.a.]          Fuel type {1 0}
-*HeatDemand(n_th,h)                          [MWh\u]         Heat demand profile for chp units
-BoundarySectorDemand(n_bs,h)                [MWh\n_bs]      Demand profile in boundary sectors
+SectorXDemand(nx,h)                       [MWh\nx]      Demand profile in boundary sectors
 LineNode(l,n)                               [n.a.]          Incidence matrix {-1 +1}
-BSLineNode(l_bs,n_bs)                       [n.a.]          Incidence matrix {-1 +1}
-BSSpillageNode(s_bs,n_bs)                   [n.a.]          Incidence matrix {-1 +1}
-BSMaximumSpillage(s_bs,h)                   [MW]            Maximum allowed spillage
+LineXNode(lx,nx)                        [n.a.]          Incidence matrix {-1 +1}
+SectorXSpillageNode(slx,nx)              [n.a.]          Incidence matrix {-1 +1}
+SectorXMaximumSpillage(slx,h)              [MW]            Maximum allowed spillage
 LoadShedding(n,h)                           [MW]            Load shedding capacity
 Location(au,n)                              [n.a.]          Location {1 0}
-*Location_th(au,n_th)                        [n.a.]          Location {1 0}
-Location_bs(au,n_bs)                        [n.a.]          Location {1 0}
+LocationX(au,nx)                          [n.a.]          Location {1 0}
 Markup(u,h)                                 [EUR\MW]        Markup
 OutageFactor(au,h)                          [%]             Outage Factor (100% = full outage)
 PartLoadMin(au)                             [%]             Minimum part load
@@ -170,21 +170,21 @@ StorageMinimum(au)                          [MWh]           Storage minimum
 Technology(au,t)                            [n.a.]          Technology type {1 0}
 TimeDownMinimum(au)                         [h]             Minimum down time
 TimeUpMinimum(au)                           [h]             Minimum up time
-BSFlexDemandInput(n_bs,h)                   [MWh]           Flexible demand inside BS at each timestep (unless for MTS)
-BSFlexDemandInputInitial(n_bs)              [MWh]           Cumulative flexible demand inside the loop
-BSFlexMaxCapacity(n_bs)                     [MW]            Max capacity for BS Flexible demand
-BSFlexSupplyInput(n_bs,h)                   [MWh]           Flexible demand inside BS at each timestep (unless for MTS)
-BSFlexSupplyInputInitial(n_bs)              [MWh]           Cumulative flexible demand inside the loop
-BSFlexMaxSupply(n_bs)                       [MW]            Max capacity for BS Flexible demand
+SectorXFlexDemandInput(nx,h)              [MWh]           Flexible demand inside BS at each timestep (unless for MTS)
+SectorXFlexDemandInputInitial(nx)         [MWh]           Cumulative flexible demand inside the loop
+SectorXFlexMaxCapacity(nx)                [MW]            Max capacity for BS Flexible demand
+SectorXFlexSupplyInput(nx,h)              [MWh]           Flexible demand inside BS at each timestep (unless for MTS)
+SectorXFlexSupplyInputInitial(nx)         [MWh]           Cumulative flexible demand inside the loop
+SectorXFlexMaxSupply(nx)                  [MW]            Max capacity for BS Flexible demand
 $If %RetrieveStatus%==1 CommittedCalc(u,z)  [n.a.]          Committment status as for the MILP
 Nunits(au)                                  [n.a.]          Number of units inside the cluster (upper bound value for integer variables)
 K_QuickStart(n)                             [n.a.]          Part of the reserve that can be provided by offline quickstart units
 QuickStartPower(au,h)                       [MW\h\u]        Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
-BoundarySectorStorageCapacity(n_bs)         [MWh]           Storage capacity of the boundary sector
-BoundarySectorStorageSelfDischarge(n_bs)    [%]             Boundary sector storage self discharge
-BoundarySectorStorageMinimum(n_bs)          [MWh]           Boundary sector storage minimum
-BoundarySectorStorageInitial(n_bs)          [MWh]           Boundary sector storage initial state of charge
-BoundarySectorStorageProfile(n_bs,h)        [%]             Boundary sector storage level respected at the end of each horizon
+SectorXStorageCapacity(nx)                [MWh]           Storage capacity of the boundary sector
+SectorXStorageSelfDischarge(nx)           [%]             Boundary sector storage self discharge
+SectorXStorageMinimum(nx)                 [MWh]           Boundary sector storage minimum
+SectorXStorageInitial(nx)                 [MWh]           Boundary sector storage initial state of charge
+SectorXStorageProfile(nx,h)               [%]             Boundary sector storage level respected at the end of each horizon
 ;
 
 *Parameters as used within the loop
@@ -193,7 +193,7 @@ CostLoadShedding(n,h)               [EUR\MW]        Value of lost load
 LoadMaximum(au,h)                   [%]             Maximum load given AF and OF
 PowerMustRun(au,h)                  [MW\u]          Minimum power output
 StorageFinalMin(au)                 [MWh]           Minimum storage level at the end of the optimization horizon
-BoundarySectorStorageFinalMin(n_bs) [MWh]           Minimum boundary sector storage level at the end of the optimization horizon
+SectorXStorageFinalMin(nx)        [MWh]           Minimum boundary sector storage level at the end of the optimization horizon
 MaxFlexDemand(n)                    [MW]            Maximum value of the flexible demand parameter
 MaxOverSupply(n,h)                  [MWh]           Maximum flexible demand accumultation
 AccumulatedOverSupply_inital(n)     [MWh]           Initial value of the flexible demand accumulation
@@ -216,11 +216,10 @@ $gdxin %inputfilename%
 
 $LOAD mk
 $LOAD n
-*$LOAD n_th
-$LOAD n_bs
+$LOAD nx
 $LOAD l
-$LOAD l_bs
-$LOAD s_bs
+$LOAD lx
+$LOAD slx
 $LOAD au
 $LOAD u
 $LOAD t
@@ -228,13 +227,10 @@ $LOAD tr
 $LOAD f
 $LOAD p
 $LOAD s
-$LOAD wat
 $LOAD p2bs
 $LOAD chp
 $LOAD p2h
 $LOAD th
-$LOAD tc
-*$LOAD hu
 $LOAD bsu
 $LOAD thms
 $LOAD h
@@ -246,8 +242,7 @@ $LOAD CHPMaxHeat
 $LOAD CHPType
 $LOAD Config
 $LOAD CostFixed
-*$LOAD CostHeatSlack
-$LOAD CostBoundarySectorSlack
+$LOAD CostXNotServed
 $LOAD CostLoadShedding
 $LOAD CostShutDown
 $LOAD CostStartUp
@@ -255,27 +250,25 @@ $LOAD CostVariable
 $LOAD Curtailment
 $LOAD CostCurtailment
 $LOAD Demand
-$LOAD BoundarySectorDemand
+$LOAD SectorXDemand
 $LOAD StorageDischargeEfficiency
 $LOAD Efficiency
-$LOAD EfficiencyBoundarySector
-$LOAD ChargingEfficiencyBoundarySector
+$LOAD X2PowerConversionMultiplier
+$LOAD Power2XConversionMultiplier
 $LOAD EmissionMaximum
 $LOAD EmissionRate
 $LOAD FlowMaximum
 $LOAD FlowMinimum
-$LOAD FlowBSMaximum
-$LOAD FlowBSMinimum
+$LOAD FlowXMaximum
+$LOAD FlowXMinimum
 $LOAD Fuel
-*$LOAD HeatDemand
 $LOAD LineNode
-$LOAD BSLineNode
-$LOAD BSSpillageNode
-$LOAD BSMaximumSpillage
+$LOAD LineXNode
+$LOAD SectorXSpillageNode
+$LOAD SectorXMaximumSpillage
 $LOAD LoadShedding
 $LOAD Location
-*$LOAD Location_th
-$LOAD Location_bs
+$LOAD LocationX
 $LOAD Markup
 $LOAD Nunits
 $LOAD OutageFactor
@@ -302,17 +295,17 @@ $LOAD TimeDownMinimum
 $LOAD TimeUpMinimum
 $LOAD CostRampUp
 $LOAD CostRampDown
-$LOAD BSFlexDemandInput
-$LOAD BSFlexDemandInputInitial
-$LOAD BSFlexMaxCapacity
-$LOAD BSFlexSupplyInput
-$LOAD BSFlexSupplyInputInitial
-$LOAD BSFlexMaxSupply
-$LOAD BoundarySectorStorageCapacity
-$LOAD BoundarySectorStorageSelfDischarge
-$LOAD BoundarySectorStorageMinimum
-$LOAD BoundarySectorStorageInitial
-$LOAD BoundarySectorStorageProfile
+$LOAD SectorXFlexDemandInput
+$LOAD SectorXFlexDemandInputInitial
+$LOAD SectorXFlexMaxCapacity
+$LOAD SectorXFlexSupplyInput
+$LOAD SectorXFlexSupplyInputInitial
+$LOAD SectorXFlexMaxSupply
+$LOAD SectorXStorageCapacity
+$LOAD SectorXStorageSelfDischarge
+$LOAD SectorXStorageMinimum
+$LOAD SectorXStorageInitial
+$LOAD SectorXStorageProfile
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
 ;
 
@@ -321,24 +314,20 @@ $If %Verbose% == 0 $goto skipdisplay
 Display
 mk,
 n,
-*n_th,
-n_bs,
+nx,
 l,
-l_bs,
+lx,
 u,
 t,
 tr,
-tc,
 f,
 p,
 s,
 p2bs,
-wat,
 chp,
 p2h,
 th,
 h2,
-*hu,
 thms,
 h,
 AvailabilityFactor,
@@ -359,17 +348,15 @@ EmissionMaximum,
 EmissionRate,
 FlowMaximum,
 FlowMinimum,
-FlowBSMaximum,
-FlowBSMinimum,
+FlowXMaximum,
+FlowXMinimum,
 Fuel,
-*HeatDemand,
 LineNode,
-BSLineNode,
-BSSpillageNode,
-BSMaximumSpillage,
+LineXNode,
+SectorXSpillageNode,
+SectorXMaximumSpillage,
 Location,
-*Location_th,
-Location_bs,
+LocationX,
 LoadShedding,
 Markup,
 OutageFactor,
@@ -394,17 +381,17 @@ StorageOutflow,
 Technology,
 TimeDownMinimum,
 TimeUpMinimum,
-BSFlexDemandInput,
-BSFlexDemandInputInitial,
-BSFlexMaxCapacity,
-BSFlexSupplyInput,
-BSFlexSupplyInputInitial,
-BSFlexMaxSupply,
-BoundarySectorStorageCapacity,
-BoundarySectorStorageSelfDischarge,
-BoundarySectorStorageMinimum,
-BoundarySectorStorageInitial,
-BoundarySectorStorageProfile,
+SectorXFlexDemandInput,
+SectorXFlexDemandInputInitial,
+SectorXFlexMaxCapacity,
+SectorXFlexSupplyInput,
+SectorXFlexSupplyInputInitial,
+SectorXFlexMaxSupply,
+SectorXStorageCapacity,
+SectorXStorageSelfDischarge,
+SectorXStorageMinimum,
+SectorXStorageInitial,
+SectorXStorageProfile,
 $If %RetrieveStatus% == 1 , CommittedCalc
 ;
 
@@ -426,56 +413,54 @@ $If not %LPFormulation% == 1 INTEGER VARIABLES Committed (au,h), StartUp(au,h), 
 
 
 POSITIVE VARIABLES
-AccumulatedOverSupply(n,h)          [MWh]   Accumulated oversupply due to the flexible demand
-CostStartUpH(u,h)                   [EUR]   Cost of starting up
-CostShutDownH(u,h)                  [EUR]   cost of shutting down
-CostRampUpH(u,h)                    [EUR]   Ramping cost
-CostRampDownH(u,h)                  [EUR]   Ramping cost
-CurtailedPower(n,h)                 [MW]    Curtailed power at node n
-CurtailmentReserve_2U(n,h) 			[MW]    Curtailed power used for reserves at node n
-CurtailmentReserve_3U(n,h) 			[MW]    Curtailed power used for reserves at node n
-*CurtailedHeat(n_th,h)               [MW]    Curtailed heat at node n_th
-Flow(l,h)                           [MW]    Flow through lines
-FlowBS(l_bs,h)                      [MW]    Flow through boundary sector lines
-Power(au,h)                         [MW]    Power output
-PowerConsumption(au,h)              [MW]    Power consumption by P2X units
-PowerMaximum(u,h)                   [MW]    Power output
-PowerMinimum(u,h)                   [MW]    Power output
-ShedLoad(n,h)                       [MW]    Shed load
-StorageInput(au,h)                  [MWh]   Charging input for storage units
-StorageLevel(au,h)                  [MWh]   Storage level of charge
-BoundarySectorStorageLevel(n_bs,h)  [MWh]   Storage level of charge of the boundary sector
-BoundarySectorSpillage(s_bs,h)      [MW]    Spillage from boundary sector x to boundary sector y
-LL_BoundarySectorSpillage(n_bs,h)   [MWh]   Spillage from boundary sector storage
-LL_MaxPower(n,h)                    [MW]    Deficit in terms of maximum power
-LL_RampUp(u,h)                      [MW]    Deficit in terms of ramping up for each plant
-LL_RampDown(u,h)                    [MW]    Deficit in terms of ramping down
-LL_MinPower(n,h)                    [MW]    Power exceeding the demand
-LL_2U(n,h)                          [MW]    Deficit in reserve up
-LL_3U(n,h)                          [MW]    Deficit in reserve up - non spinning
-LL_2D(n,h)                          [MW]    Deficit in reserve down
-LL_BSFlexDemand(n_bs)
-spillage(au,h)                      [MWh]   spillage from water reservoirs
-SystemCost(h)                       [EUR]   Hourly system cost
-Reserve_2U(au,h)                    [MW]    Spinning reserve up
-Reserve_2D(au,h)                    [MW]    Spinning reserve down
-Reserve_3U(au,h)                    [MW]    Non spinning quick start reserve up
-Heat(au,h)                          [MW]    Heat output by chp plant
-*HeatSlack(n_th,h)                   [MW]    Heat satisfied by other sources
-BoundarySectorSlack(n_bs,h)         [MW]    Boundary sector demand satisfied by other sources
-WaterSlack(au)                      [MWh]   Unsatisfied water level constraint at end of optimization period
-StorageSlack(au,h)                  [MWh]   Unsatisfied storage level constraint at end of simulation timestep
-BoundarySectorWaterSlack(n_bs)      [MWh]   Unsatisfied boundary sector water level constraint at end of optimization period
-BoundarySectorStorageSlack(n_bs,h)  [MWh]   Unsatisfied boundary sector storage level constraint at end of simulation timestep
-BSFlexDemand(n_bs,h)                [MW]    FLexible boundary sector demand at each time step of each n_bs node
-BSFlexSupply(n_bs,h)                [MW]    FLexible boundary sector supply at each time step of each n_bs node
+AccumulatedOverSupply(n,h)              [MWh]   Accumulated oversupply due to the flexible demand
+CostStartUpH(u,h)                       [EUR]   Cost of starting up
+CostShutDownH(u,h)                      [EUR]   cost of shutting down
+CostRampUpH(u,h)                        [EUR]   Ramping cost
+CostRampDownH(u,h)                      [EUR]   Ramping cost
+CurtailedPower(n,h)                     [MW]    Curtailed power at node n
+CurtailmentReserve_2U(n,h) 			    [MW]    Curtailed power used for reserves at node n
+CurtailmentReserve_3U(n,h) 			    [MW]    Curtailed power used for reserves at node n
+Flow(l,h)                               [MW]    Flow through lines
+FlowX(lx,h)                           [MW]    Flow through boundary sector lines
+Power(au,h)                             [MW]    Power output
+PowerConsumption(au,h)                  [MW]    Power consumption by P2X units
+PowerMaximum(u,h)                       [MW]    Power output
+PowerMinimum(u,h)                       [MW]    Power output
+ShedLoad(n,h)                           [MW]    Shed load
+StorageInput(au,h)                      [MWh]   Charging input for storage units
+StorageLevel(au,h)                      [MWh]   Storage level of charge
+SectorXStorageLevel(nx,h)             [MWh]   Storage level of charge of the boundary sector
+SectorXSpillage(slx,h)                 [MW]    Spillage from boundary sector x to boundary sector y
+LL_SectorXSpillage(nx,h)              [MWh]   Spillage from boundary sector storage
+LL_MaxPower(n,h)                        [MW]    Deficit in terms of maximum power
+LL_RampUp(u,h)                          [MW]    Deficit in terms of ramping up for each plant
+LL_RampDown(u,h)                        [MW]    Deficit in terms of ramping down
+LL_MinPower(n,h)                        [MW]    Power exceeding the demand
+LL_2U(n,h)                              [MW]    Deficit in reserve up
+LL_3U(n,h)                              [MW]    Deficit in reserve up - non spinning
+LL_2D(n,h)                              [MW]    Deficit in reserve down
+LL_SectorXFlexDemand(nx)              [MWh]   Deficit in flex demand
+spillage(au,h)                          [MWh]   spillage from water reservoirs
+SystemCost(h)                           [EUR]   Hourly system cost
+Reserve_2U(au,h)                        [MW]    Spinning reserve up
+Reserve_2D(au,h)                        [MW]    Spinning reserve down
+Reserve_3U(au,h)                        [MW]    Non spinning quick start reserve up
+Heat(au,h)                              [MW]    Heat output by chp plant
+XNotServed(nx,h)                      [MW]    Boundary sector demand satisfied by other sources
+StorageLevelViolation(au)               [MWh]   Unsatisfied water level constraint at end of optimization period
+StorageLevelViolation_H(au,h)           [MWh]   Unsatisfied storage level constraint at end of simulation timestep
+SectorXStorageLevelViolation(nx)      [MWh]   Unsatisfied boundary sector water level constraint at end of optimization period
+SectorXStorageLevelViolation_H(nx,h)  [MWh]   Unsatisfied boundary sector storage level constraint at end of simulation timestep
+SectorXFlexDemand(nx,h)               [MW]    FLexible boundary sector demand at each time step of each nx node
+SectorXFlexSupply(nx,h)               [MW]    FLexible boundary sector supply at each time step of each nx node
 ;
 
 free variable
 SystemCostD                         ![EUR]  Total system cost for one optimization period
 DemandModulation(n,h)               [MW]    Difference between the flexible demand and the baseline
-PowerBoundarySector(n_bs,au,h)      [MW]    Power output in boundary sector
-BoundarySectorStorageInput(n_bs,h)  [MW]    Boundary Sector Storage input - output
+PowerX(nx,au,h)                   [MW]    Power output in boundary sector
+SectorXStorageInput(nx,h)  [MW]    Boundary Sector Storage input - output
 ResidualLoad(n,h)                   [MW]    Residual Load
 ObjectiveFunction(h)
 OptimalityGap(h)
@@ -529,8 +514,6 @@ EQ_Objective_function
 EQ_CHP_extraction_Pmax
 EQ_CHP_extraction
 EQ_CHP_backpressure
-*EQ_CHP_demand_satisfaction
-*EQ_Heat_Demand_balance
 EQ_BS_Demand_balance
 EQ_CHP_max_heat
 EQ_Heat_Storage_balance
@@ -629,19 +612,17 @@ EQ_SystemCost(i)..
          sum(au,CostFixed(au)*TimeStep*Committed(au,i))
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
-*         +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
          +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
-         +sum((n_bs,bsu),CostVariable(bsu,i) * PowerBoundarySector(n_bs,bsu,i)*TimeStep)
+         +sum((nx,bsu),CostVariable(bsu,i) * PowerX(nx,bsu,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
-*         +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
-         +sum(n_bs, CostBoundarySectorSlack(n_bs,i) * BoundarySectorSlack(n_bs,i)*TimeStep)
+         +sum(nx, CostXNotServed(nx,i) * XNotServed(nx,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
-         +0.7*Config("ValueOfLostLoad","val")*(sum(n_bs,(LL_BoundarySectorSpillage(n_bs,i))*TimeStep))
-         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep + sum(s_bs,BoundarySectorSpillage(s_bs,i))*TimeStep)
+         +0.7*Config("ValueOfLostLoad","val")*(sum(nx,(LL_SectorXSpillage(nx,i))*TimeStep))
+         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep + sum(slx,SectorXSpillage(slx,i))*TimeStep)
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
 $else
@@ -653,19 +634,17 @@ EQ_SystemCost(i)..
          +sum(u,CostStartUpH(u,i) + CostShutDownH(u,i))
          +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
-*         +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
          +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
-         +sum((n_bs,bsu),CostVariable(bsu,i) * PowerBoundarySector(n_bs,bsu,i)*TimeStep)
+         +sum((nx,bsu),CostVariable(bsu,i) * PowerX(nx,bsu,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
-*         +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
-         +sum(n_bs, CostBoundarySectorSlack(n_bs,i) * BoundarySectorSlack(n_bs,i)*TimeStep)
+         +sum(nx, CostXNotServed(nx,i) * XNotServed(nx,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
-         +0.7*Config("ValueOfLostLoad","val")*(sum(n_bs,(LL_BoundarySectorSpillage(n_bs,i))*TimeStep))
-         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep + sum(s_bs,BoundarySectorSpillage(s_bs,i))*TimeStep)
+         +0.7*Config("ValueOfLostLoad","val")*(sum(nx,(LL_SectorXSpillage(nx,i))*TimeStep))
+         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep + sum(slx,SectorXSpillage(slx,i))*TimeStep)
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
 
@@ -676,9 +655,9 @@ EQ_Objective_function..
          SystemCostD
          =E=
          sum(i,SystemCost(i))
-         +Config("WaterValue","val")*sum(au,WaterSlack(au))
-         +Config("WaterValue","val")*sum(n_bs,BoundarySectorWaterSlack(n_bs))
-         +Config("ValueOfLostLoad","val")*sum(n_bs,LL_BSFlexDemand(n_bs))
+         +Config("WaterValue","val")*sum(au,StorageLevelViolation(au))
+         +Config("WaterValue","val")*sum(nx,SectorXStorageLevelViolation(nx))
+         +Config("ValueOfLostLoad","val")*sum(nx,LL_SectorXFlexDemand(nx))
 ;
 
 * 3 binary commitment status
@@ -817,7 +796,6 @@ EQ_No_Flexible_Demand(n,i)..
 *Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(n,i)..
          sum((u),Reserve_2U(u,i)*Reserve(u)*Location(u,n))
-*         + sum((p2h),Reserve_2U(p2h,i)*Reserve(p2h)*Location(p2h,n))
          + sum((chp),Reserve_2U(chp,i)*Reserve(chp)*Location(chp,n))
          + CurtailmentReserve_2U(n,i) + LL_2U(n,i)
          =E=
@@ -829,7 +807,6 @@ $If %ActivateAdvancedReserves% == 0 +(Demand("2U",n,i))*(1-K_QuickStart(n))
 *Hourly demand balance in the upwards non-spinning reserve market for each node
 EQ_Demand_balance_3U(n,i)..
          sum((u),(Reserve_2U(u,i) + Reserve_3U(u,i))*Reserve(u)*Location(u,n))
-*         + sum((p2h),(Reserve_2U(p2h,i) + Reserve_3U(p2h,i))*Reserve(p2h)*Location(p2h,n))
          + sum((chp),(Reserve_2U(chp,i) + Reserve_3U(chp,i))*Reserve(chp)*Location(chp,n))
          + CurtailmentReserve_2U(n,i) + CurtailmentReserve_3U(n,i) + LL_3U(n,i)
          =E=
@@ -841,7 +818,6 @@ $If %ActivateAdvancedReserves% == 1 + smax((u,tc),PowerCapacity(u)/Nunits(u)*Tec
 *Hourly demand balance in the downwards reserve market for each node
 EQ_Demand_balance_2D(n,i)..
          sum((u),Reserve_2D(u,i)*Reserve(u)*Location(u,n))
-*         + sum((p2h),Reserve_2D(p2h,i)*Reserve(p2h)*Location(p2h,n))
          + sum((chp),Reserve_2D(chp,i)*Reserve(chp)*Location(chp,n))
          + LL_2D(n,i)
          =E=
@@ -949,75 +925,73 @@ EQ_Power_must_run(u,i)..
 EQ_Power_available(au,i)..
          Power(au,i)$(u(au))
          + Power(au,i)$(p2bs(au))
-*         + Heat(au,i)$(hu(au))
          + Heat(au,i)$(thms(au))
          + Power(au,i)$(p2h(au))
          =L=
          PowerCapacity(au)$(u(au))*LoadMaximum(au,i)$(u(au))*Committed(au,i)$(u(au))
          + PowerCapacity(au)$(p2bs(au))*LoadMaximum(au,i)$(p2bs(au))*Nunits(au)$(p2bs(au))
-*         + PowerCapacity(au)$(hu(au))*LoadMaximum(au,i)$(hu(au))*Committed(au,i)$(hu(au))
          + PowerCapacity(au)$(thms(au))*LoadMaximum(au,i)$(thms(au))*Committed(au,i)$(thms(au))
 		 + 0
 ;
 
 * Maximum boundary sector output is below the available capacity
-EQ_Boundary_sector_only_power_available(n_bs,bsu,i)..
-         PowerBoundarySector(n_bs,bsu,i)
+EQ_Boundary_sector_only_power_available(nx,bsu,i)..
+         PowerX(nx,bsu,i)
          =L=
-         PowerCapacity(bsu)*LoadMaximum(bsu,i)*Nunits(bsu)*Location_bs(bsu,n_bs)
+         PowerCapacity(bsu)*LoadMaximum(bsu,i)*Nunits(bsu)*LocationX(bsu,nx)
 ;
 
-EQ_Boundary_sector_only_power_available_min(n_bs,bsu,i)..
+EQ_Boundary_sector_only_power_available_min(nx,bsu,i)..
          0
          =L=
-         PowerBoundarySector(n_bs,bsu,i)
+         PowerX(nx,bsu,i)
 ;
 
 *Boundary Sector Storage level must be above a minimum
-EQ_Boundary_Sector_Storage_minimum(n_bs,i)..
-         BoundarySectorStorageMinimum(n_bs)
+EQ_Boundary_Sector_Storage_minimum(nx,i)..
+         SectorXStorageMinimum(nx)
          =L=
-         BoundarySectorStorageLevel(n_bs,i)
+         SectorXStorageLevel(nx,i)
 ;
 
 *Storage level must be below storage capacity
-EQ_Boundary_Sector_Storage_level(n_bs,i)..
-         BoundarySectorStorageLevel(n_bs,i)
+EQ_Boundary_Sector_Storage_level(nx,i)..
+         SectorXStorageLevel(nx,i)
          =L=
-         BoundarySectorStorageCapacity(n_bs)
+         SectorXStorageCapacity(nx)
 ;
 
 *Discharge is limited by the storage level
-EQ_Boundary_Sector_Storage_MaxDischarge(n_bs,i)..
-         - BoundarySectorStorageInitial(n_bs)$(ord(i) = 1)
-         - BoundarySectorStorageLevel(n_bs,i-1)$(ord(i) > 1)
+EQ_Boundary_Sector_Storage_MaxDischarge(nx,i)..
+         - SectorXStorageInitial(nx)$(ord(i) = 1)
+         - SectorXStorageLevel(nx,i-1)$(ord(i) > 1)
          =L=
-         BoundarySectorStorageInput(n_bs,i)*TimeStep
+         SectorXStorageInput(nx,i)*TimeStep
 ;
 
-EQ_Boundary_Sector_Storage_MaxCharge(n_bs,i)$(BoundarySectorStorageCapacity(n_bs)>0)..
-        BoundarySectorStorageInput(n_bs,i)*TimeStep
+EQ_Boundary_Sector_Storage_MaxCharge(nx,i)$(SectorXStorageCapacity(nx)>0)..
+        SectorXStorageInput(nx,i)*TimeStep
         =L=
-        (BoundarySectorStorageCapacity(n_bs) - BoundarySectorStorageInitial(n_bs))$(ord(i) = 1)
-        + (BoundarySectorStorageCapacity(n_bs) - BoundarySectorStorageLevel(n_bs,i-1))$(ord(i) > 1)
+        (SectorXStorageCapacity(nx) - SectorXStorageInitial(nx))$(ord(i) = 1)
+        + (SectorXStorageCapacity(nx) - SectorXStorageLevel(nx,i-1))$(ord(i) > 1)
 ;
 
 
 *Storage balance
-EQ_Boundary_Sector_Storage_balance(n_bs,i)..
-         BoundarySectorStorageInitial(n_bs)$(ord(i) = 1)
-         + BoundarySectorStorageLevel(n_bs,i-1)$(ord(i) > 1)
-         + BoundarySectorStorageInput(n_bs,i)*TimeStep
+EQ_Boundary_Sector_Storage_balance(nx,i)..
+         SectorXStorageInitial(nx)$(ord(i) = 1)
+         + SectorXStorageLevel(nx,i-1)$(ord(i) > 1)
+         + SectorXStorageInput(nx,i)*TimeStep
          =E=
-         BoundarySectorStorageLevel(n_bs,i)
-         + BoundarySectorStorageSelfDischarge(n_bs)*BoundarySectorStorageLevel(n_bs,i)*TimeStep
+         SectorXStorageLevel(nx,i)
+         + SectorXStorageSelfDischarge(nx)*SectorXStorageLevel(nx,i)*TimeStep
 ;
 
 * Minimum level at the end of the optimization horizon:
-EQ_Boundary_Sector_Storage_boundaries(n_bs,i)$(ord(i) = card(i))..
-         BoundarySectorStorageFinalMin(n_bs)
+EQ_Boundary_Sector_Storage_boundaries(nx,i)$(ord(i) = card(i))..
+         SectorXStorageFinalMin(nx)
          =L=
-         BoundarySectorStorageLevel(n_bs,i) + BoundarySectorWaterSlack(n_bs)
+         SectorXStorageLevel(nx,i) + SectorXStorageLevelViolation(nx)
 ;
 
 *Storage level must be above a minimum
@@ -1080,7 +1054,7 @@ EQ_Storage_boundaries(au,i)$(ord(i) = card(i))..
          StorageFinalMin(au)$(s(au))
          =L=
          StorageLevel(au,i)$(s(au))
-         + WaterSlack(au)$(s(au))
+         + StorageLevelViolation(au)$(s(au))
 ;
 
 *Total emissions are capped
@@ -1105,25 +1079,25 @@ EQ_Flow_limits_upper(l,i)..
 ;
 
 *Boundary Sector Flows are above minimum values
-EQ_BS_Flow_limits_lower(l_bs,i)..
-         FlowBSMinimum(l_bs,i)
+EQ_BS_Flow_limits_lower(lx,i)..
+         FlowXMinimum(lx,i)
          =L=
-         FlowBS(l_bs,i)
+         FlowX(lx,i)
 ;
 
 *Boundary Sector Flows are below maximum values
-EQ_BS_Flow_limits_upper(l_bs,i)..
-         FlowBS(l_bs,i)
+EQ_BS_Flow_limits_upper(lx,i)..
+         FlowX(lx,i)
          =L=
-         FlowBSMaximum(l_bs,i)
+         FlowXMaximum(lx,i)
 ;
 
 
 *Boundary Sector Spillages are below maximum values
-EQ_BS_Spillage_limits_upper(s_bs,i)..
-         BoundarySectorSpillage(s_bs,i)
+EQ_BS_Spillage_limits_upper(slx,i)..
+         SectorXSpillage(slx,i)
          =L=
-         BSMaximumSpillage(s_bs,i)
+         SectorXMaximumSpillage(slx,i)
 ;
 
 *Force Unit commitment/decommitment:
@@ -1184,15 +1158,14 @@ EQ_Max_Power_Consumption(au,i)..
          PowerConsumption(au,i)$(p2h(au))
          =L=
          PowerCapacity(au)$(p2h(au)) * Committed(au,i)$(p2h(au))
-*         PowerCapacity(au)$(p2h(au)) * Nunits(au)$(p2h(au))
 ;
 
 * Power to boundary sector units
-EQ_Power_Balance_of_BS_units(n_bs,p2bs,i)..
-         PowerBoundarySector(n_bs,p2bs,i)
+EQ_Power_Balance_of_BS_units(nx,p2bs,i)..
+         PowerX(nx,p2bs,i)
          =E=
-         (PowerConsumption(p2bs,i) * ChargingEfficiencyBoundarySector(n_bs,p2bs,i) * Location_bs(p2bs,n_bs))$(ChargingEfficiencyBoundarySector(n_bs,p2bs,i) <> 0)
-         + (Power(p2bs,i) / (EfficiencyBoundarySector(n_bs,p2bs,i)+0.0001) * Location_bs(p2bs,n_bs))$(EfficiencyBoundarySector(n_bs,p2bs,i) <> 0)
+         (PowerConsumption(p2bs,i) * Power2XConversionMultiplier(nx,p2bs,i) * LocationX(p2bs,nx))$(Power2XConversionMultiplier(nx,p2bs,i) <> 0)
+         + (Power(p2bs,i) / (X2PowerConversionMultiplier(nx,p2bs,i)+0.0001) * LocationX(p2bs,nx))$(X2PowerConversionMultiplier(nx,p2bs,i) <> 0)
 ;
 
 EQ_Max_Power_Consumption_of_BS_units(p2bs,i)..
@@ -1202,34 +1175,22 @@ EQ_Max_Power_Consumption_of_BS_units(p2bs,i)..
 ;
 
 
-*EQ_Heat_Demand_balance(n_th,i)..
-*         sum(chp, Heat(chp,i)*Location_th(chp,n_th))
-*         + sum(p2h, Heat(p2h,i)*Location_th(p2h,n_th))
-*         sum(hu, Heat(hu,i)*Location_th(hu,n_th))
-*         + sum(thms, Heat(thms,i)*Location_th(thms,n_th))
-*         =E=
-*         HeatDemand(n_th, i)
-*         - HeatSlack(n_th,i)
-*         + sum(thms, StorageInput(thms,i)*Location_th(thms,n_th))
-*;
-
-
-EQ_BS_Demand_balance(n_bs,i)..
-        sum(p2bs, PowerBoundarySector(n_bs,p2bs,i))
-        + sum(bsu, PowerBoundarySector(n_bs,bsu,i))
-        + BoundarySectorSlack(n_bs,i)
-        + sum(l_bs,FlowBS(l_bs,i)*BSLineNode(l_bs,n_bs))
-        + BSFlexSupply(n_bs,i)
-        + sum(s_bs,BoundarySectorSpillage(s_bs,i)*BSSpillageNode(s_bs,n_bs))
-        + sum(chp, Heat(chp,i)*Location_bs(chp,n_bs))
-        + sum(p2h, Heat(p2h,i)*Location_bs(p2h,n_bs))
-        + sum(thms, Heat(thms,i)*Location_bs(thms,n_bs))
+EQ_BS_Demand_balance(nx,i)..
+        sum(p2bs, PowerX(nx,p2bs,i))
+        + sum(bsu, PowerX(nx,bsu,i))
+        + XNotServed(nx,i)
+        + sum(lx,FlowX(lx,i)*LineXNode(lx,nx))
+        + SectorXFlexSupply(nx,i)
+        + sum(slx,SectorXSpillage(slx,i)*SectorXSpillageNode(slx,nx))
+        + sum(chp, Heat(chp,i)*LocationX(chp,nx))
+        + sum(p2h, Heat(p2h,i)*LocationX(p2h,nx))
+        + sum(thms, Heat(thms,i)*LocationX(thms,nx))
         =E=
-        BoundarySectorDemand(n_bs,i)
-        + sum(thms, StorageInput(thms,i)*Location_bs(thms,n_bs))
-        + BSFlexDemand(n_bs,i)
-        + BoundarySectorStorageInput(n_bs,i)
-        + LL_BoundarySectorSpillage(n_bs,i)
+        SectorXDemand(nx,i)
+        + sum(thms, StorageInput(thms,i)*LocationX(thms,nx))
+        + SectorXFlexDemand(nx,i)
+        + SectorXStorageInput(nx,i)
+        + LL_SectorXSpillage(nx,i)
 ;
 
 *Heat Storage balance
@@ -1289,46 +1250,46 @@ EQ_Heat_Storage_boundaries(thms,i)$(ord(i) = card(i))..
          StorageFinalMin(thms)
          =L=
          StorageLevel(thms,i)
-         + WaterSlack(thms)
+         + StorageLevelViolation(thms)
 ;
 
 * Equations concerning boundary sector (PtL) flexible demand
 * Only valid in old formulation!!! If MTS=1: assures that total demand of boundary sector (PtL) is fulfilled
-EQ_Tot_Flex_Demand_BS(n_bs)..
-         BSFlexDemandInputInitial(n_bs)
-         + sum(i,BSFlexDemandInput(n_bs,i))
-         + LL_BSFlexDemand(n_bs)
+EQ_Tot_Flex_Demand_BS(nx)..
+         SectorXFlexDemandInputInitial(nx)
+         + sum(i,SectorXFlexDemandInput(nx,i))
+         + LL_SectorXFlexDemand(nx)
          =E=
-         sum(i,BSFlexDemand(n_bs,i))
+         sum(i,SectorXFlexDemand(nx,i))
 ;
 
 * Capacity of boundary sector (PtL) must not be exceeded
-EQ_Max_Flex_Capacity_BS(n_bs,i)..
-         BSFlexDemand(n_bs,i)
+EQ_Max_Flex_Capacity_BS(nx,i)..
+         SectorXFlexDemand(nx,i)
          =L=
-         BSFlexMaxCapacity(n_bs)*TimeStep
+         SectorXFlexMaxCapacity(nx)*TimeStep
 ;
 
 * Only valid in old formulation!!! If MTS = 0: Boundary sector (PtL) demand is not a variable anymore, but a parameter
-EQ_BS_Flex_Demand(n_bs,i)..
-         BSFlexDemand(n_bs,i)
+EQ_BS_Flex_Demand(nx,i)..
+         SectorXFlexDemand(nx,i)
          =E=
-         BSFlexDemandInput(n_bs,i)
+         SectorXFlexDemandInput(nx,i)
 ;
 
 
-EQ_Tot_Flex_Supply_BS(n_bs)..
-         BSFlexSupplyInputInitial(n_bs)
-         + sum(i,BSFlexSupplyInput(n_bs,i))
+EQ_Tot_Flex_Supply_BS(nx)..
+         SectorXFlexSupplyInputInitial(nx)
+         + sum(i,SectorXFlexSupplyInput(nx,i))
          =G=
-         sum(i,BSFlexSupply(n_bs,i))
+         sum(i,SectorXFlexSupply(nx,i))
 ;
 
 * Capacity of boundary sector (PtL) must not be exceeded
-EQ_Max_Flex_Supply_BS(n_bs,i)..
-         BSFlexSupply(n_bs,i)
+EQ_Max_Flex_Supply_BS(nx,i)..
+         SectorXFlexSupply(nx,i)
          =L=
-         BSFlexMaxSupply(n_bs)*TimeStep
+         SectorXFlexMaxSupply(nx)*TimeStep
 ;
 
 *===============================================================================
@@ -1340,8 +1301,6 @@ EQ_Curtailed_Power,
 EQ_CHP_extraction_Pmax,
 EQ_CHP_extraction,
 EQ_CHP_backpressure,
-*EQ_CHP_demand_satisfaction,
-*EQ_Heat_Demand_balance,
 EQ_BS_Demand_balance,
 EQ_CHP_max_heat,
 EQ_CostRampUp,
@@ -1403,8 +1362,6 @@ EQ_Flow_limits_lower,
 EQ_Flow_limits_upper,
 EQ_BS_Flow_limits_lower,
 EQ_BS_Flow_limits_upper,
-*$If not %MTS% == 1 EQ_Force_Commitment,
-*$If not %MTS% == 1 EQ_Force_DeCommitment,
 EQ_LoadShedding,
 EQ_Residual_Load,
 $If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand,
@@ -1412,9 +1369,6 @@ $If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand_Max,
 $if not %ActivateFlexibleDemand% == 1 EQ_No_Flexible_Demand,
 EQ_Flexible_Demand_Modulation_Min,
 EQ_Flexible_Demand_Modulation_Max,
-*$If %MTS% == 1 EQ_Tot_Flex_Demand_BS,
-*$If %MTS% == 1 EQ_Max_Flex_Capacity_BS,
-*$If %MTS% == 0 EQ_BS_Flex_Demand,
 EQ_Tot_Flex_Demand_BS,
 EQ_Max_Flex_Capacity_BS,
 EQ_Tot_Flex_Supply_BS,
@@ -1438,10 +1392,6 @@ if (mod(Config("RollingHorizon Length","day")*24,TimeStep) <> 0, abort "The roll
 * Some parameters used for debugging:
 failed=0;
 parameter CommittedInitial_dbg(au), PowerInitial_dbg(u), StorageInitial_dbg(au), StorageFinalMin_dbg(au), AccumulatedOverSupply_inital_dbg(n);
-
-* Fixing the initial guesses:
-*PowerH.L(u,i)=PowerInitial(u);
-*Committed.L(u,i)=CommittedInitial(u);
 
 * Defining a parameter that records the solver status:
 set  tmp   "tpm"  / "model", "solver"/  ;
@@ -1468,7 +1418,7 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
          StorageFinalMin(thms) =  sum(i$(ord(i)=card(i)),StorageProfile(thms,i)*StorageCapacity(thms)*Nunits(thms)*AvailabilityFactor(thms,i));
 		 StorageFinalMin(chp) =  sum(i$(ord(i)=card(i)),StorageProfile(chp,i)*StorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,i));
-         BoundarySectorStorageFinalMin(n_bs) = sum(i$(ord(i)=card(i)),BoundarySectorStorageProfile(n_bs,i)*BoundarySectorStorageCapacity(n_bs));
+         SectorXStorageFinalMin(nx) = sum(i$(ord(i)=card(i)),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 
 $If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
 $If %Verbose% == 1   Display PowerInitial,StorageFinalMin;
@@ -1500,14 +1450,14 @@ $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital_dbg;
          StorageInitial(p2h) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(p2h,i));
          StorageInitial(thms) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(thms,i));
          StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
-         BoundarySectorStorageInitial(n_bs) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),BoundarySectorStorageLevel.L(n_bs,i));
-         BSFlexDemandInputInitial(n_bs) = sum(i$(ord(i)<LastKeptHour+1), BSFlexDemandInput(n_bs,i) - BSFlexDemand.L(n_bs,i));
-         BSFlexSupplyInputInitial(n_bs) = sum(i$(ord(i)<LastKeptHour+1), BSFlexSupplyInput(n_bs,i) - BSFlexSupply.L(n_bs,i));
+         SectorXStorageInitial(nx) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),SectorXStorageLevel.L(nx,i));
+         SectorXFlexDemandInputInitial(nx) = sum(i$(ord(i)<LastKeptHour+1), SectorXFlexDemandInput(nx,i) - SectorXFlexDemand.L(nx,i));
+         SectorXFlexSupplyInputInitial(nx) = sum(i$(ord(i)<LastKeptHour+1), SectorXFlexSupplyInput(nx,i) - SectorXFlexSupply.L(nx,i));
 $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),AccumulatedOverSupply.L(n,i));
 
-* Assigning waterslack (one value per optimization horizon) to the last element of storageslack
-StorageSlack.L(au,i)$(ord(i)=LastKeptHour-FirstHour+1) = Waterslack.L(au);
-BoundarySectorStorageSlack.L(n_bs,i)$(ord(i)=LastKeptHour-FirstHour+1) = BoundarySectorWaterslack.L(n_bs);
+* Assigning StorageLevelViolation (one value per optimization horizon) to the last element of StorageLevelViolation_H
+StorageLevelViolation_H.L(au,i)$(ord(i)=LastKeptHour-FirstHour+1) = StorageLevelViolation.L(au);
+SectorXStorageLevelViolation_H.L(nx,i)$(ord(i)=LastKeptHour-FirstHour+1) = SectorXStorageLevelViolation.L(nx);
 ObjectiveFunction.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = SystemCostD.L;
 Error.L = sum((i,n), CostLoadShedding(n,i)*ShedLoad.L(n,i)
                                +Config("ValueOfLostLoad","val")*(LL_MaxPower.L(n,i)+LL_MinPower.L(n,i))
@@ -1542,31 +1492,29 @@ OutputMaxOutageUp(n,h)
 OutputMaxOutageDown(n,h)
 OutputCommitted(au,h)
 OutputFlow(l,h)
-OutputFlowBoundarySector(l_bs,h)
+OutputFlowX(lx,h)
 OutputPower(au,h)
-OutputPowerBoundarySector(n_bs,au,h)
+OutputPowerX(nx,au,h)
 OutputPowerConsumption(au,h)
 OutputResidualLoad(n,h)
 OutputStorageInput(au,h)
 OutputStorageLevel(au,h)
-OutputStorageSlack(au,h)
-OutputBoundarySectorStorageLevel(n_bs,h)
-OutputBoundarySectorStorageShadowPrice(n_bs,h)
-OutputBoundarySectorStorageSlack(n_bs,h)
-OutputBoundarySectorStorageInput(n_bs,h)
-LostLoad_BoundarySectorSpillage(n_bs,h)
-OutputBoundarySectorSpillage(s_bs,h)
+OutputStorageLevelViolation_H(au,h)
+OutputSectorXStorageLevel(nx,h)
+OutputSectorXStorageShadowPrice(nx,h)
+OutputSectorXStorageLevelViolation_H(nx,h)
+OutputSectorXStorageInput(nx,h)
+LostLoad_SectorXSpillage(nx,h)
+OutputSectorXSpillage(slx,h)
 OutputSystemCost(h)
 OutputSpillage(au,h)
 OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
 OutputCurtailmentReserve_2U(n,h)
 OutputCurtailmentReserve_3U(n,h)
-*OutputCurtailedHeat(n_th,h)
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 ShadowPrice(n,h)
-*HeatShadowPrice(n_th,h)
-BoundarySectorShadowPrice(n_bs,h)
+SectorXShadowPrice(nx,h)
 LostLoad_MaxPower(n,h)
 LostLoad_MinPower(n,h)
 LostLoad_2D(n,h)
@@ -1578,13 +1526,12 @@ $If %MTS%==0 LostLoad_RampUp_Unit(au,z)
 $If %MTS%==0 LostLoad_RampDown_Unit(au,z)
 OutputGenMargin(n,h)
 OutputHeat(au,h)
-*OutputHeatSlack(n_th,h)
-OutputBoundarySectorSlack(n_bs,h)
-LostLoad_WaterSlack(au)
-LostLoad_BoundarySectorWaterSlack(n_bs)
+OutputXNotServed(nx,h)
+LostLoad_StorageLevelViolation(au)
+LostLoad_SectorXStorageLevelViolation(nx)
 StorageShadowPrice(au,h)
-OutputBSFlexDemand(n_bs,h)
-OutputBSFlexSupply(n_bs,h)
+OutputSectorXFlexDemand(nx,h)
+OutputSectorXFlexSupply(nx,h)
 OutputPowerMustRun(u,h)
 $If %MTS%==0 OutputCostStartUpH(u,h)
 $If %MTS%==0 OutputCostShutDownH(u,h)
@@ -1637,32 +1584,30 @@ $If %ActivateAdvancedReserves% == 0 OutputDemand_3U(n,z)=Demand("2U",n,z);
 $If %ActivateAdvancedReserves% == 0 OutputDemand_2D(n,z)=Demand("2D",n,z);
 OutputCommitted(au,z)=Committed.L(au,z);
 OutputFlow(l,z)=Flow.L(l,z);
-OutputFlowBoundarySector(l_bs,z)=FlowBS.L(l_bs,z);
+OutputFlowX(lx,z)=FlowX.L(lx,z);
 OutputPower(au,z)=Power.L(au,z);
-OutputPowerBoundarySector(n_bs,au,z)=PowerBoundarySector.L(n_bs,au,z);
+OutputPowerX(nx,au,z)=PowerX.L(nx,au,z);
 OutputPowerConsumption(au,z)=PowerConsumption.L(au,z);
 OutputResidualLoad(n,z)=ResidualLoad.L(n,z);
 OutputHeat(au,z)=Heat.L(au,z);
-*OutputHeatSlack(n_th,z)=HeatSlack.L(n_th,z);
-OutputBoundarySectorSlack(n_bs,z) = BoundarySectorSlack.L(n_bs,z);
+OutputXNotServed(nx,z) = XNotServed.L(nx,z);
 OutputStorageInput(s,z)=StorageInput.L(s,z);
 OutputStorageInput(th,z)=StorageInput.L(th,z);
 OutputStorageLevel(s,z)=StorageLevel.L(s,z)/max(1,StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,z));
 OutputStorageLevel(th,z)=StorageLevel.L(th,z)/max(1,StorageCapacity(th)*Nunits(th));
-OutputStorageSlack(au,z) = StorageSlack.L(au,z);
-OutputBoundarySectorStorageLevel(n_bs,z) = BoundarySectorStorageLevel.L(n_bs,z);
-OutputBoundarySectorStorageShadowPrice(n_bs,z) = EQ_Boundary_Sector_Storage_balance.m(n_bs,z);
-OutputBoundarySectorStorageSlack(n_bs,z) = BoundarySectorStorageSlack.l(n_bs,z);
-OutputBoundarySectorStorageInput(n_bs,z) = BoundarySectorStorageInput.l(n_bs,z);
-LostLoad_BoundarySectorSpillage(n_bs,z) = LL_BoundarySectorSpillage.l(n_bs,z);
-OutputBoundarySectorSpillage(s_bs,z) = BoundarySectorSpillage.l(s_bs,z);
+OutputStorageLevelViolation_H(au,z) = StorageLevelViolation_H.L(au,z);
+OutputSectorXStorageLevel(nx,z) = SectorXStorageLevel.L(nx,z);
+OutputSectorXStorageShadowPrice(nx,z) = EQ_Boundary_Sector_Storage_balance.m(nx,z);
+OutputSectorXStorageLevelViolation_H(nx,z) = SectorXStorageLevelViolation_H.l(nx,z);
+OutputSectorXStorageInput(nx,z) = SectorXStorageInput.l(nx,z);
+LostLoad_SectorXSpillage(nx,z) = LL_SectorXSpillage.l(nx,z);
+OutputSectorXSpillage(slx,z) = SectorXSpillage.l(slx,z);
 OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(au,z)  = Spillage.L(au,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
 OutputCurtailmentReserve_2U(n,z)=CurtailmentReserve_2U.L(n,z);
 OutputCurtailmentReserve_3U(n,z)=CurtailmentReserve_3U.L(n,z);
-*OutputCurtailedHeat(n_th,z)=CurtailedHeat.L(n_th,z);
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
 LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
 LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
@@ -1674,13 +1619,12 @@ $If %MTS%==0 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 $If %MTS%==0 LostLoad_RampUp_Unit(u,z) = LL_RampUp.L(u,z);
 $If %MTS%==0 LostLoad_RampDown_Unit(u,z) = LL_RampDown.L(u,z);
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
-*HeatShadowPrice(n_th,z) = EQ_Heat_Demand_balance.m(n_th,z);
-BoundarySectorShadowPrice(n_bs,z) = EQ_BS_Demand_balance.m(n_bs,z);
-LostLoad_WaterSlack(au) = WaterSlack.L(au);
-LostLoad_BoundarySectorWaterSlack(n_bs) = BoundarySectorWaterSlack.L(n_bs);
+SectorXShadowPrice(nx,z) = EQ_BS_Demand_balance.m(nx,z);
+LostLoad_StorageLevelViolation(au) = StorageLevelViolation.L(au);
+LostLoad_SectorXStorageLevelViolation(nx) = SectorXStorageLevelViolation.L(nx);
 StorageShadowPrice(s,z) = 0 ;
-OutputBSFlexDemand(n_bs,z) = BSFlexDemand.L(n_bs,z);
-OutputBSFlexSupply(n_bs,z) = BSFlexSupply.L(n_bs,z);
+OutputSectorXFlexDemand(nx,z) = SectorXFlexDemand.L(nx,z);
+OutputSectorXFlexSupply(nx,z) = SectorXFlexSupply.L(nx,z);
 StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
 StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
 OutputPowerMustRun(u,z) = PowerMustRun(u,z);
@@ -1700,21 +1644,16 @@ OutputReserve_3U(au,z) = Reserve_3U.L(au,z);
 ShadowPrice_RampUp_TC(u,z) = EQ_RampUp_TC.m(u,z);
 ShadowPrice_RampDown_TC(u,z) = EQ_RampDown_TC.m(u,z);
 OutputRampRate(u,z) = - Power.L(u,z-1)$(ord(z) > 1) - PowerInitial(u)$(ord(z) = 1) + Power.L(u,z);
-*OutputRampRate(hu,z) = - Heat.L(hu,z-1)$(ord(z) > 1) + Heat.L(hu,z);
 OutputStartUp(au,z) = StartUp.L(au,z);
 OutputShutDown(au,z) = ShutDown.L(au,z);
 
 *FIXME: what about other sectors
-OutputEmissions(n,p,z) = sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n))
-*                        + sum(hu,Heat.L(hu,z)*EmissionRate(hu,p)*Location(hu,n)))
-                        / sum(u,Power.L(u,z)*Location(u,n));
-*                        / (sum(u,Power.L(u,z)*Location(u,n)) + sum(hu,Heat.L(hu,z)*Location(hu,n)));
+OutputEmissions(n,p,z) = sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n)) / sum(u,Power.L(u,z)*Location(u,n));
 
 CapacityMargin(n,z) = (sum(u, Nunits(u)*PowerCapacity(u)$(not s(u))*LoadMaximum(u,z)*Location(u,n))
                       + min(sum(s, Nunits(s)*PowerCapacity(s)*LoadMaximum(s,z)*Location(s,n)), sum(s, StorageLevel.L(s,z)*StorageCapacity(s)))
                       + sum(l, Flow.L(l,z)*LineNode(l,n))
                       + CurtailedPower.L(n,z)
-*                      + sum(l,(FlowMaximum(l,z)-Flow.L(l,z))*LineNode(l,n))$(card(l)>0)
                       - Demand("DA",n,z)
                       - DemandModulation.L(n,z)
                       - sum(p2h,PowerConsumption.L(p2h,z)*Location(p2h,n))
@@ -1723,6 +1662,7 @@ CapacityMargin(n,z) = (sum(u, Nunits(u)*PowerCapacity(u)$(not s(u))*LoadMaximum(
                       - CurtailmentReserve_2U.L(n,z)
                       - CurtailmentReserve_3U.L(n,z)
 );
+
 OutputSystemCostD(z) = ObjectiveFunction.L(z);
 OutputOptimalityGap(z) = OptimalityGap.L(z);
 OutputOptimizationError(z) = OptimizationError.L(z);
@@ -1744,30 +1684,28 @@ UnitHourlyProfit(au,z) = UnitHourlyRevenue(au,z) - UnitHourlyProductionCost(au,z
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
 OutputFlow,
-OutputFlowBoundarySector,
+OutputFlowX,
 OutputPower,
-OutputPowerBoundarySector,
+OutputPowerX,
 OutputPowerConsumption,
 OutputResidualLoad,
 OutputHeat,
-*OutputHeatSlack,
-OutputBoundarySectorSlack,
+OutputXNotServed,
 OutputStorageInput,
 OutputStorageLevel,
-OutputStorageSlack,
-OutputBoundarySectorStorageLevel,
-OutputBoundarySectorStorageShadowPrice,
-OutputBoundarySectorStorageSlack,
-OutputBoundarySectorStorageInput,
-LostLoad_BoundarySectorSpillage,
-OutputBoundarySectorSpillage,
+OutputStorageLevelViolation_H,
+OutputSectorXStorageLevel,
+OutputSectorXStorageShadowPrice,
+OutputSectorXStorageLevelViolation_H,
+OutputSectorXStorageInput,
+LostLoad_SectorXSpillage,
+OutputSectorXSpillage,
 OutputSystemCost,
 OutputSpillage,
 OutputShedLoad,
 OutputCurtailedPower,
 OutputCurtailmentReserve_2U,
 OutputCurtailmentReserve_3U,
-*OutputCurtailedHeat,
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation,
 OutputGenMargin,
 LostLoad_MaxPower,
@@ -1783,13 +1721,12 @@ ShadowPrice,
 ShadowPrice_2U,
 ShadowPrice_2D,
 ShadowPrice_3U,
-*HeatShadowPrice,
-LostLoad_WaterSlack,
-LostLoad_BoundarySectorWaterSlack,
+LostLoad_StorageLevelViolation,
+LostLoad_SectorXStorageLevelViolation,
 StorageShadowPrice,
-OutputBSFlexDemand,
-OutputBSFlexSupply,
-BoundarySectorShadowPrice,
+OutputSectorXFlexDemand,
+OutputSectorXFlexSupply,
+SectorXShadowPrice,
 OutputPowerMustRun,
 $If %MTS%==0 OutputCostStartUpH,
 $If %MTS%==0 OutputCostShutDownH,
@@ -1872,7 +1809,7 @@ EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_MaxPow
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_MinPower rng=LostLoad_MinPower!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_2D rng=LostLoad_2D!A1 rdim=1 cdim=1'
 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_2U rng=LostLoad_2U!A1 rdim=1 cdim=1'
-EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=OutputStorageSlack rng=OutputStorageSlack!A1 rdim=1 cdim=1'
+EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=OutputStorageLevelViolation_H rng=OutputStorageLevelViolation_H!A1 rdim=1 cdim=1'
 $If %MTS%==0 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_RampUp rng=LostLoad_RampUp!A1 rdim=1 cdim=1'
 $If %MTS%==0 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_RampDown rng=LostLoad_RampDown!A1 rdim=1 cdim=1'
 
@@ -1909,4 +1846,4 @@ $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCo
 $If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
 $If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
 
-Display Flow.L,Power.L,Committed.L,ShedLoad.L,StorageLevel.L,StorageInput.L,SystemCost.L,Spillage.L,StorageLevel.L,StorageInput.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L,WaterSlack.L;
+Display Flow.L,Power.L,Committed.L,ShedLoad.L,StorageLevel.L,StorageInput.L,SystemCost.L,Spillage.L,StorageLevel.L,StorageInput.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L,StorageLevelViolation.L;

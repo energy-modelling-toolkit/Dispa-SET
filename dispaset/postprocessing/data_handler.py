@@ -16,14 +16,12 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'OutputPower': ('u', 'h'),
             'OutputPowerConsumption': ('u', 'h'),
             'OutputHeat': ('u', 'h'),
-            # 'OutputHeatSlack': ('n_th', 'h'),
             'OutputStorageInput': ('u', 'h'),
             'OutputStorageLevel': ('u', 'h'),
             'OutputSystemCost': ('h'),
             'OutputSpillage': ('u', 'h'),
             'OutputShedLoad': ('n', 'h'),
             'OutputCurtailedPower': ('n', 'h'),
-            # 'OutputCurtailedHeat': ('n_th','h'),
             'OutputDemandModulation': ('n', 'h'),
             'LostLoad_MaxPower': ('n', 'h'),
             'LostLoad_MinPower': ('n', 'h'),
@@ -34,12 +32,8 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'LostLoad_RampDown': ('n', 'h'),
             'ShadowPrice': ('n', 'h'),
             'StorageShadowPrice': ('u', 'h'),
-            'LostLoad_WaterSlack': ('u'),
-            # 'OutputH2Output': ('u', 'h'),
-            'OutputStorageSlack': ('u', 'h'),
-            # 'OutputPtLDemand': ('u', 'h'),
-            # 'HeatShadowPrice': ('n_th', 'h'),
-            # 'H2ShadowPrice': ('u', 'h'),
+            'LostLoad_StorageLevelViolation': ('u'),
+            'OutputStorageLevelViolation_H': ('u', 'h'),
             'ShadowPrice_2U': ('u', 'h'),
             'ShadowPrice_2D': ('u', 'h'),
             'ShadowPrice_3U': ('u', 'h'),
@@ -165,20 +159,19 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
     keys_sparse = ['OutputPower', 'OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted',
                    'OutputCurtailedPower', 'OutputFlow', 'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel',
                    'OutputStorageInput', 'OutputHeat',
-                   # 'OutputHeatSlack', 'HeatShadowPrice', 'OutputCurtailedHeat',
                    'OutputDemandModulation',
-                   'OutputStorageSlack', 'OutputPowerMustRun',
+                   'OutputStorageLevelViolation_H', 'OutputPowerMustRun',
                    'OutputReserve_2U', 'OutputReserve_2D', 'OutputReserve_3U', 'ShadowPrice_RampUp_TC',
                    'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown',
                    'OutputEmissions', 'CapacityMargin',
-                   'OutputBoundarySectorSlack', 'OutputPowerBoundarySector', 'OutputBoundarySectorStorageLevel',
-                   'OutputBoundarySectorStorageInput', 'OutputBoundarySectorStorageShadowPrice',
-                   'BoundarySectorShadowPrice', 'OutputBoundarySectorSlack', 'OutputBoundarySectorStorageSlack',
-                   'OutputBoundarySectorSpillage', 'LostLoad_BoundarySectorSpillage',
-                   'OutputBSFlexDemand', 'OutputBSFlexSupply', 'OutputResidualLoad',
+                   'OutputXNotServed', 'OutputPowerX', 'OutputSectorXStorageLevel',
+                   'OutputSectorXStorageInput', 'OutputSectorXStorageShadowPrice',
+                   'SectorXShadowPrice', 'OutputXNotServed', 'OutputSectorXStorageLevelViolation_H',
+                   'OutputSectorXSpillage', 'LostLoad_SectorXSpillage',
+                   'OutputBSFlexDemand', 'OutputSectorXFlexSupply', 'OutputResidualLoad',
                    'OutputCurtailmentReserve_2U', 'OutputCurtailmentReserve_3U', 'OutputMaxOutageUp',
                    'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D',
-                   'OutputFlowBoundarySector']
+                   'OutputFlowX']
 
     # Setting the proper index to the result dataframes:
     for key in chain(keys, keys_sparse):
@@ -198,18 +191,18 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
             results[key] = pd.DataFrame(index=index)
         if isinstance(results[key], type(pd.DataFrame())):
             results[key] = results[key].reindex(sorted(results[key].columns), axis=1)
-        if key in ['OutputPowerBoundarySector']:
+        if key in ['OutputPowerX']:
             results[key] = results[key].loc[:, (results[key] != 0).any(axis=0)]
 
     # Include water slack in the results (only one number)
-    if 'LostLoad_WaterSlack' in results:
-        results['LostLoad_WaterSlack'] = results['LostLoad_WaterSlack']
+    if 'LostLoad_StorageLevelViolation' in results:
+        results['LostLoad_StorageLevelViolation'] = results['LostLoad_StorageLevelViolation']
     else:
-        results['LostLoad_WaterSlack'] = 0
-    if 'LostLoad_BoundarySectorWaterSlack' in results:
-        results['LostLoad_BoundarySectorWaterSlack'] = results['LostLoad_BoundarySectorWaterSlack']
+        results['LostLoad_StorageLevelViolation'] = 0
+    if 'LostLoad_SectorXStorageLevelViolation' in results:
+        results['LostLoad_SectorXStorageLevelViolation'] = results['LostLoad_SectorXStorageLevelViolation']
     else:
-        results['LostLoad_BoundarySectorWaterSlack'] = 0
+        results['LostLoad_SectorXStorageLevelViolation'] = 0
 
         # Clean power plant names:
     results['OutputPower'].columns = clean_strings(results['OutputPower'].columns.tolist())
@@ -221,7 +214,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
         results['ShadowPrice_2U'][results['ShadowPrice_2U'] >= 1e300] = 0
         results['ShadowPrice_3U'][results['ShadowPrice_3U'] >= 1e300] = 0
         # results['HeatShadowPrice'][results['HeatShadowPrice'] >= 1e300] = 0
-        results['BoundarySectorShadowPrice'][results['BoundarySectorShadowPrice'] >= 1e300] = 0
+        results['SectorXShadowPrice'][results['SectorXShadowPrice'] >= 1e300] = 0
 
     # Remove powerplants with no generation
     results['OutputPower'] = results['OutputPower'].loc[:, (results['OutputPower'] != 0).any(axis=0)]
@@ -307,7 +300,7 @@ def results_to_xarray(results):
                                   name=var_name)
                 all_ds.append(ds)
             elif len(ind) == 1:
-                if k == 'LostLoad_WaterSlack':
+                if k == 'LostLoad_StorageLevelViolation':
                     ds = xr.DataArray(df,
                                       name=var_name)
                 else:

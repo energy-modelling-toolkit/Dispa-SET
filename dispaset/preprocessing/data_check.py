@@ -687,9 +687,10 @@ def check_PtLDemand(parameters, config):
 
 
 def check_BSFlexDemand(parameters, config):
-    for i, u in enumerate(parameters['BSFlexMaxCapacity']['val']):
-        TotDemand = parameters['BSFlexDemandInput']['val'][i, :].sum() * config['SimulationTimeStep']
-        MaxProduction = parameters['BSFlexMaxCapacity']['val'][i] * len(parameters['BSFlexDemandInput']['val'][i, :]) * \
+    for i, u in enumerate(parameters['SectorXFlexMaxCapacity']['val']):
+        TotDemand = parameters['SectorXFlexDemandInput']['val'][i, :].sum() * config['SimulationTimeStep']
+        MaxProduction = parameters['SectorXFlexMaxCapacity']['val'][i] * len(
+            parameters['SectorXFlexDemandInput']['val'][i, :]) * \
                         config['SimulationTimeStep']
         if TotDemand > MaxProduction:
             logging.error('Unit ' + u + ' has a higher PtL demand than what the PtL capacity can provide')
@@ -697,9 +698,10 @@ def check_BSFlexDemand(parameters, config):
 
 
 def check_BSFlexSupply(parameters, config):
-    for i, u in enumerate(parameters['BSFlexMaxSupply']['val']):
-        TotSupply = parameters['BSFlexSupplyInput']['val'][i, :].sum() * config['SimulationTimeStep']
-        MaxSupply = parameters['BSFlexMaxSupply']['val'][i] * len(parameters['BSFlexSupplyInput']['val'][i, :]) * \
+    for i, u in enumerate(parameters['SectorXFlexMaxSupply']['val']):
+        TotSupply = parameters['SectorXFlexSupplyInput']['val'][i, :].sum() * config['SimulationTimeStep']
+        MaxSupply = parameters['SectorXFlexMaxSupply']['val'][i] * len(
+            parameters['SectorXFlexSupplyInput']['val'][i, :]) * \
                     config['SimulationTimeStep']
         if TotSupply > MaxSupply:
             logging.error('Unit ' + u + ' has a higher PtL supply than what the PtL max supply can provide')

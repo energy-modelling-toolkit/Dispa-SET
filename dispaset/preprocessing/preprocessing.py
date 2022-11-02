@@ -45,23 +45,24 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
         logging.info('Simulation without mid therm scheduling')
         SimData = build_single_run(config)
     else:
-        if (config['BSFlexibleDemand'] != '') and (config['BSFlexibleSupply'] == ''):
-            [new_profiles, new_BSFlexDemand] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
+        if (config['SectorXFlexibleDemand'] != '') and (config['SectorXFlexibleSupply'] == ''):
+            [new_profiles, new_SectorXFlexDemand] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
-            SimData = build_single_run(config, profiles=new_profiles, BSFlexDemand=new_BSFlexDemand)
-        elif (config['BSFlexibleSupply'] != '') and (config['BSFlexibleDemand'] == ''):
-            [new_profiles, new_BSFlexSupply] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
+            SimData = build_single_run(config, profiles=new_profiles, SectorXFlexDemand=new_SectorXFlexDemand)
+        elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] == ''):
+            [new_profiles, new_SectorXFlexSupply] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
-            SimData = build_single_run(config, profiles=new_profiles, BSFlexSupply=new_BSFlexSupply)
-        elif (config['BSFlexibleSupply'] != '') and (config['BSFlexibleDemand'] != ''):
-            [new_profiles, new_BSFlexDemand, new_BSFlexSupply] = mid_term_scheduling(config, mts_plot=mts_plot,
-                                                                                     TimeStep=MTSTimeStep)
+            SimData = build_single_run(config, profiles=new_profiles, SectorXFlexSupply=new_SectorXFlexSupply)
+        elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] != ''):
+            [new_profiles, new_SectorXFlexDemand, new_SectorXFlexSupply] = mid_term_scheduling(config,
+                                                                                               mts_plot=mts_plot,
+                                                                                               TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
-            SimData = build_single_run(config, profiles=new_profiles, BSFlexDemand=new_BSFlexDemand,
-                                       BSFlexSupply=new_BSFlexSupply)
+            SimData = build_single_run(config, profiles=new_profiles, SectorXFlexDemand=new_SectorXFlexDemand,
+                                       SectorXFlexSupply=new_SectorXFlexSupply)
         else:
             new_profiles = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
@@ -172,8 +173,8 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         no_of_zones = len(config['mts_zones'])
         temp_results = {}
         profiles = pd.DataFrame(index=idx)
-        BSFlexDemand = pd.DataFrame(index=idx)
-        BSFlexSupply = pd.DataFrame(index=idx)
+        SectorXFlexDemand = pd.DataFrame(index=idx)
+        SectorXFlexSupply = pd.DataFrame(index=idx)
         for i, c in enumerate(config['mts_zones']):
             logging.info(
                 '\n\nLaunching Mid-Term Scheduling for zone ' + c + ' (Number ' + str(i + 1) + ' out of ' + str(
@@ -210,30 +211,30 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                 for u_old in units.loc[u, 'FormerUnits']:
                     profiles[u_old] = temp_results[c]['OutputStorageLevel'][u].values
 
-            if config['BSFlexibleDemand'] != '':
-                if 'OutputBSFlexDemand' not in temp_results[c]:
+            if config['SectorXFlexibleDemand'] != '':
+                if 'OutputSectorXFlexDemand' not in temp_results[c]:
                     logging.critical('BS Flex demand in zone ' + c + ' was not computed')
                     sys.exit(0)
-                elif len(temp_results[c]['OutputBSFLexDemand']) > len(idx):
+                elif len(temp_results[c]['OutputSectorXFlexDemand']) > len(idx):
                     logging.critical('The number of time steps in the mid-term simulation results (' + str(
-                        len(temp_results[c]['OutputBSFLexDemand'])) +
+                        len(temp_results[c]['OutputSectorXFlexDemand'])) +
                                      ') does not match the length of the index (' + str(len(idx)) + ')')
                     sys.exit(0)
-                elif len(temp_results[c]['OutputBSFLexDemand']) < len(idx):
-                    temp_results[c]['OutputBSFLexDemand'] = temp_results[c]['OutputBSFLexDemand'].reindex(
+                elif len(temp_results[c]['OutputSectorXFlexDemand']) < len(idx):
+                    temp_results[c]['OutputSectorXFlexDemand'] = temp_results[c]['OutputSectorXFlexDemand'].reindex(
                         range(1, len(idx) + 1)).fillna(0)
 
-            if config['BSFlexibleSupply'] != '':
-                if 'OutputBSFlexSupply' not in temp_results[c]:
+            if config['SectorXFlexibleSupply'] != '':
+                if 'OutputSectorXFlexSupply' not in temp_results[c]:
                     logging.critical('BS Flex demand in zone ' + c + ' was not computed')
                     sys.exit(0)
-                elif len(temp_results[c]['OutputBSFLexSupply']) > len(idx):
+                elif len(temp_results[c]['OutputSectorXFlexSupply']) > len(idx):
                     logging.critical('The number of time steps in the mid-term simulation results (' + str(
-                        len(temp_results[c]['OutputBSFLexSupply'])) +
+                        len(temp_results[c]['OutputSectorXFlexSupply'])) +
                                      ') does not match the length of the index (' + str(len(idx)) + ')')
                     sys.exit(0)
-                elif len(temp_results[c]['OutputBSFLexSupply']) < len(idx):
-                    temp_results[c]['OutputBSFLexSupply'] = temp_results[c]['OutputBSFLexSupply'].reindex(
+                elif len(temp_results[c]['OutputSectorXFlexSupply']) < len(idx):
+                    temp_results[c]['OutputSectorXFlexSupply'] = temp_results[c]['OutputSectorXFlexSupply'].reindex(
                         range(1, len(idx) + 1)).fillna(0)
 
     # Solving reservoir levels for all regions simultaneously
@@ -259,25 +260,27 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         else:
             profiles = temp_results['OutputStorageLevel'].set_index(idx)
 
-        if config['BSFlexibleDemand'] != '':
-            if 'OutputBSFlexDemand' not in temp_results:
+        if config['SectorXFlexibleDemand'] != '':
+            if 'OutputSectorXFlexDemand' not in temp_results:
                 logging.critical('PtL Demand in the selected region was not computed')
                 sys.exit(0)
-            if len(temp_results['OutputBSFlexDemand']) < len(idx):
-                BSFlexDemand = temp_results['OutputBSFlexDemand'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(
+            if len(temp_results['OutputSectorXFlexDemand']) < len(idx):
+                SectorXFlexDemand = temp_results['OutputSectorXFlexDemand'].reindex(range(1, len(idx) + 1)).fillna(
+                    0).set_index(
                     idx)
             else:
-                BSFlexDemand = temp_results['OutputBSFlexDemand'].set_index(idx)
+                SectorXFlexDemand = temp_results['OutputSectorXFlexDemand'].set_index(idx)
 
-        if config['BSFlexibleSupply'] != '':
-            if 'OutputBSFlexSupply' not in temp_results:
+        if config['SectorXFlexibleSupply'] != '':
+            if 'OutputSectorXFlexSupply' not in temp_results:
                 logging.critical('PtL Demand in the selected region was not computed')
                 sys.exit(0)
-            if len(temp_results['OutputBSFlexSupply']) < len(idx):
-                BSFlexSupply = temp_results['OutputBSFlexSupply'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(
+            if len(temp_results['OutputSectorXFlexSupply']) < len(idx):
+                SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].reindex(range(1, len(idx) + 1)).fillna(
+                    0).set_index(
                     idx)
             else:
-                BSFlexSupply = temp_results['OutputBSFlexSupply'].set_index(idx)
+                SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].set_index(idx)
 
         # Updating the profiles table with the original unit names:
         for u in profiles:
@@ -295,11 +298,11 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     # replace all 1.000000e+300 values by nan since they correspond to undefined in GAMS:
     profiles[profiles >= 1E300] = np.nan
 
-    if config['BSFlexibleDemand'] != '':
-        BSFlexDemand[BSFlexDemand >= 1E300] = np.nan
+    if config['SectorXFlexibleDemand'] != '':
+        SectorXFlexDemand[SectorXFlexDemand >= 1E300] = np.nan
 
-    if config['BSFlexibleSupply'] != '':
-        BSFlexSupply[BSFlexSupply >= 1E300] = np.nan
+    if config['SectorXFlexibleSupply'] != '':
+        SectorXFlexSupply[SectorXFlexSupply >= 1E300] = np.nan
 
     if mts_plot:
         profiles.plot()
@@ -322,23 +325,24 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                                 end=dt.datetime(*temp_config['StopDate']),
                                 freq=pd_timestep(TimeStep)).tz_localize(None)
 
-        if config['BSFlexibleDemand'] != '':
-            BSFlexDemand = pd.DataFrame(BSFlexDemand, index=idx_tmp).fillna(0) / temp_config['SimulationTimeStep']
-            BSFlexDemand = BSFlexDemand.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
-            BSFlexDemand = BSFlexDemand.loc[idx_long, :]
+        if config['SectorXFlexibleDemand'] != '':
+            SectorXFlexDemand = pd.DataFrame(SectorXFlexDemand, index=idx_tmp).fillna(0) / temp_config[
+                'SimulationTimeStep']
+            SectorXFlexDemand = SectorXFlexDemand.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
+            SectorXFlexDemand = SectorXFlexDemand.loc[idx_long, :]
 
-        if config['BSFlexibleSupply'] != '':
-            BSFlexSupply = pd.DataFrame(BSFlexSupply, index=idx_tmp).fillna(0)
-            BSFlexSupply = BSFlexSupply.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
-            BSFlexSupply = BSFlexSupply.loc[idx_long, :]
+        if config['SectorXFlexibleSupply'] != '':
+            SectorXFlexSupply = pd.DataFrame(SectorXFlexSupply, index=idx_tmp).fillna(0)
+            SectorXFlexSupply = SectorXFlexSupply.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
+            SectorXFlexSupply = SectorXFlexSupply.loc[idx_long, :]
 
     pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'], "temp_profiles.p"), "wb"))
 
-    if (config['BSFlexibleSupply'] == '') and (config['BSFlexibleDemand'] != ''):
-        return profiles, BSFlexDemand
-    elif (config['BSFlexibleSupply'] != '') and (config['BSFlexibleDemand'] == ''):
-        return profiles, BSFlexSupply
-    elif (config['BSFlexibleSupply'] != '') and (config['BSFlexibleDemand'] != ''):
-        return profiles, BSFlexDemand, BSFlexSupply
+    if (config['SectorXFlexibleSupply'] == '') and (config['SectorXFlexibleDemand'] != ''):
+        return profiles, SectorXFlexDemand
+    elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] == ''):
+        return profiles, SectorXFlexSupply
+    elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] != ''):
+        return profiles, SectorXFlexDemand, SectorXFlexSupply
     else:
         return profiles
