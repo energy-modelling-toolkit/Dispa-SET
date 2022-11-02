@@ -624,7 +624,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                for u in Plants_merged['Technology']]].index.tolist()
     sets['chp'] = Plants_chp.index.tolist()
     sets['p2h'] = Plants_p2h.index.tolist()
-    sets['p2bs'] = Plants_p2bs.index.tolist()
+    sets['p2x'] = Plants_p2bs.index.tolist()
     sets['th'] = Plants_heat.index.tolist()
     sets['thms'] = Plants_thms.index.tolist()
     sets['t'] = commons['Technologies']
@@ -632,7 +632,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets['tc'] = list(set(commons['Technologies']) - set(commons['tech_renewables']) - set(commons['tech_p2ht']) -
                       set(commons['tech_thermal_storage']))
     sets['wat'] = Plants_wat.index.tolist()
-    sets['bsu'] = Plants_boundary_sector_only.index.tolist()
+    sets['xu'] = Plants_boundary_sector_only.index.tolist()
     sets['asu'] = Plants_merged[[u in [x for x in commons['Technologies'] if x in commons['tech_storage'] +
                                        commons['tech_thermal_storage']] for u in
                                  Plants_merged['Technology']]].index.tolist()
