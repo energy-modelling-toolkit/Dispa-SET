@@ -375,8 +375,10 @@ def group_plants(plants, method, df_grouped=False, group_list=None):
     # Definition of the merged power plants dataframe:
     # if (group_list is None) and ((plants['Zone_th'] != np.nan).all()) and ((plants['Zone_h2'] != np.nan).all()):
     #     group_list = ['Zone', 'Zone_th', 'Zone_h2', 'Technology', 'Fuel', 'CHPType']
-    if (group_list is None) and ((plants['Zone_th'] != np.nan).all()):
-        group_list = ['Zone', 'Zone_th', 'Technology', 'Fuel', 'CHPType']
+    if (group_list is None) and ((plants['Sector1'] != np.nan).all()):
+        group_list = ['Zone', 'Sector1', 'Technology', 'Fuel', 'CHPType']
+    elif (group_list is None) and ((plants['Sector1'] != np.nan).all()) and ((plants['Sector2'] != np.nan).all()):
+        group_list = ['Zone', 'Sector1', 'Technology', 'Fuel', 'CHPType', 'Sector2']
     else:
         group_list = ['Zone', 'Technology', 'Fuel', 'CHPType']
     plants_merged = pd.DataFrame(columns=plants.columns)
@@ -570,7 +572,7 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
     plants_merged = pd.DataFrame(columns=plants.columns)
 
     # Fill nan values:
-    string_keys = ["Zone", "Technology", "Fuel", "CHPType"]
+    string_keys = ["Zone", "Technology", "Fuel", "CHPType", 'Sector1']
     for key in string_keys:
         plants[key].fillna("", inplace=True)
     for key in ['PartLoadMin', 'StartUpTime', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost',

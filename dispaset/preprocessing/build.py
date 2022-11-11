@@ -255,6 +255,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                      default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_all_sto, 'ReservoirScaledInflows', config,
                                             fallbacks=['Unit', 'Technology', 'Zone'], default=0)
+    ReservoirScaledOutflows = UnitBasedTable(plants_all_sto, 'ReservoirScaledOutflows', config,
+                                             fallbacks=['Unit', 'Technology', 'Zone'], default=0)
     Temperatures = NodeBasedTable('Temperatures', config)
 
     # # Detecting thermal zones:
@@ -559,8 +561,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'EfficienciesBoundarySector': BoundarySectorEfficiencies['Efficiency'],
                'ChargingEfficienciesBoundarySector': BoundarySectorEfficiencies['ChargingEfficiency'],
                'LoadShedding': LoadShedding, 'CostLoadShedding': CostLoadShedding, 'CostCurtailment': CostCurtailment,
-               'ScaledInflows': ReservoirScaledInflows, 'ReservoirLevels': ReservoirLevels,
-               'Outages': Outages, 'AvailabilityFactors': AF,
+               'ScaledInflows': ReservoirScaledInflows, 'ScaledOutflows': ReservoirScaledOutflows,
+               'ReservoirLevels': ReservoirLevels, 'Outages': Outages, 'AvailabilityFactors': AF,
                # 'CostHeatSlack': CostHeatSlack, 'HeatDemand': HeatDemand,
                'ShareOfFlexibleDemand': ShareOfFlexibleDemand,
                'PriceTransmission': PriceTransmission,
@@ -569,7 +571,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'BSMaxSpillage': BS_Spillages}
 
     # Merge the following time series with weighted averages
-    for key in ['ScaledInflows', 'Outages', 'AvailabilityFactors']:
+    for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
 
     # Merge the following time series by weighted average based on storage capacity
@@ -702,7 +704,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['StorageInflow'] = ['asu', 'h']
     sets_param['StorageInitial'] = ['asu']
     sets_param['StorageMinimum'] = ['asu']
-    sets_param['StorageOutflow'] = ['s', 'h']
+    sets_param['StorageOutflow'] = ['asu', 'h']
     sets_param['StorageProfile'] = ['asu', 'h']
     sets_param['Technology'] = ['au', 't']
     sets_param['TimeUpMinimum'] = ['au']
@@ -820,6 +822,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         if s in finalTS['ScaledInflows']:
             parameters['StorageInflow']['val'][i, :] = finalTS['ScaledInflows'][s][idx_sim].values * \
                                                        Plants_all_sto['PowerCapacity'][s]
+            if s in finalTS['ScaledOutflows']:
+                parameters['StorageOutflow']['val'][i, :] = finalTS['ScaledOutflows'][s][idx_sim].values * \
+                                                            Plants_all_sto['PowerCapacity'][s]
 
     # # Heat demands:
     # for i, u in enumerate(sets['n_th']):

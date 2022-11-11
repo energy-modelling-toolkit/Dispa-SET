@@ -711,6 +711,8 @@ def load_config_excel(ConfigFile, AbsPath=True):
         modifiers = commons['modifiers']
         default = commons['default']
 
+        # Introduce scaled outflows
+        PathParameters['ReservoirScaledOutflows'] = 134
         # Also include boundary sector data
         PathParameters['SectorXDemand'] = 137
         PathParameters['BoundarySectorData'] = 138

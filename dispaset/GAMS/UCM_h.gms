@@ -916,7 +916,7 @@ EQ_3U_limit_chp(chp,i)..
 *Minimum power output is above the must-run output level for each unit in all periods
 EQ_Power_must_run(u,i)..
          PowerMustRun(u,i) * Committed(u,i)
-         - (StorageInput(u,i) * CHPPowerLossFactor(u) )$(chp(u) and (CHPType(u,'Extraction') or CHPType(u,'P2H')))
+         - (Heat(u,i) * CHPPowerLossFactor(u) )$(chp(u) and (CHPType(u,'Extraction') or CHPType(u,'P2H')))
          =L=
          Power(u,i)
 ;
@@ -1126,30 +1126,30 @@ EQ_LoadShedding(n,i)..
 EQ_CHP_extraction(chp,i)$(CHPType(chp,'Extraction'))..
          Power(chp,i)
          =G=
-         StorageInput(chp,i) * CHPPowerToHeat(chp)
+         Heat(chp,i) * CHPPowerToHeat(chp)
 ;
 
 EQ_CHP_extraction_Pmax(chp,i)$(CHPType(chp,'Extraction') or CHPType(chp,'P2H'))..
          Power(chp,i)
          =L=
-         PowerCapacity(chp)*Nunits(chp)  - StorageInput(chp,i) * CHPPowerLossFactor(chp)
+         PowerCapacity(chp)*Nunits(chp)  - Heat(chp,i) * CHPPowerLossFactor(chp)
 ;
 
 EQ_CHP_backpressure(chp,i)$(CHPType(chp,'Back-Pressure'))..
          Power(chp,i)
          =E=
-         StorageInput(chp,i) * CHPPowerToHeat(chp)
+         Heat(chp,i) * CHPPowerToHeat(chp)
 ;
 
 EQ_CHP_max_heat(chp,i)..
-         StorageInput(chp,i)
+         Heat(chp,i)
          =L=
          CHPMaxHeat(chp)*Nunits(chp)
 ;
 
 * Power to X units
 EQ_P2X_Power_Balance(au,i)..
-         StorageInput(au,i)$(p2h(au))
+         Heat(au,i)$(p2h(au))
          =E=
          PowerConsumption(au,i)$(p2h(au)) * Efficiency(au,i)$(p2h(au))
 ;
@@ -1194,29 +1194,29 @@ EQ_BS_Demand_balance(nx,i)..
 ;
 
 *Heat Storage balance
-EQ_Heat_Storage_balance(th,i)..
-         StorageInitial(th)$(ord(i) = 1)
-         + StorageLevel(th,i-1)$(ord(i) > 1)
-         + StorageInput(th,i)*TimeStep
+EQ_Heat_Storage_balance(thms,i)..
+         StorageInitial(thms)$(ord(i) = 1)
+         + StorageLevel(thms,i-1)$(ord(i) > 1)
+         + StorageInput(thms,i)*TimeStep
          =E=
-         StorageLevel(th,i)
-         + Heat(th,i)*TimeStep
-         + StorageSelfDischarge(th)*StorageLevel(th,i)*TimeStep
+         StorageLevel(thms,i)
+         + Heat(thms,i)*TimeStep
+         + StorageSelfDischarge(thms)*StorageLevel(thms,i)*TimeStep
 ;
 * The self-discharge proportional to the charging level is a bold hypothesis, but it avoids keeping self-discharging if the level reaches zero
 
 * Heat Storage level must be above a minimum
-EQ_Heat_Storage_minimum(th,i)..
-         StorageMinimum(th)
+EQ_Heat_Storage_minimum(thms,i)..
+         StorageMinimum(thms)
          =L=
-         StorageLevel(th,i)
+         StorageLevel(thms,i)
 ;
 
 *Storage level must be below a maximum (to make the reserves available)
-EQ_Heat_Storage_level(th,i)..
-         StorageLevel(th,i)
+EQ_Heat_Storage_level(thms,i)..
+         StorageLevel(thms,i)
          =L=
-         StorageCapacity(th)*AvailabilityFactor(th,i)*Nunits(th)
+         StorageCapacity(thms)*AvailabilityFactor(thms,i)*Nunits(thms)
 ;
 
 * Heat Storage charging is bounded by the maximum capacity

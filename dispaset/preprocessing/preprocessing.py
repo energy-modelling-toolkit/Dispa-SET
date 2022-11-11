@@ -332,7 +332,8 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             SectorXFlexDemand = SectorXFlexDemand.loc[idx_long, :]
 
         if config['SectorXFlexibleSupply'] != '':
-            SectorXFlexSupply = pd.DataFrame(SectorXFlexSupply, index=idx_tmp).fillna(0)
+            SectorXFlexSupply = pd.DataFrame(SectorXFlexSupply, index=idx_tmp).fillna(0) / temp_config[
+                'SimulationTimeStep']
             SectorXFlexSupply = SectorXFlexSupply.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
             SectorXFlexSupply = SectorXFlexSupply.loc[idx_long, :]
 
