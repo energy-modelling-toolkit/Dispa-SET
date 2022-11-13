@@ -46,28 +46,33 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
         SimData = build_single_run(config)
     else:
         if (config['SectorXFlexibleDemand'] != '') and (config['SectorXFlexibleSupply'] == ''):
-            [new_profiles, new_SectorXFlexDemand] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
-            # Build simulation data with new profiles
-            logging.info('\n\nBuilding final simulation\n')
-            SimData = build_single_run(config, profiles=new_profiles, SectorXFlexDemand=new_SectorXFlexDemand)
-        elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] == ''):
-            [new_profiles, new_SectorXFlexSupply] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
-            # Build simulation data with new profiles
-            logging.info('\n\nBuilding final simulation\n')
-            SimData = build_single_run(config, profiles=new_profiles, SectorXFlexSupply=new_SectorXFlexSupply)
-        elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] != ''):
-            [new_profiles, new_SectorXFlexDemand, new_SectorXFlexSupply] = mid_term_scheduling(config,
-                                                                                               mts_plot=mts_plot,
-                                                                                               TimeStep=MTSTimeStep)
+            [new_profiles, new_SectorXFlexDemand, new_profilesSectorX] = mid_term_scheduling(config, mts_plot=mts_plot,
+                                                                                             TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
             SimData = build_single_run(config, profiles=new_profiles, SectorXFlexDemand=new_SectorXFlexDemand,
-                                       SectorXFlexSupply=new_SectorXFlexSupply)
-        else:
-            new_profiles = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
+                                       profilesSectorX=new_profilesSectorX)
+        elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] == ''):
+            [new_profiles, new_SectorXFlexSupply, new_profilesSectorX] = mid_term_scheduling(config, mts_plot=mts_plot,
+                                                                                             TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
-            SimData = build_single_run(config, new_profiles)
+            SimData = build_single_run(config, profiles=new_profiles, SectorXFlexSupply=new_SectorXFlexSupply,
+                                       profilesSectorX=new_profilesSectorX)
+        elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] != ''):
+            [new_profiles, new_SectorXFlexDemand, new_SectorXFlexSupply, new_profilesSectorX] = mid_term_scheduling(
+                config,
+                mts_plot=mts_plot,
+                TimeStep=MTSTimeStep)
+            # Build simulation data with new profiles
+            logging.info('\n\nBuilding final simulation\n')
+            SimData = build_single_run(config, profiles=new_profiles, SectorXFlexDemand=new_SectorXFlexDemand,
+                                       SectorXFlexSupply=new_SectorXFlexSupply, profilesSectorX=new_profilesSectorX)
+        else:
+            [new_profiles, new_profilesSectorX] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
+            # Build simulation data with new profiles
+            logging.info('\n\nBuilding final simulation\n')
+            SimData = build_single_run(config, profiles=new_profiles, profilesSectorX=new_profilesSectorX)
 
     # Copy the log to the simulation folder:
     if os.path.isfile(commons['logfile']):
@@ -175,6 +180,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         profiles = pd.DataFrame(index=idx)
         SectorXFlexDemand = pd.DataFrame(index=idx)
         SectorXFlexSupply = pd.DataFrame(index=idx)
+        profilesSectorX = pd.DataFrame()
         for i, c in enumerate(config['mts_zones']):
             logging.info(
                 '\n\nLaunching Mid-Term Scheduling for zone ' + c + ' (Number ' + str(i + 1) + ' out of ' + str(
@@ -210,6 +216,14 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                     sys.exit(1)
                 for u_old in units.loc[u, 'FormerUnits']:
                     profiles[u_old] = temp_results[c]['OutputStorageLevel'][u].values
+
+            # for nx in temp_results[c]['OutputSectorXStorageLevel']:
+            #     if nx not in units.index:
+            #         logging.critical('Unit "' + u + '" is reported in the reservoir levels of the result file but '
+            #                                         'does not appear in the units table')
+            #         sys.exit(1)
+            #     for u_old in units.loc[u, 'FormerUnits']:
+            #         profiles[u_old] = temp_results[c]['OutputStorageLevel'][u].values
 
             if config['SectorXFlexibleDemand'] != '':
                 if 'OutputSectorXFlexDemand' not in temp_results[c]:
@@ -260,6 +274,12 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         else:
             profiles = temp_results['OutputStorageLevel'].set_index(idx)
 
+        if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
+            profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
+                0).set_index(idx)
+        else:
+            profilesSectorX = temp_results['OutputSectorXStorageLevel'].set_index(idx)
+
         if config['SectorXFlexibleDemand'] != '':
             if 'OutputSectorXFlexDemand' not in temp_results:
                 logging.critical('PtL Demand in the selected region was not computed')
@@ -297,6 +317,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
 
     # replace all 1.000000e+300 values by nan since they correspond to undefined in GAMS:
     profiles[profiles >= 1E300] = np.nan
+    profilesSectorX[profilesSectorX >= 1E300] = np.nan
 
     if config['SectorXFlexibleDemand'] != '':
         SectorXFlexDemand[SectorXFlexDemand >= 1E300] = np.nan
@@ -318,6 +339,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
 
     if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
         profiles = profiles.reindex(idx_long, method='nearest')
+        profilesSectorX = profilesSectorX.reindex(idx_long, method='nearest')
 
         temp_config['StartDate'] = (y_start, 1, 1, 00, 00, 00)  # updating start date to the beginning of the year
         temp_config['StopDate'] = (y_start + 1, 1, 2, 00, 59, 00)
@@ -338,12 +360,13 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             SectorXFlexSupply = SectorXFlexSupply.loc[idx_long, :]
 
     pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'], "temp_profiles.p"), "wb"))
+    pickle.dump(profilesSectorX, open(os.path.join(config['SimulationDirectory'], "temp_profilesSectorX.p"), "wb"))
 
     if (config['SectorXFlexibleSupply'] == '') and (config['SectorXFlexibleDemand'] != ''):
-        return profiles, SectorXFlexDemand
+        return profiles, SectorXFlexDemand, profilesSectorX
     elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] == ''):
-        return profiles, SectorXFlexSupply
+        return profiles, SectorXFlexSupply, profilesSectorX
     elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] != ''):
-        return profiles, SectorXFlexDemand, SectorXFlexSupply
+        return profiles, SectorXFlexDemand, SectorXFlexSupply, profilesSectorX
     else:
-        return profiles
+        return profiles, profilesSectorX

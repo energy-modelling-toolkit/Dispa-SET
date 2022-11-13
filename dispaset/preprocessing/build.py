@@ -24,7 +24,8 @@ from ..misc.gdx_handler import write_variables
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
 
-def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=None, SectorXFlexSupply=None, MTS=0):
+def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=None, SectorXFlexSupply=None, MTS=0,
+                     profilesSectorX=None):
     """
     This function reads the DispaSET config, loads the specified data,
     processes it when needed, and formats it in the proper DispaSET format.
@@ -259,14 +260,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                              fallbacks=['Unit', 'Technology', 'Zone'], default=0)
     Temperatures = NodeBasedTable('Temperatures', config)
 
-    # # Detecting thermal zones:
-    # zones_th = plants_heat['Zone_th'].unique().tolist()
-    # if '' in zones_th:
-    #     zones_th.remove('')
-    #
-    # HeatDemand = GenericTable(zones_th, 'HeatDemand', config, default=0)
-    # CostHeatSlack = GenericTable(zones_th, 'CostHeatSlack', config, default=config['default']['CostHeatSlack'])
-
     # Detecting boundary zones:
     filter_bs_cols = [col for col in plants_all_bs if col.startswith('Sector')]
     zones_bs = []
@@ -286,6 +279,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     BoundarySector = BoundarySector.reindex(zones_bs)
     BoundarySector.fillna(0, inplace=True)
+    SectorXReservoirLevels = GenericTable(zones_bs, 'SectorXReservoirLevels', config, default=0)
 
     # Boundary Sector Max Spillage
     if os.path.isfile(config['BoundarySectorMaxSpillage']):
@@ -319,6 +313,16 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     config['default']['ReservoirLevelInitial']) + ' will be used')
             else:
                 ReservoirLevels[key].update(profiles[key])
+                logging.info(
+                    'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
+
+    if profilesSectorX is not None:
+        for key in profilesSectorX.columns:
+            if key not in SectorXReservoirLevels.columns:
+                logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the '
+                                                                  'ReservoirLevels table')
+            else:
+                SectorXReservoirLevels[key].update(profilesSectorX[key])
                 logging.info(
                     'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
 
@@ -568,7 +572,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'PriceTransmission': PriceTransmission,
                'SectorXDemand': SectorXDemand, 'CostXNotServed': CostXNotServed,
                'SectorXFlexibleDemand': SectorXFlexibleDemand, 'SectorXFlexibleSupply': SectorXFlexibleSupply,
-               'BSMaxSpillage': BS_Spillages}
+               'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
@@ -816,6 +820,24 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
                                                      finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
                                                      Plants_thms['StorageCapacity'][s] * Plants_thms['Nunits'][s]
+
+    for i, nx in enumerate(sets['nx']):
+        if nx in finalTS['SectorXReservoirLevels'] and any(finalTS['SectorXReservoirLevels'][nx] > 0) and all(
+                finalTS['SectorXReservoirLevels'][nx] - 1 <= 1e-11):
+            # get the time series
+            parameters['SectorXStorageProfile']['val'][i, :] = finalTS['SectorXReservoirLevels'][nx][idx_sim].values
+        elif nx in finalTS['SectorXReservoirLevels'] and any(finalTS['SectorXReservoirLevels'][nx] > 0) and any(
+                finalTS['SectorXReservoirLevels'][nx] - 1 > 1e-11):
+            logging.critical(nx + ': The reservoir level is sometimes higher than its capacity (>1) !')
+            sys.exit(1)
+        else:
+            logging.warning(
+                'Could not find reservoir level data for storage plant ' + nx + '. Using the provided default initial '
+                                                                                'and final values')
+            parameters['SectorXStorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],
+                                                                           config['default']['ReservoirLevelFinal'],
+                                                                           len(idx_sim))
+        parameters['SectorXStorageInitial']['val'][i] = parameters['SectorXStorageProfile']['val'][i, 0]
 
     # Storage Inflows:
     for i, s in enumerate(sets['asu']):
