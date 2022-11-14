@@ -837,7 +837,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             parameters['SectorXStorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],
                                                                            config['default']['ReservoirLevelFinal'],
                                                                            len(idx_sim))
-        parameters['SectorXStorageInitial']['val'][i] = parameters['SectorXStorageProfile']['val'][i, 0]
+        parameters['SectorXStorageInitial']['val'][i] = parameters['SectorXStorageProfile']['val'][i, 0] * \
+                                                        BoundarySector['SectorXStorageCapacity'][nx]
 
     # Storage Inflows:
     for i, s in enumerate(sets['asu']):

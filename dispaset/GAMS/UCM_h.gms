@@ -1276,7 +1276,7 @@ EQ_Tot_Flex_Demand_BS(nx)..
 EQ_Max_Flex_Capacity_BS(nx,i)..
          SectorXFlexDemand(nx,i)
          =L=
-         SectorXFlexMaxCapacity(nx)*TimeStep
+         SectorXFlexMaxCapacity(nx)
 ;
 
 * Only valid in old formulation!!! If MTS = 0: Boundary sector (PtL) demand is not a variable anymore, but a parameter
@@ -1298,7 +1298,7 @@ EQ_Tot_Flex_Supply_BS(nx)..
 EQ_Max_Flex_Supply_BS(nx,i)..
          SectorXFlexSupply(nx,i)
          =L=
-         SectorXFlexMaxSupply(nx)*TimeStep
+         SectorXFlexMaxSupply(nx)
 ;
 
 *===============================================================================

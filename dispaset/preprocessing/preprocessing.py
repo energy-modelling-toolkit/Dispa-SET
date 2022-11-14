@@ -348,14 +348,12 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                                 freq=pd_timestep(TimeStep)).tz_localize(None)
 
         if config['SectorXFlexibleDemand'] != '':
-            SectorXFlexDemand = pd.DataFrame(SectorXFlexDemand, index=idx_tmp).fillna(0) / temp_config[
-                'SimulationTimeStep']
+            SectorXFlexDemand = pd.DataFrame(SectorXFlexDemand, index=idx_tmp).fillna(0)
             SectorXFlexDemand = SectorXFlexDemand.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
             SectorXFlexDemand = SectorXFlexDemand.loc[idx_long, :]
 
         if config['SectorXFlexibleSupply'] != '':
-            SectorXFlexSupply = pd.DataFrame(SectorXFlexSupply, index=idx_tmp).fillna(0) / temp_config[
-                'SimulationTimeStep']
+            SectorXFlexSupply = pd.DataFrame(SectorXFlexSupply, index=idx_tmp).fillna(0)
             SectorXFlexSupply = SectorXFlexSupply.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
             SectorXFlexSupply = SectorXFlexSupply.loc[idx_long, :]
 
