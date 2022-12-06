@@ -327,7 +327,7 @@ def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=Fal
     plt.show()
 
 
-def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones = ''):
+def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones = '', show_plot=True):
     """
     Plots the generation for a selection of zones, disaggregated by fuel type
 
@@ -418,7 +418,8 @@ def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones = ''):
 
     handles, labels = ax.get_legend_handles_labels()  # get the handles
     ax.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.15, 0.25))
-    plt.show()
+    if show_plot:
+        plt.show()
 
     # Generation share plot
     GenPerZone_prct = GenPerZone.fillna(0).div(ZonePosition.sum(axis=1), axis=0)
@@ -439,7 +440,8 @@ def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones = ''):
              linewidth=2, color='k')
     handles, labels = ax2.get_legend_handles_labels()  # get the handles
     ax2.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.14, 0.25))
-    plt.show()
+    if show_plot:
+        plt.show()
 
     # Heat generation bar chart
     fuels_heat = PPindicators[[u in [x for x in commons['Technologies']]
@@ -505,7 +507,8 @@ def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones = ''):
         handles.append(Patch(facecolor='#943126ff', hatch='X'))
         labels.append('HeatSlack')
         ax.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.14, 0.25))
-        plt.show()
+        if show_plot:
+            plt.show()
 
         return GenPerZone, HeatPerZone_th
     else:
@@ -606,7 +609,7 @@ def plot_zone_capacities(inputs, results, plot=True):
 
         # ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005,
         #         linewidth=2, color='k')
-    plt.show()
+        plt.show()
 
     # cols_heat = [col for col in commons['MeritOrderHeat'] if col in HeatCapacity]
     # HeatCapacity = HeatCapacity[cols_heat]

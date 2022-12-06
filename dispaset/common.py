@@ -18,7 +18,7 @@ commons['TimeStep'] = '1h'
 commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF', 'WTON',
                            'COMC', 'GTUR', 'ICEN', 'SCSP', 'STUR',
                            # BS Version
-                           'HDAMC', 'HRORC', 'HPHSC', 'COMCX', 'GTURX', 'ICENX', 'STURX',
+                           'HDAMC', 'HRORC', 'HPHSC', 'COMCX', 'GTURX', 'ICENX', 'STURX', 'HOBOX',
                            # Storage
                            'BATS', 'BEVS', 'CAES', 'THMS', 'H2ST',
                            'ABHP', 'ASHP', 'GETH', 'GSHP', 'HOBO', 'HYHP', 'P2HT', 'REHE', 'SOTH', 'WSHP',
@@ -41,7 +41,7 @@ commons['tech_p2bs'] = ['P2GS', 'ALKE', 'PEME', 'SOXE', 'P2BS', 'PEFC',
 # # List of heat only technologies:
 # commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
 # List of noundary sector only technologies:
-commons['tech_boundary_sector'] = ['BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP']
+commons['tech_boundary_sector'] = ['BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP', 'HOBOX']
 # List of thermal storage technologies:
 commons['tech_thermal_storage'] = ['THMS']
 # List of CHP types:
@@ -106,6 +106,8 @@ commons['colors'] = {'LIG': '#af4b9180',
                      'HeatSlack': '#943126ff'}
 
 commons['colors']['curtailment'] = 'red'
+commons['colors']['shed load'] = 'white'
+commons['colors']['reserves'] = 'black'
 # Hatches associated with each fuel:
 commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '', 'GAS': '', 'NUC': '', 'SUN': '', 'WIN': '', 'WAT': '',
                       'BIO': '', 'AMO': '', 'GEO': '', 'Storage': '', 'WST': '', 'OTH': '', 'HYD': '',

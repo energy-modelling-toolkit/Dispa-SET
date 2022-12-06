@@ -57,9 +57,9 @@ sto = ds.plot_tech_cap(inputs)
 # # Violin plot for CO2 emissions
 # ds.plot_co2(inputs, results, figsize=(9, 6), width=0.9)
 #
-# # Bar plot with the energy balances in all countries:
-# ds.plot_energy_zone_fuel(inputs, results, ds.get_indicators_powerplant(inputs, results))
-#
+# Bar plot with the energy balances in all countries:
+ds.plot_energy_zone_fuel(inputs, results, ds.get_indicators_powerplant(inputs, results))
+
 # # Analyse the results for each country and provide quantitative indicators:
 # r = ds.get_result_analysis(inputs, results)
 #

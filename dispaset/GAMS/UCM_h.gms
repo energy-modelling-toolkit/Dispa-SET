@@ -441,6 +441,7 @@ LL_2U(n,h)                              [MW]    Deficit in reserve up
 LL_3U(n,h)                              [MW]    Deficit in reserve up - non spinning
 LL_2D(n,h)                              [MW]    Deficit in reserve down
 LL_SectorXFlexDemand(nx)                [MWh]   Deficit in flex demand
+LL_SectorXFlexSupply(nx)                [MWh]   Deficit in flex supply
 spillage(au,h)                          [MWh]   spillage from water reservoirs
 SystemCost(h)                           [EUR]   Hourly system cost
 Reserve_2U(au,h)                        [MW]    Spinning reserve up
@@ -660,7 +661,7 @@ EQ_Objective_function..
          sum(i,SystemCost(i))
          +Config("WaterValue","val")*sum(au,StorageLevelViolation(au))
          +Config("WaterValue","val")*sum(nx,SectorXStorageLevelViolation(nx))
-         +Config("ValueOfLostLoad","val")*sum(nx,LL_SectorXFlexDemand(nx))
+         +Config("ValueOfLostLoad","val")*sum(nx,LL_SectorXFlexDemand(nx) + LL_SectorXFlexSupply(nx))
 ;
 
 * 3 binary commitment status
@@ -1290,6 +1291,7 @@ EQ_BS_Flex_Demand(nx,i)..
 EQ_Tot_Flex_Supply_BS(nx)..
          SectorXFlexSupplyInputInitial(nx)
          + sum(i,SectorXFlexSupplyInput(nx,i))
+         + LL_SectorXFlexSupply(nx)
          =G=
          sum(i,SectorXFlexSupply(nx,i))
 ;
@@ -1524,6 +1526,7 @@ OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
 OutputCurtailmentReserve_2U(n,h)
 OutputCurtailmentReserve_3U(n,h)
+OutputCurtailmentPerUnit(u,h)
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 ShadowPrice(n,h)
 SectorXShadowPrice(nx,h)
@@ -1622,6 +1625,7 @@ OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
 OutputCurtailmentReserve_2U(n,z)=CurtailmentReserve_2U.L(n,z);
 OutputCurtailmentReserve_3U(n,z)=CurtailmentReserve_3U.L(n,z);
+OutputCurtailmentPerUnit(u,z)=(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1);
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
 LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
 LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
@@ -1722,6 +1726,7 @@ OutputShedLoad,
 OutputCurtailedPower,
 OutputCurtailmentReserve_2U,
 OutputCurtailmentReserve_3U,
+OutputCurtailmentPerUnit,
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation,
 OutputGenMargin,
 LostLoad_MaxPower,
