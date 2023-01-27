@@ -47,18 +47,18 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
     else:
         if (config['SectorXFlexibleDemand'] != '') and (config['SectorXFlexibleSupply'] == ''):
             [new_profiles, new_SectorXFlexDemand, new_profilesSectorX] = mid_term_scheduling(config, mts_plot=mts_plot,
-                                                                                             TimeStep=MTSTimeStep)
+                                                                                              TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
             SimData = build_single_run(config, profiles=new_profiles, SectorXFlexDemand=new_SectorXFlexDemand,
-                                       profilesSectorX=new_profilesSectorX)
+                                        profilesSectorX=new_profilesSectorX)
         elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] == ''):
             [new_profiles, new_SectorXFlexSupply, new_profilesSectorX] = mid_term_scheduling(config, mts_plot=mts_plot,
-                                                                                             TimeStep=MTSTimeStep)
+                                                                                              TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
             SimData = build_single_run(config, profiles=new_profiles, SectorXFlexSupply=new_SectorXFlexSupply,
-                                       profilesSectorX=new_profilesSectorX)
+                                        profilesSectorX=new_profilesSectorX)
         elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] != ''):
             [new_profiles, new_SectorXFlexDemand, new_SectorXFlexSupply, new_profilesSectorX] = mid_term_scheduling(
                 config,
@@ -67,7 +67,7 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
             SimData = build_single_run(config, profiles=new_profiles, SectorXFlexDemand=new_SectorXFlexDemand,
-                                       SectorXFlexSupply=new_SectorXFlexSupply, profilesSectorX=new_profilesSectorX)
+                                        SectorXFlexSupply=new_SectorXFlexSupply, profilesSectorX=new_profilesSectorX)
         else:
             [new_profiles, new_profilesSectorX] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
