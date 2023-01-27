@@ -572,7 +572,7 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
     plants_merged = pd.DataFrame(columns=plants.columns)
 
     # Fill nan values:
-    string_keys = ["Zone", "Technology", "Fuel", "CHPType", 'Sector1']
+    string_keys = ['Zone', 'Technology', 'Fuel', 'CHPType', 'Sector1']
     for key in string_keys:
         plants[key].fillna("", inplace=True)
     for key in ['PartLoadMin', 'StartUpTime', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost',
