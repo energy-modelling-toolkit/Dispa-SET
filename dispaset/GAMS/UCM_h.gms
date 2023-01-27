@@ -47,6 +47,10 @@ $set InputFileName Inputs.gdx
 $setglobal LPFormulation 0
 $setglobal MTS 0
 
+* Flag to transmission grid model option
+* (1 for DC-PowerFlow 0 for NTC)
+$setglobal TransmissionGrid 0
+
 * Flag to retrieve status or not
 * (1 to retrieve 0 to not)
 $setglobal RetrieveStatus 0
@@ -185,6 +189,7 @@ SectorXStorageSelfDischarge(nx)             [%]             Boundary sector stor
 SectorXStorageMinimum(nx)                   [MWh]           Boundary sector storage minimum
 $If %MTS% == 0 SectorXStorageInitial(nx)    [MWh]           Boundary sector storage initial state of charge
 SectorXStorageProfile(nx,h)                 [%]             Boundary sector storage level respected at the end of each horizon
+$If %TransmissionGrid% == 1 PTDF(l,n)		[p.u.]			Power Transfer Distribution Factor Matrix
 ;
 
 *Parameters as used within the loop
@@ -307,6 +312,7 @@ $LOAD SectorXStorageMinimum
 $If %MTS% == 0 $LOAD SectorXStorageInitial
 $LOAD SectorXStorageProfile
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
+$If %TransmissionGrid% == 1 $LOAD PTDF
 ;
 
 $If %Verbose% == 0 $goto skipdisplay
@@ -393,6 +399,7 @@ SectorXStorageMinimum,
 $If %MTS% == 0 SectorXStorageInitial,
 SectorXStorageProfile,
 $If %RetrieveStatus% == 1 , CommittedCalc
+$If %TransmissionGrid% == 1, PTDF
 ;
 
 $label skipdisplay
@@ -421,7 +428,7 @@ CostRampDownH(u,h)                      [EUR]   Ramping cost
 CurtailedPower(n,h)                     [MW]    Curtailed power at node n
 CurtailmentReserve_2U(n,h) 			    [MW]    Curtailed power used for reserves at node n
 CurtailmentReserve_3U(n,h) 			    [MW]    Curtailed power used for reserves at node n
-Flow(l,h)                               [MW]    Flow through lines
+$If %TransmissionGrid% == 0 Flow(l,h)   [MW]    Flow through lines
 FlowX(lx,h)                             [MW]    Flow through boundary sector lines
 Power(au,h)                             [MW]    Power output
 PowerConsumption(au,h)                  [MW]    Power consumption by P2X units
@@ -469,6 +476,8 @@ ObjectiveFunction(h)
 OptimalityGap(h)
 OptimizationError
 Error
+$If %TransmissionGrid% == 1 InjectedPower(h,n) [p.u]   Power injected to each node of the system
+$If %TransmissionGrid% == 1 Flow(l,h)          [MW]    Flow through lines
 ;
 
 *===============================================================================
@@ -596,6 +605,8 @@ EQ_Curtailed_Power
 EQ_Residual_Load
 EQ_BS_Spillage_limits_upper
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
+$If %TransmissionGrid% == 1 EQ_DC_Power_Flow
+$If %TransmissionGrid% == 1 EQ_Total_Injected_Power
 ;
 
 $If %RetrieveStatus% == 0 $goto skipequation
@@ -745,6 +756,7 @@ EQ_Residual_Load(n,i)..
 ;
 
 *Hourly demand balance in the day-ahead market for each node
+$ifthen %TransmissionGrid% == 0
 EQ_Demand_balance_DA(n,i)..
          sum(u,Power(u,i)*Location(u,n))
          +sum(p2x,Power(p2x,i)*Location(p2x,n))
@@ -759,6 +771,25 @@ EQ_Demand_balance_DA(n,i)..
          +sum(p2x,PowerConsumption(p2x,i)*Location(p2x,n))
          +LL_MinPower(n,i)
 ;
+$else
+
+EQ_Demand_balance_DA(n,i)..
+         sum(u,Power(u,i)*Location(u,n))
+*         +sum(l,Flow(l,i)*LineNode(l,n))
+         -InjectedPower(i,n)
+*         +sum(l,Flow(l,i))
+         =E=
+         Demand("DA",n,i) + Demand("Flex",n,i)
+         +DemandModulation(n,i)
+         +sum(s,StorageInput(s,i)*Location(s,n))
+         -ShedLoad(n,i)
+         +sum(p2h,PowerConsumption(p2h,i)*Location(p2h,n))
+         +sum(p2h2,PowerConsumption(p2h2,i)*Location(p2h2,n))
+         -LL_MaxPower(n,i)
+         +LL_MinPower(n,i)
+;
+
+$endIf
 
 * Energy balance at the level of the flexible demand, considered as a storage capacity
 EQ_Flexible_Demand(n,i)..
@@ -1074,6 +1105,7 @@ EQ_Emission_limits(i,p,n)..
          EmissionMaximum(n,p)*TimeStep
 ;
 
+$ifthen %TransmissionGrid% == 0
 *Flows are above minimum values
 EQ_Flow_limits_lower(l,i)..
          FlowMinimum(l,i)
@@ -1087,6 +1119,36 @@ EQ_Flow_limits_upper(l,i)..
          =L=
          FlowMaximum(l,i)
 ;
+$else
+*DC Power Flow in Unit Commitment
+EQ_DC_Power_Flow(l,i)..
+         Flow(l,i)
+         =E=
+         sum(n,PTDF(l,n)*InjectedPower(i,n))
+;
+*Total Injected Power in all Nodes of the Power System
+EQ_Total_Injected_Power(i)..
+         sum(n,InjectedPower(i,n))
+         =E=
+         0
+;
+
+*Flows are above minimum values
+EQ_Flow_limits_lower(l,i)..
+*MARCO         FlowMaximum(l,i)
+         -FlowMaximum(l,i)
+         =L=
+         Flow(l,i)
+;
+
+*Flows are below maximum values
+EQ_Flow_limits_upper(l,i)..
+         Flow(l,i)
+         =L=
+         FlowMaximum(l,i)
+;
+
+$endIf
 
 *Boundary Sector Flows are above minimum values
 EQ_BS_Flow_limits_lower(lx,i)..
@@ -1386,7 +1448,9 @@ EQ_Max_Flex_Capacity_BS,
 EQ_Tot_Flex_Supply_BS,
 EQ_Max_Flex_Supply_BS,
 EQ_BS_Spillage_limits_upper,
-$If %RetrieveStatus% == 1 EQ_CommittedCalc
+$If %RetrieveStatus% == 1 EQ_CommittedCalc,
+$If %TransmissionGrid% == 1 EQ_DC_Power_Flow, 
+$If %TransmissionGrid% == 1 EQ_Total_Injected_Power
 /
 ;
 UCM_SIMPLE.optcr = 0.01;
@@ -1582,6 +1646,7 @@ UnitHourlyShutDownCost(au,h)
 UnitHourlyRampingCost(au,h)
 UnitHourlyProductionCost(au,h)
 UnitHourlyProfit(au,h)
+$If %TransmissionGrid% == 1 OutputInjectedPower(n,h)
 ;
 
 $If %ActivateAdvancedReserves% == 2 OutputMaxOutageUp(n,z)=max(smax((au,tc),PowerCapacity(au)/Nunits(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n)), smax(l,FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
@@ -1698,6 +1763,7 @@ UnitHourlyRampingCost(u,z) = CostRampUpH.L(u,z) + CostRampDownH.L(u,z);
 UnitHourlyProductionCost(au,z) = sum(u, UnitHourlyFixedCost(u,z) + UnitHourlyStartUpCost(u,z) + UnitHourlyShutDownCost(u,z) + UnitHourlyRampingCost(u,z))
                                 + UnitHourlyVariableCost(au,z);
 UnitHourlyProfit(au,z) = UnitHourlyRevenue(au,z) - UnitHourlyProductionCost(au,z);
+$If %TransmissionGrid% == 1 OutputInjectedPower(n,z)=InjectedPower.L(z,n);  
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
@@ -1776,6 +1842,7 @@ OutputDemand_2U,
 OutputDemand_3U,
 OutputDemand_2D,
 status,
+$If %TransmissionGrid% == 1 OutputInjectedPower, 
 UnitHourlyPowerRevenue
 UnitHourly2URevenue
 UnitHourly2DRevenue
@@ -1834,6 +1901,7 @@ EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=OutputStorageLe
 $If %MTS%==0 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_RampUp rng=LostLoad_RampUp!A1 rdim=1 cdim=1'
 $If %MTS%==0 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=Y var=LostLoad_RampDown rng=LostLoad_RampDown!A1 rdim=1 cdim=1'
 
+$If %TransmissionGrid% == 1 EXECUTE 'GDXXRW.EXE "Results.gdx" O="Results.xlsx" Squeeze=N par=OutputInjectedPower rng=InjectedPower!A1 rdim=1 cdim=1' 
 
 $exit
 
