@@ -128,7 +128,7 @@ commons['StdParameters'] = {
     # Horizon Settings
     'DataTimeStep': 60, 'SimulationTimeStep': 61,
     # Simulation Options
-    'SimulationType': 76, 'ReserveCalculation': 77, 'AllowCurtailment': 78,
+    'SimulationType': 76, 'ReserveCalculation': 77, 'AllowCurtailment': 78, 'TransmissionGridType': 79,
     # Mid-term scheduling related
     'HydroScheduling': 98, 'HydroSchedulingHorizon': 99, 'InitialFinalReservoirLevel': 100
 }
@@ -145,6 +145,8 @@ commons['PathParameters'] = {
     'HeatDemand': 134, 'Temperatures': 135,
     # Geo data
     'GeoData': 136,
+    # DC-Power Flow data
+    'PTDFMatrix': 145,
     # # Hydrogen data
     # 'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
     # Reserves input data
@@ -153,7 +155,8 @@ commons['PathParameters'] = {
     'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostCurtailment': 171,
     # Fuel price related data
     'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
-    'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187
+    'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187 
+
 }
 
 commons['modifiers'] = {'Demand': 274, 'Wind': 275, 'Solar': 276, 'Storage': 277}
