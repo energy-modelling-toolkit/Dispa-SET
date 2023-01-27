@@ -117,6 +117,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         PriceTransmission_raw = load_time_series(config, config['PriceTransmission'])
     else:
         PriceTransmission_raw = pd.DataFrame(index=config['idx_long'])
+    
+    # PTDF Matrix:
+    if os.path.isfile(config['PTDFMatrix']):
+        PTDF = pd.read_csv(config['PTDFMatrix'],
+                           na_values=commons['na_values'],
+                           keep_default_na=False, index_col=0)
 
     # Boundary Sector Interconnections:
     if os.path.isfile(config['BoundarySectorInterconnections']):
@@ -154,6 +160,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         BoundarySector = pd.read_csv(config['BoundarySectorData'],
                                      na_values=commons['na_values'],
                                      keep_default_na=False, index_col='Sector')
+    else:
+        for key in ['SectorXStorageCapacity', 'SectorXStorageSelfDischarge']:
+            BoundarySector[key] = np.nan
 
     # Power plants:
     plants = pd.DataFrame()
@@ -187,7 +196,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # If not present, add the non-compulsory fields to the units table:
     for key in ['CHPPowerLossFactor', 'CHPPowerToHeat', 'CHPType', 'STOCapacity', 'STOSelfDischarge',
                 'STOMaxChargingPower', 'STOChargingEfficiency', 'CHPMaxHeat', 'WaterWithdrawal',
-                'WaterConsumption']:
+                'WaterConsumption', 'Sector1', 'Sector2']:
         if key not in plants.columns:
             plants[key] = np.nan
 
@@ -202,11 +211,23 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # check plant list:
     check_units(config, plants)
+    
+    # Check the PTDF Matrix (TODO: check the order or sequence):   
+    for key in NTC.columns:
+        if key not in PTDF.index:
+            logging.warning('The transmission line' + str(key) + ' is not in the provided PTDF')
+            logging.error('The PTDF Matrix provided is not valid')
+            sys.exit(1)
+    for key in config['zones']:
+        if key not in PTDF.columns:
+            logging.warning('The node' + str(key) + ' is not in the provided zones')
+            logging.error('The PTDF Matrix provided is not valid')
+            sys.exit(1)
 
     # Defining the hydro storages:
     plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
     check_sto(config, plants_sto)
-
+    
     # Defining the thermal storages:
     plants_thms = plants[[u in commons['tech_thermal_storage'] for u in plants['Technology']]]
     check_sto(config, plants_thms)
@@ -724,6 +745,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXStorageMinimum'] = ['nx']
     sets_param['SectorXStorageInitial'] = ['nx']
     sets_param['SectorXStorageProfile'] = ['nx', 'h']
+    sets_param['PTDF'] = ['l', 'n']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -995,6 +1017,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     parameters['SectorXSpillageNode'] = incidence_matrix(sets, 'slx', parameters, 'SectorXSpillageNode', nodes='nx')
 
+    # PTDF MATRIX
+    if len(PTDF.columns) != 0:
+        for i, u in enumerate(sets['n']):
+            if u in PTDF.columns:
+                parameters['PTDF']['val'][:, i] = PTDF[u].values
+
+
     # Outage Factors
     if len(finalTS['Outages'].columns) != 0:
         for i, u in enumerate(sets['au']):
@@ -1161,7 +1190,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     if not os.path.exists(sim):
         os.makedirs(sim)
-
+    grid_flag = config.get('TransmissionGridType', "")  # If key does not exist it returns ""
     if MTS:
         if not LP:
             logging.error('Simulation in MTS must be LP')
@@ -1173,6 +1202,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
                 line = line.replace('$setglobal MTS 0', '$setglobal MTS 1')
                 fout.write(line)
+            if (grid_flag == "DC-Power Flow"):
+                logging.info('Simulation with DC-Power Flow')
+                for line in fin:
+                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
+                    fout.write(line)
             fin.close()
             fout.close()
             # additionally allso copy UCM_h_simple.gms
@@ -1185,6 +1219,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         for line in fin:
             line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
             fout.write(line)
+        if (grid_flag == "DC-Power Flow"):
+            logging.info('Simulation with DC-Power Flow')
+            for line in fin:
+                line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
+                fout.write(line)
         fin.close()
         fout.close()
         # additionally allso copy UCM_h_simple.gms
@@ -1196,6 +1235,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # additionally allso copy UCM_h_simple.gms
         shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
                         os.path.join(sim, 'UCM_h_simple.gms'))
+    
     gmsfile = open(os.path.join(sim, 'UCM.gpr'), 'w')
     gmsfile.write(
         '[PROJECT] \n \n[RP:UCM_H] \n1= \n[OPENWINDOW_1] \nFILE0=UCM_h.gms \nFILE1=UCM_h.gms \nMAXIM=1 \nTOP=50 \nLEFT=50 \nHEIGHT=400 \nWIDTH=400')
