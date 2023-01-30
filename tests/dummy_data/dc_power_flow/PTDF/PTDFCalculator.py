@@ -102,12 +102,12 @@ try:
         
         ptdf_new=np.zeros((lines_total,nodes))
 
-        for k5 in li_ava:
-            ptdf_rn=np.insert(ptdf_rn, k5, np.zeros((1, nodes)), 0)
-            lodf=np.insert(lodf, k5, np.zeros((1, len(new_feeder))), 0)
+        # for k5 in li_ava:
+        #     ptdf_rn=np.insert(ptdf_rn, k5, np.zeros((1, nodes)), 0)
+        #     lodf=np.insert(lodf, k5, np.zeros((1, len(new_feeder))), 0)
     
-        for k6 in li_ava:
-            lodf=np.insert(lodf, k6, np.zeros((1, lines_total)), 1)
+        # for k6 in li_ava:
+        #     lodf=np.insert(lodf, k6, np.zeros((1, lines_total)), 1)
             
             
         pt_dic[k]=ptdf_rn
@@ -126,27 +126,27 @@ try:
         col_df=list(feeder['Line'])*df_nf
         for k2 in row_df:
             fil_df+=list(np.repeat(k2,df_nc))
-           
-        data_pt2={'Topology': [k]*len(fil_pf), 'Nodes':col_pf,'Lines':fil_pf,'PTDF':list(ptdf_rn.flatten())}   
-        data_df2={'Topology': [k]*len(fil_df),'Line_l':col_df,'Line_m':fil_df,'LODF':list(lodf.flatten())}
-        table_pt2=pd.DataFrame(data_pt2)
-        table_df2=pd.DataFrame(data_df2)
-        table_pt=pd.concat([table_pt,table_pt2])
-        table_df=pd.concat([table_df,table_df2])
-        len_datapt+=[len_datapt[-1]+len(feeder['Line'])+2]
-        len_datadf+=[len_datadf[-1]+len(feeder['Line'])+2]
+          
+    #     data_pt2={'Topology': [k]*len(fil_pf), feeder['Node_i']:col_pf,'Lines':fil_pf,'PTDF':list(ptdf_rn.flatten())}   
+    #     data_df2={'Topology': [k]*len(fil_df),'Line_l':col_df,'Line_m':fil_df,'LODF':list(lodf.flatten())}
+    #     table_pt2=pd.DataFrame(data_pt2)
+    #     table_df2=pd.DataFrame(data_df2)
+    #     table_pt=pd.concat([table_pt,table_pt2])
+    #     table_df=pd.concat([table_df,table_df2])
+    #     len_datapt+=[len_datapt[-1]+len(feeder['Line'])+2]
+    #     len_datadf+=[len_datadf[-1]+len(feeder['Line'])+2]
         
-        
-            
-        
-    tab_bin.rename(columns = {'Name' : 'First Name', 'age' : 'Age'}, inplace = True)
-
-    tab_bin.insert(0, "Topology", list(range(len(tab_bin))), True)
-    tab_bin.insert(1,"Availability", availability, True)
+     
+    # tab_bin.insert(0, "Topology", list(range(len(tab_bin))), True)
+    # tab_bin.insert(1,"Availability", availability, True)
 
     for k in pt_dic:
         df_ptdic=pd.DataFrame(pt_dic[k])
-        df_lddic=pd.DataFrame(ld_dic[k])        
+        df_lddic=pd.DataFrame(ld_dic[k]) 
+    
+    df_ptdic.set_index(feeder['Code_Line'],inplace=True, drop=True)
+    gen_names = [Generation['Code_Gen']]
+    df_ptdic.columns = gen_names
     df_ptdic.to_csv('PTDF.csv')
 
 
