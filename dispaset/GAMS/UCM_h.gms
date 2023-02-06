@@ -518,6 +518,7 @@ EQ_CHP_extraction_Pmax
 EQ_CHP_extraction
 EQ_CHP_backpressure
 EQ_BS_Demand_balance
+EQ_BS_Demand_balance2
 EQ_CHP_max_heat
 EQ_Heat_Storage_balance
 EQ_Heat_Storage_minimum
@@ -1184,7 +1185,6 @@ EQ_Max_Power_Consumption_of_BS_units(p2x,i)..
          StorageChargingCapacity(p2x) * Nunits(p2x) *TimeStep
 ;
 
-
 EQ_BS_Demand_balance(nx,i)..
         sum(p2x, PowerX(nx,p2x,i))
         + sum(xu, PowerX(nx,xu,i))
@@ -1201,6 +1201,19 @@ EQ_BS_Demand_balance(nx,i)..
         + SectorXFlexDemand(nx,i)
         + SectorXStorageInput(nx,i)
         + LL_SectorXSpillage(nx,i)
+;
+
+EQ_BS_Demand_balance2(nx,i)..
+        SectorXStorageInput(nx,i)
+        =L=
+        sum(p2x, PowerX(nx,p2x,i))
+        + sum(xu, PowerX(nx,xu,i))
+        + sum(lx,FlowX(lx,i)*LineXNode(lx,nx))
+        + SectorXFlexSupply(nx,i)
+        + sum(slx,SectorXSpillage(slx,i)*SectorXSpillageNode(slx,nx))
+        + sum(chp, Heat(chp,i)*LocationX(chp,nx))
+        + sum(p2h, Heat(p2h,i)*LocationX(p2h,nx))
+        + sum(thms, Heat(thms,i)*LocationX(thms,nx))
 ;
 
 *Heat Storage balance
@@ -1313,6 +1326,7 @@ EQ_CHP_extraction_Pmax,
 EQ_CHP_extraction,
 EQ_CHP_backpressure,
 EQ_BS_Demand_balance,
+EQ_BS_Demand_balance2,
 EQ_CHP_max_heat,
 EQ_CostRampUp,
 EQ_CostRampDown,
