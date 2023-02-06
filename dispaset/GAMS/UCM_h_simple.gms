@@ -47,6 +47,10 @@ $setglobal LPFormulation 1
 * (1 to retrieve 0 to not)
 $setglobal RetrieveStatus 0
 
+* Flag to transmission grid model option
+* (1 for DC-PowerFlow 0 for NTC)
+$setglobal TransmissionGrid 0
+
 *===============================================================================
 *Definition of   sets and parameters
 *===============================================================================
@@ -93,7 +97,7 @@ Demand(mk,n,h)                   [MW]     Demand
 EmissionMaximum(n,p)             [tP]     Emission limit
 EmissionRate(u,p)                [tP\MWh] P emission rate
 FlowMaximum(l,h)                 [MW]     Line limits
-FlowMinimum(l,h)                 [MW]     Minimum flow
+$If %TransmissionGrid% == 0 FlowMinimum(l,h)                 [MW]     Minimum flow
 Fuel(u,f)                        [n.a.]   Fuel type {1 0}
 LineNode(l,n)                    [n.a.]   Incidence matrix {-1 +1}
 LoadShedding(n,h)                [MW]   Load shedding capacity
@@ -120,6 +124,7 @@ Technology(u,t)                  [n.a.]   Technology type {1 0}
 Nunits(u)                        [n.a.]   Number of units inside the cluster (upper bound value for integer variables)
 K_QuickStart(n)                      [n.a.]   Part of the reserve that can be provided by offline quickstart units
 QuickStartPower(u,h)            [MW\h\u]   Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
+$If %TransmissionGrid% == 1 PTDF(l,n)           [p.u.]                  Power Transfer Distribution Factor Matrix
 ;
 
 *Parameters as used within the loop
@@ -162,7 +167,7 @@ $LOAD StorageDischargeEfficiency
 $LOAD EmissionMaximum
 $LOAD EmissionRate
 $LOAD FlowMaximum
-$LOAD FlowMinimum
+$If %TransmissionGrid% == 0 $LOAD FlowMinimum
 $LOAD Fuel
 $LOAD LineNode
 $LOAD LoadShedding
@@ -187,6 +192,7 @@ $LOAD StorageOutflow
 $LOAD Technology
 $LOAD CostRampUp
 $LOAD CostRampDown
+$If %TransmissionGrid% == 1 $LOAD PTDF
 ;
 
 $If %Verbose% == 0 $goto skipdisplay
@@ -235,6 +241,7 @@ StorageProfile,
 StorageMinimum,
 StorageOutflow,
 Technology,
+$If %TransmissionGrid% == 1, PTDF
 ;
 
 $label skipdisplay
@@ -246,7 +253,7 @@ POSITIVE VARIABLES
 CostRampUpH(u,h)           [EUR]   Ramping cost
 CostRampDownH(u,h)         [EUR]   Ramping cost
 CurtailedPower(n,h)        [MW]    Curtailed power at node n
-Flow(l,h)                  [MW]    Flow through lines
+$If %TransmissionGrid% == 0 Flow(l,h)   [MW]    Flow through lines
 Power(u,h)                 [MW]    Power output
 PowerMaximum(u,h)          [MW]    Power output
 PowerMinimum(u,h)          [MW]    Power output
@@ -268,6 +275,8 @@ WaterSlack(s)              [MWh]   Unsatisfied water level constraint
 
 free variable
 SystemCostD                ![EUR]   Total system cost for one optimization period
+$If %TransmissionGrid% == 1 InjectedPower(h,n) [p.u]   Power injected to each node of the system
+$If %TransmissionGrid% == 1 Flow(l,h)          [MW]    Flow through lines
 ;
 
 *===============================================================================
@@ -314,6 +323,8 @@ EQ_Emission_limits
 EQ_Flow_limits_lower
 EQ_Flow_limits_upper
 EQ_LoadShedding
+$If %TransmissionGrid% == 1 EQ_DC_Power_Flow
+$If %TransmissionGrid% == 1 EQ_Total_Injected_Power
 ;
 
 $If %RetrieveStatus% == 0 $goto skipequation
@@ -354,6 +365,7 @@ EQ_CostRampDown(u,i)$(CostRampDown(u) <> 0)..
 ;
 
 *Hourly demand balance in the day-ahead market for each node
+$ifthen %TransmissionGrid% == 0
 EQ_Demand_balance_DA(n,i)..
          sum(u,Power(u,i)*Location(u,n))
           +sum(l,Flow(l,i)*LineNode(l,n))
@@ -364,7 +376,22 @@ EQ_Demand_balance_DA(n,i)..
          -LL_MaxPower(n,i)
          +LL_MinPower(n,i)
 ;
+$else
 
+EQ_Demand_balance_DA(n,i)..
+         sum(u,Power(u,i)*Location(u,n))
+*          +sum(l,Flow(l,i)*LineNode(l,n))
+         -InjectedPower(i,n)
+         =E=
+         Demand("DA",n,i)
+         +sum(s,StorageInput(s,i)*Location(s,n))
+         -ShedLoad(n,i)
+         -LL_MaxPower(n,i)
+         +LL_MinPower(n,i)
+
+;
+
+$endIf
 *Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(n,i)..
          sum((u,t),Reserve_2U(u,i)*Technology(u,t)*Reserve(t)*Location(u,n))
@@ -482,6 +509,7 @@ EQ_Emission_limits(n,i,p)..
          EmissionMaximum(n,p)
 ;
 
+$ifthen %TransmissionGrid% == 0
 *Flows are above minimum values
 EQ_Flow_limits_lower(l,i)..
          FlowMinimum(l,i)
@@ -495,7 +523,36 @@ EQ_Flow_limits_upper(l,i)..
          =L=
          FlowMaximum(l,i)
 ;
+$else
+*DC Power Flow in Unit Commitment
+EQ_DC_Power_Flow(l,i)..
+         Flow(l,i)
+         =E=
+         sum(n,PTDF(l,n)*InjectedPower(i,n))
+;
+*Total Injected Power in all Nodes of the Power System
+EQ_Total_Injected_Power(i)..
+         sum(n,InjectedPower(i,n))
+         =E=
+         0
+;
 
+*Flows are above minimum values
+EQ_Flow_limits_lower(l,i)..
+*MARCO         FlowMaximum(l,i)
+         -FlowMaximum(l,i)
+         =L=
+         Flow(l,i)
+;
+
+*Flows are below maximum values
+EQ_Flow_limits_upper(l,i)..
+         Flow(l,i)
+         =L=
+         FlowMaximum(l,i)
+;
+
+$endIf
 *Load shedding
 EQ_LoadShedding(n,i)..
          ShedLoad(n,i)
@@ -530,6 +587,8 @@ EQ_Emission_limits,
 EQ_Flow_limits_lower,
 EQ_Flow_limits_upper,
 EQ_LoadShedding,
+$If %TransmissionGrid% == 1 EQ_DC_Power_Flow,
+$If %TransmissionGrid% == 1 EQ_Total_Injected_Power,
 /
 ;
 UCM_SIMPLE.optcr = 0.01;
@@ -613,6 +672,7 @@ $If %Verbose% == 1 Display Flow.L,Power.L,ShedLoad.L,CurtailedPower.L,StorageLev
 
 PARAMETER
 OutputFlow(l,h)
+$If %TransmissionGrid% == 1 OutputInjectedPower(n,h)
 OutputPower(u,h)
 OutputStorageInput(u,h)
 OutputStorageLevel(u,h)
@@ -632,6 +692,7 @@ StorageShadowPrice(s,h)
 ;
 
 OutputFlow(l,z) = Flow.L(l,z);
+$If %TransmissionGrid% == 1 OutputInjectedPower(n,z)=InjectedPower.L(z,n);
 OutputPower(u,z) = Power.L(u,z);
 OutputStorageInput(s,z) = StorageInput.L(s,z);
 OutputStorageLevel(s,z) = StorageLevel.L(s,z)/StorageCapacity(s);
@@ -651,6 +712,7 @@ StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
 
 EXECUTE_UNLOAD "Results_simple.gdx"
 OutputFlow,
+$If %TransmissionGrid% == 1 OutputInjectedPower,
 OutputPower,
 OutputStorageInput,
 OutputStorageLevel,

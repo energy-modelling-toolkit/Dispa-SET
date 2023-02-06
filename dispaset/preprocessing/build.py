@@ -1196,45 +1196,122 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             logging.error('Simulation in MTS must be LP')
             sys.exit(1)
         else:
-            fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
-            fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
-            for line in fin:
-                line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
-                line = line.replace('$setglobal MTS 0', '$setglobal MTS 1')
-                fout.write(line)
+
             if (grid_flag == "DC-Power Flow"):
+                fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
+                fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
+                logging.info('Simulation with DC-Power Flow')
+                for line in fin:
+                    line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+                    line = line.replace('$setglobal MTS 0', '$setglobal MTS 1')
+                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
+                    fout.write(line)
+                fin.close()
+                fout.close()
+                
+                # additionally allso copy UCM_h_simple.gms
+                fin1 = open(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'))
+                fout1 = open(os.path.join(sim, 'UCM_h_simple.gms'), "wt")
+                logging.info('Simulation with DC-Power Flow')
+                for line in fin1:
+                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
+                    fout1.write(line)
+                fin1.close()
+                fout1.close()
+                # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+                #                 os.path.join(sim, 'UCM_h_simple.gms'))
+            elif (grid_flag == "NTC"):
+                fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
+                fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
+                logging.info('Simulation with NTC')
+                for line in fin:
+                    line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+                    line = line.replace('$setglobal MTS 0', '$setglobal MTS 1')
+                    fout.write(line)
+                fin.close()
+                fout.close()
+                # additionally allso copy UCM_h_simple.gms
+                shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+                                os.path.join(sim, 'UCM_h_simple.gms'))
+            else:
+                logging.error('Please provide a valid Transmission grid type')
+                sys.exit(1)
+
+    elif LP:
+            if (grid_flag == "DC-Power Flow"):
+                fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
+                fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
+                logging.info('Simulation with DC-Power Flow')
+                for line in fin:
+                    line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
+                    fout.write(line)
+                fin.close()
+                fout.close()
+                
+                # additionally allso copy UCM_h_simple.gms
+                fin1 = open(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'))
+                fout1 = open(os.path.join(sim, 'UCM_h_simple.gms'), "wt")
+                logging.info('Simulation with DC-Power Flow')
+                for line in fin1:
+                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
+                    fout1.write(line)
+                fin1.close()
+                fout1.close()
+                # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+                #                 os.path.join(sim, 'UCM_h_simple.gms'))
+            elif (grid_flag == "NTC"):
+                fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
+                fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
+                logging.info('Simulation with NTC')
+                for line in fin:
+                    line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+                    fout.write(line)
+                fin.close()
+                fout.close()
+                # additionally allso copy UCM_h_simple.gms
+                shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+                                os.path.join(sim, 'UCM_h_simple.gms'))
+            else:
+                logging.error('Please provide a valid Transmission grid type')
+                sys.exit(1)
+
+    else:
+            if (grid_flag == "DC-Power Flow"):
+                fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
+                fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
                 logging.info('Simulation with DC-Power Flow')
                 for line in fin:
                     line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
                     fout.write(line)
-            fin.close()
-            fout.close()
-            # additionally allso copy UCM_h_simple.gms
-            shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-                            os.path.join(sim, 'UCM_h_simple.gms'))
-
-    elif LP:
-        fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
-        fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
-        for line in fin:
-            line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
-            fout.write(line)
-        if (grid_flag == "DC-Power Flow"):
-            logging.info('Simulation with DC-Power Flow')
-            for line in fin:
-                line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
-                fout.write(line)
-        fin.close()
-        fout.close()
-        # additionally allso copy UCM_h_simple.gms
-        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-                        os.path.join(sim, 'UCM_h_simple.gms'))
-    else:
-        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h.gms'),
-                        os.path.join(sim, 'UCM_h.gms'))
-        # additionally allso copy UCM_h_simple.gms
-        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-                        os.path.join(sim, 'UCM_h_simple.gms'))
+                fin.close()
+                fout.close()
+                
+                # additionally allso copy UCM_h_simple.gms
+                fin1 = open(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'))
+                fout1 = open(os.path.join(sim, 'UCM_h_simple.gms'), "wt")
+                logging.info('Simulation with DC-Power Flow')
+                for line in fin1:
+                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
+                    fout1.write(line)
+                fin1.close()
+                fout1.close()
+                # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+                #                 os.path.join(sim, 'UCM_h_simple.gms'))
+            elif (grid_flag == "NTC"):
+                # additionally allso copy UCM_h_simple.gms
+                shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+                                os.path.join(sim, 'UCM_h_simple.gms'))
+            else:
+                logging.error('Please provide a valid Transmission grid type')
+                sys.exit(1)
+                
+                
+        # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h.gms'),
+        #                 os.path.join(sim, 'UCM_h.gms'))
+        # # additionally allso copy UCM_h_simple.gms
+        # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+        #                 os.path.join(sim, 'UCM_h_simple.gms'))
     
     gmsfile = open(os.path.join(sim, 'UCM.gpr'), 'w')
     gmsfile.write(

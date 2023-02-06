@@ -264,6 +264,8 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             gdx_to_list(config['GAMS_folder'], config['SimulationDirectory'] + '/' + resultfile, varname='all',
                         verbose=True), fixindex=True, verbose=True)
         _check_results(temp_results)
+        # Marco: create an empty df for profilesSectorX
+        profilesSectorX = pd.DataFrame()
         if 'OutputStorageLevel' not in temp_results:
             logging.critical('Storage levels in the selected region were not computed, please check that storage units '
                              'are present in the power plant database! If not, unselect zones with no storage units '
@@ -273,34 +275,43 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             profiles = temp_results['OutputStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
         else:
             profiles = temp_results['OutputStorageLevel'].set_index(idx)
-
-        if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
-            profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
+        # Marco: New "else" condition added, check the name of the parameters 'SectorXReservoirLevels' different than 'OutputSectorXStorageLevel'
+            
+        if config['SectorXReservoirLevels'] != '':
+            if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
+                profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
                 0).set_index(idx)
-        else:
-            profilesSectorX = temp_results['OutputSectorXStorageLevel'].set_index(idx)
+            else:
+                profilesSectorX = temp_results['OutputSectorXStorageLevel'].set_index(idx)
+        else: 
+            logging.info('BS Storage Sectors were not computed')
+            profilesSectorX = temp_results['OutputStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
+            0).set_index(idx)
 
         if config['SectorXFlexibleDemand'] != '':
-            if 'OutputSectorXFlexDemand' not in temp_results:
-                logging.critical('PtL Demand in the selected region was not computed')
-                sys.exit(0)
             if len(temp_results['OutputSectorXFlexDemand']) < len(idx):
                 SectorXFlexDemand = temp_results['OutputSectorXFlexDemand'].reindex(range(1, len(idx) + 1)).fillna(
                     0).set_index(
                     idx)
             else:
                 SectorXFlexDemand = temp_results['OutputSectorXFlexDemand'].set_index(idx)
+        else:
+            logging.info('BS Flexible Demand Sectors were not computed')
+            SectorXFlexDemand = temp_results['OutputCommitted'].reindex(range(1, len(idx) + 1)).fillna(
+            0).set_index(idx)
+        
 
         if config['SectorXFlexibleSupply'] != '':
-            if 'OutputSectorXFlexSupply' not in temp_results:
-                logging.critical('PtL Demand in the selected region was not computed')
-                sys.exit(0)
             if len(temp_results['OutputSectorXFlexSupply']) < len(idx):
                 SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].reindex(range(1, len(idx) + 1)).fillna(
                     0).set_index(
                     idx)
             else:
                 SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].set_index(idx)
+        else:
+            logging.info('BS Flexible Supply Sectors were not computed')
+            SectorXFlexSupply = temp_results['OutputCommitted'].reindex(range(1, len(idx) + 1)).fillna(
+            0).set_index(idx)
 
         # Updating the profiles table with the original unit names:
         for u in profiles:
@@ -317,8 +328,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
 
     # replace all 1.000000e+300 values by nan since they correspond to undefined in GAMS:
     profiles[profiles >= 1E300] = np.nan
-    profilesSectorX[profilesSectorX >= 1E300] = np.nan
-
+    profilesSectorX[profilesSectorX >= 1E300]  = np.nan
     if config['SectorXFlexibleDemand'] != '':
         SectorXFlexDemand[SectorXFlexDemand >= 1E300] = np.nan
 
@@ -339,7 +349,8 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
 
     if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
         profiles = profiles.reindex(idx_long, method='nearest')
-        profilesSectorX = profilesSectorX.reindex(idx_long, method='nearest')
+        #Marco: Missing condition if profilesSectorX dont exist
+        # profilesSectorX = profilesSectorX.reindex(idx_long, method='nearest')
 
         temp_config['StartDate'] = (y_start, 1, 1, 00, 00, 00)  # updating start date to the beginning of the year
         temp_config['StopDate'] = (y_start + 1, 1, 2, 00, 59, 00)
@@ -358,7 +369,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             SectorXFlexSupply = SectorXFlexSupply.loc[idx_long, :]
 
     pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'], "temp_profiles.p"), "wb"))
-    pickle.dump(profilesSectorX, open(os.path.join(config['SimulationDirectory'], "temp_profilesSectorX.p"), "wb"))
+    # pickle.dump(profilesSectorX, open(os.path.join(config['SimulationDirectory'], "temp_profilesSectorX.p"), "wb"))
 
     if (config['SectorXFlexibleSupply'] == '') and (config['SectorXFlexibleDemand'] != ''):
         return profiles, SectorXFlexDemand, profilesSectorX
