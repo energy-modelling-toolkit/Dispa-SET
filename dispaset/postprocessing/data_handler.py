@@ -170,7 +170,8 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown', 'HeatShadowPrice',
                    'H2ShadowPrice', 'OutputCurtailedHeat', 'OutputEmissions', 'CapacityMargin',
                    'OutputCurtailmentReserve_2U', 'OutputCurtailmentReserve_3U', 'OutputMaxOutageUp',
-                   'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D']
+                   'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D',
+                   'LostLoad_StorageAlert']
 
     # Setting the proper index to the result dataframes:
     for key in chain(keys, keys_sparse):

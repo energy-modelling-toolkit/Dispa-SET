@@ -647,7 +647,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
             # Interconnection data
             'NTC': 130, 'Interconnections': 131,
             # Hydro data
-            'ReservoirScaledInflows': 132, 'ReservoirLevels': 133,
+            'ReservoirScaledInflows': 132, 'ReservoirLevels': 133, 'StorageAlertLevels': 140,
             # Heat data
             'HeatDemand': 134, 'Temperatures': 135,
             # Geo data

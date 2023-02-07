@@ -1,5 +1,6 @@
 import datetime as dt
 import logging
+import numbers
 import os
 import shutil
 import sys
@@ -224,6 +225,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     ReservoirLevels = UnitBasedTable(plants_all_sto, 'ReservoirLevels', config,
                                      fallbacks=['Unit', 'Technology', 'Zone'],
                                      default=0)
+    StorageAlertLevels = UnitBasedTable(plants_all_sto, 'StorageAlertLevels', config,
+                                        fallbacks=['Unit', 'Technology', 'Zone'],
+                                        default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_all_sto, 'ReservoirScaledInflows', config,
                                             fallbacks=['Unit', 'Technology', 'Zone'], default=0)
     # HeatDemand = UnitBasedTable(plants_heat, 'HeatDemand', config, fallbacks=['Unit'], default=0)
@@ -468,6 +472,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                'Efficiencies': Efficiencies, 'NTCs': NTCs, 'Inter_RoW': Inter_RoW,
                'LoadShedding': LoadShedding, 'CostLoadShedding': CostLoadShedding, 'CostCurtailment': CostCurtailment,
                'ScaledInflows': ReservoirScaledInflows, 'ReservoirLevels': ReservoirLevels,
+               'StorageAlertLevels': StorageAlertLevels,
                'Outages': Outages, 'AvailabilityFactors': AF, 'CostHeatSlack': CostHeatSlack,
                'HeatDemand': HeatDemand, 'ShareOfFlexibleDemand': ShareOfFlexibleDemand,
                'PriceTransmission': PriceTransmission, 'CostH2Slack': CostH2Slack,
@@ -483,7 +488,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # for key in ['H2RigidDemand', 'H2FlexibleDemand']:
     #     finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='Sum')
     # Merge the following time series by weighted average based on storage capacity
-    for key in ['ReservoirLevels']:
+    for key in ['ReservoirLevels', 'StorageAlertLevels']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
 
     # Check that all times series data is available with the specified data time step:
@@ -558,6 +563,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['CostShutDown'] = ['au']
     sets_param['CostStartUp'] = ['au']
     sets_param['CostVariable'] = ['au', 'h']
+    sets_param['CostStorageAlert'] = ['au', 'h']
     sets_param['Curtailment'] = ['n']
     sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
@@ -594,6 +600,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['StorageInflow'] = ['asu', 'h']
     sets_param['StorageInitial'] = ['asu']
     sets_param['StorageMinimum'] = ['asu']
+    sets_param['StorageAlertLevel'] = ['asu', 'h']
     sets_param['StorageOutflow'] = ['s', 'h']
     sets_param['StorageProfile'] = ['asu', 'h']
     sets_param['Technology'] = ['au', 't']
@@ -672,6 +679,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
             parameters['StorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],
                                                                     config['default']['ReservoirLevelFinal'],
                                                                     len(idx_sim))
+        # Setting the storage alert levels
+        if s in Plants_all_sto.index:
+            parameters['StorageAlertLevel']['val'][i, :] = finalTS['StorageAlertLevels'][s][idx_sim].values
+
         # The initial level is the same as the first value of the profile:
         if s in Plants_sto.index:
             parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
@@ -761,10 +772,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # Equivalence dictionary between fuel types and price entries in the config sheet:
     FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
                    'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia'}
+    CostVariable = pd.DataFrame()
     for unit in range(Nunits):
         c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
         found = False
         for FuelEntry in FuelEntries:
+            CostVariable = pd.concat([
+                CostVariable, FuelPrices[FuelEntries[FuelEntry]][c] / Plants_merged['Efficiency'][unit] + \
+                              Plants_merged['EmissionRate'][unit] * FuelPrices['PriceOfCO2'][c]], axis=1)
             if Plants_merged['Fuel'][unit] == FuelEntry:
                 if Plants_merged['Technology'][unit] == 'ABHP':
                     parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
@@ -788,6 +803,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                             ' in unit ' + Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
 
     # %%###############################################################################################################
+    # Assign storage alert level costs to the unit with highest variable costs inside the zone
+    CostVariable = CostVariable.groupby(by=CostVariable.columns, axis=1).apply(
+        lambda g: g.mean(axis=1) if isinstance(g.iloc[0, 0], numbers.Number) else g.iloc[:, 0]) * 1.1
+    for unit in range(Nunits):
+        c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
+        found = False
+        if Plants_merged['Unit'][unit] in Plants_all_sto['Unit']:
+            parameters['CostStorageAlert']['val'][unit, :] = CostVariable[c].values
+            found = True
+        if not found:
+            logging.warning('No alert price has been found for ' + Plants_merged['Unit'][unit] +
+                            '. A null variable cost has been assigned')
 
     # Maximum Line Capacity
     for i, l in enumerate(sets['l']):

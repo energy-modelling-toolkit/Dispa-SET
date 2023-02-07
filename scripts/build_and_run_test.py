@@ -33,14 +33,16 @@ SimData = ds.build_simulation(config)
 _ = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
 
 # Load the simulation results:
-inputs, results = ds.get_sim_results(config, cache=False)
+inputs_MTS, results_MTS = ds.get_sim_results(config['SimulationDirectory'], inputs_file='Inputs_MTS.p',
+                                             results_file='Results_MTS.gdx', cache=False)
+inputs, results = ds.get_sim_results(config['SimulationDirectory'], cache=False)
 
 # import pandas as pd
 import pandas as pd
 
 rng = pd.date_range('2016-1-01', '2016-1-07', freq='H')
 # Generate country-specific plots
-ds.plot_zone(inputs, results, z='Z2', rng=rng)
+ds.plot_zone(inputs, results, z='Z1', rng=rng)
 
 # Generate country-specific plots
 ds.plot_zone(inputs, results)

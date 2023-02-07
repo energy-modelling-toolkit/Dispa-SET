@@ -114,6 +114,7 @@ CostRampDown(u)                  [EUR\MW]        Ramp-down costs
 CostShutDown(u)                  [EUR\u]         Shut-down costs
 CostStartUp(u)                   [EUR\u]         Start-up costs
 CostVariable(au,h)               [EUR\MW]        Variable costs
+CostStorageAlert(au,h)           [EUR\MW]        Cost of violating storage alert level
 CostHeatSlack(n_th,h)            [EUR\MWh]       Cost of supplying heat via other means
 CostH2Slack(n_h2,h)              [EUR\MWh]       Cost of supplying H2 by other means
 H2Demand(n_h2,h)                 [MW]            H2 rigid demand
@@ -166,6 +167,7 @@ $If %RetrieveStatus% == 1 CommittedCalc(u,z)               [n.a.]   Committment 
 Nunits(au)                       [n.a.]          Number of units inside the cluster (upper bound value for integer variables)
 K_QuickStart(n)                  [n.a.]          Part of the reserve that can be provided by offline quickstart units
 QuickStartPower(au,h)            [MW\h\u]        Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
+StorageAlertLevel(au,h)          [MWh]           Storage alert - Will only be violated to avoid power rationing
 ;
 
 *Parameters as used within the loop
@@ -229,6 +231,7 @@ $LOAD CostLoadShedding
 $LOAD CostShutDown
 $LOAD CostStartUp
 $LOAD CostVariable
+$LOAD CostStorageAlert
 $LOAD Curtailment
 $LOAD CostCurtailment
 $LOAD Demand
@@ -265,6 +268,7 @@ $LOAD StorageInflow
 $LOAD StorageInitial
 $LOAD StorageProfile
 $LOAD StorageMinimum
+$LOAD StorageAlertLevel
 $LOAD StorageOutflow
 $LOAD Technology
 $LOAD TimeDownMinimum
@@ -312,6 +316,7 @@ CostShutDown,
 CostStartUp,
 CostRampUp,
 CostVariable,
+CostStorageAlert,
 Demand,
 StorageDischargeEfficiency,
 Efficiency,
@@ -346,6 +351,7 @@ StorageInflow,
 StorageInitial,
 StorageProfile,
 StorageMinimum,
+StorageAlertLevel,
 StorageOutflow,
 Technology,
 TimeDownMinimum,
@@ -398,6 +404,7 @@ LL_MinPower(n,h)           [MW]    Power exceeding the demand
 LL_2U(n,h)                 [MW]    Deficit in reserve up
 LL_3U(n,h)                 [MW]    Deficit in reserve up - non spinning
 LL_2D(n,h)                 [MW]    Deficit in reserve down
+LL_StorageAlert(au,h)       [MWh]   Unsatisfied water level constraint for going below alert level at each hour
 spillage(au,h)              [MWh]   spillage from water reservoirs
 SystemCost(h)              [EUR]   Hourly system cost
 Reserve_2U(au,h)           [MW]    Spinning reserve up
@@ -513,6 +520,7 @@ EQ_2U_limit_chp
 EQ_2D_limit_chp
 EQ_3U_limit_chp
 EQ_Storage_minimum
+EQ_Storage_alert
 EQ_Storage_level
 EQ_Storage_input
 EQ_Storage_MaxDischarge
@@ -567,6 +575,7 @@ EQ_SystemCost(i)..
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
+         +sum(s,CostStorageAlert(s,i)*LL_StorageAlert(s,i)*TimeStep)
          +Config("CostOfSpillage","val")*sum(au,spillage(au,i))
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
@@ -589,6 +598,7 @@ EQ_SystemCost(i)..
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
+         +sum(s,CostStorageAlert(s,i)*LL_StorageAlert(s,i)*TimeStep)
          +Config("CostOfSpillage","val")*sum(au,spillage(au,i))
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
@@ -889,6 +899,14 @@ EQ_Storage_minimum(au,i)..
          StorageLevel(au,i)$(s(au) or p2h2(au))
 ;
 
+*Storage level should be above alert level, going below will only be violated to avoid power rationing (110% of most expensive power plant)
+EQ_Storage_alert(s,i)..
+         StorageCapacity(s)*Nunits(s)*min(StorageAlertLevel(s,i),AvailabilityFactor(s,i))
+         =L=
+         StorageLevel(s,i)
+         + LL_StorageAlert(s,i)
+;
+
 *Storage level must be below storage capacity
 EQ_Storage_level(au,i)..
          StorageLevel(au,i)$(s(au) or p2h2(au))
@@ -938,6 +956,7 @@ EQ_Storage_balance(au,i)..
          +H2Output(au,i)$(p2h2(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(p2h2(au)),0.0001))
          +spillage(au,i)$(wat(au))
          +Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
+         +StorageSelfDischarge(au)$(s(au))*StorageLevel(au,i)$(s(au))*TimeStep
 ;
 
 * Minimum level at the end of the optimization horizon:
@@ -1206,6 +1225,7 @@ EQ_2U_limit_chp,
 EQ_2D_limit_chp,
 EQ_3U_limit_chp,
 EQ_Storage_minimum,
+EQ_Storage_alert,
 EQ_Storage_level,
 EQ_Storage_input,
 EQ_Storage_balance,
@@ -1368,6 +1388,7 @@ LostLoad_MinPower(n,h)
 LostLoad_2D(n,h)
 LostLoad_2U(n,h)
 LostLoad_3U(n,h)
+LostLoad_StorageAlert(au,h)
 $If %MTS%==0 LostLoad_RampUp(n,h)
 $If %MTS%==0 LostLoad_RampDown(n,h)
 $If %MTS%==0 LostLoad_RampUp_Unit(au,z)
@@ -1456,6 +1477,7 @@ LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
 LostLoad_2D(n,z) = LL_2D.L(n,z);
 LostLoad_2U(n,z) = LL_2U.L(n,z);
 LostLoad_3U(n,z) = LL_3U.L(n,z);
+LostLoad_StorageAlert(au,z) = LL_StorageAlert.L(au,z);
 $If %MTS%==0 LostLoad_RampUp(n,z)    = sum(u,LL_RampUp.L(u,z)*Location(u,n));
 $If %MTS%==0 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 $If %MTS%==0 LostLoad_RampUp_Unit(u,z) = LL_RampUp.L(u,z);
@@ -1552,6 +1574,7 @@ LostLoad_MinPower,
 LostLoad_2D,
 LostLoad_2U,
 LostLoad_3U,
+LostLoad_StorageAlert,
 $If %MTS%==0 LostLoad_RampUp,
 $If %MTS%==0 LostLoad_RampDown,
 $If %MTS%==0 LostLoad_RampUp_Unit,
