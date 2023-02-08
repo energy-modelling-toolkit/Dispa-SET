@@ -123,6 +123,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         PTDF = pd.read_csv(config['PTDFMatrix'],
                            na_values=commons['na_values'],
                            keep_default_na=False, index_col=0)
+    else:
+        logging.warning('No PTDF Matrix will be considered (no valid file provided)')
+        PTDF = pd.DataFrame()
 
     # Boundary Sector Interconnections:
     if os.path.isfile(config['BoundarySectorInterconnections']):
@@ -1017,7 +1020,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     parameters['SectorXSpillageNode'] = incidence_matrix(sets, 'slx', parameters, 'SectorXSpillageNode', nodes='nx')
 
-    # PTDF MATRIX
+    # PTDF MATRIX / todo: check_ptdf (the sequence of lines and node should be the same as sets n and sets l)
     if len(PTDF.columns) != 0:
         for i, u in enumerate(sets['n']):
             if u in PTDF.columns:
@@ -1299,6 +1302,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
                 #                 os.path.join(sim, 'UCM_h_simple.gms'))
             elif (grid_flag == "NTC"):
+                fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
+                fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
+                logging.info('Simulation with NTC')
+                for line in fin:
+                    line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+                    fout.write(line)
+                fin.close()
+                fout.close()
                 # additionally allso copy UCM_h_simple.gms
                 shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
                                 os.path.join(sim, 'UCM_h_simple.gms'))
