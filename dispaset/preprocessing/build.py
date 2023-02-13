@@ -230,6 +230,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                                         default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_all_sto, 'ReservoirScaledInflows', config,
                                             fallbacks=['Unit', 'Technology', 'Zone'], default=0)
+    CostSpillage = UnitBasedTable(plants_all_sto, 'PriceOfSpillage', config,
+                                  fallbacks=['Unit', 'Technology', 'Zone'],
+                                  default=0)
+
     # HeatDemand = UnitBasedTable(plants_heat, 'HeatDemand', config, fallbacks=['Unit'], default=0)
     # CostHeatSlack = UnitBasedTable(plants_heat, 'CostHeatSlack', config, fallbacks=['Unit', 'Zone'],
     #                                default=config['default']['CostHeatSlack'])
@@ -472,7 +476,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
                'Efficiencies': Efficiencies, 'NTCs': NTCs, 'Inter_RoW': Inter_RoW,
                'LoadShedding': LoadShedding, 'CostLoadShedding': CostLoadShedding, 'CostCurtailment': CostCurtailment,
                'ScaledInflows': ReservoirScaledInflows, 'ReservoirLevels': ReservoirLevels,
-               'StorageAlertLevels': StorageAlertLevels,
+               'StorageAlertLevels': StorageAlertLevels, 'CostSpillage': CostSpillage,
                'Outages': Outages, 'AvailabilityFactors': AF, 'CostHeatSlack': CostHeatSlack,
                'HeatDemand': HeatDemand, 'ShareOfFlexibleDemand': ShareOfFlexibleDemand,
                'PriceTransmission': PriceTransmission, 'CostH2Slack': CostH2Slack,
@@ -488,7 +492,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     # for key in ['H2RigidDemand', 'H2FlexibleDemand']:
     #     finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='Sum')
     # Merge the following time series by weighted average based on storage capacity
-    for key in ['ReservoirLevels', 'StorageAlertLevels']:
+    for key in ['ReservoirLevels', 'StorageAlertLevels', 'CostSpillage']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
 
     # Check that all times series data is available with the specified data time step:
@@ -563,6 +567,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['CostShutDown'] = ['au']
     sets_param['CostStartUp'] = ['au']
     sets_param['CostVariable'] = ['au', 'h']
+    sets_param['CostSpillage'] = ['asu', 'h']
     sets_param['CostStorageAlert'] = ['au', 'h']
     sets_param['Curtailment'] = ['n']
     sets_param['CostCurtailment'] = ['n', 'h']
@@ -682,6 +687,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         # Setting the storage alert levels
         if s in Plants_all_sto.index:
             parameters['StorageAlertLevel']['val'][i, :] = finalTS['StorageAlertLevels'][s][idx_sim].values
+            parameters['CostSpillage']['val'][i, :] = finalTS['CostSpillage'][s][idx_sim].values
 
         # The initial level is the same as the first value of the profile:
         if s in Plants_sto.index:
@@ -946,8 +952,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
 
     # Config variables:
     sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead',
-                        'SimulationTimeStep', 'ValueOfLostLoad', 'QuickStartShare', 'CostOfSpillage', 'WaterValue',
-                        'DemandFlexibility']
+                        'SimulationTimeStep', 'ValueOfLostLoad', 'QuickStartShare',
+                        # 'CostOfSpillage',
+                        'WaterValue', 'DemandFlexibility']
     sets['y_config'] = ['year', 'month', 'day', 'val']
     dd_begin = idx_sim[0]
     dd_end = idx_sim[-1]
@@ -960,7 +967,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
          [1e-5, 0, 0, config['SimulationTimeStep']],
          [1e-5, 0, 0, config['default']['ValueOfLostLoad']],
          [1e-5, 0, 0, config['default']['ShareOfQuickStartUnits']],
-         [1e-5, 0, 0, config['default']['PriceOfSpillage']],
+         # [1e-5, 0, 0, config['default']['PriceOfSpillage']],
          [1e-5, 0, 0, config['default']['WaterValue']],
          [1e-5, 0, 0, config['default']['DemandFlexibility']]]
     )

@@ -114,6 +114,8 @@ CostRampDown(u)                  [EUR\MW]        Ramp-down costs
 CostShutDown(u)                  [EUR\u]         Shut-down costs
 CostStartUp(u)                   [EUR\u]         Start-up costs
 CostVariable(au,h)               [EUR\MW]        Variable costs
+CostSpillage(au,h)               [EUR\MW]        Cost of spillage for each unit
+CostWaterValue(au,h)             [EUR\MW]        Cost of storage level violation for each unit
 CostStorageAlert(au,h)           [EUR\MW]        Cost of violating storage alert level
 CostHeatSlack(n_th,h)            [EUR\MWh]       Cost of supplying heat via other means
 CostH2Slack(n_h2,h)              [EUR\MWh]       Cost of supplying H2 by other means
@@ -231,6 +233,7 @@ $LOAD CostLoadShedding
 $LOAD CostShutDown
 $LOAD CostStartUp
 $LOAD CostVariable
+$LOAD CostSpillage
 $LOAD CostStorageAlert
 $LOAD Curtailment
 $LOAD CostCurtailment
@@ -316,6 +319,7 @@ CostShutDown,
 CostStartUp,
 CostRampUp,
 CostVariable,
+CostSpillage,
 CostStorageAlert,
 Demand,
 StorageDischargeEfficiency,
@@ -576,7 +580,8 @@ EQ_SystemCost(i)..
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
          +sum(s,CostStorageAlert(s,i)*LL_StorageAlert(s,i)*TimeStep)
-         +Config("CostOfSpillage","val")*sum(au,spillage(au,i))
+*         +Config("CostOfSpillage","val")*sum(au,spillage(au,i))
+         +sum(au,CostSpillage(au,i)*spillage(au,i))
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
 $else
@@ -599,7 +604,8 @@ EQ_SystemCost(i)..
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
          +sum(s,CostStorageAlert(s,i)*LL_StorageAlert(s,i)*TimeStep)
-         +Config("CostOfSpillage","val")*sum(au,spillage(au,i))
+*         +Config("CostOfSpillage","val")*sum(au,spillage(au,i))
+         +sum(au,CostSpillage(au,i)*spillage(au,i))
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
 

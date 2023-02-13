@@ -661,7 +661,8 @@ def load_config_excel(ConfigFile, AbsPath=True):
             'CostH2Slack': 170, 'CostCurtailment': 171,
             # Fuel price related data
             'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
-            'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187
+            'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187,
+            'PriceOfSpillage': 205
         }
         modifiers = {'Demand': 274, 'Wind': 275, 'Solar': 276, 'Storage': 277}
         default = {
