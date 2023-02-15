@@ -123,13 +123,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         PriceTransmission_raw = pd.DataFrame(index=config['idx_long'])
     
     # PTDF Matrix:
-    if os.path.isfile(config['PTDFMatrix']):
-        PTDF = pd.read_csv(config['PTDFMatrix'],
-                           na_values=commons['na_values'],
-                           keep_default_na=False, index_col=0)
-    else:
-        logging.warning('No PTDF Matrix will be considered (no valid file provided)')
-        PTDF = pd.DataFrame()
+    if (grid_flag == "DC-Power Flow"):
+        if os.path.isfile(config['PTDFMatrix']):
+            PTDF = pd.read_csv(config['PTDFMatrix'],
+                               na_values=commons['na_values'],
+                               keep_default_na=False, index_col=0)
+        else:
+            logging.warning('No PTDF Matrix will be considered (no valid file provided)')
+            PTDF = pd.DataFrame()
 
     # Boundary Sector Interconnections:
     if os.path.isfile(config['BoundarySectorInterconnections']):
@@ -663,6 +664,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 if len(finalTS[key].columns) > 0:
                     finalTS[key] = finalTS[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
 
+    # Formatting PTDF matrix according to sets['l'] and sets['n'] order or sequence
+    if (grid_flag == "DC-Power Flow"):
+        PTDF = PTDF.T
+        PTDF_l = pd.DataFrame()
+        for i in Interconnections:
+            PTDF_l = pd.concat([PTDF_l,PTDF[i]], axis=1)
+        PTDF = PTDF_l.T
+        PTDF_n = pd.DataFrame()
+        for j in config['zones']:
+            PTDF_n = pd.concat([PTDF_n,PTDF[j]], axis=1)
+        PTDF = PTDF_n
+    
     # %%###############################################################################################################
     ############################################   Sets    ############################################################
     ###################################################################################################################
@@ -781,7 +794,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXStorageMinimum'] = ['nx']
     sets_param['SectorXStorageInitial'] = ['nx']
     sets_param['SectorXStorageProfile'] = ['nx', 'h']
-    sets_param['PTDF'] = ['l', 'n']
+    if (grid_flag == "DC-Power Flow"):
+        sets_param['PTDF'] = ['l', 'n']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -1026,23 +1040,35 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         for i, l in enumerate(sets['l']):
             if l in NTCs.columns:
                 parameters['FlowMaximum']['val'][i, :] = finalTS['NTCs'][l]
-            if l in Inter_RoW.columns:
-                parameters['FlowMaximum']['val'][i, :] = finalTS['Inter_RoW'][l]
-                parameters['FlowMinimum']['val'][i, :] = finalTS['Inter_RoW'][l]
-            parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
+                if l in Inter_RoW.columns:
+                    parameters['FlowMaximum']['val'][i, :] = finalTS['Inter_RoW'][l]
+                    parameters['FlowMinimum']['val'][i, :] = finalTS['Inter_RoW'][l]
+                    parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
     
         # Check values:
         check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
     
         parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
         
-    # elif (grid_flag == "DC-Power Flow"):
-        
+    elif (grid_flag == "DC-Power Flow"):
+        for i, l in enumerate(sets['l']):
+            if l in NTCs.columns:
+                parameters['FlowMaximum']['val'][i, :] = finalTS['NTCs'][l]
+                parameters['FlowMinimum']['val'][i, :] = (finalTS['NTCs'][l])*-1
+                if l in Inter_RoW.columns:
+                    parameters['FlowMaximum']['val'][i, :] = finalTS['Inter_RoW'][l]
+                    parameters['FlowMinimum']['val'][i, :] = finalTS['Inter_RoW'][l]
+                    parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
+    
+        # Check values:
+        check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
+    
+        parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')        
         
 
-    # else:
-    #     logging.error('Please provide a valid Transmission grid type')
-    #     sys.exit(1)    
+    else:
+        logging.error('Please provide a valid Transmission grid type')
+        sys.exit(1)    
 
     # Maximum Boundary Sector Line Capacity
     for i, lx in enumerate(sets['lx']):
@@ -1062,11 +1088,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     parameters['SectorXSpillageNode'] = incidence_matrix(sets, 'slx', parameters, 'SectorXSpillageNode', nodes='nx')
 
-    # PTDF MATRIX / todo: check_ptdf (the sequence of lines and node should be the same as sets n and sets l)
-    if len(PTDF.columns) != 0:
-        for i, u in enumerate(sets['n']):
-            if u in PTDF.columns:
-                parameters['PTDF']['val'][:, i] = PTDF[u].values
+    # PTDF MATRIX 
+    if (grid_flag == "DC-Power Flow"):
+        if len(PTDF.columns) != 0:
+            for i, u in enumerate(sets['n']):
+                if u in PTDF.columns:
+                    parameters['PTDF']['val'][:, i] = PTDF[u].values
 
 
     # Outage Factors
