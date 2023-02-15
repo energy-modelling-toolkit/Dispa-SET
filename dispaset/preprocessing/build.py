@@ -402,8 +402,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             for j in ope:
                 NTC = NTC.drop([j], axis=1)
             NTC = pd.concat([NTC,NTC_new], axis=1)
-        
-        
+        NTC.index = NTC.index.astype('datetime64[ns]') 
+               
         # Check the PTDF Matrix (TODO: check the order or sequence):   
         for key in NTC.columns:
             if key not in PTDF.index:
