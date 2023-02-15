@@ -20,6 +20,7 @@ from .utils import select_units, interconnections, clustering, EfficiencyTimeSer
 from .. import __version__
 from ..common import commons
 from ..misc.gdx_handler import write_variables
+from difflib import SequenceMatcher
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
@@ -48,6 +49,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Boolean variable to check wether it is milp or lp:
     LP = config['SimulationType'] == 'LP' or config['SimulationType'] == 'LP clustered'
+    
+    # Boolean variable to check wether it is NTC or DC-POWERFLOW:
+    grid_flag = config.get('TransmissionGridType', "")  # If key does not exist it returns ""
 
     # check time steps:
     if config['DataTimeStep'] != 1:
@@ -215,18 +219,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # check plant list:
     check_units(config, plants)
     
-    # Check the PTDF Matrix (TODO: check the order or sequence):   
-    for key in NTC.columns:
-        if key not in PTDF.index:
-            logging.warning('The transmission line' + str(key) + ' is not in the provided PTDF')
-            logging.error('The PTDF Matrix provided is not valid')
-            sys.exit(1)
-    for key in config['zones']:
-        if key not in PTDF.columns:
-            logging.warning('The node' + str(key) + ' is not in the provided zones')
-            logging.error('The PTDF Matrix provided is not valid')
-            sys.exit(1)
-
     # Defining the hydro storages:
     plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
     check_sto(config, plants_sto)
@@ -383,6 +375,47 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     for fuel in fuels:
         FuelPrices[fuel] = NodeBasedTable(fuel, config, default=config['default'][fuel])
 
+    # Bidirectional Interconnections:
+    if (grid_flag == "DC-Power Flow"):
+        bidirectional_connections = NTC
+        data_dict = {'connection1':[],'connection2':[],'ratio':[]}
+        aux = bidirectional_connections
+        for i in bidirectional_connections:
+            aux = aux.drop([i], axis=1)
+            for j in aux:
+                ratio = SequenceMatcher(None, j, i).quick_ratio()
+                data_dict['connection1'].append(i)
+                data_dict['connection2'].append(j)
+                data_dict['ratio'].append(ratio)
+        df_ratio = pd.DataFrame(data_dict)
+        eqratio = df_ratio['ratio'] == 1
+        reptd_con = df_ratio[eqratio]
+        reptd_con.reset_index(level =0, inplace = True)
+        reptd_con = reptd_con.drop(['index','ratio'], axis=1)
+        NTC_new = pd.DataFrame()
+        for i in range(len(reptd_con)):
+            ope = reptd_con.iloc[i]
+            max_val = (NTC[ope].max()).max()
+            NTC_aux = NTC[reptd_con.loc[i,'connection1']]
+            NTC_aux.values[:] = max_val
+            NTC_new = pd.concat([NTC_new,NTC_aux], axis=1)
+            for j in ope:
+                NTC = NTC.drop([j], axis=1)
+            NTC = pd.concat([NTC,NTC_new], axis=1)
+        
+        
+        # Check the PTDF Matrix (TODO: check the order or sequence):   
+        for key in NTC.columns:
+            if key not in PTDF.index:
+                logging.warning('The transmission line' + str(key) + ' is not in the provided PTDF')
+                logging.error('The PTDF Matrix provided is not valid')
+                sys.exit(1)
+        for key in config['zones']:
+            if key not in PTDF.columns:
+                logging.warning('The node' + str(key) + ' is not in the provided zones')
+                logging.error('The PTDF Matrix provided is not valid')
+                sys.exit(1)
+    
     # Interconnections:
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], NTC, flows)
 
@@ -989,18 +1022,27 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # %%###############################################################################################################
 
     # Maximum Line Capacity
-    for i, l in enumerate(sets['l']):
-        if l in NTCs.columns:
-            parameters['FlowMaximum']['val'][i, :] = finalTS['NTCs'][l]
-        if l in Inter_RoW.columns:
-            parameters['FlowMaximum']['val'][i, :] = finalTS['Inter_RoW'][l]
-            parameters['FlowMinimum']['val'][i, :] = finalTS['Inter_RoW'][l]
-        parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
+    if (grid_flag == "NTC"):
+        for i, l in enumerate(sets['l']):
+            if l in NTCs.columns:
+                parameters['FlowMaximum']['val'][i, :] = finalTS['NTCs'][l]
+            if l in Inter_RoW.columns:
+                parameters['FlowMaximum']['val'][i, :] = finalTS['Inter_RoW'][l]
+                parameters['FlowMinimum']['val'][i, :] = finalTS['Inter_RoW'][l]
+            parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
+    
+        # Check values:
+        check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
+    
+        parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
+        
+    # elif (grid_flag == "DC-Power Flow"):
+        
+        
 
-    # Check values:
-    check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
-
-    parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
+    # else:
+    #     logging.error('Please provide a valid Transmission grid type')
+    #     sys.exit(1)    
 
     # Maximum Boundary Sector Line Capacity
     for i, lx in enumerate(sets['lx']):
@@ -1193,7 +1235,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     if not os.path.exists(sim):
         os.makedirs(sim)
-    grid_flag = config.get('TransmissionGridType', "")  # If key does not exist it returns ""
+    
     if MTS:
         if not LP:
             logging.error('Simulation in MTS must be LP')
