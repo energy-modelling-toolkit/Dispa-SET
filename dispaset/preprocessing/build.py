@@ -1036,21 +1036,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # %%###############################################################################################################
 
     # Maximum Line Capacity
-    if (grid_flag == "NTC"):
-        for i, l in enumerate(sets['l']):
-            if l in NTCs.columns:
-                parameters['FlowMaximum']['val'][i, :] = finalTS['NTCs'][l]
-                if l in Inter_RoW.columns:
-                    parameters['FlowMaximum']['val'][i, :] = finalTS['Inter_RoW'][l]
-                    parameters['FlowMinimum']['val'][i, :] = finalTS['Inter_RoW'][l]
-                    parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
-    
-        # Check values:
-        check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
-    
-        parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
-        
-    elif (grid_flag == "DC-Power Flow"):
+    if (grid_flag == "DC-Power Flow"):
         for i, l in enumerate(sets['l']):
             if l in NTCs.columns:
                 parameters['FlowMaximum']['val'][i, :] = finalTS['NTCs'][l]
@@ -1067,8 +1053,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         
 
     else:
-        logging.error('Please provide a valid Transmission grid type')
-        sys.exit(1)    
+        for i, l in enumerate(sets['l']):
+            if l in NTCs.columns:
+                parameters['FlowMaximum']['val'][i, :] = finalTS['NTCs'][l]
+                if l in Inter_RoW.columns:
+                    parameters['FlowMaximum']['val'][i, :] = finalTS['Inter_RoW'][l]
+                    parameters['FlowMinimum']['val'][i, :] = finalTS['Inter_RoW'][l]
+                    parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
+        
+            # Check values:
+            check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
+        
+            parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
+    
 
     # Maximum Boundary Sector Line Capacity
     for i, lx in enumerate(sets['lx']):
@@ -1292,7 +1289,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 fout1.close()
                 # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
                 #                 os.path.join(sim, 'UCM_h_simple.gms'))
-            elif (grid_flag == "NTC"):
+            else:
                 fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
                 fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
                 logging.info('Simulation with NTC')
@@ -1305,9 +1302,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 # additionally allso copy UCM_h_simple.gms
                 shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
                                 os.path.join(sim, 'UCM_h_simple.gms'))
-            else:
-                logging.error('Please provide a valid Transmission grid type')
-                sys.exit(1)
+
 
     elif LP:
             if (grid_flag == "DC-Power Flow"):
@@ -1332,7 +1327,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 fout1.close()
                 # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
                 #                 os.path.join(sim, 'UCM_h_simple.gms'))
-            elif (grid_flag == "NTC"):
+            else:
                 fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
                 fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
                 logging.info('Simulation with NTC')
@@ -1344,9 +1339,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 # additionally allso copy UCM_h_simple.gms
                 shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
                                 os.path.join(sim, 'UCM_h_simple.gms'))
-            else:
-                logging.error('Please provide a valid Transmission grid type')
-                sys.exit(1)
+
 
     else:
             if (grid_flag == "DC-Power Flow"):
@@ -1370,7 +1363,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 fout1.close()
                 # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
                 #                 os.path.join(sim, 'UCM_h_simple.gms'))
-            elif (grid_flag == "NTC"):
+            else:
                 fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
                 fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
                 logging.info('Simulation with NTC')
@@ -1382,9 +1375,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 # additionally allso copy UCM_h_simple.gms
                 shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
                                 os.path.join(sim, 'UCM_h_simple.gms'))
-            else:
-                logging.error('Please provide a valid Transmission grid type')
-                sys.exit(1)
                 
                 
         # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h.gms'),
