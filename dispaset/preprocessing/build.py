@@ -578,7 +578,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
     sets_param['OutageFactor'] = ['au', 'h']
     sets_param['PartLoadMin'] = ['au']
     sets_param['PowerCapacity'] = ['au']
-    sets_param['PowerInitial'] = ['u']
+    sets_param['PowerInitial'] = ['au']
     sets_param['PriceTransmission'] = ['l', 'h']
     sets_param['RampUpMaximum'] = ['au']
     sets_param['RampDownMaximum'] = ['au']
@@ -912,10 +912,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, MTS=0):
         Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_thermal_storage']), 'InitialPower'] = 0
 
     if 'InitialPower' in Plants_merged:
-        technologies = [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
-                        commons['tech_p2ht'] + commons['tech_thermal_storage'] + commons['tech_p2h2']]
-        parameters['PowerInitial']['val'] = Plants_merged.loc[Plants_merged['Technology'].isin(technologies)][
-            'InitialPower'].values
+        # technologies = [x for x in commons['Technologies'] if x not in commons['tech_heat'] +
+        #                 commons['tech_p2ht'] + commons['tech_thermal_storage'] + commons['tech_p2h2']]
+        parameters['PowerInitial']['val'] = Plants_merged.loc[:]['InitialPower'].values
 
     # Config variables:
     sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead',
