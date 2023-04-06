@@ -770,7 +770,14 @@ def adjust_unit_capacity(SimData, u_idx, scaling=1, value=None, singleunit=False
     :param singleunit:  Set to true if the technology should remain lumped in a single unit
     :return:            New SimData dictionary
     """
-
+    # a few checks:
+    if len(u_idx) ==0:
+        logging.warning('adjust_unit_capacity : list of units to be scaled is empty')
+        return SimData
+    if scaling > 1E10:
+        logging.warning('adjust_unit_capacity: scaling factor is too high (' + str(scaling) + ')')
+        return SimData
+        
     # find the units to be scaled:
     units = SimData['units'].loc[u_idx,:]
     cond = SimData['units'].index.isin(u_idx)
@@ -802,6 +809,7 @@ def adjust_unit_capacity(SimData, u_idx, scaling=1, value=None, singleunit=False
         for param in ['CostShutDown', 'CostStartUp', 'PowerInitial', 'RampDownMaximum', 'RampShutDownMaximum',
                       'RampStartUpMaximum', 'RampUpMaximum', 'StorageCapacity']:
             SimData['parameters'][param]['val'][idx[u]] = SimData['parameters'][param]['val'][idx[u]] * factor
+
         for param in ['StorageChargingCapacity', 'StorageInitial']:
             # find index, if any:
             idx_s = np.where(np.array(SimData['sets']['s']) == u)[0]
