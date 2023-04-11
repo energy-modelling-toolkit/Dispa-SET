@@ -16,7 +16,7 @@ from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merg
     load_geo_data, GenericTable
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, \
-    BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep
+    BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep, PTDF_matrix
 from .. import __version__
 from ..common import commons
 from ..misc.gdx_handler import write_variables
@@ -124,13 +124,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
     # PTDF Matrix:
     if (grid_flag == "DC-Power Flow"):
-        if os.path.isfile(config['PTDFMatrix']):
-            PTDF = pd.read_csv(config['PTDFMatrix'],
+        if os.path.isfile(config['GridData']):
+            GridData = pd.read_csv(config['GridData'],
                                na_values=commons['na_values'],
                                keep_default_na=False, index_col=0)
         else:
-            logging.warning('No PTDF Matrix will be considered (no valid file provided)')
-            PTDF = pd.DataFrame()
+            logging.error('No valid grid data file provided')
+            GridData = pd.DataFrame()
 
     # Boundary Sector Interconnections:
     if os.path.isfile(config['BoundarySectorInterconnections']):
@@ -378,6 +378,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Bidirectional Interconnections:
     if (grid_flag == "DC-Power Flow"):
+        
+        PTDF = PTDF_matrix(config,GridData)
+        
         bidirectional_connections = NTC
         data_dict = {'connection1':[],'connection2':[],'ratio':[]}
         aux = bidirectional_connections
@@ -405,11 +408,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             NTC = pd.concat([NTC,NTC_new], axis=1)
         NTC.index = NTC.index.astype('datetime64[ns]') 
                
-        # Check the PTDF Matrix (TODO: check the order or sequence):   
+        # Check the Gridata Matrix (TODO: check the order or sequence):   
         for key in NTC.columns:
-            if key not in PTDF.index:
-                logging.warning('The transmission line' + str(key) + ' is not in the provided PTDF')
-                logging.error('The PTDF Matrix provided is not valid')
+            if key not in GridData.index:
+                logging.warning('The transmission line' + str(key) + ' is not in the provided GridData')
+                logging.error('The GridData Matrix provided is not valid')
                 sys.exit(1)
         for key in config['zones']:
             if key not in PTDF.columns:

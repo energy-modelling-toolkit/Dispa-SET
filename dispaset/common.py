@@ -146,7 +146,7 @@ commons['PathParameters'] = {
     # Geo data
     'GeoData': 136,
     # DC-Power Flow data
-    'PTDFMatrix': 145,
+    'GridData': 145,
     # # Hydrogen data
     # 'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
     # Reserves input data
