@@ -44,7 +44,7 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
     if (hydro_flag == "") or (hydro_flag == "Off"):
         logging.info('Simulation without mid therm scheduling')
         SimData = build_single_run(config)
-    else:
+    elif 'SectorXFlexibleDemand' and 'SectorXFlexibleSupply' in config:
         if (config['SectorXFlexibleDemand'] != '') and (config['SectorXFlexibleSupply'] == ''):
             [new_profiles, new_SectorXFlexDemand, new_profilesSectorX] = mid_term_scheduling(config, mts_plot=mts_plot,
                                                                                               TimeStep=MTSTimeStep)
@@ -73,6 +73,11 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
             SimData = build_single_run(config, profiles=new_profiles, profilesSectorX=new_profilesSectorX)
+    else:
+        [new_profiles, new_profilesSectorX] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
+        # Build simulation data with new profiles
+        logging.info('\n\nBuilding final simulation\n')
+        SimData = build_single_run(config, profiles=new_profiles, profilesSectorX=new_profilesSectorX)
 
     # Copy the log to the simulation folder:
     if os.path.isfile(commons['logfile']):
@@ -277,7 +282,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             profiles = temp_results['OutputStorageLevel'].set_index(idx)
         # Marco: New "else" condition added, check the name of the parameters 'SectorXReservoirLevels' different than 'OutputSectorXStorageLevel'
             
-        if config['SectorXReservoirLevels'] != '':
+        if 'SectorXReservoirLevels' in config and config['SectorXReservoirLevels'] != '':
             if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
                 profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
                 0).set_index(idx)
@@ -288,7 +293,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             profilesSectorX = temp_results['OutputStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
             0).set_index(idx)
 
-        if config['SectorXFlexibleDemand'] != '':
+        if 'SectorXFlexibleDemand' in config and config['SectorXFlexibleDemand'] != '':
             if len(temp_results['OutputSectorXFlexDemand']) < len(idx):
                 SectorXFlexDemand = temp_results['OutputSectorXFlexDemand'].reindex(range(1, len(idx) + 1)).fillna(
                     0).set_index(
@@ -301,7 +306,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             0).set_index(idx)
         
 
-        if config['SectorXFlexibleSupply'] != '':
+        if 'SectorXFlexibleSupply' in config and config['SectorXFlexibleSupply'] != '':
             if len(temp_results['OutputSectorXFlexSupply']) < len(idx):
                 SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].reindex(range(1, len(idx) + 1)).fillna(
                     0).set_index(
@@ -329,10 +334,10 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     # replace all 1.000000e+300 values by nan since they correspond to undefined in GAMS:
     profiles[profiles >= 1E300] = np.nan
     profilesSectorX[profilesSectorX >= 1E300]  = np.nan
-    if config['SectorXFlexibleDemand'] != '':
+    if 'SectorXFlexibleDemand' in config and config['SectorXFlexibleDemand'] != '':
         SectorXFlexDemand[SectorXFlexDemand >= 1E300] = np.nan
 
-    if config['SectorXFlexibleSupply'] != '':
+    if 'SectorXFlexibleSupply' in config and config['SectorXFlexibleSupply'] != '':
         SectorXFlexSupply[SectorXFlexSupply >= 1E300] = np.nan
 
     if mts_plot:
@@ -358,24 +363,26 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                                 end=dt.datetime(*temp_config['StopDate']),
                                 freq=pd_timestep(TimeStep)).tz_localize(None)
 
-        if config['SectorXFlexibleDemand'] != '':
+        if 'SectorXFlexibleDemand' in config and config['SectorXFlexibleDemand'] != '':
             SectorXFlexDemand = pd.DataFrame(SectorXFlexDemand, index=idx_tmp).fillna(0)
             SectorXFlexDemand = SectorXFlexDemand.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
             SectorXFlexDemand = SectorXFlexDemand.loc[idx_long, :]
 
-        if config['SectorXFlexibleSupply'] != '':
+        if 'SectorXFlexibleSupply' in config and config['SectorXFlexibleSupply'] != '':
             SectorXFlexSupply = pd.DataFrame(SectorXFlexSupply, index=idx_tmp).fillna(0)
             SectorXFlexSupply = SectorXFlexSupply.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
             SectorXFlexSupply = SectorXFlexSupply.loc[idx_long, :]
 
     pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'], "temp_profiles.p"), "wb"))
     # pickle.dump(profilesSectorX, open(os.path.join(config['SimulationDirectory'], "temp_profilesSectorX.p"), "wb"))
-
-    if (config['SectorXFlexibleSupply'] == '') and (config['SectorXFlexibleDemand'] != ''):
-        return profiles, SectorXFlexDemand, profilesSectorX
-    elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] == ''):
-        return profiles, SectorXFlexSupply, profilesSectorX
-    elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] != ''):
-        return profiles, SectorXFlexDemand, SectorXFlexSupply, profilesSectorX
+    if 'SectorXFlexibleDemand' and 'SectorXFlexibleSupply' in config:
+        if (config['SectorXFlexibleSupply'] == '') and (config['SectorXFlexibleDemand'] != ''):
+            return profiles, SectorXFlexDemand, profilesSectorX
+        elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] == ''):
+            return profiles, SectorXFlexSupply, profilesSectorX
+        elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] != ''):
+            return profiles, SectorXFlexDemand, SectorXFlexSupply, profilesSectorX
+        else:
+            return profiles, profilesSectorX
     else:
         return profiles, profilesSectorX

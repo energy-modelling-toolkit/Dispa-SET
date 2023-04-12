@@ -133,12 +133,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             GridData = pd.DataFrame()
 
     # Boundary Sector Interconnections:
-    if os.path.isfile(config['BoundarySectorInterconnections']):
+    if 'BoundarySectorInterconnections' in config and os.path.isfile(config['BoundarySectorInterconnections']):
         BS_flows = load_time_series(config, config['BoundarySectorInterconnections']).fillna(0)
     else:
         logging.warning('No historical boundary sector flows will be considered (no valid file provided)')
         BS_flows = pd.DataFrame(index=config['idx_long'])
-    if os.path.isfile(config['BoundarySectorNTC']):
+    if 'BoundarySectorNTC' in config and os.path.isfile(config['BoundarySectorNTC']):
         BS_NTC = load_time_series(config, config['BoundarySectorNTC']).fillna(0)
     else:
         logging.warning('No boundary sector NTC values will be considered (no valid file provided)')
@@ -204,10 +204,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # If not present, add the non-compulsory fields to the units table:
     for key in ['CHPPowerLossFactor', 'CHPPowerToHeat', 'CHPType', 'STOCapacity', 'STOSelfDischarge',
                 'STOMaxChargingPower', 'STOChargingEfficiency', 'CHPMaxHeat', 'WaterWithdrawal',
-                'WaterConsumption', 'Sector1', 'Sector2']:
+                'WaterConsumption']:
         if key not in plants.columns:
             plants[key] = np.nan
-
+    for key in ['Sector1', 'Sector2']: 
+        if key not in plants.columns:
+            plants[key] = ''
+            
     # If the thermal zones are not defined in the units table, define one individual zone per power plant:
     for key in ['Zone_th']:
         if key in plants.columns:
@@ -247,6 +250,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Defining the P2H units:
     plants_p2h = plants[[u in commons['tech_p2ht'] for u in plants['Technology']]]
     check_p2h(config, plants_p2h)
+    
+    # Defining the CONVENTIONAL units:
+    #plants_conventional = plants[[u in commons['tech_conventional'] for u in plants['Technology']]]
+    #check_conventional(config, plants_conventional)
 
     # All heating units:
     # plants_heat = pd.concat([plants_heat, plants_chp])
@@ -273,8 +280,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                      default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_all_sto, 'ReservoirScaledInflows', config,
                                             fallbacks=['Unit', 'Technology', 'Zone'], default=0)
-    ReservoirScaledOutflows = UnitBasedTable(plants_all_sto, 'ReservoirScaledOutflows', config,
-                                             fallbacks=['Unit', 'Technology', 'Zone'], default=0)
+    if 'ReservoirScaledOutflows' in config and os.path.isfile(config['ReservoirScaledOutflows']):
+        ReservoirScaledOutflows = UnitBasedTable(plants_all_sto, 'ReservoirScaledOutflows', config,
+                                                 fallbacks=['Unit', 'Technology', 'Zone'], default=0)
+    else:
+        logging.warning('No historical outflows will be considered (no valid file provided)')
+        ReservoirScaledOutflows = pd.DataFrame(index=config['idx_long'])
+        
     Temperatures = NodeBasedTable('Temperatures', config)
 
     # Detecting boundary zones:
@@ -290,16 +302,31 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         zones_bs = [x for x in zones_bs if pd.isnull(x) == False]
     if 'nan' in zones_bs:
         zones_bs.remove('nan')
-    SectorXDemand = GenericTable(zones_bs, 'SectorXDemand', config, default=0)
-    CostXNotServed = GenericTable(zones_bs, 'CostXNotServed', config,
-                                  default=config['default']['CostXNotServed'])
+
+    if 'SectorXDemand' in config and os.path.isfile(config['SectorXDemand']):
+        SectorXDemand = GenericTable(zones_bs, 'SectorXDemand', config, default=0)
+    else:
+        logging.warning('No SectorXDemand will be considered (no valid file provided)')
+        SectorXDemand = pd.DataFrame(index=config['idx_long'])    
+    
+    if 'CostXNotServed' in config and os.path.isfile(config['CostXNotServed']):
+        CostXNotServed = GenericTable(zones_bs, 'CostXNotServed', config,
+                                      default=config['default']['CostXNotServed'])
+    else:
+        logging.warning('No CostXNotServed will be considered (no valid file provided)')
+        CostXNotServed = pd.DataFrame(index=config['idx_long']) 
 
     BoundarySector = BoundarySector.reindex(zones_bs)
     BoundarySector.fillna(0, inplace=True)
-    SectorXReservoirLevels = GenericTable(zones_bs, 'SectorXReservoirLevels', config, default=0)
+        
+    if 'SectorXReservoirLevels' in config and os.path.isfile(config['SectorXReservoirLevels']):
+        SectorXReservoirLevels = GenericTable(zones_bs, 'SectorXReservoirLevels', config, default=0)
+    else:
+        logging.warning('No SectorXReservoirLevels will be considered (no valid file provided)')
+        SectorXReservoirLevels = pd.DataFrame(index=config['idx_long']) 
 
     # Boundary Sector Max Spillage
-    if os.path.isfile(config['BoundarySectorMaxSpillage']):
+    if 'BoundarySectorMaxSpillage' in config and os.path.isfile(config['BoundarySectorMaxSpillage']):
         BS_spillage = load_time_series(config, config['BoundarySectorMaxSpillage']).fillna(0)
     else:
         BS_spillage = pd.DataFrame(index=idx_long)
@@ -307,15 +334,24 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # sys.exit('No maximum spillage capacity provided. This parameter is necessary.')
 
     # Boundary Sector Forced Spillage
-    if os.path.isfile(config['BoundarySectorMaxSpillage']):
+    if 'BoundarySectorMaxSpillage' in config and os.path.isfile(config['BoundarySectorMaxSpillage']):
         BS_forced_spillage = pd.DataFrame(0, index=BS_spillage.index, columns=BS_spillage.columns)
     else:
         BS_forced_spillage = pd.DataFrame(index=idx_long)
 
     # Read BS Flexible demand & supply
-    SectorXFlexibleDemand = GenericTable(zones_bs, 'SectorXFlexibleDemand', config, default=0)
-    SectorXFlexibleSupply = GenericTable(zones_bs, 'SectorXFlexibleSupply', config, default=0)
-
+    if 'SectorXFlexibleDemand' in config and os.path.isfile(config['SectorXFlexibleDemand']):
+        SectorXFlexibleDemand = GenericTable(zones_bs, 'SectorXFlexibleDemand', config, default=0)
+    else:
+        logging.warning('No SectorXFlexibleDemand will be considered (no valid file provided)')
+        SectorXFlexibleDemand = pd.DataFrame(index=config['idx_long'])    
+    
+    if 'SectorXFlexibleSupply' in config and os.path.isfile(config['SectorXFlexibleSupply']):    
+        SectorXFlexibleSupply = GenericTable(zones_bs, 'SectorXFlexibleSupply', config, default=0)
+    else:
+        logging.warning('No SectorXFlexibleSupply will be considered (no valid file provided)')
+        SectorXFlexibleSupply = pd.DataFrame(index=config['idx_long']) 
+        
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
         plants_all_sto.set_index(plants_all_sto.loc[:, 'Unit'], inplace=True, drop=True)
