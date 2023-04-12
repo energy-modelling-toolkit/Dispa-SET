@@ -833,6 +833,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXStorageMinimum'] = ['nx']
     sets_param['SectorXStorageInitial'] = ['nx']
     sets_param['SectorXStorageProfile'] = ['nx', 'h']
+    if MTS == 0:
+        sets_param['InertiaConstant'] = ['au']
     if (grid_flag == "DC-Power Flow"):
         sets_param['PTDF'] = ['l', 'n']
 
@@ -863,9 +865,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         parameters[var]['val'] = BoundarySector[var].values
 
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
-    for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
-                'CostRampUp', 'StorageCapacity', 'StorageSelfDischarge', 'StorageChargingCapacity']:
-        parameters[var]['val'] = Plants_merged[var].values
+    if MTS == 0:
+        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
+                    'CostRampUp', 'StorageCapacity', 'StorageSelfDischarge', 'StorageChargingCapacity', 'InertiaConstant']:
+            parameters[var]['val'] = Plants_merged[var].values
+    else:    
+        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
+                    'CostRampUp', 'StorageCapacity', 'StorageSelfDischarge', 'StorageChargingCapacity']:
+            parameters[var]['val'] = Plants_merged[var].values
 
     # List of parameters whose value is not necessarily specified in the dataframe Plants_merged
     for var in ['Nunits']:

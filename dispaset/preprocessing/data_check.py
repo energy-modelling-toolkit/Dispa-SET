@@ -453,7 +453,7 @@ def check_units(config, plants):
 
     keys = ['Unit', 'Fuel', 'Zone', 'Technology', 'PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate',
             'StartUpTime', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost', 'Efficiency', 'CO2Intensity',
-            'WaterWithdrawal', 'WaterConsumption']
+            'WaterWithdrawal', 'WaterConsumption','InertiaConstant']
     NonNaNKeys = ['PowerCapacity', 'PartLoadMin', 'RampUpRate', 'RampDownRate', 'Efficiency', 'RampingCost',
                   'CO2Intensity']
     StrKeys = ['Unit', 'Zone', 'Fuel', 'Technology']

@@ -189,7 +189,8 @@ SectorXStorageSelfDischarge(nx)             [%]             Boundary sector stor
 SectorXStorageMinimum(nx)                   [MWh]           Boundary sector storage minimum
 $If %MTS% == 0 SectorXStorageInitial(nx)    [MWh]           Boundary sector storage initial state of charge
 SectorXStorageProfile(nx,h)                 [%]             Boundary sector storage level respected at the end of each horizon
-$If %TransmissionGrid% == 1 PTDF(l,n)           [p.u.]                  Power Transfer Distribution Factor Matrix
+$If %TransmissionGrid% == 1 PTDF(l,n)       [p.u.]          Power Transfer Distribution Factor Matrix
+$If %MTS% == 0 InertiaConstant(au)          [s]             Inertia Constant
 ;
 
 *Parameters as used within the loop
@@ -313,6 +314,7 @@ $If %MTS% == 0 $LOAD SectorXStorageInitial
 $LOAD SectorXStorageProfile
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
 $If %TransmissionGrid% == 1 $LOAD PTDF
+$If %MTS% == 0 $LOAD InertiaConstant
 ;
 
 $If %Verbose% == 0 $goto skipdisplay
@@ -400,6 +402,7 @@ $If %MTS% == 0 SectorXStorageInitial,
 SectorXStorageProfile,
 $If %RetrieveStatus% == 1 , CommittedCalc
 $If %TransmissionGrid% == 1, PTDF
+$If %MTS% == 0, InertiaConstant
 ;
 
 $label skipdisplay
@@ -464,6 +467,7 @@ SectorXFlexDemand(nx,h)                 [MW]    FLexible boundary sector demand 
 SectorXFlexSupply(nx,h)                 [MW]    FLexible boundary sector supply at each time step of each nx node
 $If %MTS% == 1 SectorXStorageInitial(nx)
 $If %MTS% == 1 SectorXStorageFinalMin(nx)
+$If %MTS% == 0 SysInertia(h)            [s]     System Inertia
 ;
 
 free variable
@@ -607,6 +611,8 @@ EQ_BS_Spillage_limits_upper
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 $If %TransmissionGrid% == 1 EQ_DC_Power_Flow
 $If %TransmissionGrid% == 1 EQ_Total_Injected_Power
+$If %MTS% == 0 EQ_SysInertia
+$If %MTS% == 0 EQ_I_limit
 ;
 
 $If %RetrieveStatus% == 0 $goto skipequation
@@ -947,6 +953,25 @@ EQ_3U_limit_chp(chp,i)..
          (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))*(CHPPowerToHeat(chp))
 
 ;
+
+*MARCO INERTIA RESERVES
+$ifthen %MTS% == 0
+EQ_SysInertia(i)..
+         SysInertia(i)
+         =E=
+*          sum(u,((Power(u,i)*(InertiaConstant(u))/(Pi*50)))))
+          sum(u,((PowerCapacity(u)*Committed(u,i)*InertiaConstant(u))/(Pi*50)))
+*          sum(u,(((PowerCapacity(u)/10)*Committed(u,i)*InertiaConstant(u))/(Pi*50)))
+*          sum(u,((InertiaConstant(u)*TimeStep)/(Pi*50)))
+;
+
+EQ_I_limit(u,i)..
+         0
+         =l=
+         SysInertia(i)
+;
+$endIf
+
 *Minimum power output is above the must-run output level for each unit in all periods
 EQ_Power_must_run(u,i)..
          PowerMustRun(u,i) * Committed(u,i)
@@ -1450,6 +1475,8 @@ EQ_BS_Spillage_limits_upper,
 $If %RetrieveStatus% == 1 EQ_CommittedCalc,
 $If %TransmissionGrid% == 1 EQ_DC_Power_Flow,
 $If %TransmissionGrid% == 1 EQ_Total_Injected_Power,
+$If %MTS% == 0 EQ_SysInertia,
+$If %MTS% == 0 EQ_I_limit,
 /
 ;
 UCM_SIMPLE.optcr = 0.01;
@@ -1646,6 +1673,7 @@ UnitHourlyShutDownCost(au,h)
 UnitHourlyRampingCost(au,h)
 UnitHourlyProductionCost(au,h)
 UnitHourlyProfit(au,h)
+$If %MTS% == 0 OutputSysInertia(h)
 ;
 
 $If %ActivateAdvancedReserves% == 2 OutputMaxOutageUp(n,z)=max(smax((au,tc),PowerCapacity(au)/Nunits(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n)), smax(l,FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
@@ -1729,6 +1757,7 @@ ShadowPrice_RampDown_TC(u,z) = EQ_RampDown_TC.m(u,z);
 OutputRampRate(u,z) = - Power.L(u,z-1)$(ord(z) > 1) - PowerInitial(u)$(ord(z) = 1) + Power.L(u,z);
 OutputStartUp(au,z) = StartUp.L(au,z);
 OutputShutDown(au,z) = ShutDown.L(au,z);
+$If %MTS%==0 OutputSysInertia(z) = SysInertia.L(z);
 
 *FIXME: what about other sectors
 OutputEmissions(n,p,z) = sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n)) / sum(u,Power.L(u,z)*Location(u,n));
@@ -1763,6 +1792,7 @@ UnitHourlyRampingCost(u,z) = CostRampUpH.L(u,z) + CostRampDownH.L(u,z);
 UnitHourlyProductionCost(au,z) = sum(u, UnitHourlyFixedCost(u,z) + UnitHourlyStartUpCost(u,z) + UnitHourlyShutDownCost(u,z) + UnitHourlyRampingCost(u,z))
                                 + UnitHourlyVariableCost(au,z);
 UnitHourlyProfit(au,z) = UnitHourlyRevenue(au,z) - UnitHourlyProductionCost(au,z);
+*$If %MTS% == 0 OutputSysInertia(z) = SysInertia.L(z);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
@@ -1825,6 +1855,7 @@ ShadowPrice_3U,
 OutputReserve_2U,
 OutputReserve_2D,
 OutputReserve_3U,
+$If %MTS%==0 OutputSysInertia,
 ShadowPrice_RampUp_TC,
 ShadowPrice_RampDown_TC,
 OutputRampRate,
