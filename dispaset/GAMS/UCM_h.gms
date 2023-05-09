@@ -1205,6 +1205,7 @@ EQ_BS_Demand_balance(nx,i)..
 
 EQ_BS_Demand_balance2(nx,i)..
         SectorXStorageInput(nx,i)
+        + SectorXDemand(nx,i)
         =L=
         sum(p2x, PowerX(nx,p2x,i))
         + sum(xu, PowerX(nx,xu,i))

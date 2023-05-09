@@ -15,8 +15,10 @@ from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_b
 from ..common import commons
 
 
-def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailment=None, shedload=None, shiftedload=None, rng=None,
-                  alpha=None, figsize=(13, 7), ntc=None, dispatch_limits=None, storage_limits=None, ntc_limits=None):
+def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailment=None, shedload=None,
+                  shiftedload=None, rng=None,
+                  alpha=None, figsize=(13, 7), ntc=None, dispatch_limits=None, storage_limits=None, ntc_limits=None,
+                  units=['GW', 'GWh']):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
 
@@ -110,7 +112,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         axes[2].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'],
                              facecolor=commons['colors']['FlowOut'],
                              alpha=alpha)
-        axes[2].set_ylabel('NTC [GW]')
+        axes[2].set_ylabel('NTC [' + units[0] + ']')
         if ntc_limits is not None:
             axes[2].set_ylim(ntc_limits[0], ntc_limits[1])
     else:
@@ -150,7 +152,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
             axes[1].fill_between(pdrng, 0, level[pdrng], facecolor=commons['colors']['WAT'], alpha=.3)
         if isinstance(minlevel, pd.Series):
             axes[1].plot(pdrng, minlevel[pdrng], color='k', alpha=alpha, linestyle=':')
-        axes[1].set_ylabel('Level [GWh]')
+        axes[1].set_ylabel('Level [' + units[1] + ']')
         axes[1].yaxis.label.set_fontsize(12)
         line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Min level', linestyle=':')
         if storage_limits is not None:
@@ -197,7 +199,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         labels.append('Curtailment')
         patches.append(mpatches.Patch(facecolor=commons['colors']['curtailment'], label='Curtailment'))
 
-    axes[0].set_ylabel(y_ax + ' [GW]')
+    axes[0].set_ylabel(y_ax + ' [' + units[0] + ']')
     axes[0].yaxis.label.set_fontsize(12)
     if dispatch_limits is not None:
         axes[0].set_ylim(dispatch_limits[0], dispatch_limits[1])
@@ -632,7 +634,7 @@ def plot_zone_capacities(inputs, results, plot=True):
 
 
 def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=None, storage_limits=None,
-              ntc_limits=None):
+              ntc_limits=None, units=['GW', 'GWh']):
     """
     Generates plots from the dispa-SET results for one specific zone
 
@@ -768,19 +770,20 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
     # Plot power dispatch
     demand.rename(z, inplace=True)
     if ntc is None:
-        plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment, shedload=shed_load,
+        plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment,
+                      shedload=shed_load,
                       shiftedload=shifted_load, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
-                      storage_limits=storage_limits)
+                      storage_limits=storage_limits, units=units)
     elif ntc.empty:
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment,
                       shedload=shed_load,
                       shiftedload=shifted_load, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
-                      storage_limits=storage_limits)
+                      storage_limits=storage_limits, units=units)
     else:
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment,
                       shedload=shed_load,
                       shiftedload=shifted_load, ntc=ntc, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
-                      storage_limits=storage_limits, ntc_limits=ntc_limits)
+                      storage_limits=storage_limits, ntc_limits=ntc_limits, units=units)
 
     # # Plot heat dispatch
     # Nzones_th = len(inputs['sets']['n_th'])
