@@ -83,6 +83,7 @@ p                Pollutants
 *Nodes
 n                Nodes
 nx             Boundary sector nodes
+nx_CC             Boundary sector nodes without the EndCascade node
 *Lines
 l                Lines
 lx             Boundary sector lines
@@ -165,7 +166,7 @@ StorageDischargeEfficiency(au)              [%]             Discharge efficiency
 StorageOutflow(au,h)                        [MW\u]          Storage outflows
 StorageInflow(au,h)                         [MW\u]          Storage inflows (potential energy)
 StorageInitial(au)                          [MWh]           Storage level before initial period
-StorageProfile(au,h)                        [%]             Storage level to be resepected at the end of each horizon
+StorageProfile(au,h)                        [%]             Storage level to be respected at the end of each horizon
 StorageMinimum(au)                          [MWh]           Storage minimum
 Technology(au,t)                            [n.a.]          Technology type {1 0}
 TimeDownMinimum(au)                         [h]             Minimum down time
@@ -217,6 +218,7 @@ $gdxin %inputfilename%
 $LOAD mk
 $LOAD n
 $LOAD nx
+$LOAD nx_CC
 $LOAD l
 $LOAD lx
 $LOAD slx
@@ -315,6 +317,7 @@ Display
 mk,
 n,
 nx,
+nx_CC,
 l,
 lx,
 u,
@@ -428,7 +431,7 @@ PowerConsumption(au,h)                  [MW]    Power consumption by P2X units
 PowerMaximum(u,h)                       [MW]    Power output
 PowerMinimum(u,h)                       [MW]    Power output
 ShedLoad(n,h)                           [MW]    Shed load
-StorageInput(au,h)                      [MWh]   Charging input for storage units
+StorageInput(au,h)                      [MW]   Charging input for storage units
 StorageLevel(au,h)                      [MWh]   Storage level of charge
 SectorXStorageLevel(nx,h)               [MWh]   Storage level of charge of the boundary sector
 SectorXSpillage(slx,h)                  [MW]    Spillage from boundary sector x to boundary sector y
@@ -989,7 +992,7 @@ EQ_Boundary_Sector_Storage_balance(nx,i)..
          + SectorXStorageInput(nx,i)*TimeStep
          =E=
          SectorXStorageLevel(nx,i)
-         + SectorXStorageSelfDischarge(nx)*SectorXStorageLevel(nx,i)*TimeStep
+         + SectorXStorageSelfDischarge(nx)*SectorXStorageLevel(nx,i)
 ;
 
 * Minimum level at the end of the optimization horizon:
@@ -999,7 +1002,7 @@ EQ_Boundary_Sector_Storage_boundaries(nx,i)$(ord(i) = card(i))..
          SectorXStorageLevel(nx,i) + SectorXStorageLevelViolation(nx)
 ;
 
-EQ_Boundary_Sector_Storage_Cyclic(nx)..
+EQ_Boundary_Sector_Storage_Cyclic(nx)$(SectorXStorageCapacity(nx)<10000000)..
          SectorXStorageFinalMin(nx)
          =E=
          SectorXStorageInitial(nx)
@@ -1057,7 +1060,7 @@ EQ_Storage_balance(au,i)..
          +StorageOutflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
          +spillage(au,i)$(s(au))
          +Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
-         +StorageSelfDischarge(au)$(s(au))*StorageLevel(au,i)$(s(au))*TimeStep
+         +StorageSelfDischarge(au)$(s(au))*StorageLevel(au,i)$(s(au))
 ;
 
 * Minimum level at the end of the optimization horizon:
@@ -1182,7 +1185,7 @@ EQ_Power_Balance_of_BS_units(nx,p2x,i)..
 EQ_Max_Power_Consumption_of_BS_units(p2x,i)..
          PowerConsumption(p2x,i)
          =L=
-         StorageChargingCapacity(p2x) * Nunits(p2x) *TimeStep
+         StorageChargingCapacity(p2x) * Nunits(p2x)
 ;
 
 EQ_BS_Demand_balance(nx,i)..
@@ -1225,7 +1228,7 @@ EQ_Heat_Storage_balance(thms,i)..
          =E=
          StorageLevel(thms,i)
          + Heat(thms,i)*TimeStep
-         + StorageSelfDischarge(thms)*StorageLevel(thms,i)*TimeStep
+         + StorageSelfDischarge(thms)*StorageLevel(thms,i)
 ;
 * The self-discharge proportional to the charging level is a bold hypothesis, but it avoids keeping self-discharging if the level reaches zero
 
@@ -1446,6 +1449,7 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          StorageFinalMin(thms) =  sum(i$(ord(i)=card(i)),StorageProfile(thms,i)*StorageCapacity(thms)*Nunits(thms)*AvailabilityFactor(thms,i));
 		 StorageFinalMin(chp) =  sum(i$(ord(i)=card(i)),StorageProfile(chp,i)*StorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,i));
 $If %MTS% == 0     SectorXStorageFinalMin(nx) = sum(i$(ord(i)=card(i)),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
+$If %MTS% == 0     SectorXStorageInitial(nx) = sum(i$(ord(i)=1),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 
 $If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
 $If %Verbose% == 1   Display PowerInitial,StorageFinalMin;
@@ -1528,6 +1532,7 @@ OutputStorageInput(au,h)
 OutputStorageLevel(au,h)
 OutputStorageLevelViolation_H(au,h)
 OutputSectorXStorageLevel(nx,h)
+OutputSectorXSelfDischarge(nx,h)
 OutputSectorXStorageShadowPrice(nx,h)
 OutputSectorXStorageLevelViolation_H(nx,h)
 OutputSectorXStorageInput(nx,h)
@@ -1627,6 +1632,7 @@ OutputStorageLevel(s,z)=StorageLevel.L(s,z)/max(1,StorageCapacity(s)*Nunits(s)*A
 OutputStorageLevel(th,z)=StorageLevel.L(th,z)/max(1,StorageCapacity(th)*Nunits(th));
 OutputStorageLevelViolation_H(au,z) = StorageLevelViolation_H.L(au,z);
 OutputSectorXStorageLevel(nx,z) = SectorXStorageLevel.L(nx,z)/max(1,SectorXStorageCapacity(nx));
+OutputSectorXSelfDischarge(nx,z) = SectorXStorageSelfDischarge(nx)*SectorXStorageLevel.L(nx,z)*TimeStep;
 OutputSectorXStorageShadowPrice(nx,z) = EQ_Boundary_Sector_Storage_balance.m(nx,z);
 OutputSectorXStorageLevelViolation_H(nx,z) = SectorXStorageLevelViolation_H.l(nx,z);
 $If %MTS% == 1 OutputSectorXStorageFinalMin(nx) = SectorXStorageFinalMin.L(nx)/max(1,SectorXStorageCapacity(nx));
@@ -1681,7 +1687,8 @@ OutputStartUp(au,z) = StartUp.L(au,z);
 OutputShutDown(au,z) = ShutDown.L(au,z);
 
 *FIXME: what about other sectors
-OutputEmissions(n,p,z) = sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n)) / sum(u,Power.L(u,z)*Location(u,n));
+*OutputEmissions(n,p,z) = sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n)) / sum(u,Power.L(u,z)*Location(u,n));
+OutputEmissions(n,p,z) = sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n)) / max(sum(u,Power.L(u,z)*Location(u,n)),0.0001);
 
 CapacityMargin(n,z) = (sum(u, Nunits(u)*PowerCapacity(u)$(not s(u))*LoadMaximum(u,z)*Location(u,n))
                       + min(sum(s, Nunits(s)*PowerCapacity(s)*LoadMaximum(s,z)*Location(s,n)), sum(s, StorageLevel.L(s,z)*StorageCapacity(s)))
@@ -1728,6 +1735,7 @@ OutputStorageInput,
 OutputStorageLevel,
 OutputStorageLevelViolation_H,
 OutputSectorXStorageLevel,
+OutputSectorXSelfDischarge,
 OutputSectorXStorageShadowPrice,
 OutputSectorXStorageLevelViolation_H,
 OutputSectorXStorageInput,
@@ -1806,7 +1814,8 @@ UnitHourlyProfit
 ;
 
 *display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L, power.L;
-display OutputPowerConsumption, heat.L, powerconsumption.L, power.L;
+$If %MTS%==1 display OutputPowerConsumption, heat.L, powerconsumption.L, power.L, EQ_Boundary_Sector_Storage_Cyclic.L;
+$If %MTS%==0 display OutputPowerConsumption, heat.L, powerconsumption.L, power.L;
 
 $onorder
 * Exit here if the PrintResult option is set to 0:

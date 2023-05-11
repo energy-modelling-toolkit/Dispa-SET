@@ -187,8 +187,11 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
         z = connection.split(' -> ')
         if z[0] in Simulation_list:
             all_connections.append(connection)
-            if z[1] in Simulation_list:
-                simulation_connections.append(connection)
+            simulation_connections.append(connection)
+        # if z[0] in Simulation_list:
+        #     all_connections.append(connection)
+        #     if z[1] in Simulation_list:
+        #         simulation_connections.append(connection)
         elif z[1] in Simulation_list:
             all_connections.append(connection)
 

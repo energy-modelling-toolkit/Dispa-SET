@@ -32,6 +32,7 @@ commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF
 commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 # List of storage technologies:
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
+# commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP', 'HDAMC']
 # List of power to heat technologies:
 commons['tech_p2ht'] = ['P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
 # List of power to boundary sector technologies
@@ -92,6 +93,7 @@ commons['colors'] = {'LIG': '#af4b9180',
                      'OTH': '#57D53B',
                      'WST': '#b9c337ff',
                      'HDAM': '#00a0e1ff',
+                     'HDAMC': '#00a0e1ff',
                      'HPHS': 'blue',
                      'THMS': '#C04000ff',
                      'BATS': '#41A317ff',

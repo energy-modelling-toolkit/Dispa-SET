@@ -11,7 +11,7 @@ import pandas as pd
 from matplotlib.patches import Patch
 
 from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage, \
-    get_power_flow_tracing, get_EFOH, filter_by_heating_zone, filter_by_tech_list
+    get_power_flow_tracing, get_EFOH, filter_by_heating_zone, filter_by_tech_list, filter_sector
 from ..common import commons
 
 
@@ -372,6 +372,12 @@ def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones = '', show_pl
             storage_input.loc[:, z] = filter_by_zone(filter_by_tech_list(results['OutputStorageInput'], inputs,
                                                                          commons['tech_storage']),
                                                      inputs, z).sum(axis=1)
+        if not filter_by_zone(filter_by_tech_list(filter_sector(results['OutputSectorXStorageInput'], inputs), inputs,
+                                                  commons['tech_storage']), inputs,
+                              z).empty:
+            storage_input.loc[:, z] += filter_by_zone(filter_by_tech_list(filter_sector(results['OutputSectorXStorageInput'], inputs), inputs,
+                                                                         commons['tech_storage']),
+                                                     inputs, z).sum(axis=1).values
 
     cols = [col for col in commons['MeritOrder'] if col in GenPerZone]
     GenPerZone = GenPerZone[cols] / 1E6
@@ -657,56 +663,72 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
     plotdata = get_plot_data(inputs, results, z) / 1000  # GW
 
     aggregation = False
-    if 'OutputStorageLevel' in results:
-        lev = filter_by_zone(results['OutputStorageLevel'], inputs, z)
-        lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] * inputs['units']['Nunits'].loc[
-            lev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:, lev.columns] / 1e3  # GWh of storage
-        level = filter_by_storage(lev, inputs, StorageSubset='s')
-        levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
-        # the same for the minimum level:
-        minlev = filter_by_zone(inputs['param_df']['StorageProfile'], inputs, z)
-        minlev = minlev * inputs['units']['StorageCapacity'].loc[minlev.columns] * inputs['units']['Nunits'].loc[
-            minlev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:, minlev.columns] / 1e3  # GWh of storage   
-        minlevel = filter_by_storage(minlev, inputs, StorageSubset='s').sum(axis=1)
+    if 'OutputStorageLevel' in results or 'OutputSectorXStorageLevel' in results:
+        if 'OutputStorageLevel' in results:
+            lev = filter_by_zone(results['OutputStorageLevel'], inputs, z)
+            lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] * inputs['units']['Nunits'].loc[
+                lev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:, lev.columns] / 1e3  # GWh of storage
+            level = filter_by_storage(lev, inputs, StorageSubset='s')
+            levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
+            # the same for the minimum level:
+            minlev = filter_by_zone(inputs['param_df']['StorageProfile'], inputs, z)
+            minlev = minlev * inputs['units']['StorageCapacity'].loc[minlev.columns] * inputs['units']['Nunits'].loc[
+                minlev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:, minlev.columns] / 1e3  # GWh of storage
+            minlevel = filter_by_storage(minlev, inputs, StorageSubset='s').sum(axis=1)
 
-        # for col in lev.columns:
-        #     if 'BEVS' in col:
-        #         lev[col] = lev[col] * inputs['param_df']['AvailabilityFactor'][col]
+        if 'OutputSectorXStorageLevel' in results:
+            levX = filter_by_zone(filter_sector(results['OutputSectorXStorageLevel'], inputs), inputs, z, sector=True)
+            levX = levX * filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).loc[levX.columns].T.values * inputs['units']['Nunits'].loc[
+                levX.columns]  / 1e3  # GWh of storage
+            levelX = filter_by_storage(levX, inputs, StorageSubset='sx')
+            levelsX = pd.DataFrame(index=filter_sector(results['OutputSectorXStorageLevel'], inputs).index, columns=inputs['sets']['t'])
+            # the same for the minimum level:
+            minlevX = filter_by_zone(filter_sector(filter_sector(inputs['param_df']['SectorXStorageProfile'], inputs), inputs), inputs, z)
+            minlevX = minlevX * filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).loc[minlevX.columns].T.values * \
+                     inputs['units']['Nunits'].loc[
+                         minlevX.columns] *  1e3  # GWh of storage
+            minlevelX = filter_by_storage(minlevX, inputs, StorageSubset='sx').sum(axis=1)
 
-        for t in commons['tech_storage']:
-            temp = filter_by_tech(level, inputs, t)
-            levels[t] = temp.sum(axis=1)
-        levels.dropna(axis=1, inplace=True)
-        for col in levels.columns:
-            if levels[col].max() == 0 and levels[col].min() == 0:
-                del levels[col]
+            # for col in lev.columns:
+            #     if 'BEVS' in col:
+            #         lev[col] = lev[col] * inputs['param_df']['AvailabilityFactor'][col]
+            level = pd.concat([level, levelX], axis = 1)
+            # levels = levels + levelsX
 
-        # lev_heat = filter_by_heating_zone(results['OutputStorageLevel'], inputs, z_th)
-        # lev_heat = lev_heat * inputs['units']['StorageCapacity'].loc[lev_heat.columns] * inputs['units']['Nunits'].loc[
-        #     lev_heat.columns] / 1e3  # GWh of storage
-        # # Filter storage levels for thermal storage
-        # level_heat = filter_by_storage(lev_heat, inputs, StorageSubset='thms')
-        # levels_heat = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
-        # # the same for the minimum level:
-        # minlev_heat = filter_by_heating_zone(results['OutputStorageLevel'], inputs, z_th)
-        # minlev_heat = minlev_heat * inputs['units']['StorageCapacity'].loc[minlev_heat.columns] * inputs['units']['Nunits'].loc[
-        #     minlev_heat.columns] / 1e3  # GWh of storage
-        # minlevel_heat = filter_by_storage(minlev_heat, inputs, StorageSubset='thms').sum(axis=1)
-        # for t in commons['tech_thermal_storage']:
-        #     temp = filter_by_tech(level_heat, inputs, t)
-        #     levels_heat[t] = temp.sum(axis=1)
-        # levels_heat.dropna(axis=1, inplace=True)
-        #
-        # for col in levels_heat.columns:
-        #     if levels_heat[col].max() == 0 and levels_heat[col].min() == 0:
-        #         del levels_heat[col]
-
-        if aggregation is True:
-            level = level.sum(axis=1)
-            # level_heat = level_heat.sum(axis=1)
-        else:
-            level = levels
-            # level_heat = levels_heat
+            for t in commons['tech_storage']+['HDAMC']:
+                temp = filter_by_tech(level, inputs, t)
+                levels[t] = temp.sum(axis=1)
+            levels.dropna(axis=1, inplace=True)
+            for col in levels.columns:
+                if levels[col].max() == 0 and levels[col].min() == 0:
+                    del levels[col]
+    
+            # lev_heat = filter_by_heating_zone(results['OutputStorageLevel'], inputs, z_th)
+            # lev_heat = lev_heat * inputs['units']['StorageCapacity'].loc[lev_heat.columns] * inputs['units']['Nunits'].loc[
+            #     lev_heat.columns] / 1e3  # GWh of storage
+            # # Filter storage levels for thermal storage
+            # level_heat = filter_by_storage(lev_heat, inputs, StorageSubset='thms')
+            # levels_heat = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
+            # # the same for the minimum level:
+            # minlev_heat = filter_by_heating_zone(results['OutputStorageLevel'], inputs, z_th)
+            # minlev_heat = minlev_heat * inputs['units']['StorageCapacity'].loc[minlev_heat.columns] * inputs['units']['Nunits'].loc[
+            #     minlev_heat.columns] / 1e3  # GWh of storage
+            # minlevel_heat = filter_by_storage(minlev_heat, inputs, StorageSubset='thms').sum(axis=1)
+            # for t in commons['tech_thermal_storage']:
+            #     temp = filter_by_tech(level_heat, inputs, t)
+            #     levels_heat[t] = temp.sum(axis=1)
+            # levels_heat.dropna(axis=1, inplace=True)
+            #
+            # for col in levels_heat.columns:
+            #     if levels_heat[col].max() == 0 and levels_heat[col].min() == 0:
+            #         del levels_heat[col]
+    
+            if aggregation is True:
+                level = level.sum(axis=1)
+                # level_heat = level_heat.sum(axis=1)
+            else:
+                level = levels
+                # level_heat = levels_heat
     else:
         level = None
         # level_heat = None
@@ -1110,6 +1132,25 @@ def plot_tech_cap(inputs, plot=True, figsize=(10, 7), alpha=0.8, width=0.5):
                 elif u in inputs['param_df']['sets']['p2h'] or inputs['param_df']['sets']['chp'] or \
                         inputs['param_df']['Technology'].loc['SCSP', u] or inputs['param_df']['sets']['thms']:
                     Cap.loc[z, 'Thermal'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i, 0] * \
+                                             inputs['param_df']['Nunits'].iloc[i, 0]
+    for i, u in enumerate(filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).index):
+        for z in inputs['sets']['n']:
+            if inputs['param_df']['Location'].loc[z, u]:
+                if inputs['param_df']['Fuel'].loc['WAT', u]:
+                    Cap.loc[z, 'Hydro'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+                                           inputs['param_df']['Nunits'].iloc[i, 0]
+                elif inputs['param_df']['Fuel'].loc['HYD', u]:
+                    Cap.loc[z, 'H2'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+                                        inputs['param_df']['Nunits'].iloc[i, 0]
+                elif inputs['param_df']['Technology'].loc['BEVS', u]:
+                    Cap.loc[z, 'BEVS'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+                                          inputs['param_df']['Nunits'].iloc[i, 0]
+                elif inputs['param_df']['Technology'].loc['BATS', u]:
+                    Cap.loc[z, 'BATS'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+                                          inputs['param_df']['Nunits'].iloc[i, 0]
+                elif u in inputs['param_df']['sets']['p2h'] or inputs['param_df']['sets']['chp'] or \
+                        inputs['param_df']['Technology'].loc['SCSP', u] or inputs['param_df']['sets']['thms']:
+                    Cap.loc[z, 'Thermal'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
                                              inputs['param_df']['Nunits'].iloc[i, 0]
 
     Cap = Cap / 1000

@@ -81,8 +81,20 @@ def aggregate_by_fuel(PowerOutput, Inputs, SpecifyFuels=None):
 
     return PowerByFuel
 
+def filter_sector(InputParam, inputs):
+    loc = inputs['units']['Zone']
+    InputParamCopy = InputParam.copy()
+    if str(InputParamCopy.columns[0]).startswith('S_'):
+        for s in loc[inputs['units']['Technology'] == 'HDAMC'].index:
+           InputParamCopy = InputParamCopy.rename(columns={inputs['units']['Sector1'][s]: s})
+        InputParamCopy = InputParamCopy[InputParamCopy.columns.intersection(loc.index.to_list())]
+    elif str(InputParamCopy.index[0]).startswith('S_'):
+        for s in loc[inputs['units']['Technology'] == 'HDAMC'].index:
+            InputParamCopy = InputParamCopy.rename(index={inputs['units']['Sector1'][s]: s})
+        InputParamCopy = InputParamCopy.loc[InputParamCopy.index.intersection(loc.index.to_list())]
+    return InputParamCopy
 
-def filter_by_zone(PowerOutput, inputs, z, thermal = None):
+def filter_by_zone(PowerOutput, inputs, z, thermal = None, sector = False):
     """
     This function filters the dispaset Output dataframes by zone
 
@@ -95,9 +107,16 @@ def filter_by_zone(PowerOutput, inputs, z, thermal = None):
     """
     if thermal:
         loc = inputs['units']['Zone_th']
+        PowerOutputCopy = PowerOutput.copy()
     else:
         loc = inputs['units']['Zone']
-    Power = PowerOutput.loc[:, [u for u in PowerOutput.columns if loc[u] == z]]
+        PowerOutputCopy = PowerOutput.copy()
+        # if sector == True:
+        #     PowerOutputCopy = PowerOutput.copy()
+        #     for s in loc[inputs['units']['Technology'] == 'HDAMC'].index:
+        #         PowerOutputCopy = PowerOutputCopy.rename(columns={inputs['units']['Sector1'][s] : s})
+        #     PowerOutputCopy = PowerOutputCopy[PowerOutputCopy.columns.intersection(loc.index.to_list())]
+    Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if loc[u] == z]]
     return Power
 
 
