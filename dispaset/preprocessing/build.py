@@ -283,7 +283,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     BoundarySector = BoundarySector.reindex(zones_bs)
     BoundarySector.fillna(0, inplace=True)
     SectorXReservoirLevels = GenericTable(zones_bs, 'SectorXReservoirLevels', config, default=0)
-
+    SectorXAlertLevels = GenericTable(zones_bs, 'SectorXAlertLevels', config, default=0)
     # Boundary Sector Max Spillage
     if os.path.isfile(config['BoundarySectorMaxSpillage']):
         BS_spillage = load_time_series(config, config['BoundarySectorMaxSpillage']).fillna(0)
@@ -575,7 +575,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'PriceTransmission': PriceTransmission,
                'SectorXDemand': SectorXDemand, 'CostXNotServed': CostXNotServed,
                'SectorXFlexibleDemand': SectorXFlexibleDemand, 'SectorXFlexibleSupply': SectorXFlexibleSupply,
-               'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels}
+               'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevels': SectorXAlertLevels}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
@@ -670,6 +670,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['CostShutDown'] = ['au']
     sets_param['CostStartUp'] = ['au']
     sets_param['CostVariable'] = ['au', 'h']
+    sets_param['CostStorageAlert'] = ['nx','h']
     sets_param['Curtailment'] = ['n']
     sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
@@ -729,7 +730,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXStorageMinimum'] = ['nx']
     sets_param['SectorXStorageInitial'] = ['nx']
     sets_param['SectorXStorageProfile'] = ['nx', 'h']
-
+    sets_param['SectorXAlertLevels'] = ['nx', 'h']
+    
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
         parameters[var] = define_parameter(sets_param[var], sets, value=0)
@@ -842,9 +844,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             parameters['SectorXStorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],
                                                                            config['default']['ReservoirLevelFinal'],
                                                                            len(idx_sim))
+           # Setting Storage Alert
+        if nx in BoundarySector.index:
+            parameters['SectorXAlertLevels']['val'][i, :] = finalTS['SectorXAlertLevels'][nx][idx_sim].values                                                    
+        
         parameters['SectorXStorageInitial']['val'][i] = parameters['SectorXStorageProfile']['val'][i, 0] * \
-                                                        BoundarySector['SectorXStorageCapacity'][nx]
-
+                                                    BoundarySector['SectorXStorageCapacity'][nx]
     # Storage Inflows:
     for i, s in enumerate(sets['asu']):
         if s in finalTS['ScaledInflows']:
@@ -853,7 +858,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             if s in finalTS['ScaledOutflows']:
                 parameters['StorageOutflow']['val'][i, :] = finalTS['ScaledOutflows'][s][idx_sim].values * \
                                                             Plants_all_sto['PowerCapacity'][s]
-
     # # Heat demands:
     # for i, u in enumerate(sets['n_th']):
     #     if u in finalTS['HeatDemand']:
