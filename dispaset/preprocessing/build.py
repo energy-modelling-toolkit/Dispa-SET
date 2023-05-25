@@ -845,7 +845,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                                                            config['default']['ReservoirLevelFinal'],
                                                                            len(idx_sim))
            # Setting Storage Alert
-        if nx in BoundarySector.index:
+        if nx in finalTS['SectorXAlertLevels'] and any(finalTS['SectorXAlertLevels'][nx] > 0) and all(
+                finalTS['SectorXAlertLevels'][nx] - 1 <= 1e-11):
             parameters['SectorXAlertLevels']['val'][i, :] = finalTS['SectorXAlertLevels'][nx][idx_sim].values                                                    
         
         parameters['SectorXStorageInitial']['val'][i] = parameters['SectorXStorageProfile']['val'][i, 0] * \
