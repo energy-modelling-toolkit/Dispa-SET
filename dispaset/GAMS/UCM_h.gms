@@ -121,7 +121,6 @@ CostRampDown(u)                             [EUR\MW]        Ramp-down costs
 CostShutDown(u)                             [EUR\u]         Shut-down costs
 CostStartUp(u)                              [EUR\u]         Start-up costs
 CostVariable(au,h)                          [EUR\MW]        Variable costs
-CostStorageAlert(au,h)                      [EUR\MW]        Cost of violating storage alert level
 CostXNotServed(nx,h)                        [EUR\MWh]       Cost of supplying energy to boundary sector via other means
 CostLoadShedding(n,h)                       [EUR\MWh]       Cost of load shedding
 Curtailment(n)                              [n.a]           Curtailment allowed or not {1 0} at node n
@@ -187,7 +186,7 @@ SectorXStorageSelfDischarge(nx)             [%]             Boundary sector stor
 SectorXStorageMinimum(nx)                   [MWh]           Boundary sector storage minimum
 $If %MTS% == 0 SectorXStorageInitial(nx)    [MWh]           Boundary sector storage initial state of charge
 SectorXStorageProfile(nx,h)                 [%]             Boundary sector storage level respected at the end of each horizon
-SectorXStorageAlertLevel(nx,h)              [MWh]           Storage alert of the boundary sector - Will only be violated to avoid power rationing
+SectorXAlertLevel(nx,h)                     [MWh]           Storage alert of the boundary sector - Will only be violated to avoid power rationing
 ;
 
 *Parameters as used within the loop
@@ -251,7 +250,6 @@ $LOAD CostLoadShedding
 $LOAD CostShutDown
 $LOAD CostStartUp
 $LOAD CostVariable
-$LOAD CostStorageAlert
 $LOAD Curtailment
 $LOAD CostCurtailment
 $LOAD Demand
@@ -309,7 +307,7 @@ $LOAD SectorXFlexMaxSupply
 $LOAD SectorXStorageCapacity
 $LOAD SectorXStorageSelfDischarge
 $LOAD SectorXStorageMinimum
-$LOAD SectorXStorageAlertLevel
+$LOAD SectorXAlertLevel
 $If %MTS% == 0 $LOAD SectorXStorageInitial
 $LOAD SectorXStorageProfile
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
@@ -348,7 +346,6 @@ CostShutDown,
 CostStartUp,
 CostRampUp,
 CostVariable,
-CostStorageAlert,
 Demand,
 StorageDischargeEfficiency,
 Efficiency,
@@ -398,7 +395,7 @@ SectorXFlexMaxSupply,
 SectorXStorageCapacity,
 SectorXStorageSelfDischarge,
 SectorXStorageMinimum,
-SectorXStorageAlertLevel,
+SectorXAlertLevel,
 $If %MTS% == 0 SectorXStorageInitial,
 SectorXStorageProfile,
 $If %RetrieveStatus% == 1 , CommittedCalc
@@ -638,7 +635,7 @@ EQ_SystemCost(i)..
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
          +0.7*Config("ValueOfLostLoad","val")*(sum(nx,(LL_SectorXSpillage(nx,i))*TimeStep))
-         +sum(nx,CostStorageAlert(nx,i)*LL_SectorXStorageAlert(nx,i)*TimeStep)
+         +sum(nx,10000*LL_SectorXStorageAlert(nx,i)*TimeStep)
          +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep + sum(slx,SectorXSpillage(slx,i))*TimeStep)
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
@@ -661,7 +658,7 @@ EQ_SystemCost(i)..
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
          +0.7*Config("ValueOfLostLoad","val")*(sum(nx,(LL_SectorXSpillage(nx,i))*TimeStep))
-         +sum(nx,CostStorageAlert(nx,i)*LL_SectorXStorageAlert(nx,i)*TimeStep)
+         +sum(nx,10000*LL_SectorXStorageAlert(nx,i)*TimeStep)
          +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep + sum(slx,SectorXSpillage(slx,i))*TimeStep)
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
@@ -972,8 +969,8 @@ EQ_Boundary_Sector_Storage_minimum(nx,i)..
          SectorXStorageLevel(nx,i)
 ;
 *Boundary Sector Storage level should be above alert level, going below will only be violated to avoid power rationing (110% of most expensive power plant)
-EQ_Boundary_Sector_Storage_alert(nx,xu,i)..
-         SectorXStorageCapacity(nx)*Nunits(xu)*min(SectorXStorageAlertLevel(nx,i),AvailabilityFactor(nx,i))
+EQ_Boundary_Sector_Storage_alert(nx,i)..
+         SectorXStorageCapacity(nx)*SectorXAlertLevel(nx,i)
          =L=
          SectorXStorageLevel(nx,i)
          + LL_SectorXStorageAlert(nx,i)

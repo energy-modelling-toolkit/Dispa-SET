@@ -722,7 +722,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
         PathParameters['SectorXFlexibleSupply'] = 142
         PathParameters['BoundarySectorMaxSpillage'] = 143
         PathParameters['SectorXReservoirLevels'] = 144
-        PathParameters['SectorXAlertLevels'] = 145
+        PathParameters['SectorXAlertLevel'] = 145
         PathParameters['CostXNotServed'] = 170
         default['CostXNotServed'] = 170
 
