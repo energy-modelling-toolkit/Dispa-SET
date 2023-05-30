@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 import sys
+import numbers
 
 import numpy as np
 import pandas as pd
@@ -670,7 +671,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['CostShutDown'] = ['au']
     sets_param['CostStartUp'] = ['au']
     sets_param['CostVariable'] = ['au', 'h']
-    # sets_param['CostStorageAlert'] = ['nx','h']
+    sets_param['CostStorageAlert'] = ['nx','h']
     sets_param['Curtailment'] = ['n']
     sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
@@ -943,12 +944,17 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # %%###############################################################################################################
     # Variable Cost
     # Equivalence dictionary between fuel types and price entries in the config sheet:
-    FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
+    
+        FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
                    'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia'}
+    CostVariable = pd.DataFrame()
     for unit in range(Nunits):
         c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
         found = False
         for FuelEntry in FuelEntries:
+            CostVariable = pd.concat([
+            CostVariable, FuelPrices[FuelEntries[FuelEntry]][c] / Plants_merged['Efficiency'][unit] + \
+                  Plants_merged['EmissionRate'][unit] * FuelPrices['PriceOfCO2'][c]], axis=1)
             if Plants_merged['Fuel'][unit] == FuelEntry:
                 if Plants_merged['Technology'][unit] == 'ABHP':
                     parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
@@ -970,6 +976,20 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         if not found:
             logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] +
                             ' in unit ' + Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
+
+# %%###############################################################################################################
+    # Assign storage alert level costs to the unit with highest variable costs inside the zone
+    CostVariable = CostVariable.groupby(by=CostVariable.columns, axis=1).apply(
+        lambda g: g.mean(axis=1) if isinstance(g.iloc[0, 0], numbers.Number) else g.iloc[:, 0]) * 1.1
+    for unit in range(Nunits):
+        c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
+        found = False
+        if Plants_merged['Unit'][unit] in Plants_all_sto['Unit']:
+            parameters['CostStorageAlert']['val'][unit, :] = CostVariable[c].values
+            found = True
+        if not found:
+            logging.warning('No alert price has been found for ' + Plants_merged['Unit'][unit] +
+                            '. A null variable cost has been assigned')
 
     # %%###############################################################################################################
 
