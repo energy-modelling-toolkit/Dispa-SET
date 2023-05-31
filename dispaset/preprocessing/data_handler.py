@@ -724,6 +724,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
         PathParameters['SectorXReservoirLevels'] = 144
         PathParameters['SectorXAlertLevel'] = 145
         PathParameters['CostXNotServed'] = 170
+        PathParameters['PriceOfSpillage'] = 205
         default['CostXNotServed'] = 170
 
         for p in StdParameters:
@@ -806,7 +807,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
 
                 # List of parameters for which an external file path must be specified:
         PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
-                  'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
+                  'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfSpillage',
                   'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat', 'HeatDemand',
                   'CostHeatSlack', 'CostLoadShedding', 'ShareOfFlexibleDemand']
         for i, param in enumerate(PARAMS):
@@ -913,7 +914,7 @@ def load_config_yaml(filename, AbsPath=True):
 
     # Define missing parameters if they were not provided in the config file
     PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
-              'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
+              'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfSpillage',
               'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia',
               'HeatDemand', 'CostHeatSlack', 'CostLoadShedding', 'ShareOfFlexibleDemand', 'Temperatures',
               'PriceTransmission', 'Reserve2D', 'Reserve2U', 'H2RigidDemand', 'H2FlexibleDemand', 'H2FlexibleCapacity',
