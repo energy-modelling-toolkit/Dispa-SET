@@ -285,6 +285,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     BoundarySector.fillna(0, inplace=True)
     SectorXReservoirLevels = GenericTable(zones_bs, 'SectorXReservoirLevels', config, default=0)
     SectorXAlertLevel = GenericTable(zones_bs, 'SectorXAlertLevel', config, default=0)
+    CostXSpillage = load_time_series(config, config['PriceOfSpillage']).fillna(0)
     # Boundary Sector Max Spillage
     if os.path.isfile(config['BoundarySectorMaxSpillage']):
         BS_spillage = load_time_series(config, config['BoundarySectorMaxSpillage']).fillna(0)
@@ -576,7 +577,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'PriceTransmission': PriceTransmission,
                'SectorXDemand': SectorXDemand, 'CostXNotServed': CostXNotServed,
                'SectorXFlexibleDemand': SectorXFlexibleDemand, 'SectorXFlexibleSupply': SectorXFlexibleSupply,
-               'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel}
+               'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel, 'PriceOfSpillage':CostXSpillage}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
@@ -672,6 +673,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['CostStartUp'] = ['au']
     sets_param['CostVariable'] = ['au', 'h']
     sets_param['CostStorageAlert'] = ['nx','h']
+    sets_param['PriceOfSpillage'] = ['slx','h']
     sets_param['Curtailment'] = ['n']
     sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
@@ -1017,7 +1019,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     for i, slx in enumerate(sets['slx']):
         if slx in BS_Spillages.columns:
             parameters['SectorXMaximumSpillage']['val'][i, :] = finalTS['BSMaxSpillage'][slx]
-
+    #Cost of Spillage boundary sector
+            parameters['PriceOfSpillage']['val'][i, :] = finalTS['PriceOfSpillage'][slx]  
     # Check values:
     check_MinMaxFlows(parameters['FlowXMinimum']['val'], parameters['FlowXMaximum']['val'])
 
@@ -1146,7 +1149,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Config variables:
     sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead',
-                        'SimulationTimeStep', 'ValueOfLostLoad', 'QuickStartShare', 'CostOfSpillage', 'WaterValue',
+                        'SimulationTimeStep', 'ValueOfLostLoad', 'QuickStartShare', 'PriceOfSpillage', 'WaterValue',
                         'DemandFlexibility']
     sets['y_config'] = ['year', 'month', 'day', 'val']
     dd_begin = idx_sim[0]
@@ -1160,7 +1163,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
          [1e-5, 0, 0, config['SimulationTimeStep']],
          [1e-5, 0, 0, config['default']['ValueOfLostLoad']],
          [1e-5, 0, 0, config['default']['ShareOfQuickStartUnits']],
-         [1e-5, 0, 0, config['default']['PriceOfSpillage']],
+         #[1e-5, 0, 0, config['default']['PriceOfSpillage']],
          [1e-5, 0, 0, config['default']['WaterValue']],
          [1e-5, 0, 0, config['default']['DemandFlexibility']]]
     )
