@@ -983,15 +983,16 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Assign storage alert level costs to the unit with highest variable costs inside the zone
     CostVariable = CostVariable.groupby(by=CostVariable.columns, axis=1).apply(
         lambda g: g.mean(axis=1) if isinstance(g.iloc[0, 0], numbers.Number) else g.iloc[:, 0]) * 1.1
-    for unit in range(Nunits):
-        c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
+    BoundarySector['Sector']=BoundarySector.index
+    zones=list(CostVariable.columns)
+    for unit in range(len(BoundarySector)):
+        # c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
         found = False
-        if Plants_merged['Unit'][unit] in Plants_all_sto['Unit']:
-            parameters['CostStorageAlert']['val'][unit, :] = CostVariable[c].values
+        if BoundarySector['Zone'][unit] in zones:
+            parameters['CostStorageAlert']['val'][unit, :] = CostVariable[BoundarySector['Zone'][unit]].values
             found = True
         if not found:
-            logging.warning('No alert price has been found for ' + Plants_merged['Unit'][unit] +
-                            '. A null variable cost has been assigned')
+            parameters['CostStorageAlert']['val'][unit, :] = 0
 
     # %%###############################################################################################################
 
@@ -1163,7 +1164,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
          [1e-5, 0, 0, config['SimulationTimeStep']],
          [1e-5, 0, 0, config['default']['ValueOfLostLoad']],
          [1e-5, 0, 0, config['default']['ShareOfQuickStartUnits']],
-         #[1e-5, 0, 0, config['default']['PriceOfSpillage']],
+         [1e-5, 0, 0, config['default']['PriceOfSpillage']],
          [1e-5, 0, 0, config['default']['WaterValue']],
          [1e-5, 0, 0, config['default']['DemandFlexibility']]]
     )
