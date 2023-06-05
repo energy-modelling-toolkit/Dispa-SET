@@ -756,8 +756,8 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
     plants_merged = plants_merged[new_columns + list(plants_merged.columns.drop(new_columns))]
     return plants_merged, mapping
 
-
-def PTDF_matrix(config,feeder):
+# TODO: CHECK THIS FUNCTION WITH BACKWARD COMPATIBILITY
+def PTDF_matrix(config, feeder):
     '''
     Function that calculate the ptdf matrix from the grid data table
     '''
@@ -790,9 +790,11 @@ def PTDF_matrix(config,feeder):
         Bp=np.diag([1/(1j*feeder['X'][mq]) for mq in range(l)])#Primitive Susceptances Matrix
         A=np.zeros((n,l))
         for ldw in range(l):
-            linenodes = feeder['Code_Line'][ldw].split(' -> ')
-            From=linenodes[0]
-            To=linenodes[1]
+            # linenodes = feeder['Code_Line'][ldw].split(' -> ')
+            # From=linenodes[0]
+            # To=linenodes[1]
+            From=feeder['Node_i'][ldw]
+            To=feeder['Node_j'][ldw]
             for m in range(n):
                 if From==m+1:
                     A[m,ldw]=1
@@ -872,7 +874,7 @@ def PTDF_matrix(config,feeder):
         df_ptdic=pd.DataFrame(pt_dic[k])
     
     df_ptdic.set_index(feeder['Code_Line'],inplace=True, drop=True)
-    df_ptdic.columns = gen_names
+    df_ptdic.columns = config['zones']
     #df_ptdic.to_csv('PTDF.csv')
 
     #Calculation complete 

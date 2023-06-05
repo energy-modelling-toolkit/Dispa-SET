@@ -126,8 +126,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     if (grid_flag == "DC-Power Flow"):
         if os.path.isfile(config['GridData']):
             GridData = pd.read_csv(config['GridData'],
-                               na_values=commons['na_values'],
-                               keep_default_na=False, index_col=0)
+        # if os.path.isfile(config['PTDFMatrix']):
+        #     PTDF = pd.read_csv(config['PTDFMatrix'],
+                                na_values=commons['na_values'],
+                                keep_default_na=False)
+            PTDF = PTDF_matrix(config, GridData).fillna(0)
         else:
             logging.error('No valid grid data file provided')
             GridData = pd.DataFrame()
@@ -415,7 +418,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Bidirectional Interconnections:
     if (grid_flag == "DC-Power Flow"):
         
-        PTDF = PTDF_matrix(config,GridData)
+        # PTDF = PTDF_matrix(config,GridData)
         
         bidirectional_connections = NTC
         data_dict = {'connection1':[],'connection2':[],'ratio':[]}
@@ -446,7 +449,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                
         # Check the Gridata Matrix (TODO: check the order or sequence):   
         for key in NTC.columns:
-            if key not in GridData.index:
+            # if key not in GridData.index:
+            if key not in PTDF.index:
                 logging.warning('The transmission line' + str(key) + ' is not in the provided GridData')
                 logging.error('The GridData Matrix provided is not valid')
                 sys.exit(1)

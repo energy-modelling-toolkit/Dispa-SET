@@ -960,13 +960,14 @@ EQ_SysInertia(i)..
          SysInertia(i)
          =E=
 *          sum(u,((Power(u,i)*(InertiaConstant(u))/(Pi*50)))))
-          sum(u,((PowerCapacity(u)*Committed(u,i)*InertiaConstant(u))/(Pi*50)))
+*111          sum(u,((PowerCapacity(u)*Committed(u,i)*InertiaConstant(u))/(Pi*50)))
+          sum(u,(Committed(u,i)*InertiaConstant(u)))
 *          sum(u,(((PowerCapacity(u)/10)*Committed(u,i)*InertiaConstant(u))/(Pi*50)))
 *          sum(u,((InertiaConstant(u)*TimeStep)/(Pi*50)))
 ;
 
 EQ_I_limit(u,i)..
-         0
+         52
          =l=
          SysInertia(i)
 ;
