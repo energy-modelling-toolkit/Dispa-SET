@@ -122,6 +122,7 @@ CostShutDown(u)                             [EUR\u]         Shut-down costs
 CostStartUp(u)                              [EUR\u]         Start-up costs
 CostVariable(au,h)                          [EUR\MW]        Variable costs
 CostXStorageAlert(nx,h)                     [EUR\MW]        Cost of violating storage alert level boundary sector
+CostXFloodControl(nx,h)                     [EUR\MW]        Cost of violating storage flood control level boundary sector
 CostXSpillage(slx,h)                        [EUR\MW]        Cost of spillage for boundary sector
 CostXNotServed(nx,h)                        [EUR\MWh]       Cost of supplying energy to boundary sector via other means
 CostLoadShedding(n,h)                       [EUR\MWh]       Cost of load shedding
@@ -189,6 +190,7 @@ SectorXStorageMinimum(nx)                   [MWh]           Boundary sector stor
 $If %MTS% == 0 SectorXStorageInitial(nx)    [MWh]           Boundary sector storage initial state of charge
 SectorXStorageProfile(nx,h)                 [%]             Boundary sector storage level respected at the end of each horizon
 SectorXAlertLevel(nx,h)                     [MWh]           Storage alert of the boundary sector - Will only be violated to avoid power rationing
+SectorXFloodControl(nx,h)                   [MWh]           Storage flood control of the boundary sector
 ;
 
 *Parameters as used within the loop
@@ -248,6 +250,7 @@ $LOAD CHPType
 $LOAD Config
 $LOAD CostFixed
 $LOAD CostXStorageAlert
+$LOAD CostXFloodControl
 $LOAD CostXSpillage
 $LOAD CostXNotServed
 $LOAD CostLoadShedding
@@ -312,6 +315,7 @@ $LOAD SectorXStorageCapacity
 $LOAD SectorXStorageSelfDischarge
 $LOAD SectorXStorageMinimum
 $LOAD SectorXAlertLevel
+$LOAD SectorXFloodControl
 $If %MTS% == 0 $LOAD SectorXStorageInitial
 $LOAD SectorXStorageProfile
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
@@ -351,6 +355,7 @@ CostStartUp,
 CostRampUp,
 CostVariable,
 CostXStorageAlert,
+CostXFloodControl,
 CostXSpillage,
 Demand,
 StorageDischargeEfficiency,
@@ -402,6 +407,7 @@ SectorXStorageCapacity,
 SectorXStorageSelfDischarge,
 SectorXStorageMinimum,
 SectorXAlertLevel,
+SectorXFloodControl,
 $If %MTS% == 0 SectorXStorageInitial,
 SectorXStorageProfile,
 $If %RetrieveStatus% == 1 , CommittedCalc
@@ -452,7 +458,8 @@ LL_MinPower(n,h)                        [MW]    Power exceeding the demand
 LL_2U(n,h)                              [MW]    Deficit in reserve up
 LL_3U(n,h)                              [MW]    Deficit in reserve up - non spinning
 LL_2D(n,h)                              [MW]    Deficit in reserve down
-LL_SectorXStorageAlert(nx,h)            [MWh]   Boundary Sector Unsatisfied water level constraint for going below alert level at each hour
+SectorXStorageAlertViolation(nx,h)      [MWh]   Boundary Sector Unsatisfied water level constraint for going below alert level at each hour
+SectorXFloodControlViolation(nx,h)      [MWh]   Boundary Sector Unsatisfied water level constraint for going above flood control at each hour
 LL_SectorXFlexDemand(nx)                [MWh]   Deficit in flex demand
 LL_SectorXFlexSupply(nx)                [MWh]   Deficit in flex supply
 spillage(au,h)                          [MWh]   spillage from water reservoirs
@@ -584,6 +591,7 @@ EQ_Boundary_Sector_Storage_MaxDischarge
 EQ_Boundary_Sector_Storage_MaxCharge
 EQ_Boundary_Sector_Storage_minimum
 EQ_Boundary_Sector_Storage_alert
+EQ_Boundary_Sector_Flood_Control
 EQ_Boundary_Sector_Storage_level
 EQ_Boundary_Sector_Storage_balance
 EQ_Boundary_Sector_Storage_boundaries
@@ -641,11 +649,12 @@ EQ_SystemCost(i)..
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
          +0.7*Config("ValueOfLostLoad","val")*(sum(nx,(LL_SectorXSpillage(nx,i))*TimeStep))
-         +sum(nx,CostXStorageAlert(nx,i)*LL_SectorXStorageAlert(nx,i)*TimeStep)
+         +sum(nx,CostXStorageAlert(nx,i)*SectorXStorageAlertViolation(nx,i)*TimeStep)
 *         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep
-         +sum(au,CostSpillage(au,i)*spillage(au,i))
-         +sum(nx,CostXSpillage(slx,i)*SectorXSpillage(slx,h))
-         +sum(slx,SectorXSpillage(slx,i))*TimeStep)
+         +sum(nx,CostXFloodControl(nx,i)*SectorXFloodControlViolation(nx,i)*TimeStep)
+*         +sum(au,CostSpillage(au,i)*spillage(au,i))
+         +sum(slx,CostXSpillage(slx,i)*SectorXSpillage(slx,i)*TimeStep)
+         +sum(slx,SectorXSpillage(slx,i)*TimeStep)
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
 $else
@@ -667,11 +676,12 @@ EQ_SystemCost(i)..
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(u,(LL_RampUp(u,i)+LL_RampDown(u,i))*TimeStep)
          +0.7*Config("ValueOfLostLoad","val")*(sum(nx,(LL_SectorXSpillage(nx,i))*TimeStep))
-         +sum(nx,CostXStorageAlert(nx,i)*LL_SectorXStorageAlert(nx,i)*TimeStep)
+         +sum(nx,CostXStorageAlert(nx,i)*SectorXStorageAlertViolation(nx,i)*TimeStep)
 *         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep
-         +sum(au,CostSpillage(au,i)*spillage(au,i))
-         +sum(nx,CostXSpillage(slx,i)*SectorXSpillage(slx,h))
-         +sum(slx,SectorXSpillage(slx,i))*TimeStep)
+         +sum(nx,CostXFloodControl(nx,i)*SectorXFloodControlViolation(nx,i)*TimeStep)
+*          +sum(au,CostSpillage(au,i)*spillage(au,i))
+         +sum(slx,CostXSpillage(slx,i)*SectorXSpillage(slx,i)*TimeStep)
+         +sum(slx,SectorXSpillage(slx,i)*TimeStep)
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
 ;
 
@@ -981,11 +991,18 @@ EQ_Boundary_Sector_Storage_minimum(nx,i)..
          SectorXStorageLevel(nx,i)
 ;
 *Boundary Sector Storage level should be above alert level, going below will only be violated to avoid power rationing (110% of most expensive power plant)
-EQ_Boundary_Sector_Storage_alert(nx,i)..
+EQ_Boundary_Sector_Storage_alert(nx,i)$(SectorXFloodControl(nx,i) > SectorXAlertLevel(nx,i))..
          SectorXStorageCapacity(nx)*SectorXAlertLevel(nx,i)
          =L=
          SectorXStorageLevel(nx,i)
-         + LL_SectorXStorageAlert(nx,i)
+         + SectorXStorageAlertViolation(nx,i)
+;
+*Boundary Sector Storage level should be below flood control level
+EQ_Boundary_Sector_Flood_Control(nx,i)..
+         SectorXStorageCapacity(nx)*SectorXFloodControl(nx,i)
+         + SectorXFloodControlViolation(nx,i)
+         =G=
+         SectorXStorageLevel(nx,i)
 ;
 *Storage level must be below storage capacity
 EQ_Boundary_Sector_Storage_level(nx,i)..
@@ -1407,6 +1424,7 @@ EQ_Boundary_Sector_Storage_MaxCharge,
 EQ_Boundary_Sector_Storage_minimum,
 EQ_Boundary_Sector_Storage_level,
 EQ_Boundary_Sector_Storage_alert,
+EQ_Boundary_Sector_Flood_Control,
 EQ_Boundary_Sector_Storage_balance,
 EQ_Boundary_Sector_Storage_boundaries,
 $If %MTS% == 1 EQ_Boundary_Sector_Storage_Cyclic,
@@ -1590,7 +1608,8 @@ OutputHeat(au,h)
 OutputXNotServed(nx,h)
 LostLoad_StorageLevelViolation(au)
 LostLoad_SectorXStorageLevelViolation(nx)
-LostLoad_SectorXStorageAlert(nx,h)
+OutputSectorXStorageAlertViolation(nx,h)
+OutputSectorXFloodControlViolation(nx,h)
 StorageShadowPrice(au,h)
 OutputSectorXFlexDemand(nx,h)
 OutputSectorXFlexSupply(nx,h)
@@ -1680,7 +1699,8 @@ LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
 LostLoad_2D(n,z) = LL_2D.L(n,z);
 LostLoad_2U(n,z) = LL_2U.L(n,z);
 LostLoad_3U(n,z) = LL_3U.L(n,z);
-LostLoad_SectorXStorageAlert(nx,z) = LL_SectorXStorageAlert.L(nx,z);
+OutputSectorXStorageAlertViolation(nx,z) = SectorXStorageAlertViolation.L(nx,z);
+OutputSectorXFloodControlViolation(nx,z) = SectorXFloodControlViolation.L(nx,z);
 $If %MTS%==0 LostLoad_RampUp(n,z)    = sum(u,LL_RampUp.L(u,z)*Location(u,n));
 $If %MTS%==0 LostLoad_RampDown(n,z)  = sum(u,LL_RampDown.L(u,z)*Location(u,n));
 $If %MTS%==0 LostLoad_RampUp_Unit(u,z) = LL_RampUp.L(u,z);
@@ -1785,7 +1805,8 @@ LostLoad_MinPower,
 LostLoad_2D,
 LostLoad_2U,
 LostLoad_3U,
-LostLoad_SectorXStorageAlert,
+OutputSectorXStorageAlertViolation,
+OutputSectorXFloodControlViolation,
 $If %MTS%==0 LostLoad_RampUp,
 $If %MTS%==0 LostLoad_RampDown,
 $If %MTS%==0 LostLoad_RampUp_Unit,

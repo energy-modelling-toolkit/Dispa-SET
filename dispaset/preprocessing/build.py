@@ -285,7 +285,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     BoundarySector.fillna(0, inplace=True)
     SectorXReservoirLevels = GenericTable(zones_bs, 'SectorXReservoirLevels', config, default=0)
     SectorXAlertLevel = GenericTable(zones_bs, 'SectorXAlertLevel', config, default=0)
-    CostXSpillage = load_time_series(config, config['PriceOfSpillage']).fillna(0)
+    SectorXFloodControl = GenericTable(zones_bs, 'SectorXFloodControl', config, default=0)
+    CostXSpillage = load_time_series(config, config['CostXSpillage']).fillna(0)
     # Boundary Sector Max Spillage
     if os.path.isfile(config['BoundarySectorMaxSpillage']):
         BS_spillage = load_time_series(config, config['BoundarySectorMaxSpillage']).fillna(0)
@@ -577,7 +578,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'PriceTransmission': PriceTransmission,
                'SectorXDemand': SectorXDemand, 'CostXNotServed': CostXNotServed,
                'SectorXFlexibleDemand': SectorXFlexibleDemand, 'SectorXFlexibleSupply': SectorXFlexibleSupply,
-               'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel, 'PriceOfSpillage':CostXSpillage}
+               'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel, 
+               'SectorXFloodControl': SectorXFloodControl, 
+               'CostXSpillage':CostXSpillage}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
@@ -672,8 +675,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['CostShutDown'] = ['au']
     sets_param['CostStartUp'] = ['au']
     sets_param['CostVariable'] = ['au', 'h']
-    sets_param['CostStorageAlert'] = ['nx','h']
-    sets_param['PriceOfSpillage'] = ['slx','h']
+    sets_param['CostXStorageAlert'] = ['nx','h']
+    sets_param['CostXFloodControl'] = ['nx','h']
+    sets_param['CostXSpillage'] = ['slx','h']
     sets_param['Curtailment'] = ['n']
     sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
@@ -734,6 +738,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXStorageInitial'] = ['nx']
     sets_param['SectorXStorageProfile'] = ['nx', 'h']
     sets_param['SectorXAlertLevel'] = ['nx', 'h']
+    sets_param['SectorXFloodControl'] = ['nx', 'h']
     
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -851,7 +856,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         if nx in finalTS['SectorXAlertLevel'] and any(finalTS['SectorXAlertLevel'][nx] > 0) and all(
                 finalTS['SectorXAlertLevel'][nx] - 1 <= 1e-11):
             parameters['SectorXAlertLevel']['val'][i, :] = finalTS['SectorXAlertLevel'][nx][idx_sim].values                                                    
-        
+        if nx in finalTS['SectorXFloodControl'] and any(finalTS['SectorXFloodControl'][nx] > 0) and all(
+                finalTS['SectorXFloodControl'][nx] - 1 <= 1e-11):
+            parameters['SectorXFloodControl']['val'][i, :] = finalTS['SectorXFloodControl'][nx][idx_sim].values 
         parameters['SectorXStorageInitial']['val'][i] = parameters['SectorXStorageProfile']['val'][i, 0] * \
                                                     BoundarySector['SectorXStorageCapacity'][nx]
     # Storage Inflows:
@@ -989,11 +996,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
         found = False
         if BoundarySector['Zone'][unit] in zones:
-            parameters['CostStorageAlert']['val'][unit, :] = CostVariable[BoundarySector['Zone'][unit]].values
+            parameters['CostXStorageAlert']['val'][unit, :] = CostVariable[BoundarySector['Zone'][unit]].values
             found = True
         if not found:
-            parameters['CostStorageAlert']['val'][unit, :] = 0
-
+            parameters['CostXStorageAlert']['val'][unit, :] = 0
+   # Assign storage flood control level costs to the unit with highest variable costs inside the zone
+    for unit in range(len(BoundarySector)):
+        # c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
+        found = False
+        if BoundarySector['Zone'][unit] in zones:
+            parameters['CostXFloodControl']['val'][unit, :] = CostVariable[BoundarySector['Zone'][unit]].values
+            found = True
+        if not found:
+            parameters['CostXFloodControl']['val'][unit, :] = 0
     # %%###############################################################################################################
 
     # Maximum Line Capacity
@@ -1021,7 +1036,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         if slx in BS_Spillages.columns:
             parameters['SectorXMaximumSpillage']['val'][i, :] = finalTS['BSMaxSpillage'][slx]
     #Cost of Spillage boundary sector
-            parameters['PriceOfSpillage']['val'][i, :] = finalTS['PriceOfSpillage'][slx]  
+            parameters['CostXSpillage']['val'][i, :] = finalTS['CostXSpillage'][slx]  
     # Check values:
     check_MinMaxFlows(parameters['FlowXMinimum']['val'], parameters['FlowXMaximum']['val'])
 
@@ -1150,7 +1165,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Config variables:
     sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead',
-                        'SimulationTimeStep', 'ValueOfLostLoad', 'QuickStartShare', 'PriceOfSpillage', 'WaterValue',
+                        'SimulationTimeStep', 'ValueOfLostLoad', 'QuickStartShare', 'WaterValue',
                         'DemandFlexibility']
     sets['y_config'] = ['year', 'month', 'day', 'val']
     dd_begin = idx_sim[0]
@@ -1164,7 +1179,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
          [1e-5, 0, 0, config['SimulationTimeStep']],
          [1e-5, 0, 0, config['default']['ValueOfLostLoad']],
          [1e-5, 0, 0, config['default']['ShareOfQuickStartUnits']],
-         [1e-5, 0, 0, config['default']['PriceOfSpillage']],
+         # [1e-5, 0, 0, config['default']['CostXSpillage']],
          [1e-5, 0, 0, config['default']['WaterValue']],
          [1e-5, 0, 0, config['default']['DemandFlexibility']]]
     )
