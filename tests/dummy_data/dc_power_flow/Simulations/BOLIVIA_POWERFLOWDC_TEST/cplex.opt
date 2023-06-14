@@ -1,0 +1,12 @@
+epgap 0.0015
+numericalemphasis 0
+mipdisplay 4
+scaind 1
+lpmethod 0
+relaxfixedinfeas 0
+mipstart 1
+mircuts 1
+quality True
+bardisplay 2
+epint 0
+lbheur 1

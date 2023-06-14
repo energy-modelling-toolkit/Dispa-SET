@@ -967,7 +967,7 @@ EQ_SysInertia(i)..
 ;
 
 EQ_I_limit(u,i)..
-         52
+         0
          =l=
          SysInertia(i)
 ;

@@ -761,6 +761,31 @@ def PTDF_matrix(config, feeder):
     '''
     Function that calculate the ptdf matrix from the grid data table
     '''
+    #preprocesing the griddata dataframe
+    
+    zones = config['zones']
+
+    feeder['aux'] = np.arange(feeder.shape[0])
+    feeder['Line'] = feeder['aux'] + 1
+    feeder = feeder.drop(['aux'], axis=1)
+    feeder['Code_Node_i'], feeder['Code_Node_j'] = feeder['Code_Line'].str.split('->', 1).str
+    feeder['Code_Node_i'] = feeder['Code_Node_i'].str.strip()
+    feeder['Code_Node_j'] = feeder['Code_Node_j'].str.strip()
+
+    feeder['Node_i'] = ""
+    feeder['Node_j'] = ""
+
+    for zone, option in zip(zones, range(1, len(zones) + 1)):
+        conditions_i = (feeder['Code_Node_i'] == zone)
+        conditions_j = (feeder['Code_Node_j'] == zone)
+        
+        feeder.loc[conditions_i, 'Node_i'] = option
+        feeder.loc[conditions_j, 'Node_j'] = option
+
+    feeder['Node_i'] = feeder['Node_i'].astype(int)
+    feeder['Node_j'] = feeder['Node_j'].astype(int)
+    
+    #ptdf calculation
     
     HM=feeder[feeder['HM']!=0].index.tolist() #Lines for maintenance 
     lines_under_maintenance=sum(feeder['HM']!=0) #Number of lines under maintenance
