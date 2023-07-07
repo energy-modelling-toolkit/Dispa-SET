@@ -171,7 +171,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'OutputBSFlexDemand', 'OutputSectorXFlexSupply', 'OutputResidualLoad',
                    'OutputCurtailmentReserve_2U', 'OutputCurtailmentReserve_3U', 'OutputMaxOutageUp',
                    'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D',
-                   'OutputFlowX']
+                   'OutputFlowX','OutputSectorXStorageAlertViolation','OutputSectorXFloodControlViolation']
 
     # Setting the proper index to the result dataframes:
     for key in chain(keys, keys_sparse):
