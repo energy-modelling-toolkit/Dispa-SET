@@ -206,6 +206,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Defining the hydro storages:
     plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
     check_sto(config, plants_sto)
+    # check_sto(config, plants_sto.dropna(subset = ['STOCapacity']))
 
     # Defining the thermal storages:
     plants_thms = plants[[u in commons['tech_thermal_storage'] for u in plants['Technology']]]
@@ -261,18 +262,20 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     Temperatures = NodeBasedTable('Temperatures', config)
 
     # Detecting boundary zones:
-    filter_bs_cols = [col for col in plants_all_bs if col.startswith('Sector')]
-    zones_bs = []
-    for col in plants_all_bs[filter_bs_cols].columns:
-        tmp = plants_all_bs[col].unique().tolist()
-        zones_bs += tmp
-    zones_bs = list(set(zones_bs))
+    # filter_bs_cols = [col for col in plants_all_bs if col.startswith('Sector')]
+    zones_bs = BoundarySector.index.to_list()
+    # for col in plants_all_bs[filter_bs_cols].columns:
+    #     tmp = plants_all_bs[col].unique().tolist()
+    #     zones_bs += tmp
+    # zones_bs = list(set(np.unique(zones_bs)))
     if '' in zones_bs:
         zones_bs.remove('')
     if np.nan in zones_bs:
         zones_bs = [x for x in zones_bs if pd.isnull(x) == False]
     if 'nan' in zones_bs:
         zones_bs.remove('nan')
+    zones_bss = np.unique(zones_bs + list(BoundarySector.index)).tolist()
+
     SectorXDemand = GenericTable(zones_bs, 'SectorXDemand', config, default=0)
     CostXNotServed = GenericTable(zones_bs, 'CostXNotServed', config,
                                   default=config['default']['CostXNotServed'])
@@ -617,6 +620,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets['mk'] = ['DA', '2U', '2D', 'Flex']
     sets['n'] = config['zones']
     sets['nx'] = zones_bs
+    sets['nx_CC'] = pd.Series(zones_bs)[pd.Series(zones_bs) != 'S_EC'].tolist()
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['lx'] = BSInterconnections
@@ -624,6 +628,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
+    sets['sx'] = Plants_wat[Plants_wat['Technology']=='HDAMC'].index.tolist()
     sets['u'] = Plants_merged[[u in [x for x in commons['Technologies'] if x not in
                                      commons['tech_p2ht'] + commons['tech_thermal_storage'] +
                                      commons['tech_p2bs'] + commons['tech_boundary_sector']]
@@ -986,7 +991,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             parameters['FlowXMinimum']['val'][i, :] = finalTS['BS_Inter_RoW'][lx]
     for i, slx in enumerate(sets['slx']):
         if slx in BS_Spillages.columns:
-            parameters['SectorXMaximumSpillage']['val'][i, :] = finalTS['BSMaxSpillage'][lx]
+            parameters['SectorXMaximumSpillage']['val'][i, :] = finalTS['BSMaxSpillage'][slx]
 
     # Check values:
     check_MinMaxFlows(parameters['FlowXMinimum']['val'], parameters['FlowXMaximum']['val'])
