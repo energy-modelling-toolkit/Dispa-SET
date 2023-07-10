@@ -991,14 +991,14 @@ EQ_Boundary_Sector_Storage_minimum(nx,i)..
          SectorXStorageLevel(nx,i)
 ;
 *Boundary Sector Storage level should be above alert level, going below will only be violated to avoid power rationing (110% of most expensive power plant)
-EQ_Boundary_Sector_Storage_alert(nx,i)$(SectorXFloodControl(nx,i) > SectorXAlertLevel(nx,i))..
+EQ_Boundary_Sector_Storage_alert(nx,i)..
          SectorXStorageCapacity(nx)*SectorXAlertLevel(nx,i)
          =L=
          SectorXStorageLevel(nx,i)
          + SectorXStorageAlertViolation(nx,i)
 ;
 *Boundary Sector Storage level should be below flood control level
-EQ_Boundary_Sector_Flood_Control(nx,i)..
+EQ_Boundary_Sector_Flood_Control(nx,i)$(SectorXFloodControl(nx,i) > SectorXAlertLevel(nx,i))..
          SectorXStorageCapacity(nx)*SectorXFloodControl(nx,i)
          + SectorXFloodControlViolation(nx,i)
          =G=
