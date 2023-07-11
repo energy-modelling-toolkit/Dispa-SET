@@ -98,25 +98,30 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     sumplot_pos = plotdata[cols[idx_zero:]].cumsum(axis=1)
     sumplot_pos['zero'] = 0
     sumplot_pos = sumplot_pos[['zero'] + sumplot_pos.columns[:-1].tolist()]
-
+    if level is not None:
+        n=3
+        height_ratio = [2.7, .8, .8]
+    else:
+        n=2
+        height_ratio = [2.3, .8]
     if ntc is not None:
-        fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
-                                 gridspec_kw={'height_ratios': [2.7, .8, .8], 'hspace': 0.04})
+        fig, axes = plt.subplots(nrows=n, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
+                                 gridspec_kw={'height_ratios': height_ratio, 'hspace': 0.04})
 
-        axes[2].plot(pdrng, ntc.loc[pdrng, 'NTCIn'].values, color='r')
-        axes[2].plot(pdrng, ntc.loc[pdrng, 'NTCOut'].values, color='g')
-        axes[2].set_xlim(pdrng[0], pdrng[-1])
-        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'FlowIn'], ntc.loc[pdrng, 'ZeroLine'],
+        axes[n-1].plot(pdrng, ntc.loc[pdrng, 'NTCIn'].values, color='r')
+        axes[n-1].plot(pdrng, ntc.loc[pdrng, 'NTCOut'].values, color='g')
+        axes[n-1].set_xlim(pdrng[0], pdrng[-1])
+        axes[n-1].fill_between(pdrng, ntc.loc[pdrng, 'FlowIn'], ntc.loc[pdrng, 'ZeroLine'],
                              facecolor=commons['colors']['FlowIn'],
                              alpha=alpha)
-        axes[2].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'],
+        axes[n-1].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'],
                              facecolor=commons['colors']['FlowOut'],
                              alpha=alpha)
-        axes[2].set_ylabel('NTC [' + units[0] + ']')
+        axes[n-1].set_ylabel('NTC [' + units[0] + ']')
         if ntc_limits is not None:
-            axes[2].set_ylim(ntc_limits[0], ntc_limits[1])
+            axes[n-1].set_ylim(ntc_limits[0], ntc_limits[1])
     else:
-        fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
+        fig, axes = plt.subplots(nrows=n-1, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
                                  gridspec_kw={'height_ratios': [2.7, .8], 'hspace': 0.04})
 
     # Create left axis:
@@ -640,7 +645,7 @@ def plot_zone_capacities(inputs, results, plot=True):
 
 
 def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=None, storage_limits=None,
-              ntc_limits=None, units=['GW', 'GWh']):
+              ntc_limits=None, units=['GW', 'GWh'], hide_storage_plot = False):
     """
     Generates plots from the dispa-SET results for one specific zone
 
@@ -791,21 +796,26 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
 
     # Plot power dispatch
     demand.rename(z, inplace=True)
+    if hide_storage_plot:
+        level = None
+        figsize = (12, 5)
+    else:
+        figsize = (13, 7)
     if ntc is None:
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment,
                       shedload=shed_load,
                       shiftedload=shifted_load, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
-                      storage_limits=storage_limits, units=units)
+                      storage_limits=storage_limits, units=units, figsize=figsize)
     elif ntc.empty:
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment,
                       shedload=shed_load,
                       shiftedload=shifted_load, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
-                      storage_limits=storage_limits, units=units)
+                      storage_limits=storage_limits, units=units, figsize=figsize)
     else:
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment,
                       shedload=shed_load,
                       shiftedload=shifted_load, ntc=ntc, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
-                      storage_limits=storage_limits, ntc_limits=ntc_limits, units=units)
+                      storage_limits=storage_limits, ntc_limits=ntc_limits, units=units, figsize=figsize)
 
     # # Plot heat dispatch
     # Nzones_th = len(inputs['sets']['n_th'])
