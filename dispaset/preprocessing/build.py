@@ -1,9 +1,9 @@
 import datetime as dt
 import logging
+import numbers
 import os
 import shutil
 import sys
-import numbers
 
 import numpy as np
 import pandas as pd
@@ -285,8 +285,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     BoundarySector.fillna(0, inplace=True)
     SectorXReservoirLevels = GenericTable(zones_bs, 'SectorXReservoirLevels', config, default=0)
     SectorXAlertLevel = GenericTable(zones_bs, 'SectorXAlertLevel', config, default=0)
-    SectorXFloodControl = GenericTable(zones_bs, 'SectorXFloodControl', config, default=0)
-    CostXSpillage = load_time_series(config, config['CostXSpillage']).fillna(0)
+    SectorXFloodControl = GenericTable(zones_bs, 'SectorXFloodControl', config, default=1)
+
     # Boundary Sector Max Spillage
     if os.path.isfile(config['BoundarySectorMaxSpillage']):
         BS_spillage = load_time_series(config, config['BoundarySectorMaxSpillage']).fillna(0)
@@ -300,6 +300,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         BS_forced_spillage = pd.DataFrame(0, index=BS_spillage.index, columns=BS_spillage.columns)
     else:
         BS_forced_spillage = pd.DataFrame(index=idx_long)
+
+    lines_bs = BS_spillage.columns
+
+    CostXSpillage = GenericTable(lines_bs, 'CostXSpillage', config, default=config['default']['PriceOfSpillage'])
 
     # Read BS Flexible demand & supply
     SectorXFlexibleDemand = GenericTable(zones_bs, 'SectorXFlexibleDemand', config, default=0)
@@ -849,18 +853,20 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             logging.warning(
                 'Could not find reservoir level data for storage plant ' + nx + '. Using the provided default initial '
                                                                                 'and final values')
-            parameters['SectorXStorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],
-                                                                           config['default']['ReservoirLevelFinal'],
-                                                                           len(idx_sim))
-           # Setting Storage Alert
+            parameters['SectorXStorageProfile']['val'][i, :] = np.where(
+                BoundarySector['SectorXStorageCapacity'][nx] == 0, 0,
+                np.linspace(config['default']['ReservoirLevelInitial'], config['default']['ReservoirLevelFinal'],
+                            len(idx_sim)))
+
+        # Setting Storage Alert
         if nx in finalTS['SectorXAlertLevel'] and any(finalTS['SectorXAlertLevel'][nx] > 0) and all(
                 finalTS['SectorXAlertLevel'][nx] - 1 <= 1e-11):
-            parameters['SectorXAlertLevel']['val'][i, :] = finalTS['SectorXAlertLevel'][nx][idx_sim].values                                                    
+            parameters['SectorXAlertLevel']['val'][i, :] = finalTS['SectorXAlertLevel'][nx][idx_sim].values
         if nx in finalTS['SectorXFloodControl'] and any(finalTS['SectorXFloodControl'][nx] > 0) and all(
                 finalTS['SectorXFloodControl'][nx] - 1 <= 1e-11):
-            parameters['SectorXFloodControl']['val'][i, :] = finalTS['SectorXFloodControl'][nx][idx_sim].values 
+            parameters['SectorXFloodControl']['val'][i, :] = finalTS['SectorXFloodControl'][nx][idx_sim].values
         parameters['SectorXStorageInitial']['val'][i] = parameters['SectorXStorageProfile']['val'][i, 0] * \
-                                                    BoundarySector['SectorXStorageCapacity'][nx]
+                                                        BoundarySector['SectorXStorageCapacity'][nx]
     # Storage Inflows:
     for i, s in enumerate(sets['asu']):
         if s in finalTS['ScaledInflows']:
@@ -986,12 +992,43 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] +
                             ' in unit ' + Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
 
-# %%###############################################################################################################
+    # %%###############################################################################################################
     # Assign storage alert level costs to the unit with highest variable costs inside the zone
+
+    def zone_to_bs_mapping(df):
+        zone_mapping = {}
+        ambiguous_sectors = {}
+
+        # Iterate over the rows of the DataFrame
+        for _, row in df.iterrows():
+            zone = row['Zone']
+            sector = row['Sector1']
+
+            # Check if both zone and sector are not empty strings
+            if zone and sector:
+                # Check if the sector already belongs to a different zone
+                if sector in zone_mapping:
+                    if zone != zone_mapping[sector]:
+                        ambiguous_sectors.setdefault(sector, []).extend([zone, zone_mapping[sector]])
+                else:
+                    zone_mapping[sector] = zone
+
+        if ambiguous_sectors:
+            warning_message = "Warning: The following sectors belong to multiple zones:\n"
+            for sector, zones in ambiguous_sectors.items():
+                default_zone = zone_mapping[sector]
+                zone_list = list(set(zones))
+                zone_list.remove(default_zone)
+                zone_str = ', '.join(zone_list)
+                warning_message += f"Sector: {sector} is linked to Zones: {zone_str} (Default zone: {default_zone}). Please check if this is correct.\n"
+            logging.warning(warning_message)
+        return zone_mapping
+
     CostVariable = CostVariable.groupby(by=CostVariable.columns, axis=1).apply(
-        lambda g: g.mean(axis=1) if isinstance(g.iloc[0, 0], numbers.Number) else g.iloc[:, 0]) * 1.1
-    BoundarySector['Sector']=BoundarySector.index
-    zones=list(CostVariable.columns)
+        lambda g: g.max(axis=1) if isinstance(g.iloc[0, 0], numbers.Number) else g.iloc[:, 0]) * 1.1
+    BoundarySector['Sector'] = BoundarySector.index
+    BoundarySector['Zone'] = BoundarySector.index.map(zone_to_bs_mapping(plants_all_bs))
+    zones = list(CostVariable.columns)
     for unit in range(len(BoundarySector)):
         # c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
         found = False
@@ -1000,7 +1037,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             found = True
         if not found:
             parameters['CostXStorageAlert']['val'][unit, :] = 0
-   # Assign storage flood control level costs to the unit with highest variable costs inside the zone
+    # Assign storage flood control level costs to the unit with highest variable costs inside the zone
     for unit in range(len(BoundarySector)):
         # c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
         found = False
