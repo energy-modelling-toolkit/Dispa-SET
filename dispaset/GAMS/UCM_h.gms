@@ -1715,10 +1715,10 @@ OutputSectorXFlexSupply(nx,z) = SectorXFlexSupply.L(nx,z);
 StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
 StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
 OutputPowerMustRun(u,z) = PowerMustRun(u,z);
-$If (%MTS%==0 or %LPFormulation% == 1) OutputCostStartUpH(u,z) = CostStartUpH.L(u,z);
-$If (%MTS%==0 or %LPFormulation% == 1) OutputCostShutDownH(u,z) = CostShutDownH.L(u,z);
-$If (%MTS%==0 or %LPFormulation% == 1) OutputCostRampUpH(u,z) = CostRampUpH.L(u,z);
-$If (%MTS%==0 or %LPFormulation% == 1) OutputCostRampDownH(u,z) = CostRampDownH.L(u,z);
+$If (%MTS%==0 or %LPFormulation% == 0) OutputCostStartUpH(u,z) = CostStartUpH.L(u,z);
+$If (%MTS%==0 or %LPFormulation% == 0) OutputCostShutDownH(u,z) = CostShutDownH.L(u,z);
+$If (%MTS%==0 or %LPFormulation% == 0) OutputCostRampUpH(u,z) = CostRampUpH.L(u,z);
+$If (%MTS%==0 or %LPFormulation% == 0) OutputCostRampDownH(u,z) = CostRampDownH.L(u,z);
 
 ShadowPrice_2U(n,z) =  EQ_Demand_balance_2U.m(n,z);
 ShadowPrice_2D(n,z) =  EQ_Demand_balance_2D.m(n,z);
