@@ -941,7 +941,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])
     for i in range(len(sets['n'])):
-        values[0, i, :] = finalTS['Load'][sets['n'][i]]
+        values[0, i, :] = finalTS['Load'][sets['n'][i]] * (1 - finalTS['ShareOfFlexibleDemand'][sets['n'][i]])
         values[1, i, :] = finalTS['Reserve2U'][sets['n'][i]]
         values[2, i, :] = finalTS['Reserve2D'][sets['n'][i]]
         values[3, i, :] = finalTS['Load'][sets['n'][i]] * finalTS['ShareOfFlexibleDemand'][sets['n'][i]]

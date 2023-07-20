@@ -23,6 +23,7 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'OutputShedLoad': ('n', 'h'),
             'OutputCurtailedPower': ('n', 'h'),
             'OutputDemandModulation': ('n', 'h'),
+            'OutputAccumulatedOverSupply': ('n', 'h'),
             'LostLoad_MaxPower': ('n', 'h'),
             'LostLoad_MinPower': ('n', 'h'),
             'LostLoad_2D': ('n', 'h'),
@@ -153,13 +154,13 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
 
     keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
             'LostLoad_RampDown', 'LostLoad_2D', 'ShadowPrice', 'StorageShadowPrice',
-            'OutputCostStartUpH', 'OutputCostRampUpH', 'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U',
+            'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U',
             'status']  # 'status'
 
     keys_sparse = ['OutputPower', 'OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted',
                    'OutputCurtailedPower', 'OutputFlow', 'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel',
                    'OutputStorageInput', 'OutputHeat',
-                   'OutputDemandModulation',
+                   'OutputDemandModulation', 'OutputAccumulatedOverSupply',
                    'OutputStorageLevelViolation_H', 'OutputPowerMustRun',
                    'OutputReserve_2U', 'OutputReserve_2D', 'OutputReserve_3U', 'ShadowPrice_RampUp_TC',
                    'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown',
@@ -171,7 +172,8 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'OutputBSFlexDemand', 'OutputSectorXFlexSupply', 'OutputResidualLoad',
                    'OutputCurtailmentReserve_2U', 'OutputCurtailmentReserve_3U', 'OutputMaxOutageUp',
                    'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D',
-                   'OutputFlowX','OutputSectorXStorageAlertViolation','OutputSectorXFloodControlViolation']
+                   'OutputFlowX', 'OutputSectorXStorageAlertViolation', 'OutputSectorXFloodControlViolation',
+                   'OutputCostStartUpH', 'OutputCostRampUpH']
 
     # Setting the proper index to the result dataframes:
     for key in chain(keys, keys_sparse):
