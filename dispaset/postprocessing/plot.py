@@ -392,12 +392,12 @@ def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones = '', show_pl
             storage_input.loc[:, z] = filter_by_zone(filter_by_tech_list(results['OutputStorageInput'], inputs,
                                                                          commons['tech_storage']),
                                                      inputs, z).sum(axis=1)
-        if not filter_by_zone(filter_by_tech_list(filter_sector(results['OutputSectorXStorageInput'], inputs), inputs,
-                                                  commons['tech_storage']), inputs,
-                              z).empty:
-            storage_input.loc[:, z] += filter_by_zone(filter_by_tech_list(filter_sector(results['OutputSectorXStorageInput'], inputs), inputs,
-                                                                         commons['tech_storage']),
-                                                     inputs, z).sum(axis=1).values
+        # if not filter_by_zone(filter_by_tech_list(filter_sector(results['OutputSectorXStorageInput'], inputs), inputs,
+        #                                           commons['tech_storage']), inputs,
+        #                       z).empty:
+        #     storage_input.loc[:, z] += filter_by_zone(filter_by_tech_list(filter_sector(results['OutputSectorXStorageInput'], inputs), inputs,
+        #                                                                  commons['tech_storage']),
+        #                                              inputs, z).sum(axis=1).values
 
     cols = [col for col in commons['MeritOrder'] if col in GenPerZone]
     GenPerZone = GenPerZone[cols] / 1E6
@@ -471,76 +471,77 @@ def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones = '', show_pl
     if show_plot:
         plt.show()
 
-    # Heat generation bar chart
-    fuels_heat = PPindicators[[u in [x for x in commons['Technologies']]
-                               for u in PPindicators['Technology']]].Fuel.unique()
-    zones_heat = PPindicators['Zone_th'].unique()
-    zones_heat = np.array([i for i in zones_heat if i])
-
-    if zones_heat.size != 0 and fuels_heat.size != 0:
-        HeatPerZone_th = pd.DataFrame(index=zones_heat, columns=fuels_heat)
-        for fuel in commons['Fuels']:
-            if fuel not in HeatPerZone_th:
-                HeatPerZone_th[fuel] = 0
-
-        heat_storage_input = pd.DataFrame(index=results['OutputStorageInput'].index)
-        for z in zones_heat:
-            for f in fuels_heat:
-                tmp = PPindicators[(PPindicators.Fuel == f) & (PPindicators.Zone_th == z)]
-                HeatPerZone_th.loc[z, f] = tmp.HeatGeneration.sum()
-            # HeatSlack = results['OutputHeatSlack'].loc[:,z].sum()
-            # if HeatSlack > 0:
-            #     HeatPerZone_th.loc[z, 'HeatSlack'] = HeatSlack
-            z = str(z)
-            if filter_by_heating_zone(filter_by_tech_list(results['OutputStorageInput'], inputs,
-                                                          commons['tech_thermal_storage']), inputs, z).empty:
-                heat_storage_input.loc[:, z] = 0
-            else:
-                heat_storage_input.loc[:, z] = filter_by_heating_zone(
-                    filter_by_tech_list(results['OutputStorageInput'], inputs,
-                                        commons['tech_thermal_storage']), inputs, z).sum(axis=1)
-
-        heat_storage_input = heat_storage_input.sum() / 1e6
-        power_consumption = power_consumption.loc[ListZones]
-        heat_storage_input.sort_index(inplace=True)
-
-        cols_heat = [col for col in commons['MeritOrderHeat'] if col in HeatPerZone_th]
-        HeatPerZone_th = HeatPerZone_th[cols_heat] / 1e6
-        power_consumption = power_consumption.loc[ListZones]
-        HeatPerZone_th.sort_index(inplace=True)
-        colors = [commons['colors'][tech] for tech in HeatPerZone_th.columns]
-        ax = HeatPerZone_th.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
-                                 title='Heat generation per heating zone (the horizontal lines indicate the demand '
-                                       '[black] & storage input [green])')
-        ax.set_ylabel('Generation [TWh]')
-
-        # Check for heat slack and plot it
-        Slack = results['OutputHeatSlack'].sum() / 1e6
-        Slack = Slack.reindex(inputs['sets']['n_th']).fillna(0)
-        power_consumption = power_consumption.loc[ListZones]
-        Slack.sort_index(inplace=True)
-        ax.bar(range(0, Slack.index.size), Slack.values, bottom=HeatPerZone_th.sum(axis=1).values,
-               edgecolor='black', hatch='X', color='#943126ff', width=[0.4])
-
-        # Identify heat demand and plot it
-        demand = inputs['param_df']['HeatDemand'].sum() / 1E6
-        power_consumption = power_consumption.loc[ListZones]
-        demand.sort_index(inplace=True)
-        ax.barh(demand + heat_storage_input, left=ax.get_xticks() - 0.4, width=[0.8] * len(heat_storage_input),
-                height=ax.get_ylim()[1] * 0.005, linewidth=2, color='g')
-        ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005,
-                linewidth=2, color='k')
-
-        handles, labels = ax.get_legend_handles_labels()  # get the handles
-        handles.append(Patch(facecolor='#943126ff', hatch='X'))
-        labels.append('HeatSlack')
-        ax.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.14, 0.25))
-        if show_plot:
-            plt.show()
-
-        return GenPerZone, HeatPerZone_th
-    else:
-        return GenPerZone
+    # # Heat generation bar chart
+    # fuels_heat = PPindicators[[u in [x for x in commons['Technologies']]
+    #                            for u in PPindicators['Technology']]].Fuel.unique()
+    # zones_heat = PPindicators['Zone_th'].unique()
+    # zones_heat = np.array([i for i in zones_heat if i])
+    #
+    # if zones_heat.size != 0 and fuels_heat.size != 0:
+    #     HeatPerZone_th = pd.DataFrame(index=zones_heat, columns=fuels_heat)
+    #     for fuel in commons['Fuels']:
+    #         if fuel not in HeatPerZone_th:
+    #             HeatPerZone_th[fuel] = 0
+    #
+    #     heat_storage_input = pd.DataFrame(index=results['OutputStorageInput'].index)
+    #     for z in zones_heat:
+    #         for f in fuels_heat:
+    #             tmp = PPindicators[(PPindicators.Fuel == f) & (PPindicators.Zone_th == z)]
+    #             HeatPerZone_th.loc[z, f] = tmp.HeatGeneration.sum()
+    #         # HeatSlack = results['OutputHeatSlack'].loc[:,z].sum()
+    #         # if HeatSlack > 0:
+    #         #     HeatPerZone_th.loc[z, 'HeatSlack'] = HeatSlack
+    #         z = str(z)
+    #         if filter_by_heating_zone(filter_by_tech_list(results['OutputStorageInput'], inputs,
+    #                                                       commons['tech_thermal_storage']), inputs, z).empty:
+    #             heat_storage_input.loc[:, z] = 0
+    #         else:
+    #             heat_storage_input.loc[:, z] = filter_by_heating_zone(
+    #                 filter_by_tech_list(results['OutputStorageInput'], inputs,
+    #                                     commons['tech_thermal_storage']), inputs, z).sum(axis=1)
+    #
+    #     heat_storage_input = heat_storage_input.sum() / 1e6
+    #     power_consumption = power_consumption.loc[ListZones]
+    #     heat_storage_input.sort_index(inplace=True)
+    #
+    #     cols_heat = [col for col in commons['MeritOrderHeat'] if col in HeatPerZone_th]
+    #     HeatPerZone_th = HeatPerZone_th[cols_heat] / 1e6
+    #     power_consumption = power_consumption.loc[ListZones]
+    #     HeatPerZone_th.sort_index(inplace=True)
+    #     colors = [commons['colors'][tech] for tech in HeatPerZone_th.columns]
+    #     ax = HeatPerZone_th.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
+    #                              title='Heat generation per heating zone (the horizontal lines indicate the demand '
+    #                                    '[black] & storage input [green])')
+    #     ax.set_ylabel('Generation [TWh]')
+    #
+    #     # Check for heat slack and plot it
+    #     Slack = results['OutputHeatSlack'].sum() / 1e6
+    #     Slack = Slack.reindex(inputs['sets']['n_th']).fillna(0)
+    #     power_consumption = power_consumption.loc[ListZones]
+    #     Slack.sort_index(inplace=True)
+    #     ax.bar(range(0, Slack.index.size), Slack.values, bottom=HeatPerZone_th.sum(axis=1).values,
+    #            edgecolor='black', hatch='X', color='#943126ff', width=[0.4])
+    #
+    #     # Identify heat demand and plot it
+    #     demand = inputs['param_df']['HeatDemand'].sum() / 1E6
+    #     power_consumption = power_consumption.loc[ListZones]
+    #     demand.sort_index(inplace=True)
+    #     ax.barh(demand + heat_storage_input, left=ax.get_xticks() - 0.4, width=[0.8] * len(heat_storage_input),
+    #             height=ax.get_ylim()[1] * 0.005, linewidth=2, color='g')
+    #     ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005,
+    #             linewidth=2, color='k')
+    #
+    #     handles, labels = ax.get_legend_handles_labels()  # get the handles
+    #     handles.append(Patch(facecolor='#943126ff', hatch='X'))
+    #     labels.append('HeatSlack')
+    #     ax.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.14, 0.25))
+    #     if show_plot:
+    #         plt.show()
+    #
+    #     return GenPerZone, HeatPerZone_th
+    # else:
+    #     return GenPerZone
+    return GenPerZone
 
 
 def plot_zone_capacities(inputs, results, plot=True):
@@ -591,11 +592,11 @@ def plot_zone_capacities(inputs, results, plot=True):
     units_heat = pd.concat([units_heat, units_chp])
 
     ZoneFuels = {}
-    ZoneFuelsHT = {}
+    # ZoneFuelsHT = {}
     for u in units.index:
         ZoneFuels[(units.Zone[u], units.Fuel[u])] = (units.Zone[u], units.Fuel[u])
-    for u in units_heat.index:
-        ZoneFuelsHT[(units_heat.Zone_th[u], units_heat.Fuel[u])] = (units_heat.Zone_th[u], units_heat.Fuel[u])
+    # for u in units_heat.index:
+    #     ZoneFuelsHT[(units_heat.Zone_th[u], units_heat.Fuel[u])] = (units_heat.Zone_th[u], units_heat.Fuel[u])
 
     PowerCapacity = pd.DataFrame(columns=inputs['sets']['f'], index=inputs['sets']['n'])
     StorageCapacity = pd.DataFrame(columns=inputs['sets']['f'], index=inputs['sets']['n'])
@@ -1103,25 +1104,25 @@ def plot_tech_cap(inputs, plot=True, figsize=(10, 7), alpha=0.8, width=0.5):
                         inputs['param_df']['Technology'].loc['SCSP', u] or inputs['param_df']['sets']['thms']:
                     Cap.loc[z, 'Thermal'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i, 0] * \
                                              inputs['param_df']['Nunits'].iloc[i, 0]
-    for i, u in enumerate(filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).index):
-        for z in inputs['sets']['n']:
-            if inputs['param_df']['Location'].loc[z, u]:
-                if inputs['param_df']['Fuel'].loc['WAT', u]:
-                    Cap.loc[z, 'Hydro'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
-                                           inputs['param_df']['Nunits'].iloc[i, 0]
-                elif inputs['param_df']['Fuel'].loc['HYD', u]:
-                    Cap.loc[z, 'H2'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
-                                        inputs['param_df']['Nunits'].iloc[i, 0]
-                elif inputs['param_df']['Technology'].loc['BEVS', u]:
-                    Cap.loc[z, 'BEVS'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
-                                          inputs['param_df']['Nunits'].iloc[i, 0]
-                elif inputs['param_df']['Technology'].loc['BATS', u]:
-                    Cap.loc[z, 'BATS'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
-                                          inputs['param_df']['Nunits'].iloc[i, 0]
-                elif u in inputs['param_df']['sets']['p2h'] or inputs['param_df']['sets']['chp'] or \
-                        inputs['param_df']['Technology'].loc['SCSP', u] or inputs['param_df']['sets']['thms']:
-                    Cap.loc[z, 'Thermal'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
-                                             inputs['param_df']['Nunits'].iloc[i, 0]
+    # for i, u in enumerate(filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).index):
+    #     for z in inputs['sets']['n']:
+    #         if inputs['param_df']['Location'].loc[z, u]:
+    #             if inputs['param_df']['Fuel'].loc['WAT', u]:
+    #                 Cap.loc[z, 'Hydro'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+    #                                        inputs['param_df']['Nunits'].iloc[i, 0]
+    #             elif inputs['param_df']['Fuel'].loc['HYD', u]:
+    #                 Cap.loc[z, 'H2'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+    #                                     inputs['param_df']['Nunits'].iloc[i, 0]
+    #             elif inputs['param_df']['Technology'].loc['BEVS', u]:
+    #                 Cap.loc[z, 'BEVS'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+    #                                       inputs['param_df']['Nunits'].iloc[i, 0]
+    #             elif inputs['param_df']['Technology'].loc['BATS', u]:
+    #                 Cap.loc[z, 'BATS'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+    #                                       inputs['param_df']['Nunits'].iloc[i, 0]
+    #             elif u in inputs['param_df']['sets']['p2h'] or inputs['param_df']['sets']['chp'] or \
+    #                     inputs['param_df']['Technology'].loc['SCSP', u] or inputs['param_df']['sets']['thms']:
+    #                 Cap.loc[z, 'Thermal'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+    #                                          inputs['param_df']['Nunits'].iloc[i, 0]
 
     Cap = Cap / 1000
     Cap = Cap.loc[(Cap != 0).any(axis=1)]
