@@ -280,7 +280,7 @@ def get_imports(flows, z):
 
 
 # %%
-def get_result_analysis(inputs, results):
+def get_result_analysis(inputs, results, units='MWh'):
     """
     Reads the DispaSET results and provides useful general information to stdout
 
@@ -288,47 +288,42 @@ def get_result_analysis(inputs, results):
     :param results:     DispaSET results
     """
 
+    if units == 'MWh':
+        unit_small = ['MW','MWh']
+        unit_medium = ['GW','GWh']
+        unit_large = ['TW', 'TWh']
+    elif units == 'kWh':
+        unit_small = ['kW', 'MWh']
+        unit_medium = ['MW', 'GWh']
+        unit_large = ['GW', 'TWh']
+
     # inputs into the dataframe format:
     dfin = inputs['param_df']
 
     # Aggregated values:
-    demand = {}
-    demand_th = {}
+    demand_zone = pd.DataFrame()
     for z in inputs['sets']['n']:
         if 'OutputPowerConsumption' in results:
-            demand_p2h = filter_by_zone(results['OutputPowerConsumption'], inputs, z)
-            demand_p2h = demand_p2h.sum(axis=1)
+            demand_p2x = filter_by_zone(results['OutputPowerConsumption'], inputs, z)
+            demand_p2x = demand_p2x.sum(axis=1)
         else:
-            demand_p2h = pd.Series(0, index=results['OutputPower'].index)
+            demand_p2x = pd.Series(0, index=results['OutputPower'].index)
         if ('Flex', z) in inputs['param_df']['Demand']:
             demand_flex = inputs['param_df']['Demand'][('Flex', z)]
         else:
             demand_flex = pd.Series(0, index=results['OutputPower'].index)
         demand_da = inputs['param_df']['Demand'][('DA', z)]
-        demand[z] = pd.DataFrame(demand_da + demand_p2h + demand_flex, columns=[('DA', z)])
-    # for z_th in inputs['sets']['n_th']:
-    #     if 'OutputHeat' in results:
-    #         demand_th[z_th] = filter_by_zone(results['OutputHeat'], inputs, z_th, thermal=True)
-    #         demand_th[z_th] = demand_th[z_th].sum(axis=1)
-    #     else:
-    #         demand_th[z_th] = pd.Series(0, index=results['OutputPower'].index)
+        demand_temp = pd.DataFrame(demand_da + demand_p2x + demand_flex, columns=[z])
+        demand_zone = pd.concat([demand_zone, demand_temp], axis=1)
 
-    demand = pd.concat(demand, axis=1)
-    demand.columns = demand.columns.droplevel(-1)
+    demand_total = demand_zone.sum(axis=1)
 
-    TotalLoad = demand.sum().sum()
-    PeakLoad = demand.sum(axis=1).max(axis=0)
+    TotalLoad = demand_total.sum().sum()
+    PeakLoad = demand_total.max()
     LoadShedding = results['OutputShedLoad'].sum().sum() / 1e6
     Curtailment = results['OutputCurtailedPower'].sum().sum()
     MaxCurtailemnt = results['OutputCurtailedPower'].sum(axis=1).max() / 1e6
     MaxLoadShedding = results['OutputShedLoad'].sum(axis=1).max()
-
-    # if not inputs['param_df']['HeatDemand'].empty:
-    #     demand_th = pd.concat(demand_th, axis=1)
-    #     TotalHeatLoad = demand_th.sum().sum()
-    #     PeakHeatLoad = demand_th.sum(axis=1).max(axis=0)
-    #     HeatCurtailment = results['OutputCurtailedHeat'].sum().sum()
-    #     MaxHeatCurtailemnt = results['OutputCurtailedHeat'].sum(axis=1).max() / 1e6
 
     if 'OutputDemandModulation' in results:
         ShiftedLoad_net = results['OutputDemandModulation'].sum().sum() / 1E6
@@ -339,15 +334,13 @@ def get_result_analysis(inputs, results):
     else:
         ShiftedLoad_tot = 0
 
-    NetImports = -get_imports(results['OutputFlow'], 'RoW')
-
-    # if not inputs['param_df']['HeatDemand'].empty:
-    #     Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports + TotalHeatLoad)
-    # else:
-    #     Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports)
-    Cost_kwh = results['OutputSystemCost'].sum() / (TotalLoad - NetImports)
-
-    print('\nAverage electricity cost : ' + str(Cost_kwh) + ' EUR/MWh')
+    if 'ShadowPrice' in results:
+        if results['ShadowPrice'].isnull().values.any():
+            logging.warning('Shadow Prices are not computed properly. DataFrame has nan values')
+        else:
+            Cost_kwh_zone = (demand_zone * results['ShadowPrice']).sum(axis=0) / demand_zone.sum(axis=0)
+            Cost_kwh = (demand_zone * results['ShadowPrice']).sum(axis=1).sum() / demand_zone.sum(axis=0).sum()
+            print('\nAverage electricity cost (EUR/' + unit_small[1] + '): \n'  + str(Cost_kwh_zone) + '\nEntireRegion ' + str(Cost_kwh))
 
     for key in ['LostLoad_RampUp', 'LostLoad_2D', 'LostLoad_MinPower',
                 'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower',
@@ -361,20 +354,22 @@ def get_result_analysis(inputs, results):
             LL = results[key].values.sum()
         if LL > 0.0001 * TotalLoad:
             logging.critical('\nThere is a significant amount of lost load for ' + key + ': ' + str(
-                LL) + ' MWh. The results should be checked carefully')
+                LL) + unit_small[1] + '. The results should be checked carefully')
         elif LL > 100:
             logging.warning('\nThere is lost load for ' + key + ': ' + str(
-                LL) + ' MWh. The results should be checked')
+                LL) + unit_small[1] + '. The results should be checked')
+
+    NetImports = -get_imports(results['OutputFlow'], 'RoW')
 
     print('\nAggregated statistics for the considered area:')
-    print('Total Consumption:' + str(TotalLoad / 1E6) + ' TWh')
-    print('Peak Load:' + str(PeakLoad) + ' MW')
-    print('Net Importations:' + str(NetImports / 1E6) + ' TWh')
-    print('Total Load Shedding:' + str(LoadShedding) + ' TWh')
-    print('Total shifted load:' + str(ShiftedLoad_tot) + ' TWh')
-    print('Maximum Load Shedding:' + str(MaxLoadShedding) + ' MW')
-    print('Total Curtailed RES:' + str(Curtailment) + ' TWh')
-    print('Maximum Curtailed RES:' + str(MaxCurtailemnt) + ' MW')
+    print('Total Consumption:' + str(TotalLoad / 1E6) + ' ' + unit_large[1])
+    print('Peak Load:' + str(PeakLoad) + ' ' + unit_small[0])
+    print('Net Importations:' + str(NetImports / 1E6) + ' ' + unit_large[1])
+    print('Total Load Shedding:' + str(LoadShedding) + ' ' + unit_large[1])
+    print('Total shifted load:' + str(ShiftedLoad_tot) + ' ' + unit_large[1])
+    print('Maximum Load Shedding:' + str(MaxLoadShedding) + ' ' + unit_small[0])
+    print('Total Curtailed RES:' + str(Curtailment) + ' ' + unit_large[1])
+    print('Maximum Curtailed RES:' + str(MaxCurtailemnt) + ' ' + unit_small[0])
 
     # Zone-specific values:
     ZoneData = pd.DataFrame(index=inputs['sets']['n'])
