@@ -13,15 +13,14 @@ This script runs the Dispa-SET EU model with the 2016 data. The main steps are:
 # Add the root folder of Dispa-SET to the path so that the library can be loaded:
 import os
 import sys
-
-sys.path.append(os.path.abspath('..'))
-
+import pandas as pd
 # Import Dispa-SET
 import dispaset as ds
 
+sys.path.append(os.path.abspath('..'))
+
 # Load the configuration file
 config = ds.load_config('../ConfigFiles/ConfigTestBoundarySector.xlsx')
-# config = ds.load_config('../ConfigFiles/ConfigTest.xlsx')
 
 # Limit the simulation period (for testing purposes, comment the line to run the whole year)
 config['StartDate'] = (2015, 1, 1, 0, 0, 0)
@@ -37,9 +36,6 @@ _ = ds.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
 inputs, results = ds.get_sim_results(config['SimulationDirectory'], cache=False)
 inputs_MTS, results_MTS = ds.get_sim_results(config['SimulationDirectory'], cache=False, inputs_file='Inputs_MTS.p',
                                              results_file='Results_MTS.gdx')
-
-# import pandas as pd
-import pandas as pd
 
 rng = pd.date_range('2015-1-01', '2015-1-03', freq='H')
 # Generate country-specific plots
@@ -60,14 +56,14 @@ sto = ds.plot_tech_cap(inputs)
 # Bar plot with the energy balances in all countries:
 ds.plot_energy_zone_fuel(inputs, results, ds.get_indicators_powerplant(inputs, results))
 
-# # Analyse the results for each country and provide quantitative indicators:
-# r = ds.get_result_analysis(inputs, results)
-#
-# # Analyze power flow tracing
-# pft, pft_prct = ds.plot_power_flow_tracing_matrix(inputs, results, cmap="magma_r", figsize=(15, 10))
-#
-# # Plot net flows on a map
-# ds.plot_net_flows_map(inputs, results, terrain=True, margin=3, bublesize=5000, figsize=(8, 7))
-#
-# # Plot congestion in the interconnection lines on a map
-# ds.plot_line_congestion_map(inputs, results, terrain=True, margin=3, figsize=(9, 7), edge_width=3.5, bublesize=100)
+# Analyse the results for each country and provide quantitative indicators:
+r = ds.get_result_analysis(inputs, results)
+
+# Analyze power flow tracing
+pft, pft_prct = ds.plot_power_flow_tracing_matrix(inputs, results, cmap="magma_r", figsize=(15, 10))
+
+# Plot net flows on a map
+ds.plot_net_flows_map(inputs, results, terrain=True, margin=3, bublesize=5000, figsize=(8, 7))
+
+# Plot congestion in the interconnection lines on a map
+ds.plot_line_congestion_map(inputs, results, terrain=True, margin=3, figsize=(9, 7), edge_width=3.5, bublesize=100)
