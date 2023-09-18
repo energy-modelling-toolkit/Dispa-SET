@@ -57,11 +57,11 @@ jobs:
           auto-activate-base: false
       - shell: bash -l {0}
         run: |
+          pip install -e .
           conda info
           conda list
           conda config --show-sources
           conda config --show
-          pip install -e .
 
 #      - name: Lint
 #        shell: bash -l {0}
