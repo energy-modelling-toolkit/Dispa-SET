@@ -21,33 +21,71 @@ jobs:
       - name: this is dispaset
         run: echo "Torture Dispa-SET"
         shell: bash
+
   miniconda:
     name: Miniconda ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
         matrix:
-            os: ["ubuntu-latest", "windows-latest"]
+            os: ["ubuntu-latest"]
             python-version: ["3.8", "3.9", "3.10", "3.11"]
+    env:
+      GAMS: 24.9
+      GAMS_URL: https://d37drm4t2jghv5.cloudfront.net/distributions/24.9.2/linux/linux_x64_64_sfx.exe
+      CC_TEST_REPORTER_ID: 4de43419e620692eff68510258e9428a6da4e5dca96ef9deb7744566ad3a7386
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: conda-incubator/setup-miniconda@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
         with:
-          activate-environment: test
-          environment-file: environment.yml
           python-version: ${{ matrix.python-version }}
-          auto-activate-base: false
-      - shell: bash -l {0}
+
+      - name: Install Miniconda
         run: |
-          conda info
-          conda list
-#      - name: Lint
-#        shell: bash -l {0}
-#        run: |
-#            conda install flake8
-#            python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-#            python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      - name: Run pytest
-        shell: bash -l {0}
+          export MINICONDA=$HOME/miniconda
+          export PATH="$MINICONDA/bin:$PATH"
+          hash -r
+          wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+          bash miniconda.sh -b -f -p $MINICONDA
+          conda config --set always_yes yes --set changeps1 no
+          conda update -q conda
+          conda info -a
+          sed -i -E 's/(python=)(.*)/\1'${{ matrix.python-version }}'/' ./environment.yml
+
+      - name: Install GAMS
         run: |
-            conda install pytest
-            pytest
+          wget -N $GAMS_URL -O gams.zip
+          unzip -qu gams.zip -d $HOME
+          ln -s $HOME/gams${GAMS}_linux_x64_64_sfx $HOME/gams
+          export GAMSPATH="$HOME/gams"
+          export PATH="$GAMSPATH:$PATH"
+          cd $HOME/gams
+          gamsinst -a
+          cd -
+
+      - name: Install CodeClimate Test Reporter
+        run: |
+          curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+          chmod +x ./cc-test-reporter
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Conda environment
+        run: |
+          conda env create -q -f environment.yml
+          source activate dispaset
+          python setup.py develop
+
+      - name: Before Build for CodeClimate Test Reporter
+        run: ./cc-test-reporter before-build
+
+      - name: Run Tests
+        run: pytest --cov-report term --cov=dispaset tests/
+
+      - name: After Build for CodeClimate Test Reporter
+        run: ./cc-test-reporter after-build --exit-code ${{ job.status }}
+
+      - name: Push results to Codecov
+        run: bash <(curl -s https://codecov.io/bash)
+        
