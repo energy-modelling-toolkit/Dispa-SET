@@ -365,10 +365,40 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2',
              'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia']
+    FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
+                   'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia'}
     FuelPrices = {}
     for fuel in fuels:
-        FuelPrices[fuel] = NodeBasedTable(fuel, config, default=config['default'][fuel])
-
+        fp = pd.DataFrame()
+        loc = plants['Zone']
+        ft = plants['Fuel']
+        if os.path.isfile(config[fuel]):
+            fp = pd.read_csv(config[fuel], index_col=0,
+                             na_values=commons['na_values'],
+                             keep_default_na=False)
+            fp.index = pd.to_datetime(fp.index).tz_localize(None)
+            if set(fp.columns).issubset(plants['Unit']):
+                FuelPrices[fuel] = UnitBasedTable(plants, fuel, config, fallbacks=['Unit', 'Technology'])
+            else:
+                key = [key for key, val in FuelEntries.items() if val == fuel][0]
+                FuelPrices[fuel] = pd.DataFrame(index=config['idx_long'])
+                for unit, zone in loc.items():
+                    if (unit, key) in ft.iteritems():
+                        if zone in fp.columns:
+                            FuelPrices[fuel][unit] = fp[zone]
+                FuelPrices[fuel] = FuelPrices[fuel].loc[config['idx_long']]
+        else:
+            if config['default'][fuel] == 0:
+                FuelPrices[fuel] = UnitBasedTable(plants, fuel, config, default=config['default'][fuel])
+            else:
+                FuelPrices[fuel] = pd.DataFrame(index=config['idx_long'])
+                key = [key for key, val in FuelEntries.items() if val == fuel][0]
+                for unit in ft.index:
+                    if (unit, key) in ft.iteritems():
+                        FuelPrices[fuel][unit] = config['default'][fuel]
+    for unit_name, price in FuelPrices.items():
+        missing_columns = list(set(plants['Unit']) - set(price.columns))
+        price[missing_columns] = 0
     # Interconnections:
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], NTC, flows)
 
@@ -960,32 +990,36 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Variable Cost
     # Equivalence dictionary between fuel types and price entries in the config sheet:
     
-        FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
-                   'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia'}
+    # FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
+    #                'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia'}
+    FuelPrices_merged= {}
+    for key, unitprices in FuelPrices.items():
+        df_result = Plants_merged['FormerUnits'].apply(lambda group: unitprices[group].max(axis=1)).T
+        FuelPrices_merged[key] = df_result
     CostVariable = pd.DataFrame()
     for unit in range(Nunits):
-        c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
+        c = Plants_merged['Unit'][unit]  # zone to which the unit belongs
         found = False
         for FuelEntry in FuelEntries:
             CostVariable = pd.concat([
-            CostVariable, FuelPrices[FuelEntries[FuelEntry]][c] / Plants_merged['Efficiency'][unit] + \
-                  Plants_merged['EmissionRate'][unit] * FuelPrices['PriceOfCO2'][c]], axis=1)
+            CostVariable, FuelPrices_merged[FuelEntries[FuelEntry]][c] / Plants_merged['Efficiency'][unit] + \
+                  Plants_merged['EmissionRate'][unit] * FuelPrices_merged['PriceOfCO2'][c]], axis=1)
             if Plants_merged['Fuel'][unit] == FuelEntry:
                 if Plants_merged['Technology'][unit] == 'ABHP':
-                    parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
+                    parameters['CostVariable']['val'][unit, :] = FuelPrices_merged[FuelEntries[FuelEntry]][c] / \
                                                                  Plants_merged['Efficiency'][unit] + \
                                                                  Plants_merged['EmissionRate'][unit] * \
-                                                                 FuelPrices['PriceOfCO2'][c]
+                                                                 FuelPrices_merged['PriceOfCO2'][c]
                     found = True
                 else:
-                    parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
+                    parameters['CostVariable']['val'][unit, :] = FuelPrices_merged[FuelEntries[FuelEntry]][c] / \
                                                                  Plants_merged['Efficiency'][unit] + \
                                                                  Plants_merged['EmissionRate'][unit] * \
-                                                                 FuelPrices['PriceOfCO2'][c]
+                                                                 FuelPrices_merged['PriceOfCO2'][c]
                     found = True
         # Special case for biomass plants, which are not included in EU ETS:
         if Plants_merged['Fuel'][unit] == 'BIO':
-            parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'][c] / \
+            parameters['CostVariable']['val'][unit, :] = FuelPrices_merged['PriceOfBiomass'][c] / \
                                                          Plants_merged['Efficiency'][unit]
             found = True
         if not found:
@@ -1026,14 +1060,16 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     CostVariable = CostVariable.groupby(by=CostVariable.columns, axis=1).apply(
         lambda g: g.max(axis=1) if isinstance(g.iloc[0, 0], numbers.Number) else g.iloc[:, 0]) * 1.1
+    unit_to_zone = dict(zip(Plants_merged['Unit'], Plants_merged['Zone']))
+    MaxCostVariable = CostVariable.groupby(unit_to_zone, axis=1).max()
     BoundarySector['Sector'] = BoundarySector.index
     BoundarySector['Zone'] = BoundarySector.index.map(zone_to_bs_mapping(plants_all_bs))
-    zones = list(CostVariable.columns)
+    zones = list(MaxCostVariable.columns)
     for unit in range(len(BoundarySector)):
         # c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
         found = False
         if BoundarySector['Zone'][unit] in zones:
-            parameters['CostXStorageAlert']['val'][unit, :] = CostVariable[BoundarySector['Zone'][unit]].values
+            parameters['CostXStorageAlert']['val'][unit, :] = MaxCostVariable[BoundarySector['Zone'][unit]].values
             found = True
         if not found:
             parameters['CostXStorageAlert']['val'][unit, :] = 0
@@ -1042,7 +1078,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
         found = False
         if BoundarySector['Zone'][unit] in zones:
-            parameters['CostXFloodControl']['val'][unit, :] = CostVariable[BoundarySector['Zone'][unit]].values
+            parameters['CostXFloodControl']['val'][unit, :] = MaxCostVariable[BoundarySector['Zone'][unit]].values
             found = True
         if not found:
             parameters['CostXFloodControl']['val'][unit, :] = 0
