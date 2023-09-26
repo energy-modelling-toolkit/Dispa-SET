@@ -18,7 +18,7 @@ from ..common import commons
 def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailment=None, shedload=None,
                   shiftedload=None, rng=None,
                   alpha=None, figsize=(13, 7), ntc=None, dispatch_limits=None, storage_limits=None, ntc_limits=None,
-                  units=['GW', 'GWh']):
+                  units=['GW', 'GWh'], colors=None):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
 
@@ -38,15 +38,20 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
 
     import matplotlib.patches as mpatches
     import matplotlib.lines as mlines
+    from matplotlib import cm
 
     pd.plotting.register_matplotlib_converters()
+
+    if colors == None:
+        colors = commons['colors']
 
     if rng is None:
         pdrng = plotdata.index[:min(len(plotdata) - 1, 7 * 24)]
     elif not type(rng) == type(demand.index):
         logging.error('The "rng" variable must be a pandas DatetimeIndex')
         raise ValueError()
-    elif rng[0] < plotdata.index[0] or rng[0] > plotdata.index[-1] or rng[-1] < plotdata.index[0] or rng[-1] > plotdata.index[-1]:
+    elif rng[0] < plotdata.index[0] or rng[0] > plotdata.index[-1] or rng[-1] < plotdata.index[0] or rng[-1] > \
+            plotdata.index[-1]:
         logging.warning('Plotting range is not properly defined, considering the first simulated week')
         pdrng = plotdata.index[:min(len(plotdata) - 1, 7 * 24)]
     else:
@@ -54,7 +59,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
 
     if (pdrng[-1] - pdrng[0]) > datetime.timedelta(days=32):  # if the range is too big, don't plot the lines
         plot_lines = False
-        logging.warning('The plotting range for the dispatch plot is too big to plot the lines')
+        logging.warn('The plotting range for the dispatch plot is too big to plot the lines')
     else:
         plot_lines = True
 
@@ -98,29 +103,29 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     sumplot_pos['zero'] = 0
     sumplot_pos = sumplot_pos[['zero'] + sumplot_pos.columns[:-1].tolist()]
     if level is not None:
-        n=3
+        n = 3
         height_ratio = [2.7, .8, .8]
     else:
-        n=2
+        n = 2
         height_ratio = [2.3, .8]
     if ntc is not None:
         fig, axes = plt.subplots(nrows=n, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
                                  gridspec_kw={'height_ratios': height_ratio, 'hspace': 0.04})
 
-        axes[n-1].plot(pdrng, ntc.loc[pdrng, 'NTCIn'].values, color='r')
-        axes[n-1].plot(pdrng, ntc.loc[pdrng, 'NTCOut'].values, color='g')
-        axes[n-1].set_xlim(pdrng[0], pdrng[-1])
-        axes[n-1].fill_between(pdrng, ntc.loc[pdrng, 'FlowIn'], ntc.loc[pdrng, 'ZeroLine'],
-                             facecolor=commons['colors']['FlowIn'],
-                             alpha=alpha)
-        axes[n-1].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'],
-                             facecolor=commons['colors']['FlowOut'],
-                             alpha=alpha)
-        axes[n-1].set_ylabel('NTC [' + units[0] + ']')
+        axes[n - 1].plot(pdrng, ntc.loc[pdrng, 'NTCIn'].values, color='r')
+        axes[n - 1].plot(pdrng, ntc.loc[pdrng, 'NTCOut'].values, color='g')
+        axes[n - 1].set_xlim(pdrng[0], pdrng[-1])
+        axes[n - 1].fill_between(pdrng, ntc.loc[pdrng, 'FlowIn'], ntc.loc[pdrng, 'ZeroLine'],
+                                 facecolor=colors['FlowIn'],
+                                 alpha=alpha)
+        axes[n - 1].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'],
+                                 facecolor=colors['FlowOut'],
+                                 alpha=alpha)
+        axes[n - 1].set_ylabel('NTC [' + units[0] + ']')
         if ntc_limits is not None:
-            axes[n-1].set_ylim(ntc_limits[0], ntc_limits[1])
+            axes[n - 1].set_ylim(ntc_limits[0], ntc_limits[1])
     else:
-        fig, axes = plt.subplots(nrows=n-1, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
+        fig, axes = plt.subplots(nrows=n - 1, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
                                  gridspec_kw={'height_ratios': [2.7, .8], 'hspace': 0.04})
 
     # Create left axis:
@@ -134,7 +139,6 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     labels = []
     patches = []
     colorlist = []
-    hatches = {}
 
     # Plot reservoir levels (either separated or as one value)
     if level is not None:
@@ -146,7 +150,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
             for j in range(len(sumplot_lev.columns) - 1):
                 col3 = sumplot_lev.columns[j]
                 col4 = sumplot_lev.columns[j + 1]
-                rez_color = commons['colors'][col4]
+                rez_color = colors[col4]
                 axes[1].fill_between(pdrng, sumplot_lev.loc[pdrng, col3], sumplot_lev.loc[pdrng, col4],
                                      facecolor=rez_color, alpha=0.3)
                 labels.append(col4)
@@ -154,7 +158,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
                 colorlist.append(rez_color)
         elif isinstance(level, pd.Series):
             # Create lower axis:
-            axes[1].fill_between(pdrng, 0, level[pdrng], facecolor=commons['colors']['WAT'], alpha=.3)
+            axes[1].fill_between(pdrng, 0, level[pdrng], facecolor=colors['WAT'], alpha=.3)
         if isinstance(minlevel, pd.Series):
             axes[1].plot(pdrng, minlevel[pdrng], color='k', alpha=alpha, linestyle=':')
         axes[1].set_ylabel('Level [' + units[1] + ']')
@@ -167,28 +171,32 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     for j in range(idx_zero):
         col1 = sumplot_neg.columns[j]
         col2 = sumplot_neg.columns[j + 1]
-        color = commons['colors'][col2]
-        hatch = commons['hatches'][col2]
+        color = colors[col2]
+        if plot_lines:
+            hatch = commons['hatches'][col2]
+        else:
+            hatch = ''
         axes[0].fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2], facecolor=color,
                              alpha=alpha, hatch=hatch)
         if col2 not in labels:
             labels.append(col2)
             patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
             colorlist.append(color)
-        hatches[col2] = hatch  # Store the hatch for each label
 
     # Plot Positive values:
     for j in range(len(sumplot_pos.columns) - 1):
         col1 = sumplot_pos.columns[j]
         col2 = sumplot_pos.columns[j + 1]
-        color = commons['colors'][col2]
-        hatch = commons['hatches'][col2]
+        color = colors[col2]
+        if plot_lines:
+            hatch = commons['hatches'][col2]
+        else:
+            hatch = ''
         axes[0].fill_between(pdrng, sumplot_pos.loc[pdrng, col1], sumplot_pos.loc[pdrng, col2], facecolor=color,
                              alpha=alpha, hatch=hatch)
         labels.append(col2)
         patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
-        hatches[col2] = hatch  # Store the hatch for each label
 
     # Plot curtailment:
     if isinstance(curtailment, pd.Series):
@@ -196,9 +204,9 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
             logging.error('The curtailment time series must have the same index as the demand')
             sys.exit(1)
         axes[0].fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum'] - curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'],
-                             facecolor=commons['colors']['curtailment'])
+                             facecolor=colors['curtailment'])
         labels.append('Curtailment')
-        patches.append(mpatches.Patch(facecolor=commons['colors']['curtailment'], label='Curtailment'))
+        patches.append(mpatches.Patch(facecolor=colors['curtailment'], label='Curtailment'))
 
     axes[0].set_ylabel(y_ax + ' [' + units[0] + ']')
     axes[0].yaxis.label.set_fontsize(12)
@@ -226,40 +234,21 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     line_shedload = mlines.Line2D([], [], color='black', alpha=alpha, label='New load', linestyle='dashed')
     line_demand = mlines.Line2D([], [], color='black', label='Load')
 
-    # Create legends based on the present data in the plot
     if not load_changed and level is None:
-        legend_handles = [line_demand] + patches[::-1]
+        plt.legend(handles=[line_demand] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
     elif not load_changed:
-        legend_handles = [line_demand] + [line_SOC] + patches[::-1]
+        plt.legend(handles=[line_demand] + [line_SOC] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
     elif level is None:
-        legend_handles = [line_demand] + [line_shedload] + patches[::-1]
-        if plot_lines:
-            axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k", linestyle='dashed')
-    else:
-        legend_handles = [line_demand] + [line_shedload] + [line_SOC] + patches[::-1]
+        plt.legend(handles=[line_demand] + [line_shedload] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
         if plot_lines:
             axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
                                  linestyle='dashed')
-
-    # Filter out the unused handles from the legend
-    used_labels = set(labels)  # Set of unique labels used in the plot
-    filtered_handles = [handle for handle in legend_handles if handle.get_label() in used_labels]
-
-    # Plot the legend with matched hatches in all subplots
-    handles_dict = {}  # Dictionary to hold handles for each unique label
-    for handle in filtered_handles:
-        label = handle.get_label()
-        if label not in handles_dict:
-            handles_dict[label] = handle
-        else:
-            # Update hatch to match the same label in all subplots
-            handles_dict[label].set_hatch(hatches[label])
-
-    # Convert the dictionary values to a list for plotting the legend
-    legend_handles = list(handles_dict.values())
-
-    # Plot the legend
-    plt.legend(title='Dispatch for ' + demand.name, handles=legend_handles, loc=4, bbox_to_anchor=(1.2, 0.5))
+    else:
+        plt.legend(title='Dispatch for ' + demand.name, handles=[line_demand] + [line_shedload] + [line_SOC] +
+                                                                patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
+        if plot_lines:
+            axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
+                                 linestyle='dashed')
 
     plt.subplots_adjust(right=0.8)
     fig.align_ylabels()
@@ -661,7 +650,7 @@ def plot_zone_capacities(inputs, results, plot=True):
 
 
 def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=None, storage_limits=None,
-              ntc_limits=None, units=['GW', 'GWh'], hide_storage_plot = False):
+              ntc_limits=None, units=['GW', 'GWh'], hide_storage_plot = False, colors=None):
     """
     Generates plots from the dispa-SET results for one specific zone
 
@@ -684,46 +673,68 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
     plotdata = get_plot_data(inputs, results, z) / 1000  # GW
 
     aggregation = False
-    aggregation = False
-    if 'OutputStorageLevel' in results:
-        lev = filter_by_zone(results['OutputStorageLevel'], inputs, z)
-        lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] * inputs['units']['Nunits'].loc[
-            lev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:, lev.columns] / 1e3  # GWh of storage
-        level = filter_by_storage(lev, inputs, StorageSubset='s')
-        levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
-        # the same for the minimum level:
-        minlev = filter_by_zone(inputs['param_df']['StorageProfile'], inputs, z)
-        minlev = minlev * inputs['units']['StorageCapacity'].loc[minlev.columns] * inputs['units']['Nunits'].loc[
-            minlev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:, minlev.columns] / 1e3  # GWh of storage
-        minlevel = filter_by_storage(minlev, inputs, StorageSubset='s').sum(axis=1)
+    if 'OutputStorageLevel' in results or 'OutputSectorXStorageLevel' in results:
+        if 'OutputStorageLevel' in results:
+            lev = filter_by_zone(results['OutputStorageLevel'], inputs, z)
+            lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] * inputs['units']['Nunits'].loc[
+                lev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:, lev.columns] / 1e3  # GWh of storage
+            level = filter_by_storage(lev, inputs, StorageSubset='s')
+            levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
+            # the same for the minimum level:
+            minlev = filter_by_zone(inputs['param_df']['StorageProfile'], inputs, z)
+            minlev = minlev * inputs['units']['StorageCapacity'].loc[minlev.columns] * inputs['units']['Nunits'].loc[
+                minlev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:,
+                                  minlev.columns] / 1e3  # GWh of storage
+            minlevel = filter_by_storage(minlev, inputs, StorageSubset='s').sum(axis=1)
 
-        # for col in lev.columns:
-        #     if 'BEVS' in col:
-        #         lev[col] = lev[col] * inputs['param_df']['AvailabilityFactor'][col]
+            for t in commons['tech_storage']:
+                temp = filter_by_tech(level, inputs, t)
+                levels[t] = temp.sum(axis=1)
+            levels.dropna(axis=1, inplace=True)
+            for col in levels.columns:
+                if levels[col].max() == 0 and levels[col].min() == 0:
+                    del levels[col]
 
-        for t in commons['tech_storage']:
-            temp = filter_by_tech(level, inputs, t)
-            levels[t] = temp.sum(axis=1)
-        levels.dropna(axis=1, inplace=True)
-        for col in levels.columns:
-            if levels[col].max() == 0 and levels[col].min() == 0:
-                del levels[col]
+            if aggregation is True:
+                level = level.sum(axis=1)
+            else:
+                level = levels
 
-        if aggregation is True:
-            level = level.sum(axis=1)
-            # level_heat = level_heat.sum(axis=1)
-        else:
-            level = levels
-            # level_heat = levels_heat
+        if 'OutputSectorXStorageLevel' in results:
+            levX = filter_by_zone(filter_sector(results['OutputSectorXStorageLevel'], inputs), inputs, z, sector=True)
+            levX = levX * filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).loc[
+                levX.columns].T.values / 1e3  # GWh of storage
+            # levelX = filter_by_storage(levX, inputs, StorageSubset='sx')
+            # levelsX = pd.DataFrame(index=filter_sector(results['OutputSectorXStorageLevel'], inputs).index,
+            #                        columns=inputs['sets']['t'])
+            # the same for the minimum level:
+            minlevX = filter_by_zone(filter_sector(inputs['param_df']['SectorXStorageProfile'], inputs), inputs, z, sector=True)
+            minlevX = minlevX * filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).loc[
+                minlevX.columns].T.values / 1e3  # GWh of storage
+
+            levels = pd.concat([level, levX], axis=1)
+
+            # for t in commons['tech_storage'] + ['HDAMC']:
+            #     temp = filter_by_tech(level, inputs, t)
+            #     levels[t] = temp.sum(axis=1)
+            # levels.dropna(axis=1, inplace=True)
+            # for col in levels.columns:
+            #     if levels[col].max() == 0 and levels[col].min() == 0:
+            #         del levels[col]
+
+            if aggregation is True:
+                level = level.sum(axis=1)
+            else:
+                level = levels
     else:
         level = None
-        # level_heat = None
         minlevel = None
-        # minlevel_heat = None
 
     if 'OutputPowerConsumption' in results:
         demand_p2h = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1000  # GW
         demand_p2h = demand_p2h.sum(axis=1)
+        if demand_p2h.empty:
+            demand_p2h = pd.Series(0, index=results['OutputPower'].index)
     else:
         demand_p2h = pd.Series(0, index=results['OutputPower'].index)
     if ('Flex', z) in inputs['param_df']['Demand']:
@@ -786,17 +797,17 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment,
                       shedload=shed_load,
                       shiftedload=shifted_load, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
-                      storage_limits=storage_limits, units=units, figsize=figsize)
+                      storage_limits=storage_limits, units=units, figsize=figsize, colors=colors)
     elif ntc.empty:
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment,
                       shedload=shed_load,
                       shiftedload=shifted_load, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
-                      storage_limits=storage_limits, units=units, figsize=figsize)
+                      storage_limits=storage_limits, units=units, figsize=figsize, colors=colors)
     else:
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment,
                       shedload=shed_load,
                       shiftedload=shifted_load, ntc=ntc, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
-                      storage_limits=storage_limits, ntc_limits=ntc_limits, units=units, figsize=figsize)
+                      storage_limits=storage_limits, ntc_limits=ntc_limits, units=units, figsize=figsize, colors=colors)
 
     # Generation plot:
     if rug_plot:

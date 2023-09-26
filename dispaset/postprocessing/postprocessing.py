@@ -108,15 +108,29 @@ def filter_by_zone(PowerOutput, inputs, z, thermal = None, sector = False):
     if thermal:
         loc = inputs['units']['Zone_th']
         PowerOutputCopy = PowerOutput.copy()
+        Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if loc[u] == z]]
     else:
-        loc = inputs['units']['Zone']
-        PowerOutputCopy = PowerOutput.copy()
-        # if sector == True:
-        #     PowerOutputCopy = PowerOutput.copy()
-        #     for s in loc[inputs['units']['Technology'] == 'HDAMC'].index:
-        #         PowerOutputCopy = PowerOutputCopy.rename(columns={inputs['units']['Sector1'][s] : s})
-        #     PowerOutputCopy = PowerOutputCopy[PowerOutputCopy.columns.intersection(loc.index.to_list())]
-    Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if loc[u] == z]]
+        if sector != True:
+            loc = inputs['units']['Zone']
+            PowerOutputCopy = PowerOutput.copy()
+            Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if loc[u] == z]]
+        if sector == True:
+            loc = inputs['units'][['Zone', 'Sector1']]
+            filter = loc['Sector1'].str.contains('nan')
+            loc = loc[~filter]
+            # Remove rows with NaN values in either 'Zone' or 'Sector1'
+            loc = loc.dropna(how='any')
+            # Find unique combinations of 'Zone' and 'Sector1' after removing NaN rows
+            loc = loc.drop_duplicates()
+            result = pd.DataFrame(columns=['Zone', 'Sector1'])
+            for value in loc['Sector1'].unique():
+                pair = pd.DataFrame(loc[loc['Sector1'] == value].iloc[0])  # Get the first row that matches
+                result = pd.concat([result, pair.T], axis=0)
+            result.set_index('Zone', inplace=True)
+            indices = result.loc[z,:]['Sector1'].tolist()
+            PowerOutputCopy = PowerOutput.copy()
+            Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if u in indices]]
+
     return Power
 
 

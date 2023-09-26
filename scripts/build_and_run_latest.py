@@ -37,9 +37,19 @@ inputs, results = ds.get_sim_results(config['SimulationDirectory'], cache=False)
 inputs_MTS, results_MTS = ds.get_sim_results(config['SimulationDirectory'], cache=False, inputs_file='Inputs_MTS.p',
                                              results_file='Results_MTS.gdx')
 
-rng = pd.date_range('2015-1-01', '2015-1-03', freq='H')
+colors = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': 'darkviolet', 'OIL': 'magenta', 'GAS': '#d7642dff',
+          'NUC': '#466eb4ff', 'SUN': '#e6a532ff', 'WIN': '#41afaaff', 'WAT': '#00a0e1ff', 'HYD': '#A0522D',
+          'BIO': '#7daf4bff', 'AMO': '#ffff00ff', 'GEO': '#7daf4bbf', 'Storage': '#b93c46ff', 'FlowIn': 'red',
+          'FlowOut': 'green', 'OTH': '#57D53B', 'WST': '#b9c337ff', 'HDAM': '#00a0e1ff', 'HDAMC': '#00a0e1ff',
+          'HPHS': 'blue', 'THMS': '#C04000ff', 'BATS': '#41A317ff', 'BEVS': '#b9c33799', 'SCSP': '#e6a532ff',
+          'P2GS': '#A0522D', 'ShedLoad': '#ffffffff', 'AIR': '#aed6f1ff', 'WHT': '#a93226ff', 'ELE': '#2C75FFff',
+          'THE': '#c70509ff',
+          'Z2_h2': 'cyan', 'Z2_w2': 'magenta', 'curtailment': 'red', 'Z1_h2': 'cyan',
+          'Z1_th': 'yellow'}
+
+rng = pd.date_range('2015-1-01', '2015-1-07', freq='H')
 # Generate country-specific plots
-ds.plot_zone(inputs, results, z='Z1', rng=rng)
+ds.plot_zone(inputs, results, z='Z2', rng=rng, colors=colors)
 
 # Generate country-specific plots
 ds.plot_zone(inputs, results)
