@@ -987,44 +987,38 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         parameters['CostCurtailment']['val'][i] = finalTS['CostCurtailment'][c]
 
     # %%###############################################################################################################
-    # Variable Cost
-    # Equivalence dictionary between fuel types and price entries in the config sheet:
-    
-    # FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
-    #                'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia'}
-    FuelPrices_merged= {}
-    for key, unitprices in FuelPrices.items():
-        df_result = Plants_merged['FormerUnits'].apply(lambda group: unitprices[group].max(axis=1)).T
-        FuelPrices_merged[key] = df_result
-    CostVariable = pd.DataFrame()
-    for unit in range(Nunits):
-        c = Plants_merged['Unit'][unit]  # zone to which the unit belongs
-        found = False
-        for FuelEntry in FuelEntries:
-            CostVariable = pd.concat([
-            CostVariable, FuelPrices_merged[FuelEntries[FuelEntry]][c] / Plants_merged['Efficiency'][unit] + \
-                  Plants_merged['EmissionRate'][unit] * FuelPrices_merged['PriceOfCO2'][c]], axis=1)
-            if Plants_merged['Fuel'][unit] == FuelEntry:
-                if Plants_merged['Technology'][unit] == 'ABHP':
-                    parameters['CostVariable']['val'][unit, :] = FuelPrices_merged[FuelEntries[FuelEntry]][c] / \
-                                                                 Plants_merged['Efficiency'][unit] + \
-                                                                 Plants_merged['EmissionRate'][unit] * \
-                                                                 FuelPrices_merged['PriceOfCO2'][c]
+        # Variable Cost
+        # Equivalence dictionary between fuel types and price entries in the config sheet:
+        # FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
+        #                'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia'}
+        CostVariable = pd.DataFrame()
+        for unit in range(Nunits):
+            c = Plants_merged['Unit'][unit].split('-')[-1].strip()
+            found = False
+            for FuelEntry in FuelEntries:
+                CostVariable = pd.concat([
+                    CostVariable, FuelPrices[FuelEntries[FuelEntry]][c] / Plants_merged['Efficiency'][unit] + \
+                                  Plants_merged['EmissionRate'][unit] * FuelPrices['PriceOfCO2'][c]], axis=1)
+                if Plants_merged['Fuel'][unit] == FuelEntry:
+                    if Plants_merged['Technology'][unit] == 'ABHP':
+                        parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
+                                                                     Plants_merged['Efficiency'][unit] + \
+                                                                     Plants_merged['EmissionRate'][unit] * \
+                                                                     FuelPrices['PriceOfCO2'][c]
+                        found = True
+                    else:
+                        parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
+                                                                     Plants_merged['Efficiency'][unit] + \
+                                                                     Plants_merged['EmissionRate'][unit] * \
+                                                                     FuelPrices['PriceOfCO2'][c]
                     found = True
-                else:
-                    parameters['CostVariable']['val'][unit, :] = FuelPrices_merged[FuelEntries[FuelEntry]][c] / \
-                                                                 Plants_merged['Efficiency'][unit] + \
-                                                                 Plants_merged['EmissionRate'][unit] * \
-                                                                 FuelPrices_merged['PriceOfCO2'][c]
-                    found = True
-        # Special case for biomass plants, which are not included in EU ETS:
-        if Plants_merged['Fuel'][unit] == 'BIO':
-            parameters['CostVariable']['val'][unit, :] = FuelPrices_merged['PriceOfBiomass'][c] / \
-                                                         Plants_merged['Efficiency'][unit]
-            found = True
-        if not found:
-            logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] +
-                            ' in unit ' + Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
+            # Special case for biomass plants, which are not included in EU ETS:
+            if Plants_merged['Fuel'][unit] == 'BIO':
+                parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'][c] / \
+                                                             Plants_merged['Efficiency'][unit]
+            if not found:
+                logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] +
+                                ' in unit ' + Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
 
     # %%###############################################################################################################
     # Assign storage alert level costs to the unit with highest variable costs inside the zone
