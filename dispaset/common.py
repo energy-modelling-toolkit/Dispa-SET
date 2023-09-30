@@ -105,7 +105,8 @@ commons['colors'] = {'LIG': '#af4b9180',
                      'WHT': '#a93226ff',
                      'ELE': '#2C75FFff',
                      'THE': '#c70509ff',
-                     'HeatSlack': '#943126ff'}
+                     'HeatSlack': '#943126ff',
+                     'curtailment': 'red'}
 
 commons['colors']['curtailment'] = 'red'
 commons['colors']['shed load'] = 'white'

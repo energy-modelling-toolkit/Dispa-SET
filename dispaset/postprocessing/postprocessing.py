@@ -116,21 +116,21 @@ def filter_by_zone(PowerOutput, inputs, z, thermal = None, sector = False):
             Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if loc[u] == z]]
         if sector == True:
             loc = inputs['units'][['Zone', 'Sector1']]
-            filter = loc['Sector1'].str.contains('nan')
-            loc = loc[~filter]
-            # Remove rows with NaN values in either 'Zone' or 'Sector1'
-            loc = loc.dropna(how='any')
-            # Find unique combinations of 'Zone' and 'Sector1' after removing NaN rows
-            loc = loc.drop_duplicates()
-            result = pd.DataFrame(columns=['Zone', 'Sector1'])
-            for value in loc['Sector1'].unique():
-                pair = pd.DataFrame(loc[loc['Sector1'] == value].iloc[0])  # Get the first row that matches
-                result = pd.concat([result, pair.T], axis=0)
+            loc = loc[~loc['Sector1'].str.contains('nan')].dropna(how='any').drop_duplicates()
+            result = loc.groupby('Sector1', as_index=False).first()[['Zone', 'Sector1']]
             result.set_index('Zone', inplace=True)
-            indices = result.loc[z,:]['Sector1'].tolist()
+            value = result.loc[z, 'Sector1']
+            # Check if the value is a pandas Series
+            if isinstance(value, pd.Series):
+                indices = value.tolist()
+            elif isinstance(value, str):
+                indices = [value]
+            else:
+                indices = []
             PowerOutputCopy = PowerOutput.copy()
             Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if u in indices]]
-
+            if PowerOutputCopy.empty:
+                Power = pd.DataFrame()
     return Power
 
 
