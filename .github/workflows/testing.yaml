@@ -55,7 +55,10 @@ jobs:
           cd $HOME/gams
           gamsinst -a
           cd -
-          echo "::set-env name=GAMSPATH::$GAMSPATH"
+          echo "GAMSPATH=$GAMSPATH" >> $GITHUB_ENV
+        env:
+          GAMSPATH: $GAMSPATH
+#          echo "::set-env name=GAMSPATH::$GAMSPATH"
         shell: bash
 
       - uses: conda-incubator/setup-miniconda@v2
@@ -70,26 +73,7 @@ jobs:
           pip install -e .
           conda list
 
-#      - name: Add CodeClimate test reporter
-#        run: |
-#          curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
-#          chmod +x ./cc-test-reporter
-#        shell: bash
-#
-#      - name: Before script
-#        run: ./cc-test-reporter before-build
-#        shell: bash
-
       - name: Run tests
         run: |
           conda run -n dispaset pytest tests/
         shell: bash
-
-#      - name: After script
-#        run: ./cc-test-reporter after-build --exit-code ${{ job.status }}
-#        shell: bash
-#
-#      - name: Push results to Codecov
-#        run: bash <(curl -s https://codecov.io/bash)
-#        if: ${{ job.status == 'success' }}
-#        shell: bash
