@@ -22,12 +22,12 @@ AllowCurtailment: 1.0
 CostHeatSlack:  ''
 CostLoadShedding:  ''
 Demand:  'tests/dummy_data/Load_RealTime/##/2015.csv'
-HeatDemand:  'tests/dummy_data/HeatDemand.csv'
-Interconnections:  'tests/dummy_data/CrossBorderFlows.csv'
+HeatDemand:  ''
+Interconnections:  ''
 LoadShedding:  ''
 NTC:  'tests/dummy_data/NTCs.csv'
-Outages:  'tests/dummy_data/Outages.csv'
-PowerPlantData: 'tests/dummy_data/Units_testcase.csv'
+Outages:  ''
+PowerPlantData: 'tests/dummy_data/boundary_sector/BS_Units_testcase.csv'
 PriceTransmission: 'tests/dummy_data/PriceTransmission.csv'
 PriceOfBiomass:  'Database/FuelPrices/Biomass/2015.csv'
 PriceOfBlackCoal:  'Database/FuelPrices/Coal/2015.csv'
@@ -38,14 +38,24 @@ PriceOfLignite:  ''
 PriceOfNuclear:  ''
 PriceOfPeat:  'Database/FuelPrices/Biomass/2015.csv'
 RenewablesAF:  'tests/dummy_data/AvailabilityFactors/##/2015.csv'
-ReservoirLevels:  'tests/dummy_data/ReservoirLevels.csv'
-ReservoirScaledInflows:  'tests/dummy_data/ScaledInflows.csv'
+ReservoirLevels:  ''
+ReservoirScaledInflows:  ''
+ReservoirScaledOutflows:  ''
 Temperatures: 'tests/dummy_data/Temperatures.csv'
 ShareOfFlexibleDemand: 'tests/dummy_data/ShareFlex.csv'
 GeoData: 'tests/dummy_data/Geo_Coordinates.csv'
-H2RigidDemand: 'tests/dummy_data/H2Demand.csv'
-H2FlexibleDemand: 'tests/dummy_data/H2PtLDemand.csv'
-H2FlexibleCapacity: 'tests/dummy_data/PtLCapacities.csv'
+SectorXDemand: 'tests/dummy_data/boundary_sector/BS_Demand.csv'
+BoundarySectorData: 'tests/dummy_data/boundary_sector/BS_Inputs.csv'
+BoundarySectorNTC: 'tests/dummy_data/boundary_sector/BS_NTCs.csv'
+BoundarySectorInterconnections: 'tests/dummy_data/boundary_sector/BS_CBFs.csv'
+SectorXFlexibleDemand: 'tests/dummy_data/boundary_sector/BS_FlexibleDemand.csv'
+SectorXFlexibleSupply: 'tests/dummy_data/boundary_sector/BS_FlexibleSupply.csv'
+BoundarySectorMaxSpillage: 'tests/dummy_data/boundary_sector/BS_Spillage_Capacity.csv'
+SectorXReservoirLevels: ''
+SectorXAlertLevel: 'tests/dummy_data/boundary_sector/BS_AlertLevel.csv'
+SectorXFloodControl: 'tests/dummy_data/boundary_sector/BS_Flood_control.csv'
+CostXNotServed: ''
+CostXSpillage: 'tests/dummy_data/boundary_sector/BS_Spillage_cost.csv'
 
 #----------------
 zones: [ 'Z1', 'Z2', 'ZZ3']
@@ -56,7 +66,8 @@ ReserveParticipation: [ 'GTUR',  'HDAM',  'HPHS', 'ICEN',  'CAES',  'BATS',  'BE
 #----------------
 default: {CostHeatSlack: 51.0, CostLoadShedding: 400.0, LoadShedding: 0.05, PriceOfBiomass: 37.0,
   PriceOfBlackCoal: 10.62, PriceOfCO2: 7.5, PriceOfFuelOil: 35.0, PriceOfGas: 25.0,
-  PriceOfLignite: 8.0, PriceOfNuclear: 3.0, PriceOfPeat: 0.0, PriceTransmission: 1}
+  PriceOfLignite: 8.0, PriceOfNuclear: 3.0, PriceOfPeat: 0.0, PriceTransmission: 1, CostXNotServed: 0,
+  PriceOfSpillage: 0.1}
 
 #----------------
 modifiers: {Demand: 0.12, Solar: 1.05, Storage: 1.01, Wind: 0.99}

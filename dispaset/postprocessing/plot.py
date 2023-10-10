@@ -8,6 +8,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import random
+from matplotlib import cm
 from matplotlib.patches import Patch
 
 from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage, \
@@ -18,7 +20,7 @@ from ..common import commons
 def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailment=None, shedload=None,
                   shiftedload=None, rng=None,
                   alpha=None, figsize=(13, 7), ntc=None, dispatch_limits=None, storage_limits=None, ntc_limits=None,
-                  units=['GW', 'GWh']):
+                  units=['GW', 'GWh'], colors=None):
     """
     Function that plots the dispatch data and the reservoir level as a cumulative sum
 
@@ -38,15 +40,20 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
 
     import matplotlib.patches as mpatches
     import matplotlib.lines as mlines
+    from matplotlib import cm
 
     pd.plotting.register_matplotlib_converters()
+
+    if colors == None:
+        colors = commons['colors']
 
     if rng is None:
         pdrng = plotdata.index[:min(len(plotdata) - 1, 7 * 24)]
     elif not type(rng) == type(demand.index):
         logging.error('The "rng" variable must be a pandas DatetimeIndex')
         raise ValueError()
-    elif rng[0] < plotdata.index[0] or rng[0] > plotdata.index[-1] or rng[-1] < plotdata.index[0] or rng[-1] > plotdata.index[-1]:
+    elif rng[0] < plotdata.index[0] or rng[0] > plotdata.index[-1] or rng[-1] < plotdata.index[0] or rng[-1] > \
+            plotdata.index[-1]:
         logging.warning('Plotting range is not properly defined, considering the first simulated week')
         pdrng = plotdata.index[:min(len(plotdata) - 1, 7 * 24)]
     else:
@@ -98,29 +105,29 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     sumplot_pos['zero'] = 0
     sumplot_pos = sumplot_pos[['zero'] + sumplot_pos.columns[:-1].tolist()]
     if level is not None:
-        n=3
+        n = 3
         height_ratio = [2.7, .8, .8]
     else:
-        n=2
+        n = 2
         height_ratio = [2.3, .8]
     if ntc is not None:
         fig, axes = plt.subplots(nrows=n, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
                                  gridspec_kw={'height_ratios': height_ratio, 'hspace': 0.04})
 
-        axes[n-1].plot(pdrng, ntc.loc[pdrng, 'NTCIn'].values, color='r')
-        axes[n-1].plot(pdrng, ntc.loc[pdrng, 'NTCOut'].values, color='g')
-        axes[n-1].set_xlim(pdrng[0], pdrng[-1])
-        axes[n-1].fill_between(pdrng, ntc.loc[pdrng, 'FlowIn'], ntc.loc[pdrng, 'ZeroLine'],
-                             facecolor=commons['colors']['FlowIn'],
-                             alpha=alpha)
-        axes[n-1].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'],
-                             facecolor=commons['colors']['FlowOut'],
-                             alpha=alpha)
-        axes[n-1].set_ylabel('NTC [' + units[0] + ']')
+        axes[n - 1].plot(pdrng, ntc.loc[pdrng, 'NTCIn'].values, color='r')
+        axes[n - 1].plot(pdrng, ntc.loc[pdrng, 'NTCOut'].values, color='g')
+        axes[n - 1].set_xlim(pdrng[0], pdrng[-1])
+        axes[n - 1].fill_between(pdrng, ntc.loc[pdrng, 'FlowIn'], ntc.loc[pdrng, 'ZeroLine'],
+                                 facecolor=colors['FlowIn'],
+                                 alpha=alpha)
+        axes[n - 1].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'],
+                                 facecolor=colors['FlowOut'],
+                                 alpha=alpha)
+        axes[n - 1].set_ylabel('NTC [' + units[0] + ']')
         if ntc_limits is not None:
-            axes[n-1].set_ylim(ntc_limits[0], ntc_limits[1])
+            axes[n - 1].set_ylim(ntc_limits[0], ntc_limits[1])
     else:
-        fig, axes = plt.subplots(nrows=n-1, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
+        fig, axes = plt.subplots(nrows=n - 1, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
                                  gridspec_kw={'height_ratios': [2.7, .8], 'hspace': 0.04})
 
     # Create left axis:
@@ -134,7 +141,6 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     labels = []
     patches = []
     colorlist = []
-    hatches = {}
 
     # Plot reservoir levels (either separated or as one value)
     if level is not None:
@@ -146,7 +152,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
             for j in range(len(sumplot_lev.columns) - 1):
                 col3 = sumplot_lev.columns[j]
                 col4 = sumplot_lev.columns[j + 1]
-                rez_color = commons['colors'][col4]
+                rez_color = colors[col4]
                 axes[1].fill_between(pdrng, sumplot_lev.loc[pdrng, col3], sumplot_lev.loc[pdrng, col4],
                                      facecolor=rez_color, alpha=0.3)
                 labels.append(col4)
@@ -154,7 +160,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
                 colorlist.append(rez_color)
         elif isinstance(level, pd.Series):
             # Create lower axis:
-            axes[1].fill_between(pdrng, 0, level[pdrng], facecolor=commons['colors']['WAT'], alpha=.3)
+            axes[1].fill_between(pdrng, 0, level[pdrng], facecolor=colors['WAT'], alpha=.3)
         if isinstance(minlevel, pd.Series):
             axes[1].plot(pdrng, minlevel[pdrng], color='k', alpha=alpha, linestyle=':')
         axes[1].set_ylabel('Level [' + units[1] + ']')
@@ -167,28 +173,32 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     for j in range(idx_zero):
         col1 = sumplot_neg.columns[j]
         col2 = sumplot_neg.columns[j + 1]
-        color = commons['colors'][col2]
-        hatch = commons['hatches'][col2]
+        color = colors[col2]
+        if plot_lines:
+            hatch = commons['hatches'][col2]
+        else:
+            hatch = ''
         axes[0].fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2], facecolor=color,
                              alpha=alpha, hatch=hatch)
         if col2 not in labels:
             labels.append(col2)
             patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
             colorlist.append(color)
-        hatches[col2] = hatch  # Store the hatch for each label
 
     # Plot Positive values:
     for j in range(len(sumplot_pos.columns) - 1):
         col1 = sumplot_pos.columns[j]
         col2 = sumplot_pos.columns[j + 1]
-        color = commons['colors'][col2]
-        hatch = commons['hatches'][col2]
+        color = colors[col2]
+        if plot_lines:
+            hatch = commons['hatches'][col2]
+        else:
+            hatch = ''
         axes[0].fill_between(pdrng, sumplot_pos.loc[pdrng, col1], sumplot_pos.loc[pdrng, col2], facecolor=color,
                              alpha=alpha, hatch=hatch)
         labels.append(col2)
         patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
-        hatches[col2] = hatch  # Store the hatch for each label
 
     # Plot curtailment:
     if isinstance(curtailment, pd.Series):
@@ -196,9 +206,9 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
             logging.error('The curtailment time series must have the same index as the demand')
             sys.exit(1)
         axes[0].fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum'] - curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'],
-                             facecolor=commons['colors']['curtailment'])
+                             facecolor=colors['curtailment'])
         labels.append('Curtailment')
-        patches.append(mpatches.Patch(facecolor=commons['colors']['curtailment'], label='Curtailment'))
+        patches.append(mpatches.Patch(facecolor=colors['curtailment'], label='Curtailment'))
 
     axes[0].set_ylabel(y_ax + ' [' + units[0] + ']')
     axes[0].yaxis.label.set_fontsize(12)
@@ -226,40 +236,21 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     line_shedload = mlines.Line2D([], [], color='black', alpha=alpha, label='New load', linestyle='dashed')
     line_demand = mlines.Line2D([], [], color='black', label='Load')
 
-    # Create legends based on the present data in the plot
     if not load_changed and level is None:
-        legend_handles = [line_demand] + patches[::-1]
+        plt.legend(handles=[line_demand] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
     elif not load_changed:
-        legend_handles = [line_demand] + [line_SOC] + patches[::-1]
+        plt.legend(handles=[line_demand] + [line_SOC] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
     elif level is None:
-        legend_handles = [line_demand] + [line_shedload] + patches[::-1]
-        if plot_lines:
-            axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k", linestyle='dashed')
-    else:
-        legend_handles = [line_demand] + [line_shedload] + [line_SOC] + patches[::-1]
+        plt.legend(handles=[line_demand] + [line_shedload] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
         if plot_lines:
             axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
                                  linestyle='dashed')
-
-    # Filter out the unused handles from the legend
-    used_labels = set(labels)  # Set of unique labels used in the plot
-    filtered_handles = [handle for handle in legend_handles if handle.get_label() in used_labels]
-
-    # Plot the legend with matched hatches in all subplots
-    handles_dict = {}  # Dictionary to hold handles for each unique label
-    for handle in filtered_handles:
-        label = handle.get_label()
-        if label not in handles_dict:
-            handles_dict[label] = handle
-        else:
-            # Update hatch to match the same label in all subplots
-            handles_dict[label].set_hatch(hatches[label])
-
-    # Convert the dictionary values to a list for plotting the legend
-    legend_handles = list(handles_dict.values())
-
-    # Plot the legend
-    plt.legend(title='Dispatch for ' + demand.name, handles=legend_handles, loc=4, bbox_to_anchor=(1.2, 0.5))
+    else:
+        plt.legend(title='Dispatch for ' + demand.name, handles=[line_demand] + [line_shedload] + [line_SOC] +
+                                                                patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
+        if plot_lines:
+            axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
+                                 linestyle='dashed')
 
     plt.subplots_adjust(right=0.8)
     fig.align_ylabels()
@@ -349,7 +340,7 @@ def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=Fal
     plt.show()
 
 
-def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones = '', show_plot=True):
+def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones='', show_plot=True):
     """
     Plots the generation for a selection of zones, disaggregated by fuel type
 
@@ -392,16 +383,16 @@ def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones = '', show_pl
             storage_input.loc[:, z] = filter_by_zone(filter_by_tech_list(results['OutputStorageInput'], inputs,
                                                                          commons['tech_storage']),
                                                      inputs, z).sum(axis=1)
-        if not filter_by_zone(filter_by_tech_list(filter_sector(results['OutputSectorXStorageInput'], inputs), inputs,
-                                                  commons['tech_storage']), inputs,
-                              z).empty:
-            storage_input.loc[:, z] += filter_by_zone(filter_by_tech_list(filter_sector(results['OutputSectorXStorageInput'], inputs), inputs,
-                                                                         commons['tech_storage']),
-                                                     inputs, z).sum(axis=1).values
+        # if not filter_by_zone(filter_by_tech_list(filter_sector(results['OutputSectorXStorageInput'], inputs), inputs,
+        #                                           commons['tech_storage']), inputs,
+        #                       z).empty:
+        #     storage_input.loc[:, z] += filter_by_zone(filter_by_tech_list(filter_sector(results['OutputSectorXStorageInput'], inputs), inputs,
+        #                                                                  commons['tech_storage']),
+        #                                              inputs, z).sum(axis=1).values
 
     cols = [col for col in commons['MeritOrder'] if col in GenPerZone]
     GenPerZone = GenPerZone[cols] / 1E6
-    GenPerZone = pd.DataFrame(GenPerZone, index = inputs['sets']['n'])
+    GenPerZone = pd.DataFrame(GenPerZone, index=inputs['sets']['n'])
     GenPerZone = GenPerZone.loc[ListZones]
     GenPerZone.sort_index(inplace=True)
     colors = [commons['colors'][tech] for tech in GenPerZone.columns]
@@ -430,7 +421,8 @@ def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones = '', show_pl
             height=ax.get_ylim()[1] * 0.005, linewidth=2, color='b')
     ax.barh(storage_demand.squeeze(), left=ax.get_xticks() - 0.4, width=[0.8] * len(storage_demand),
             height=ax.get_ylim()[1] * 0.005, linewidth=2, color='g')
-    ax.barh(demand.squeeze(), left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005, linewidth=2,
+    ax.barh(demand.squeeze(), left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005,
+            linewidth=2,
             color='k')
 
     ZonePosition = GenPerZone.copy()
@@ -462,85 +454,18 @@ def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones = '', show_pl
     ax2.set_ylabel('Generation share [%]')
     ax2.bar(range(0, ShedLoad.index.size), ShedLoad.values, bottom=GenPerZone_prct.sum(axis=1).values,
             edgecolor='black', hatch='X', color='w', width=[0.4])
-    ax2.barh(power_consumption_prct.fillna(0).squeeze(), left=ax2.get_xticks() - 0.4, width=[0.8] * len(power_consumption_prct),
+    ax2.barh(power_consumption_prct.fillna(0).squeeze(), left=ax2.get_xticks() - 0.4,
+             width=[0.8] * len(power_consumption_prct),
              height=ax2.get_ylim()[1] * 0.005, linewidth=2, color='b')
-    ax2.barh(demand_prct.squeeze(), left=ax2.get_xticks() - 0.4, width=[0.8] * len(demand_prct), height=ax2.get_ylim()[1] * 0.005,
+    ax2.barh(demand_prct.squeeze(), left=ax2.get_xticks() - 0.4, width=[0.8] * len(demand_prct),
+             height=ax2.get_ylim()[1] * 0.005,
              linewidth=2, color='k')
     handles, labels = ax2.get_legend_handles_labels()  # get the handles
     ax2.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.14, 0.25))
     if show_plot:
         plt.show()
 
-    # Heat generation bar chart
-    fuels_heat = PPindicators[[u in [x for x in commons['Technologies']]
-                               for u in PPindicators['Technology']]].Fuel.unique()
-    zones_heat = PPindicators['Zone_th'].unique()
-    zones_heat = np.array([i for i in zones_heat if i])
-
-    if zones_heat.size != 0 and fuels_heat.size != 0:
-        HeatPerZone_th = pd.DataFrame(index=zones_heat, columns=fuels_heat)
-        for fuel in commons['Fuels']:
-            if fuel not in HeatPerZone_th:
-                HeatPerZone_th[fuel] = 0
-
-        heat_storage_input = pd.DataFrame(index=results['OutputStorageInput'].index)
-        for z in zones_heat:
-            for f in fuels_heat:
-                tmp = PPindicators[(PPindicators.Fuel == f) & (PPindicators.Zone_th == z)]
-                HeatPerZone_th.loc[z, f] = tmp.HeatGeneration.sum()
-            # HeatSlack = results['OutputHeatSlack'].loc[:,z].sum()
-            # if HeatSlack > 0:
-            #     HeatPerZone_th.loc[z, 'HeatSlack'] = HeatSlack
-            z = str(z)
-            if filter_by_heating_zone(filter_by_tech_list(results['OutputStorageInput'], inputs,
-                                                          commons['tech_thermal_storage']), inputs, z).empty:
-                heat_storage_input.loc[:, z] = 0
-            else:
-                heat_storage_input.loc[:, z] = filter_by_heating_zone(
-                    filter_by_tech_list(results['OutputStorageInput'], inputs,
-                                        commons['tech_thermal_storage']), inputs, z).sum(axis=1)
-
-        heat_storage_input = heat_storage_input.sum() / 1e6
-        power_consumption = power_consumption.loc[ListZones]
-        heat_storage_input.sort_index(inplace=True)
-
-        cols_heat = [col for col in commons['MeritOrderHeat'] if col in HeatPerZone_th]
-        HeatPerZone_th = HeatPerZone_th[cols_heat] / 1e6
-        power_consumption = power_consumption.loc[ListZones]
-        HeatPerZone_th.sort_index(inplace=True)
-        colors = [commons['colors'][tech] for tech in HeatPerZone_th.columns]
-        ax = HeatPerZone_th.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
-                                 title='Heat generation per heating zone (the horizontal lines indicate the demand '
-                                       '[black] & storage input [green])')
-        ax.set_ylabel('Generation [TWh]')
-
-        # Check for heat slack and plot it
-        Slack = results['OutputHeatSlack'].sum() / 1e6
-        Slack = Slack.reindex(inputs['sets']['n_th']).fillna(0)
-        power_consumption = power_consumption.loc[ListZones]
-        Slack.sort_index(inplace=True)
-        ax.bar(range(0, Slack.index.size), Slack.values, bottom=HeatPerZone_th.sum(axis=1).values,
-               edgecolor='black', hatch='X', color='#943126ff', width=[0.4])
-
-        # Identify heat demand and plot it
-        demand = inputs['param_df']['HeatDemand'].sum() / 1E6
-        power_consumption = power_consumption.loc[ListZones]
-        demand.sort_index(inplace=True)
-        ax.barh(demand + heat_storage_input, left=ax.get_xticks() - 0.4, width=[0.8] * len(heat_storage_input),
-                height=ax.get_ylim()[1] * 0.005, linewidth=2, color='g')
-        ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005,
-                linewidth=2, color='k')
-
-        handles, labels = ax.get_legend_handles_labels()  # get the handles
-        handles.append(Patch(facecolor='#943126ff', hatch='X'))
-        labels.append('HeatSlack')
-        ax.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.14, 0.25))
-        if show_plot:
-            plt.show()
-
-        return GenPerZone, HeatPerZone_th
-    else:
-        return GenPerZone
+    return GenPerZone
 
 
 def plot_zone_capacities(inputs, results, plot=True):
@@ -587,28 +512,18 @@ def plot_zone_capacities(inputs, results, plot=True):
         units.loc[u, 'PowerCapacity'] = PurePowerCapacity
         units_chp.loc[u, 'PowerCapacity'] = MaxHeat
 
-    # units_heat = units_heat.append(units_chp)
     units_heat = pd.concat([units_heat, units_chp])
 
     ZoneFuels = {}
-    ZoneFuelsHT = {}
     for u in units.index:
         ZoneFuels[(units.Zone[u], units.Fuel[u])] = (units.Zone[u], units.Fuel[u])
-    for u in units_heat.index:
-        ZoneFuelsHT[(units_heat.Zone_th[u], units_heat.Fuel[u])] = (units_heat.Zone_th[u], units_heat.Fuel[u])
 
     PowerCapacity = pd.DataFrame(columns=inputs['sets']['f'], index=inputs['sets']['n'])
     StorageCapacity = pd.DataFrame(columns=inputs['sets']['f'], index=inputs['sets']['n'])
-    # HeatCapacity = pd.DataFrame(columns=inputs['sets']['f'], index=inputs['sets']['n_th'])
     for n, f in ZoneFuels:
         idx = ((units.Zone == n) & (units.Fuel == f))
         PowerCapacity.loc[n, f] = (units.PowerCapacity[idx] * units.Nunits[idx]).sum()
         StorageCapacity.loc[n, f] = (units.StorageCapacity[idx] * units.Nunits[idx]).sum()
-
-    # for n_th, f in ZoneFuelsHT:
-    #     idx = ((units_heat.Zone_th == n_th) & (units_heat.Fuel == f))
-    #     units_heat.COP.fillna(1, inplace=True)
-    #     HeatCapacity.loc[n_th, f] = (units_heat.PowerCapacity[idx] * units_heat.Nunits[idx] * units_heat.COP[idx]).sum()
 
     cols = [col for col in commons['MeritOrder'] if col in PowerCapacity]
     PowerCapacity = PowerCapacity[cols]
@@ -634,33 +549,31 @@ def plot_zone_capacities(inputs, results, plot=True):
                 height=ax.get_ylim()[1] * 0.005, linewidth=2, color='b')
         ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005,
                 linewidth=2, color='k')
-
-        # ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005,
-        #         linewidth=2, color='k')
         plt.show()
 
-    # cols_heat = [col for col in commons['MeritOrderHeat'] if col in HeatCapacity]
-    # HeatCapacity = HeatCapacity[cols_heat]
-    # HeatCapacity.sort_index(inplace=True)
-    # if len(HeatCapacity) > 0 and plot:
-    #     colors = [commons['colors'][tech] for tech in HeatCapacity.columns]
-    #     ax = HeatCapacity.plot(kind="bar", figsize=(12, 8), stacked=True, color=colors, alpha=0.8, legend='reverse',
-    #                            title='Installed heat capacity per zone ' +
-    #                                  '(the horizontal lines indicate the peak heating demand)')
-    #     ax.set_ylabel('Capacity [MW]')
-    #     demand = inputs['param_df']['HeatDemand'].max()
-    #     demand.sort_index(inplace=True)
-    #     ax.barh(demand, left=ax.get_xticks() - 0.4, width=[0.8] * len(demand), height=ax.get_ylim()[1] * 0.005,
-    #             linewidth=2,
-    #             color='k')
-    #     plt.show()
-
-    # return {'PowerCapacity': PowerCapacity, 'StorageCapacity': StorageCapacity, 'HeatCapacity': HeatCapacity}
     return {'PowerCapacity': PowerCapacity, 'StorageCapacity': StorageCapacity}
 
 
+def update_colors(inputs, colors, new_colors=None, random_seed=42):
+    if new_colors:
+        for key in inputs['sets']['nx']:
+            if key in new_colors.items():
+                colors[key] = new_colors[key]
+            else:
+                colors[key] = None
+
+    # Set the random seed if provided
+    if random_seed is not None:
+        random.seed(random_seed)
+
+    # Check for missing colors and fill them from a random color map
+    cmap = cm.get_cmap("tab20")  # You can choose any color map you like
+    missing_colors = {key: cmap(random.random()) for key, value in colors.items() if value is None}
+    colors.update(missing_colors)
+
+
 def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=None, storage_limits=None,
-              ntc_limits=None, units=['GW', 'GWh'], hide_storage_plot = False):
+              ntc_limits=None, units=['GW', 'GWh'], hide_storage_plot=False, colors=None):
     """
     Generates plots from the dispa-SET results for one specific zone
 
@@ -670,6 +583,12 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
     :param rng:         Date range to be considered in the plot
     :param rug_plot:    Rug plot on/off
     """
+    if colors is None:
+        colors = commons['colors']
+    if colors is not None:
+        update_colors(inputs, commons['colors'], new_colors=colors)
+        colors = commons['colors']
+
     if z == '':
         Nzones = len(inputs['sets']['n'])
         z = inputs['sets']['n'][np.random.randint(Nzones)]
@@ -683,46 +602,56 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
     plotdata = get_plot_data(inputs, results, z) / 1000  # GW
 
     aggregation = False
-    aggregation = False
-    if 'OutputStorageLevel' in results:
-        lev = filter_by_zone(results['OutputStorageLevel'], inputs, z)
-        lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] * inputs['units']['Nunits'].loc[
-            lev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:, lev.columns] / 1e3  # GWh of storage
-        level = filter_by_storage(lev, inputs, StorageSubset='s')
-        levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
-        # the same for the minimum level:
-        minlev = filter_by_zone(inputs['param_df']['StorageProfile'], inputs, z)
-        minlev = minlev * inputs['units']['StorageCapacity'].loc[minlev.columns] * inputs['units']['Nunits'].loc[
-            minlev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:, minlev.columns] / 1e3  # GWh of storage
-        minlevel = filter_by_storage(minlev, inputs, StorageSubset='s').sum(axis=1)
+    if 'OutputStorageLevel' in results or 'OutputSectorXStorageLevel' in results:
+        if 'OutputStorageLevel' in results:
+            lev = filter_by_zone(results['OutputStorageLevel'], inputs, z)
+            lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] * inputs['units']['Nunits'].loc[
+                lev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:, lev.columns] / 1e3  # GWh of storage
+            level = filter_by_storage(lev, inputs, StorageSubset='s')
+            levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
+            # the same for the minimum level:
+            minlev = filter_by_zone(inputs['param_df']['StorageProfile'], inputs, z)
+            minlev = minlev * inputs['units']['StorageCapacity'].loc[minlev.columns] * inputs['units']['Nunits'].loc[
+                minlev.columns] * inputs['param_df']['AvailabilityFactor'].loc[:,
+                                  minlev.columns] / 1e3  # GWh of storage
+            minlevel = filter_by_storage(minlev, inputs, StorageSubset='s').sum(axis=1)
 
-        # for col in lev.columns:
-        #     if 'BEVS' in col:
-        #         lev[col] = lev[col] * inputs['param_df']['AvailabilityFactor'][col]
+            for t in commons['tech_storage']:
+                temp = filter_by_tech(level, inputs, t)
+                levels[t] = temp.sum(axis=1)
+            levels.dropna(axis=1, inplace=True)
+            for col in levels.columns:
+                if levels[col].max() == 0 and levels[col].min() == 0:
+                    del levels[col]
 
-        for t in commons['tech_storage']:
-            temp = filter_by_tech(level, inputs, t)
-            levels[t] = temp.sum(axis=1)
-        levels.dropna(axis=1, inplace=True)
-        for col in levels.columns:
-            if levels[col].max() == 0 and levels[col].min() == 0:
-                del levels[col]
+            if aggregation is True:
+                level = level.sum(axis=1)
+            else:
+                level = levels
 
-        if aggregation is True:
-            level = level.sum(axis=1)
-            # level_heat = level_heat.sum(axis=1)
-        else:
-            level = levels
-            # level_heat = levels_heat
+        if 'OutputSectorXStorageLevel' in results:
+            levX = filter_by_zone(filter_sector(results['OutputSectorXStorageLevel'], inputs), inputs, z, sector=True)
+            levX = levX * filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).loc[
+                levX.columns].T.values / 1e3  # GWh of storage
+            # the same for the minimum level:
+            minlevX = filter_by_zone(filter_sector(inputs['param_df']['SectorXStorageProfile'], inputs), inputs, z,
+                                     sector=True)
+            minlevX = minlevX * filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).loc[
+                minlevX.columns].T.values / 1e3  # GWh of storage
+            levels = pd.concat([level, levX], axis=1)
+            if aggregation is True:
+                level = level.sum(axis=1)
+            else:
+                level = levels
     else:
         level = None
-        # level_heat = None
         minlevel = None
-        # minlevel_heat = None
 
     if 'OutputPowerConsumption' in results:
         demand_p2h = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1000  # GW
         demand_p2h = demand_p2h.sum(axis=1)
+        if demand_p2h.empty:
+            demand_p2h = pd.Series(0, index=results['OutputPower'].index)
     else:
         demand_p2h = pd.Series(0, index=results['OutputPower'].index)
     if ('Flex', z) in inputs['param_df']['Demand']:
@@ -753,7 +682,7 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
             diff.max() / demand.max() * 100) + '% difference in the instantaneous energy balance of zone ' + z)
     else:
         logging.critical('There is up to ' + str(0) + '% difference in the instantaneous energy balance of zone ' + z)
-#********************************************************
+    # ********************************************************
 
     if 'OutputCurtailedPower' in results and z in results['OutputCurtailedPower']:
         curtailment = results['OutputCurtailedPower'][z] / 1000  # GW
@@ -785,17 +714,17 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment,
                       shedload=shed_load,
                       shiftedload=shifted_load, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
-                      storage_limits=storage_limits, units=units, figsize=figsize)
+                      storage_limits=storage_limits, units=units, figsize=figsize, colors=colors)
     elif ntc.empty:
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment,
                       shedload=shed_load,
                       shiftedload=shifted_load, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
-                      storage_limits=storage_limits, units=units, figsize=figsize)
+                      storage_limits=storage_limits, units=units, figsize=figsize, colors=colors)
     else:
         plot_dispatch(demand, plotdata, y_ax='Power', level=level, minlevel=minlevel, curtailment=curtailment,
                       shedload=shed_load,
                       shiftedload=shifted_load, ntc=ntc, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
-                      storage_limits=storage_limits, ntc_limits=ntc_limits, units=units, figsize=figsize)
+                      storage_limits=storage_limits, ntc_limits=ntc_limits, units=units, figsize=figsize, colors=colors)
 
     # Generation plot:
     if rug_plot:
@@ -1103,25 +1032,25 @@ def plot_tech_cap(inputs, plot=True, figsize=(10, 7), alpha=0.8, width=0.5):
                         inputs['param_df']['Technology'].loc['SCSP', u] or inputs['param_df']['sets']['thms']:
                     Cap.loc[z, 'Thermal'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i, 0] * \
                                              inputs['param_df']['Nunits'].iloc[i, 0]
-    for i, u in enumerate(filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).index):
-        for z in inputs['sets']['n']:
-            if inputs['param_df']['Location'].loc[z, u]:
-                if inputs['param_df']['Fuel'].loc['WAT', u]:
-                    Cap.loc[z, 'Hydro'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
-                                           inputs['param_df']['Nunits'].iloc[i, 0]
-                elif inputs['param_df']['Fuel'].loc['HYD', u]:
-                    Cap.loc[z, 'H2'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
-                                        inputs['param_df']['Nunits'].iloc[i, 0]
-                elif inputs['param_df']['Technology'].loc['BEVS', u]:
-                    Cap.loc[z, 'BEVS'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
-                                          inputs['param_df']['Nunits'].iloc[i, 0]
-                elif inputs['param_df']['Technology'].loc['BATS', u]:
-                    Cap.loc[z, 'BATS'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
-                                          inputs['param_df']['Nunits'].iloc[i, 0]
-                elif u in inputs['param_df']['sets']['p2h'] or inputs['param_df']['sets']['chp'] or \
-                        inputs['param_df']['Technology'].loc['SCSP', u] or inputs['param_df']['sets']['thms']:
-                    Cap.loc[z, 'Thermal'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
-                                             inputs['param_df']['Nunits'].iloc[i, 0]
+    # for i, u in enumerate(filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).index):
+    #     for z in inputs['sets']['n']:
+    #         if inputs['param_df']['Location'].loc[z, u]:
+    #             if inputs['param_df']['Fuel'].loc['WAT', u]:
+    #                 Cap.loc[z, 'Hydro'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+    #                                        inputs['param_df']['Nunits'].iloc[i, 0]
+    #             elif inputs['param_df']['Fuel'].loc['HYD', u]:
+    #                 Cap.loc[z, 'H2'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+    #                                     inputs['param_df']['Nunits'].iloc[i, 0]
+    #             elif inputs['param_df']['Technology'].loc['BEVS', u]:
+    #                 Cap.loc[z, 'BEVS'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+    #                                       inputs['param_df']['Nunits'].iloc[i, 0]
+    #             elif inputs['param_df']['Technology'].loc['BATS', u]:
+    #                 Cap.loc[z, 'BATS'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+    #                                       inputs['param_df']['Nunits'].iloc[i, 0]
+    #             elif u in inputs['param_df']['sets']['p2h'] or inputs['param_df']['sets']['chp'] or \
+    #                     inputs['param_df']['Technology'].loc['SCSP', u] or inputs['param_df']['sets']['thms']:
+    #                 Cap.loc[z, 'Thermal'] += filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).fillna(0).iloc[i, 0] * \
+    #                                          inputs['param_df']['Nunits'].iloc[i, 0]
 
     Cap = Cap / 1000
     Cap = Cap.loc[(Cap != 0).any(axis=1)]
@@ -1335,6 +1264,7 @@ def plot_co2(inputs, results, idx=None, figsize=(10, 7), width=0.9, alpha=0.8, p
     ax.set_title('$CO_{2}$ Emissions')
     fig.tight_layout()
     plt.show()
+
 
 def set_axis_style(ax, labels, xlabel='', ylabel=''):
     ax.xaxis.set_tick_params(direction='out')

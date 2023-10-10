@@ -725,7 +725,9 @@ def load_config_excel(ConfigFile, AbsPath=True):
         PathParameters['SectorXFloodControl'] = 146
         PathParameters['CostXNotServed'] = 170
         PathParameters['CostXSpillage'] = 205
+        PathParameters['CostCurtailment'] = 171
         default['CostXNotServed'] = 170
+        default['CostCurtailment'] = 171
 
         for p in StdParameters:
             config[p] = sheet.cell_value(StdParameters[p], 2)
@@ -900,25 +902,28 @@ def load_config_yaml(filename, AbsPath=True):
 
     params_to_be_added = {'Temperatures': '', 'DataTimeStep': 1, 'SimulationTimeStep': 1, 'HydroScheduling': 'Off',
                           'HydroSchedulingHorizon': 'Annual', 'InitialFinalReservoirLevel': True,
-                          'ReserveParticipation_CHP': []}
+                          'ReserveParticipation_CHP': [], 'CplexAccuracy': 0.005, 'CplexSetting': 'Default'}
     for param in params_to_be_added:
         if param not in config:
             config[param] = params_to_be_added[param]
 
     # Set default values (for backward compatibility):
     NonEmptyDefaultss = {'ReservoirLevelInitial': 0.5, 'ReservoirLevelFinal': 0.5, 'ValueOfLostLoad': 1E5,
-                         'CostXSpillage': 1, 'WaterValue': 100, 'ShareOfQuickStartUnits': 0.5}
+                         'CostXSpillage': 1, 'WaterValue': 100, 'ShareOfQuickStartUnits': 0.5, 'CostCurtailment': 0}
     for param in NonEmptyDefaultss:
         if param not in config['default']:
             config['default'][param] = NonEmptyDefaultss[param]
 
     # Define missing parameters if they were not provided in the config file
     PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
-              'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'CostXSpillage',
+              'ReservoirScaledInflows', 'ReservoirScaledOutflows','PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas',
+              'PriceOfFuelOil', 'CostXSpillage',
               'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia',
               'HeatDemand', 'CostHeatSlack', 'CostLoadShedding', 'ShareOfFlexibleDemand', 'Temperatures',
-              'PriceTransmission', 'Reserve2D', 'Reserve2U', 'H2RigidDemand', 'H2FlexibleDemand', 'H2FlexibleCapacity',
-              'CostH2Slack', 'GeoData']
+              'PriceTransmission', 'Reserve2D', 'Reserve2U', 'GeoData', 'SectorXDemand', 'BoundarySectorData',
+              'BoundarySectorNTC', 'BoundarySectorInterconnections', 'SectorXFlexibleDemand', 'SectorXFlexibleSupply',
+              'BoundarySectorMaxSpillage', 'SectorXReservoirLevels', 'SectorXAlertLevel', 'SectorXFloodControl',
+              'CostXSpillage', 'CostXNotServed', 'CostCurtailment']
     for param in PARAMS:
         if param not in config:
             config[param] = ''
