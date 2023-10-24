@@ -375,7 +375,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2',
     #          'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia']
     FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
-                   'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia'}
+                   'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia',
+                   'PriceOfCO2': 'PriceOfCO2'}
     FuelPrices = {}
     for fuel in fuels:
         fp = pd.DataFrame()

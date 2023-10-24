@@ -104,7 +104,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     sumplot_pos = plotdata[cols[idx_zero:]].cumsum(axis=1)
     sumplot_pos['zero'] = 0
     sumplot_pos = sumplot_pos[['zero'] + sumplot_pos.columns[:-1].tolist()]
-    if level is not None:
+    if level is not None and not level.empty:
         n = 3
         height_ratio = [2.7, .8, .8]
     else:
@@ -143,7 +143,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     colorlist = []
 
     # Plot reservoir levels (either separated or as one value)
-    if level is not None:
+    if level is not None and not level.empty:
         if isinstance(level, pd.DataFrame):
             cols_lvl = level.columns.tolist()
             sumplot_lev = level[cols_lvl[0:]].cumsum(axis=1)
@@ -240,7 +240,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         plt.legend(handles=[line_demand] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
     elif not load_changed:
         plt.legend(handles=[line_demand] + [line_SOC] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
-    elif level is None:
+    elif level is None or level.empty:
         plt.legend(handles=[line_demand] + [line_shedload] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
         if plot_lines:
             axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
