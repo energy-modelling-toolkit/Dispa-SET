@@ -13,6 +13,10 @@ import sys
 import numpy as np
 import pandas as pd
 
+from scipy.integrate import odeint
+import matplotlib.pyplot as plt
+
+
 from ..common import commons
 
 
@@ -1079,3 +1083,264 @@ def curtailment(inputs,results):
             curtailment.loc['amount',z] = (results['OutputCurtailedPower'][z]!=0).sum()
 
     return curtailment
+
+# %%
+def get_frequency_security_constraints(inputs, results):
+    """
+    Reads the DispaSET results and provides frequency security constraints 
+
+    :param inputs:      DispaSET inputs
+    :param results:     DispaSET results
+    """
+    
+        
+    OutputCommitted = results['OutputCommitted']
+    OutputPower = results['OutputPower'] 
+    TotalOutputPower = OutputPower.sum(axis=1)
+    units = inputs['units']
+    
+    # Filter "units" to keep rows with 'WAT', 'GAS', 'BIO', 'OIL' in the "Fuel" column
+    units = units[units['Fuel'].isin(['WAT', 'GAS', 'BIO', 'OIL'])]
+    
+    # Get the list of generator names from the filtered "units"
+    generator_list = units.Unit.tolist()
+    
+    # Filter the dataframe to keep only the columns that exist in the dataframe
+    generator_list = [col for col in generator_list if col in OutputCommitted.columns]
+    
+    # Keep only the columns in "OutputCommitted" that are in "generator_list"
+    OutputSyncCommitted = OutputCommitted[generator_list]
+    
+    # Create an empty DataFrame for the result
+    GeneratorContingency = pd.DataFrame(columns=['Hour', 'GeneratorName', 'PowerCapacity'])
+    
+    # Iterate through the rows of OutputSyncCommitted
+    for hour, row in OutputSyncCommitted.iterrows():
+        # Find generators with commitment value of 1
+        committed_generators = [col for col in row.index if row[col] == 1]
+    
+        # If there are committed generators, find the one with the highest PowerCapacity
+        if committed_generators:
+            max_committed_generator = max(committed_generators, key=lambda x: units.loc[x, 'PowerCapacity'])
+            max_committed_power = units.loc[max_committed_generator, 'PowerCapacity']
+        
+            # Append the result to GeneratorContingency
+            GeneratorContingency = GeneratorContingency.append({'Hour': hour,
+                                                                'GeneratorName': max_committed_generator,
+                                                                'PowerCapacity': max_committed_power},
+                                                               ignore_index=True)
+    
+    # Set the 'Hour' column as the index
+    GeneratorContingency.set_index('Hour', inplace=True)
+    
+    # Print the resulting DataFrame
+    print(GeneratorContingency)
+    
+    # Merge DataFrames across columns
+    dispatch = pd.concat([GeneratorContingency, TotalOutputPower], axis=1)
+    
+    # rename columns
+    dispatch = dispatch.rename(columns={'PowerCapacity': 'pcontingency',0: 'pcommitted'})
+    dispatch['ploss'] = (dispatch['pcontingency']/(dispatch['pcommitted']-dispatch['pcontingency']))*-1
+    dispatch = dispatch.reset_index()
+
+    # Find the ploss max for each GeneratorName
+    max_ploss = dispatch.groupby('GeneratorName')['ploss'].max()
+
+    # # Find the ploss min for each GeneratorName
+    # min_ploss = dispatch.groupby('GeneratorName')['ploss'].min()
+
+    # Save the original dispatch
+    dispatch.to_csv('dispatch.csv', index=False)
+
+    # Filter the original dispatch using the max_ploss and min_ploss for each GeneratorName
+    filtered_dispatch = dispatch[
+        #(
+        dispatch.set_index(['GeneratorName', 'ploss'])
+                    .index.isin(max_ploss.items()) 
+                    #| 
+                    #dispatch.set_index(['GeneratorName', 'ploss'])
+                    #.index.isin(min_ploss.items()))
+                                  ]
+    filtered_dispatch.to_csv('filtered_dispatch.csv', index=False)
+    # filtered_dispatch = dispatch
+# %% power swing solutions
+    # to save the results of inertia and pprim into the dispatch result
+    # dispatch = filtered_dispatch
+    filtered_dispatch['optimal_k'] = None
+    filtered_dispatch['optimal_H'] = None
+    
+    # Create an empty dictionary to store results
+    freq_security = {}
+    
+    # Crear un archivo Excel para almacenar los resultados
+    with pd.ExcelWriter('power_swing_results.xlsx', engine='xlsxwriter') as writer:
+        contingency_count = 1  # Inicializar el contador de hojas
+    
+        for index, row in filtered_dispatch.iterrows():
+            # Perform the operations on each row
+    
+            def power_swing(y, t, k, H):
+                deltap, f = y
+    
+                if t < 1:
+                    ploss = 0
+                    pprim = 0
+                elif t < 5:
+                    ploss = row['ploss']
+                    deltap = ploss
+                    pprim = 0
+                else:
+                    ploss = row['ploss']
+                    pcommitted = row['pcommitted']
+                    pprim = (-k * f) / pcommitted * (t-5)
+                    deltap = ploss + pprim
+    
+                delf = deltap / (2 * H)
+    
+                return [deltap, delf]
+    
+            # Initial conditions
+            f0 = 0
+            y0 = [0, f0]
+    
+            # Time vector
+            t = np.arange(0, 61, 1)  # Time steps every 1 second from 0 to 60 seconds
+    
+            # Create an empty DataFrame to store results
+            results_df = pd.DataFrame({'Time': t})
+    
+            # Function to calculate frequency at each time step
+            def calc_frequency_at_time(k, H):
+                sol = odeint(power_swing, y0, t, args=(k, H))
+                f_values = sol[:, 1]  # Frequency values at each time step
+                return f_values
+    
+            # Constraints
+            def constraints_satisfied(k, H):
+                f_values = calc_frequency_at_time(k, H)
+                der_f_values = np.gradient(f_values, t)
+                min_der_f = np.min(der_f_values)
+                min_f = np.min(f_values)
+                f_at_60s = f_values[-1]
+    
+                return min_der_f >= -0.002 and min_f >= -0.016 and f_at_60s >= -0.01
+    
+            # Search for the first solution by iterating through values of H and k
+            lower_bound_H = 1
+            upper_bound_H = 100  # Adjust the upper bound as needed
+            lower_bound_k = 0
+            upper_bound_k = 4000  # Adjust the upper bound as needed
+            step = 1
+    
+            found_solution = False
+            # optimal_k = None                                  # k variable
+            optimal_k = 1700  # Valor constante de k
+            optimal_H = None
+    
+            for H in range(lower_bound_H, upper_bound_H + 1, step):
+                # for k in range(lower_bound_k, upper_bound_k + 1, step):      # k variable
+                    #if constraints_satisfied(k, H):                        # k variable
+                    if constraints_satisfied(optimal_k, H):
+                        found_solution = True
+                        #optimal_k = k          # k variable
+                        optimal_H = H
+                        break
+                # if found_solution      # k variable
+                #     break              # k variable
+    
+            if found_solution:
+                print(f"Optimal k (fixed at 1700) that satisfies constraints: {optimal_k}")
+                #print(f"Optimal k that satisfies constraints: {optimal_k}")
+                print(f"Optimal H that satisfies constraints: {optimal_H}")
+                # Update the DataFrame with the new values
+                filtered_dispatch.at[index, 'optimal_k'] = optimal_k  # Store in 'optimal_k'
+                filtered_dispatch.at[index, 'optimal_H'] = optimal_H  # Store in 'optimal_H'
+    
+                # Solve the ODE system with the optimal k and H
+                sol = odeint(power_swing, y0, t, args=(optimal_k, optimal_H))
+    
+                # Extract the results
+                deltap = sol[:, 0]
+                f = sol[:, 1]
+                der_f = np.gradient(f, t)
+                pprim = np.where(t < 5, 0, (-optimal_k * f) / row['pcommitted'] * (t-5))
+                ploss = np.where(t < 5, row['ploss'], row['ploss'])
+                pcommitted = row['pcommitted']
+                pcontingency = row['pcontingency']
+    
+                # Store results in the DataFrame
+                results_df['Frequency'] = f
+                results_df['RoCoF'] = der_f
+                results_df['DeltaP'] = deltap
+                results_df['pcontingency'] = pcontingency
+                results_df['PrimaryResponsePU'] = pprim
+                results_df['PrimaryResponseMW'] = pprim*(pcommitted-pcontingency)
+                results_df['pcommitted'] = pcommitted
+                results_df['ploss'] = ploss
+    
+                # Add the values of k and H to the DataFrame
+                results_df['OptimalK'] = optimal_k
+                results_df['OptimalH'] = optimal_H
+    
+                # Store the results_df in the dictionary
+                freq_security[f"Contingency{contingency_count}"] = results_df    
+    
+                # Guardar el DataFrame en una pestaña numerada
+                sheet_name = f'Contingency{contingency_count}'
+                results_df.to_excel(writer, sheet_name=sheet_name, index=False)
+                
+                contingency_count += 1  # Incrementar el contador de hojas
+                
+                # Plotting code remains the same
+                fig, ax1 = plt.subplots(figsize=(12, 8))
+            
+                # Frequency Values Plot (Left Y-axis)
+                ax1.plot(t, f, color='tab:blue', linestyle='-', label='f')
+                ax1.plot(t, der_f, color='tab:orange', linestyle='-', label='der(f)')
+                ax1.set_xlabel('Time')
+                ax1.set_ylabel('Frequency', color='tab:blue')
+                ax1.tick_params(axis='y', labelcolor='tab:blue')
+                ax1.legend(loc='upper left')
+            
+                # Power Values Plot (Right Y-axis)
+                ax2 = ax1.twinx()
+                ax2.plot(t, deltap, color='tab:green', linestyle='--', label='deltap')
+                ax2.plot(t, ploss, color='tab:red', linestyle='--', label='ploss')
+                ax2.plot(t, pprim, color='tab:purple', linestyle='--', label='pprim')
+                ax2.set_ylabel('Power', color='tab:red')
+                ax2.tick_params(axis='y', labelcolor='tab:red')
+                ax2.legend(loc='upper right')
+            
+                # Overall Plot Settings
+                plt.title('Power Swing')
+                plt.xlim(0, 60)
+                plt.tight_layout()
+                plt.show()
+                
+            else:
+                print("No solution found within the specified range of H and k that satisfies constraints.")
+    
+    # Crear un DataFrame vacío para almacenar los resultados
+    summary = pd.DataFrame(columns=['Contingency', 'Inertia'])
+    
+    # Iterar sobre los DataFrames en el diccionario y tomar el primer valor de 'A' y 'B'
+    for nombre_df, df in freq_security.items():
+        primer_contingency = df['pcontingency'].iloc[0]  # Primer valor de la columna 'A'
+        primer_inertia = df['OptimalH'].iloc[0]  # Primer valor de la columna 'B'
+        
+        # Agregar los valores a 'Summary'
+        summary = summary.append({'Contingency': primer_contingency, 'Inertia': primer_inertia}, ignore_index=True)
+    
+    # Copiar valores de 'B' en 'D' donde los valores en 'A' y 'C' coinciden
+    for index, row in dispatch.iterrows():
+        valor_a = row['pcontingency']
+        coincidencia = summary[summary['Contingency'] == valor_a]
+        if len(coincidencia) > 0:
+            dispatch.at[index, 'Inertia'] = coincidencia['Inertia'].values[0]
+            # dispatch.at[index, 'PrimaryResponse'] = coincidencia['PrimaryResponse'].values[0]
+    dispatch['Inertia'] = dispatch['Inertia']*2
+    dispatch.rename(columns={'index': 'TIMESTAMP'}, inplace=True)
+    dispatch.set_index('TIMESTAMP', inplace=True)
+        
+    return freq_security, summary, dispatch

@@ -135,6 +135,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             logging.error('No valid grid data file provided')
             GridData = pd.DataFrame()
 
+    # Inertia Limit:
+    InertiaLimit = load_time_series(config, config['InertiaLimit']).fillna(0)
+    
     # Boundary Sector Interconnections:
     if 'BoundarySectorInterconnections' in config and os.path.isfile(config['BoundarySectorInterconnections']):
         BS_flows = load_time_series(config, config['BoundarySectorInterconnections']).fillna(0)
@@ -673,7 +676,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'PriceTransmission': PriceTransmission,
                'SectorXDemand': SectorXDemand, 'CostXNotServed': CostXNotServed,
                'SectorXFlexibleDemand': SectorXFlexibleDemand, 'SectorXFlexibleSupply': SectorXFlexibleSupply,
-               'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels}
+               'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'InertiaLimit': InertiaLimit}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
@@ -839,8 +842,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXStorageProfile'] = ['nx', 'h']
     if MTS == 0:
         sets_param['InertiaConstant'] = ['au']
+        sets_param['InertiaLimit'] = ['h']
     if (grid_flag == "DC-Power Flow"):
-        sets_param['PTDF'] = ['l', 'n']
+        sets_param['PTDF'] = ['l', 'n']   
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -1082,9 +1086,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         if not found:
             logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] +
                             ' in unit ' + Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
-
+    
     # %%###############################################################################################################
-
+    # Inertia limit to parameters dict
+    # parameters['InertiaLimit']['val'] = InertiaLimit['InertiaLimit'].values
+    if MTS == 0:
+        parameters['InertiaLimit']['val'] = InertiaLimit.iloc[:, 0].values
+    
     # Maximum Line Capacity
     if (grid_flag == "DC-Power Flow"):
         for i, l in enumerate(sets['l']):

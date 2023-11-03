@@ -130,7 +130,7 @@ commons['StdParameters'] = {
     # Horizon Settings
     'DataTimeStep': 60, 'SimulationTimeStep': 61,
     # Simulation Options
-    'SimulationType': 76, 'ReserveCalculation': 77, 'AllowCurtailment': 78, 'TransmissionGridType': 79,
+    'SimulationType': 76, 'ReserveCalculation': 77, 'AllowCurtailment': 78, 'TransmissionGridType': 79, 'FrequencyServices': 80,
     # Mid-term scheduling related
     'HydroScheduling': 98, 'HydroSchedulingHorizon': 99, 'InitialFinalReservoirLevel': 100
 }
@@ -150,6 +150,8 @@ commons['PathParameters'] = {
     # DC-Power Flow data
     'GridData': 145,
     # 'PTDFMatrix': 145,
+    # Inertia Limit data
+    'InertiaLimit': 146,
     # # Hydrogen data
     # 'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
     # Reserves input data
@@ -175,5 +177,7 @@ commons['default'] = {
     # Optimization and infeasibility cost data
     'ShareOfFlexibleDemand': 125, 'LoadShedding': 129,
     'DemandFlexibility': 162, 'ShareOfQuickStartUnits': 163,
-    'ValueOfLostLoad': 204, 'PriceOfSpillage': 205, 'WaterValue': 206
+    'ValueOfLostLoad': 204, 'PriceOfSpillage': 205, 'WaterValue': 206,
+    # Inertia requirement default
+    'InertiaLimit': 146
 }

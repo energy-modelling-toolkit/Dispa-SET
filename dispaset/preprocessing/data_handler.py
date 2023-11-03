@@ -736,7 +736,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
         for p in default:
             config['default'][p] = sheet.cell_value(default[p], 5)
 
-        # True/Falst values:
+        # True/False values:
         config['zones'] = read_truefalse(sheet, 225, 1, 250, 3)
         config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 250, 6)
         config['mts_zones'] = read_truefalse(sheet, 225, 1, 250, 3, 2)
@@ -814,7 +814,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
         for p in default:
             config['default'][p] = sheet.cell_value(default[p], 5)
 
-        # True/Falst values:
+        # True/False values:
         config['zones'] = read_truefalse(sheet, 225, 1, 250, 3)
         config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 250, 6)
         config['mts_zones'] = read_truefalse(sheet, 225, 1, 250, 3, 2)
@@ -845,6 +845,84 @@ def load_config_excel(ConfigFile, AbsPath=True):
                     config[param] = os.path.join(basefolder, config[param])
 
         logging.info("Using config file (v20.04) " + ConfigFile + " to build the simulation environment")
+        logging.info("Using " + config['SimulationDirectory'] + " as simulation folder")
+        logging.info("Description of the simulation: " + config['Description'])
+
+        return config
+        
+    elif sheet.cell_value(0, 0) == 'Dispa-SET Configuration File (v20.05)':
+        config['Description'] = sheet.cell_value(5, 1)
+        config['StartDate'] = xlrd.xldate_as_tuple(sheet.cell_value(56, 2), wb.datemode)
+        config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(57, 2), wb.datemode)
+        config['HorizonLength'] = int(sheet.cell_value(58, 2))
+        config['LookAhead'] = int(sheet.cell_value(59, 2))
+        config['CplexAccuracy'] = sheet.cell_value(38, 2)
+        config['CplexSetting'] = sheet.cell_value(39, 2)
+
+        # Defning the input locations in the config file:
+        StdParameters = commons['StdParameters']
+        PathParameters = commons['PathParameters']
+
+        # Modifiers and default values
+        modifiers = commons['modifiers']
+        default = commons['default']
+
+        # Introduce scaled outflows
+        PathParameters['ReservoirScaledOutflows'] = 134
+        # Also include boundary sector data
+        PathParameters['SectorXDemand'] = 137
+        PathParameters['BoundarySectorData'] = 138
+        PathParameters['BoundarySectorNTC'] = 139
+        PathParameters['BoundarySectorInterconnections'] = 140
+        PathParameters['SectorXFlexibleDemand'] = 141
+        PathParameters['SectorXFlexibleSupply'] = 142
+        PathParameters['BoundarySectorMaxSpillage'] = 143
+        PathParameters['SectorXReservoirLevels'] = 144
+        PathParameters['CostXNotServed'] = 170
+        default['CostXNotServed'] = 170
+
+        for p in StdParameters:
+            config[p] = sheet.cell_value(StdParameters[p], 2)
+        for p in PathParameters:
+            config[p] = sheet.cell_value(PathParameters[p], 2)
+        config['modifiers'] = {}
+        for p in modifiers:
+            config['modifiers'][p] = sheet.cell_value(modifiers[p], 2)
+        config['default'] = {}
+        for p in default:
+            config['default'][p] = sheet.cell_value(default[p], 5)
+
+        # True/False values:
+        config['zones'] = read_truefalse(sheet, 225, 1, 250, 3)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 250, 6)
+        config['mts_zones'] = read_truefalse(sheet, 225, 1, 250, 3, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 250, 6, 2)
+        config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 321, 3)
+        config['ReserveParticipation'] = config['ReserveParticipation'] + read_truefalse(sheet, 305, 4, 321, 6)
+        config['ReserveParticipation_CHP'] = read_truefalse(sheet, 299, 1, 302, 3)
+
+        # Set default values (for backward compatibility):
+        for param in DEFAULTS:
+            if config['default'][param] == '':
+                config['default'][param] = DEFAULTS[param]
+                logging.warning(
+                    'No value was provided in config file for {}. Will use {}'.format(param, DEFAULTS[param]))
+                config['default'][param] = DEFAULTS[param]
+
+        if AbsPath:
+            # Changing all relative paths to absolute paths. Relative paths must be defined
+            # relative to the parent folder of the config file.
+            abspath = os.path.abspath(ConfigFile)
+            basefolder = os.path.abspath(os.path.join(os.path.dirname(abspath), os.pardir))
+            if not os.path.isabs(config['SimulationDirectory']):
+                config['SimulationDirectory'] = os.path.join(basefolder, config['SimulationDirectory'])
+            for param in PathParameters:
+                if config[param] == '' or config[param].isspace():
+                    config[param] = ''
+                elif not os.path.isabs(config[param]):
+                    config[param] = os.path.join(basefolder, config[param])
+
+        logging.info("Using config file (v20.05) " + ConfigFile + " to build the simulation environment")
         logging.info("Using " + config['SimulationDirectory'] + " as simulation folder")
         logging.info("Description of the simulation: " + config['Description'])
 

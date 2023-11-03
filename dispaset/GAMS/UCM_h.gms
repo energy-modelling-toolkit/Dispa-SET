@@ -191,6 +191,8 @@ $If %MTS% == 0 SectorXStorageInitial(nx)    [MWh]           Boundary sector stor
 SectorXStorageProfile(nx,h)                 [%]             Boundary sector storage level respected at the end of each horizon
 $If %TransmissionGrid% == 1 PTDF(l,n)       [p.u.]          Power Transfer Distribution Factor Matrix
 $If %MTS% == 0 InertiaConstant(au)          [s]             Inertia Constant
+* New
+$If %MTS% == 0 InertiaLimit(h)              [s\h]             Inertia Limit
 ;
 
 *Parameters as used within the loop
@@ -315,6 +317,9 @@ $LOAD SectorXStorageProfile
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
 $If %TransmissionGrid% == 1 $LOAD PTDF
 $If %MTS% == 0 $LOAD InertiaConstant
+*New
+$If %MTS% == 0 $LOAD InertiaLimit
+
 ;
 
 $If %Verbose% == 0 $goto skipdisplay
@@ -403,6 +408,8 @@ SectorXStorageProfile,
 $If %RetrieveStatus% == 1 , CommittedCalc
 $If %TransmissionGrid% == 1, PTDF
 $If %MTS% == 0, InertiaConstant
+* New
+$If %MTS% == 0, InertiaLimit
 ;
 
 $label skipdisplay
@@ -967,7 +974,9 @@ EQ_SysInertia(i)..
 ;
 
 EQ_I_limit(u,i)..
-         0
+*         0
+* New
+         InertiaLimit(i)
          =l=
          SysInertia(i)
 ;
