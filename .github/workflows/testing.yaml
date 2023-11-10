@@ -1,0 +1,79 @@
+name: Testing
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+      - feature/boundary_sectors
+  pull_request:
+    branches:
+      - master
+      - develop
+      - feature/boundary_sectors
+  workflow_dispatch:
+
+jobs:
+  dispaset:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: this is dispaset
+        run: echo "Torture Dispa-SET"
+        shell: bash
+
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+#        os: ['ubuntu-latest', 'windows-latest']
+        os: ['ubuntu-latest']
+        python-version: ['3.8']
+
+    env:
+      GAMS: 24.9
+      GAMS_URL: https://d37drm4t2jghv5.cloudfront.net/distributions/24.9.2/linux/linux_x64_64_sfx.exe
+      CC_TEST_REPORTER_ID: 4de43419e620692eff68510258e9428a6da4e5dca96ef9deb7744566ad3a7386
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python_version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python_version }}
+
+      - name: Install GAMS
+        run: |
+          wget -N $GAMS_URL -O gams.zip
+          unzip -qu gams.zip -d $HOME
+          ln -s $HOME/gams${GAMS}_linux_x64_64_sfx $HOME/gams
+          export GAMSPATH="$HOME/gams"
+          export PATH="$GAMSPATH:$PATH"
+          cd $HOME/gams
+          gamsinst -a
+          cd -
+          echo "GAMSPATH=$GAMSPATH" >> $GITHUB_ENV
+        env:
+          GAMSPATH: $GAMSPATH
+#          echo "::set-env name=GAMSPATH::$GAMSPATH"
+        shell: bash
+
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          activate-environment: dispaset
+          python-version: ${{ matrix.python-version }}
+      - name: Bash
+        shell: bash -el {0}
+        run: |
+          conda info
+          pip install -e .
+          conda list
+
+      - name: Run tests
+        run: |
+          conda run -n dispaset pytest tests/
+        shell: bash

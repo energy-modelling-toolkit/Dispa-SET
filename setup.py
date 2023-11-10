@@ -47,13 +47,18 @@ setup(
         "click >= 3.3",
         "numpy >= 1.12",
         "pandas >= 0.19",
-        "xlrd >= 0.9",
+        "xlrd == 1.2",
         "matplotlib >= 1.5.1",
         "gdxcc >= 7",
         "xlrd == 1.2.0",
         "gamsxcc",
         "optcc",
-        "networkx"
+        "networkx",
+        "pytest",
+        "xarray",
+        "pyyaml",
+        # "projects",
+        # "cartopy >= 0.20"
     ],
     entry_points={
         'console_scripts': [

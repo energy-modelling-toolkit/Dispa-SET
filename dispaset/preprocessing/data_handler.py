@@ -13,8 +13,7 @@ try:
 except ImportError:
     pass
 
-DEFAULTS = {'ReservoirLevelInitial': 0.5, 'ReservoirLevelFinal': 0.5, 'ValueOfLostLoad': 1E5,
-            'PriceOfSpillage': 1, 'WaterValue': 100, 'ShareOfQuickStartUnits': 0.5, 'PriceOfAmmonia': 0,
+DEFAULTS = {'ReservoirLevelInitial': 0.5, 'ReservoirLevelFinal': 0.5, 'ValueOfLostLoad': 1E5, 'WaterValue': 100, 'ShareOfQuickStartUnits': 0.5, 'PriceOfAmmonia': 0,
             'PriceOfNuclear': 0, 'PriceOfBlackCoal': 0, 'PriceOfGas': 0, 'PriceOfFuelOil': 0, 'PriceOfBiomass': 0,
             'PriceOfCO2': 0, 'PriceOfLignite': 0, 'PriceOfPeat': 0, 'LoadShedding': 0, 'CostHeatSlack': 0,
             'CostLoadShedding': 100, 'ShareOfFlexibleDemand': 0, 'DemandFlexibility': 0, 'PriceTransmission': 0
@@ -562,7 +561,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
                    'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183, 'PriceOfBiomass': 184,
                    'PriceOfCO2': 166, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'LoadShedding': 129,
                    'CostHeatSlack': 167, 'CostLoadShedding': 168, 'ValueOfLostLoad': 204,
-                   'PriceOfSpillage': 205, 'WaterValue': 206, 'ShareOfQuickStartUnits': 163,
+                   'CostXSpillage': 205, 'WaterValue': 206, 'ShareOfQuickStartUnits': 163,
                    'ShareOfFlexibleDemand': 125, 'DemandFlexibility': 162, 'PriceTransmission': 169, 'CostH2Slack': 170}
         for p in StdParameters:
             config[p] = sheet.cell_value(StdParameters[p], 2)
@@ -722,8 +721,13 @@ def load_config_excel(ConfigFile, AbsPath=True):
         PathParameters['SectorXFlexibleSupply'] = 142
         PathParameters['BoundarySectorMaxSpillage'] = 143
         PathParameters['SectorXReservoirLevels'] = 144
+        PathParameters['SectorXAlertLevel'] = 145
+        PathParameters['SectorXFloodControl'] = 146
         PathParameters['CostXNotServed'] = 170
+        PathParameters['CostXSpillage'] = 205
+        PathParameters['CostCurtailment'] = 171
         default['CostXNotServed'] = 170
+        default['CostCurtailment'] = 171
 
         for p in StdParameters:
             config[p] = sheet.cell_value(StdParameters[p], 2)
@@ -961,7 +965,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
 
                 # List of parameters for which an external file path must be specified:
         PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
-                  'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
+                  'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'CostXSpillage',
                   'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat', 'HeatDemand',
                   'CostHeatSlack', 'CostLoadShedding', 'ShareOfFlexibleDemand']
         for i, param in enumerate(PARAMS):
@@ -1004,7 +1008,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
         config['default']['CostHeatSlack'] = sheet.cell_value(79, 5)
         config['default']['CostLoadShedding'] = sheet.cell_value(80, 5)
         config['default']['ValueOfLostLoad'] = sheet.cell_value(81, 5)
-        config['default']['PriceOfSpillage'] = sheet.cell_value(82, 5)
+        config['default']['CostXSpillage'] = sheet.cell_value(82, 5)
         config['default']['WaterValue'] = sheet.cell_value(83, 5)
         config['default']['ShareOfQuickStartUnits'] = 0.5  # to be added to xlsx file
 
@@ -1054,25 +1058,28 @@ def load_config_yaml(filename, AbsPath=True):
 
     params_to_be_added = {'Temperatures': '', 'DataTimeStep': 1, 'SimulationTimeStep': 1, 'HydroScheduling': 'Off',
                           'HydroSchedulingHorizon': 'Annual', 'InitialFinalReservoirLevel': True,
-                          'ReserveParticipation_CHP': []}
+                          'ReserveParticipation_CHP': [], 'CplexAccuracy': 0.005, 'CplexSetting': 'Default'}
     for param in params_to_be_added:
         if param not in config:
             config[param] = params_to_be_added[param]
 
     # Set default values (for backward compatibility):
     NonEmptyDefaultss = {'ReservoirLevelInitial': 0.5, 'ReservoirLevelFinal': 0.5, 'ValueOfLostLoad': 1E5,
-                         'PriceOfSpillage': 1, 'WaterValue': 100, 'ShareOfQuickStartUnits': 0.5}
+                         'CostXSpillage': 1, 'WaterValue': 100, 'ShareOfQuickStartUnits': 0.5, 'CostCurtailment': 0}
     for param in NonEmptyDefaultss:
         if param not in config['default']:
             config['default'][param] = NonEmptyDefaultss[param]
 
     # Define missing parameters if they were not provided in the config file
     PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
-              'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil',
+              'ReservoirScaledInflows', 'ReservoirScaledOutflows','PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas',
+              'PriceOfFuelOil', 'CostXSpillage',
               'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia',
               'HeatDemand', 'CostHeatSlack', 'CostLoadShedding', 'ShareOfFlexibleDemand', 'Temperatures',
-              'PriceTransmission', 'Reserve2D', 'Reserve2U', 'H2RigidDemand', 'H2FlexibleDemand', 'H2FlexibleCapacity',
-              'CostH2Slack', 'GeoData']
+              'PriceTransmission', 'Reserve2D', 'Reserve2U', 'GeoData', 'SectorXDemand', 'BoundarySectorData',
+              'BoundarySectorNTC', 'BoundarySectorInterconnections', 'SectorXFlexibleDemand', 'SectorXFlexibleSupply',
+              'BoundarySectorMaxSpillage', 'SectorXReservoirLevels', 'SectorXAlertLevel', 'SectorXFloodControl',
+              'CostXSpillage', 'CostXNotServed', 'CostCurtailment']
     for param in PARAMS:
         if param not in config:
             config[param] = ''

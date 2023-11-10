@@ -1,5 +1,6 @@
 import datetime as dt
 import logging
+import numbers
 import os
 import shutil
 import sys
@@ -225,6 +226,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             plants[key] = plants['Unit']
             logging.info('No "' + key + '" header was found in the units table. One individual zone is defined per '
                                         'power plant')
+    # If there is a path for FuelPrices in the config File, define one individual price per power plant:
+    fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2',
+             'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia']
+    found = False
+    for key in fuels:
+        if os.path.isfile(config[key]):
+            plants['FuelPricebyUnit'] = plants['Unit']
+            found = True
+            break
 
     # check plant list:
     check_units(config, plants)
@@ -232,7 +242,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Defining the hydro storages:
     plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
     check_sto(config, plants_sto)
-    
+    # check_sto(config, plants_sto.dropna(subset = ['STOCapacity']))
+
     # Defining the thermal storages:
     plants_thms = plants[[u in commons['tech_thermal_storage'] for u in plants['Technology']]]
     check_sto(config, plants_thms)
@@ -296,18 +307,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     Temperatures = NodeBasedTable('Temperatures', config)
 
     # Detecting boundary zones:
-    filter_bs_cols = [col for col in plants_all_bs if col.startswith('Sector')]
-    zones_bs = []
-    for col in plants_all_bs[filter_bs_cols].columns:
-        tmp = plants_all_bs[col].unique().tolist()
-        zones_bs += tmp
-    zones_bs = list(set(zones_bs))
+    # filter_bs_cols = [col for col in plants_all_bs if col.startswith('Sector')]
+    zones_bs = BoundarySector.index.to_list()
+    # for col in plants_all_bs[filter_bs_cols].columns:
+    #     tmp = plants_all_bs[col].unique().tolist()
+    #     zones_bs += tmp
+    # zones_bs = list(set(np.unique(zones_bs)))
     if '' in zones_bs:
         zones_bs.remove('')
     if np.nan in zones_bs:
         zones_bs = [x for x in zones_bs if pd.isnull(x) == False]
     if 'nan' in zones_bs:
         zones_bs.remove('nan')
+	zones_bss = np.unique(zones_bs + list(BoundarySector.index)).tolist()
 
     if 'SectorXDemand' in config and os.path.isfile(config['SectorXDemand']):
         SectorXDemand = GenericTable(zones_bs, 'SectorXDemand', config, default=0)
@@ -331,6 +343,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         logging.warning('No SectorXReservoirLevels will be considered (no valid file provided)')
         SectorXReservoirLevels = pd.DataFrame(index=config['idx_long']) 
 
+    if 'SectorXAlertLevel' in config and os.path.isfile(config['SectorXAlertLevel']):
+        SectorXAlertLevel = GenericTable(zones_bs, 'SectorXAlertLevel', config, default=0)
+    else:
+        logging.warning('No SectorXAlertLevel will be considered (no valid file provided)')
+        SectorXAlertLevel = pd.DataFrame(index=config['idx_long'])    
+   
+    if 'SectorXFloodControl' in config and os.path.isfile(config['SectorXFloodControl']):
+        SectorXFloodControl = GenericTable(zones_bs, 'SectorXFloodControl', config, default=0)
+    else:
+        logging.warning('No SectorXFloodControl will be considered (no valid file provided)')
+        SectorXFloodControl = pd.DataFrame(index=config['idx_long'])  
+        
     # Boundary Sector Max Spillage
     if 'BoundarySectorMaxSpillage' in config and os.path.isfile(config['BoundarySectorMaxSpillage']):
         BS_spillage = load_time_series(config, config['BoundarySectorMaxSpillage']).fillna(0)
@@ -344,6 +368,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         BS_forced_spillage = pd.DataFrame(0, index=BS_spillage.index, columns=BS_spillage.columns)
     else:
         BS_forced_spillage = pd.DataFrame(index=idx_long)
+
+    lines_bs = BS_spillage.columns
+
+    CostXSpillage = GenericTable(lines_bs, 'CostXSpillage', config, default=config['default']['PriceOfSpillage'])
 
     # Read BS Flexible demand & supply
     if 'SectorXFlexibleDemand' in config and os.path.isfile(config['SectorXFlexibleDemand']):
@@ -412,12 +440,44 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     check_reserves(Reserve2D, Reserve2U, Load)
 
     # Fuel prices:
-    fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2',
-             'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia']
+    # fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2',
+    #          'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia']
+    FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
+                   'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia',
+                   'PriceOfCO2': 'PriceOfCO2'}
     FuelPrices = {}
     for fuel in fuels:
-        FuelPrices[fuel] = NodeBasedTable(fuel, config, default=config['default'][fuel])
-
+        fp = pd.DataFrame()
+        loc = plants['Zone']
+        ft = plants['Fuel']
+        if os.path.isfile(config[fuel]):
+            fp = pd.read_csv(config[fuel], index_col=0,
+                             na_values=commons['na_values'],
+                             keep_default_na=False)
+            fp.index = pd.to_datetime(fp.index).tz_localize(None)
+            if set(fp.columns).issubset(plants['Unit']):
+                FuelPrices[fuel] = UnitBasedTable(plants, fuel, config, fallbacks=['Unit', 'Technology'])
+            else:
+                key = [key for key, val in FuelEntries.items() if val == fuel][0]
+                FuelPrices[fuel] = pd.DataFrame(index=config['idx_long'])
+                for unit, zone in loc.items():
+                    if (unit, key) in ft.iteritems():
+                        if zone in fp.columns:
+                            FuelPrices[fuel][unit] = fp[zone]
+                FuelPrices[fuel] = FuelPrices[fuel].loc[config['idx_long']]
+        else:
+            if config['default'][fuel] == 0:
+                FuelPrices[fuel] = UnitBasedTable(plants, fuel, config, default=config['default'][fuel])
+            else:
+                FuelPrices[fuel] = pd.DataFrame(index=config['idx_long'])
+                key = [key for key, val in FuelEntries.items() if val == fuel][0]
+                for unit in ft.index:
+                    if (unit, key) in ft.iteritems():
+                        FuelPrices[fuel][unit] = config['default'][fuel]
+    for unit_name, price in FuelPrices.items():
+        missing_columns = list(set(plants['Unit']) - set(price.columns))
+        price[missing_columns] = 0
+        
     # Bidirectional Interconnections:
     if (grid_flag == "DC-Power Flow"):
         
@@ -676,7 +736,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'PriceTransmission': PriceTransmission,
                'SectorXDemand': SectorXDemand, 'CostXNotServed': CostXNotServed,
                'SectorXFlexibleDemand': SectorXFlexibleDemand, 'SectorXFlexibleSupply': SectorXFlexibleSupply,
-               'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'InertiaLimit': InertiaLimit}
+               'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel, 
+               'SectorXFloodControl': SectorXFloodControl, 
+               'CostXSpillage':CostXSpillage, 'InertiaLimit': InertiaLimit}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
@@ -733,6 +795,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets['mk'] = ['DA', '2U', '2D', 'Flex']
     sets['n'] = config['zones']
     sets['nx'] = zones_bs
+    sets['nx_CC'] = pd.Series(zones_bs)[pd.Series(zones_bs) != 'S_EC'].tolist()
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['lx'] = BSInterconnections
@@ -740,6 +803,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
+    sets['sx'] = Plants_wat[Plants_wat['Technology']=='HDAMC'].index.tolist()
     sets['u'] = Plants_merged[[u in [x for x in commons['Technologies'] if x not in
                                      commons['tech_p2ht'] + commons['tech_thermal_storage'] +
                                      commons['tech_p2bs'] + commons['tech_boundary_sector']]
@@ -781,6 +845,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['CostShutDown'] = ['au']
     sets_param['CostStartUp'] = ['au']
     sets_param['CostVariable'] = ['au', 'h']
+    sets_param['CostXStorageAlert'] = ['nx','h']
+    sets_param['CostXFloodControl'] = ['nx','h']
+    sets_param['CostXSpillage'] = ['slx','h']
     sets_param['Curtailment'] = ['n']
     sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
@@ -840,6 +907,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXStorageMinimum'] = ['nx']
     sets_param['SectorXStorageInitial'] = ['nx']
     sets_param['SectorXStorageProfile'] = ['nx', 'h']
+    sets_param['SectorXAlertLevel'] = ['nx', 'h']
+    sets_param['SectorXFloodControl'] = ['nx', 'h']
     if MTS == 0:
         sets_param['InertiaConstant'] = ['au']
         sets_param['InertiaLimit'] = ['h']
@@ -960,12 +1029,20 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             logging.warning(
                 'Could not find reservoir level data for storage plant ' + nx + '. Using the provided default initial '
                                                                                 'and final values')
-            parameters['SectorXStorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],
-                                                                           config['default']['ReservoirLevelFinal'],
-                                                                           len(idx_sim))
+            parameters['SectorXStorageProfile']['val'][i, :] = np.where(
+                BoundarySector['SectorXStorageCapacity'][nx] == 0, 0,
+                np.linspace(config['default']['ReservoirLevelInitial'], config['default']['ReservoirLevelFinal'],
+                            len(idx_sim)))
+
+        # Setting Storage Alert
+        if nx in finalTS['SectorXAlertLevel'] and any(finalTS['SectorXAlertLevel'][nx] > 0) and all(
+                finalTS['SectorXAlertLevel'][nx] - 1 <= 1e-11):
+            parameters['SectorXAlertLevel']['val'][i, :] = finalTS['SectorXAlertLevel'][nx][idx_sim].values
+        if nx in finalTS['SectorXFloodControl'] and any(finalTS['SectorXFloodControl'][nx] > 0) and all(
+                finalTS['SectorXFloodControl'][nx] - 1 <= 1e-11):
+            parameters['SectorXFloodControl']['val'][i, :] = finalTS['SectorXFloodControl'][nx][idx_sim].values
         parameters['SectorXStorageInitial']['val'][i] = parameters['SectorXStorageProfile']['val'][i, 0] * \
                                                         BoundarySector['SectorXStorageCapacity'][nx]
-
     # Storage Inflows:
     for i, s in enumerate(sets['asu']):
         if s in finalTS['ScaledInflows']:
@@ -974,7 +1051,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             if s in finalTS['ScaledOutflows']:
                 parameters['StorageOutflow']['val'][i, :] = finalTS['ScaledOutflows'][s][idx_sim].values * \
                                                             Plants_all_sto['PowerCapacity'][s]
-
     # # Heat demands:
     # for i, u in enumerate(sets['n_th']):
     #     if u in finalTS['HeatDemand']:
@@ -1041,7 +1117,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])
     for i in range(len(sets['n'])):
-        values[0, i, :] = finalTS['Load'][sets['n'][i]]
+        values[0, i, :] = finalTS['Load'][sets['n'][i]] * (1 - finalTS['ShareOfFlexibleDemand'][sets['n'][i]])
         values[1, i, :] = finalTS['Reserve2U'][sets['n'][i]]
         values[2, i, :] = finalTS['Reserve2D'][sets['n'][i]]
         values[3, i, :] = finalTS['Load'][sets['n'][i]] * finalTS['ShareOfFlexibleDemand'][sets['n'][i]]
@@ -1057,27 +1133,126 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         parameters['CostCurtailment']['val'][i] = finalTS['CostCurtailment'][c]
 
     # %%###############################################################################################################
-    # Variable Cost
-    # Equivalence dictionary between fuel types and price entries in the config sheet:
-    FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
-                   'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia'}
+        # Variable Cost
+        # Equivalence dictionary between fuel types and price entries in the config sheet:
+        # FuelEntries = {'BIO': 'PriceOfBiomass', 'GAS': 'PriceOfGas', 'HRD': 'PriceOfBlackCoal', 'LIG': 'PriceOfLignite',
+        #                'NUC': 'PriceOfNuclear', 'OIL': 'PriceOfFuelOil', 'PEA': 'PriceOfPeat', 'AMO': 'PriceOfAmmonia'}
+    CostVariable = pd.DataFrame()
     for unit in range(Nunits):
-        c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
-        found = False
-        for FuelEntry in FuelEntries:
-            if Plants_merged['Fuel'][unit] == FuelEntry:
-                if Plants_merged['Technology'][unit] == 'ABHP':
-                    parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
-                                                                 Plants_merged['Efficiency'][unit] + \
-                                                                 Plants_merged['EmissionRate'][unit] * \
-                                                                 FuelPrices['PriceOfCO2'][c]
+        if 'FuelPricebyUnit' in plants.columns:
+            c = Plants_merged['Unit'][unit].split('-')[-1].strip()
+            found = False
+            for FuelEntry in FuelEntries:
+                CostVariable = pd.concat([
+                    CostVariable, FuelPrices[FuelEntries[FuelEntry]][c] / Plants_merged['Efficiency'][unit] + \
+                                  Plants_merged['EmissionRate'][unit] * FuelPrices['PriceOfCO2'][c]], axis=1)
+                if Plants_merged['Fuel'][unit] == FuelEntry:
+                    if Plants_merged['Technology'][unit] == 'ABHP':
+                        parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
+                                                                     Plants_merged['Efficiency'][unit] + \
+                                                                     Plants_merged['EmissionRate'][unit] * \
+                                                                     FuelPrices['PriceOfCO2'][c]
+                        found = True
+                    else:
+                        parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
+                                                                     Plants_merged['Efficiency'][unit] + \
+                                                                     Plants_merged['EmissionRate'][unit] * \
+                                                                     FuelPrices['PriceOfCO2'][c]
                     found = True
+            # Special case for biomass plants, which are not included in EU ETS:
+            if Plants_merged['Fuel'][unit] == 'BIO':
+                parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'][c] / \
+                                                             Plants_merged['Efficiency'][unit]
+            if not found:
+                logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] +
+                                ' in unit ' + Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
+        else:
+            FuelPrices_merged = {}
+            for key, unitprices in FuelPrices.items():
+                df_result = Plants_merged['FormerUnits'].apply(lambda group: unitprices[group].max(axis=1)).T
+                FuelPrices_merged[key] = df_result
+            c = Plants_merged['Unit'][unit]  # zone to which the unit belongs
+            found = False
+            for FuelEntry in FuelEntries:
+                CostVariable = pd.concat([
+                    CostVariable,
+                    FuelPrices_merged[FuelEntries[FuelEntry]][c] / Plants_merged['Efficiency'][unit] + \
+                    Plants_merged['EmissionRate'][unit] * FuelPrices_merged['PriceOfCO2'][c]], axis=1)
+                if Plants_merged['Fuel'][unit] == FuelEntry:
+                    if Plants_merged['Technology'][unit] == 'ABHP':
+                        parameters['CostVariable']['val'][unit, :] = FuelPrices_merged[FuelEntries[FuelEntry]][
+                                                                         c] / \
+                                                                     Plants_merged['Efficiency'][unit] + \
+                                                                     Plants_merged['EmissionRate'][unit] * \
+                                                                     FuelPrices_merged['PriceOfCO2'][c]
+                        found = True
+                    else:
+                        parameters['CostVariable']['val'][unit, :] = FuelPrices_merged[FuelEntries[FuelEntry]][
+                                                                         c] / \
+                                                                     Plants_merged['Efficiency'][unit] + \
+                                                                     Plants_merged['EmissionRate'][unit] * \
+                                                                     FuelPrices_merged['PriceOfCO2'][c]
+                        found = True
+            # Special case for biomass plants, which are not included in EU ETS:
+            if Plants_merged['Fuel'][unit] == 'BIO':
+                parameters['CostVariable']['val'][unit, :] = FuelPrices_merged['PriceOfBiomass'][c] / \
+                                                             Plants_merged['Efficiency'][unit]
+                found = True
+            if not found:
+                logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] +
+                                ' in unit ' + Plants_merged['Unit'][
+                                    unit] + '. A null variable cost has been assigned')
+    # %%###############################################################################################################
+    # Assign storage alert level costs to the unit with highest variable costs inside the zone
+
+    def zone_to_bs_mapping(df):
+        zone_mapping = {}
+        ambiguous_sectors = {}
+
+        # Iterate over the rows of the DataFrame
+        for _, row in df.iterrows():
+            zone = row['Zone']
+            sector = row['Sector1']
+
+            # Check if both zone and sector are not empty strings
+            if zone and sector:
+                # Check if the sector already belongs to a different zone
+                if sector in zone_mapping:
+                    if zone != zone_mapping[sector]:
+                        ambiguous_sectors.setdefault(sector, []).extend([zone, zone_mapping[sector]])
                 else:
-                    parameters['CostVariable']['val'][unit, :] = FuelPrices[FuelEntries[FuelEntry]][c] / \
-                                                                 Plants_merged['Efficiency'][unit] + \
-                                                                 Plants_merged['EmissionRate'][unit] * \
-                                                                 FuelPrices['PriceOfCO2'][c]
-                    found = True
+                    zone_mapping[sector] = zone
+
+        if ambiguous_sectors:
+            warning_message = "Warning: The following sectors belong to multiple zones:\n"
+            for sector, zones in ambiguous_sectors.items():
+                default_zone = zone_mapping[sector]
+                zone_list = list(set(zones))
+                zone_list.remove(default_zone)
+                zone_str = ', '.join(zone_list)
+                warning_message += f"Sector: {sector} is linked to Zones: {zone_str} (Default zone: {default_zone}). Please check if this is correct.\n"
+            logging.warning(warning_message)
+        return zone_mapping
+
+    CostVariable = CostVariable.groupby(by=CostVariable.columns, axis=1).apply(
+        lambda g: g.max(axis=1) if isinstance(g.iloc[0, 0], numbers.Number) else g.iloc[:, 0]) * 1.1
+    if 'FuelPricebyUnit' in plants.columns:
+        unit_to_zone = dict(zip(Plants_merged['Unit'].apply(lambda x: x.split('-')[-1].strip()), Plants_merged['Zone']))
+    else:
+        unit_to_zone = dict(zip(Plants_merged['Unit'], Plants_merged['Zone']))
+    MaxCostVariable = CostVariable.groupby(unit_to_zone, axis=1).max()
+    BoundarySector['Sector'] = BoundarySector.index
+    BoundarySector['Zone'] = BoundarySector.index.map(zone_to_bs_mapping(plants_all_bs))
+    zones = list(MaxCostVariable.columns)
+    for unit in range(len(BoundarySector)):
+        # c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
+        found = False
+        if BoundarySector['Zone'][unit] in zones:
+            parameters['CostXStorageAlert']['val'][unit, :] = MaxCostVariable[BoundarySector['Zone'][unit]].values
+            found = True
+        if not found:
+            parameters['CostXStorageAlert']['val'][unit, :] = 0
+
         # Special case for biomass plants, which are not included in EU ETS:
         if Plants_merged['Fuel'][unit] == 'BIO':
             parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'][c] / \
@@ -1086,6 +1261,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         if not found:
             logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] +
                             ' in unit ' + Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
+    # Assign storage flood control level costs to the unit with highest variable costs inside the zone
+    for unit in range(len(BoundarySector)):
+        # c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
+        found = False
+        if BoundarySector['Zone'][unit] in zones:
+            parameters['CostXFloodControl']['val'][unit, :] = MaxCostVariable[BoundarySector['Zone'][unit]].values
+            found = True
+        if not found:
+            parameters['CostXFloodControl']['val'][unit, :] = 0
     
     # %%###############################################################################################################
     # Inertia limit to parameters dict
@@ -1134,8 +1318,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             parameters['FlowXMinimum']['val'][i, :] = finalTS['BS_Inter_RoW'][lx]
     for i, slx in enumerate(sets['slx']):
         if slx in BS_Spillages.columns:
-            parameters['SectorXMaximumSpillage']['val'][i, :] = finalTS['BSMaxSpillage'][lx]
-
+            parameters['SectorXMaximumSpillage']['val'][i, :] = finalTS['BSMaxSpillage'][slx]
+    #Cost of Spillage boundary sector
+            parameters['CostXSpillage']['val'][i, :] = finalTS['CostXSpillage'][slx]  
     # Check values:
     check_MinMaxFlows(parameters['FlowXMinimum']['val'], parameters['FlowXMaximum']['val'])
 
@@ -1270,7 +1455,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Config variables:
     sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead',
-                        'SimulationTimeStep', 'ValueOfLostLoad', 'QuickStartShare', 'CostOfSpillage', 'WaterValue',
+                        'SimulationTimeStep', 'ValueOfLostLoad', 'QuickStartShare', 'WaterValue',
                         'DemandFlexibility']
     sets['y_config'] = ['year', 'month', 'day', 'val']
     dd_begin = idx_sim[0]
@@ -1284,7 +1469,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
          [1e-5, 0, 0, config['SimulationTimeStep']],
          [1e-5, 0, 0, config['default']['ValueOfLostLoad']],
          [1e-5, 0, 0, config['default']['ShareOfQuickStartUnits']],
-         [1e-5, 0, 0, config['default']['PriceOfSpillage']],
+         # [1e-5, 0, 0, config['default']['CostXSpillage']],
          [1e-5, 0, 0, config['default']['WaterValue']],
          [1e-5, 0, 0, config['default']['DemandFlexibility']]]
     )
