@@ -310,9 +310,10 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             0).set_index(idx)
 
         if 'SectorXFlexibleDemand' in config and config['SectorXFlexibleDemand'] != '':
-    		if 'OutputSectorXFlexDemand' not in temp_results:
+            if 'OutputSectorXFlexDemand' not in temp_results:
                 logging.critical('PtL Demand in the selected region was not computed')
                 sys.exit(0)
+            
             if len(temp_results['OutputSectorXFlexDemand']) < len(idx):
                 SectorXFlexDemand = temp_results['OutputSectorXFlexDemand'].reindex(range(1, len(idx) + 1)).fillna(
                     0).set_index(
@@ -328,6 +329,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             if 'OutputSectorXFlexSupply' not in temp_results:
                 logging.critical('PtL Demand in the selected region was not computed')
                 sys.exit(0)
+                
             if len(temp_results['OutputSectorXFlexSupply']) < len(idx):
                 SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].reindex(range(1, len(idx) + 1)).fillna(
                     0).set_index(
@@ -434,5 +436,5 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
 	            return profiles, None
 	        elif 'profilesSectorX' in locals():
 	            return None, profilesSectorX
-	else:
+    else:
         return profiles, profilesSectorX

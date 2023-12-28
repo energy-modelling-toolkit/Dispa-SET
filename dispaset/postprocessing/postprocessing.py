@@ -1181,17 +1181,17 @@ def get_frequency_security_constraints(inputs, results):
     # Save the original dispatch
     dispatch.to_csv('dispatch.csv', index=False)
 
-    # Filter the original dispatch using the max_ploss and min_ploss for each GeneratorName
-    filtered_dispatch = dispatch[
-        #(
-        dispatch.set_index(['GeneratorName', 'ploss'])
-                    .index.isin(max_ploss.items()) 
-                    #| 
-                    #dispatch.set_index(['GeneratorName', 'ploss'])
-                    #.index.isin(min_ploss.items()))
-                                  ]
-    filtered_dispatch.to_csv('filtered_dispatch.csv', index=False)
-    # filtered_dispatch = dispatch
+    # # Filter the original dispatch using the max_ploss and min_ploss for each GeneratorName
+    # filtered_dispatch = dispatch[
+    #     #(
+    #     dispatch.set_index(['GeneratorName', 'ploss'])
+    #                 .index.isin(max_ploss.items()) 
+    #                 #| 
+    #                 #dispatch.set_index(['GeneratorName', 'ploss'])
+    #                 #.index.isin(min_ploss.items()))
+    #                               ]
+    # filtered_dispatch.to_csv('filtered_dispatch.csv', index=False)
+    filtered_dispatch = dispatch
 # %% power swing solutions
     # to save the results of inertia and pprim into the dispatch result
     # dispatch = filtered_dispatch
@@ -1257,42 +1257,42 @@ def get_frequency_security_constraints(inputs, results):
             # Search for the first solution by iterating through values of H and k
             lower_bound_H = 1
             upper_bound_H = 100  # Adjust the upper bound as needed
-            lower_bound_k = 0
-            upper_bound_k = 4000  # Adjust the upper bound as needed
+            # lower_bound_k = 0
+            # upper_bound_k = 4000  # Adjust the upper bound as needed
             step = 1
     
             found_solution = False
-            # optimal_k = None                                  # k variable
-            optimal_k = 1700  # Valor constante de k
-            optimal_H = None
+            # min_k = None                                  # k variable
+            k = 1700  # Valor constante de k
+            min_H = None
     
             for H in range(lower_bound_H, upper_bound_H + 1, step):
                 # for k in range(lower_bound_k, upper_bound_k + 1, step):      # k variable
                     #if constraints_satisfied(k, H):                        # k variable
-                    if constraints_satisfied(optimal_k, H):
+                    if constraints_satisfied(k, H):
                         found_solution = True
-                        #optimal_k = k          # k variable
-                        optimal_H = H
+                        #min_k = k          # k variable
+                        min_H = H
                         break
                 # if found_solution      # k variable
                 #     break              # k variable
     
             if found_solution:
-                print(f"Optimal k (fixed at 1700) that satisfies constraints: {optimal_k}")
-                #print(f"Optimal k that satisfies constraints: {optimal_k}")
-                print(f"Optimal H that satisfies constraints: {optimal_H}")
+                print(f"k (fixed at 1700) that satisfies constraints: {k}")
+                #print(f"Minimum k that satisfies constraints: {min/_k}")
+                print(f"Minimum H that satisfies constraints: {min_H}")
                 # Update the DataFrame with the new values
-                filtered_dispatch.at[index, 'optimal_k'] = optimal_k  # Store in 'optimal_k'
-                filtered_dispatch.at[index, 'optimal_H'] = optimal_H  # Store in 'optimal_H'
+                filtered_dispatch.at[index, 'k'] = k  # Store in 'k'
+                filtered_dispatch.at[index, 'min_H'] = min_H  # Store in 'min_H'
     
                 # Solve the ODE system with the optimal k and H
-                sol = odeint(power_swing, y0, t, args=(optimal_k, optimal_H))
+                sol = odeint(power_swing, y0, t, args=(k, min_H))
     
                 # Extract the results
                 deltap = sol[:, 0]
                 f = sol[:, 1]
                 der_f = np.gradient(f, t)
-                pprim = np.where(t < 5, 0, (-optimal_k * f) / row['pcommitted'] * (t-5))
+                pprim = np.where(t < 5, 0, (-k * f) / row['pcommitted'] * (t-5))
                 ploss = np.where(t < 5, row['ploss'], row['ploss'])
                 pcommitted = row['pcommitted']
                 pcontingency = row['pcontingency']
@@ -1308,8 +1308,8 @@ def get_frequency_security_constraints(inputs, results):
                 results_df['ploss'] = ploss
     
                 # Add the values of k and H to the DataFrame
-                results_df['OptimalK'] = optimal_k
-                results_df['OptimalH'] = optimal_H
+                results_df['K'] = k
+                results_df['min_H'] = min_H
     
                 # Store the results_df in the dictionary
                 freq_security[f"Contingency{contingency_count}"] = results_df    
@@ -1350,15 +1350,16 @@ def get_frequency_security_constraints(inputs, results):
                 print("No solution found within the specified range of H and k that satisfies constraints.")
     
     # Crear un DataFrame vacío para almacenar los resultados
-    summary = pd.DataFrame(columns=['Contingency', 'Inertia'])
+    summary = pd.DataFrame(columns=['Contingency', 'Inertia','PrimaryResponse'])
     
     # Iterar sobre los DataFrames en el diccionario y tomar el primer valor de 'A' y 'B'
     for nombre_df, df in freq_security.items():
         primer_contingency = df['pcontingency'].iloc[0]  # Primer valor de la columna 'A'
-        primer_inertia = df['OptimalH'].iloc[0]  # Primer valor de la columna 'B'
+        primer_inertia = df['min_H'].iloc[0]  # Primer valor de la columna 'B'
+        max_PrimaryResponseMW = df['PrimaryResponseMW'].max()  # Valor maximo de la columna 'B'
         
         # Agregar los valores a 'Summary'
-        summary = summary.append({'Contingency': primer_contingency, 'Inertia': primer_inertia}, ignore_index=True)
+        summary = summary.append({'Contingency': primer_contingency, 'Inertia': primer_inertia, 'PrimaryResponse': max_PrimaryResponseMW}, ignore_index=True)
     
     # Copiar valores de 'B' en 'D' donde los valores en 'A' y 'C' coinciden
     for index, row in dispatch.iterrows():

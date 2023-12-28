@@ -196,9 +196,14 @@ SectorXStorageProfile(nx,h)                 [%]             Boundary sector stor
 SectorXAlertLevel(nx,h)                     [MWh]           Storage alert of the boundary sector - Will only be violated to avoid power rationing
 SectorXFloodControl(nx,h)                   [MWh]           Storage flood control of the boundary sector
 $If %TransmissionGrid% == 1 PTDF(l,n)       [p.u.]          Power Transfer Distribution Factor Matrix
-$If %MTS% == 0 InertiaConstant(au)          [s]             Inertia Constant
+
 * New
-$If %MTS% == 0 InertiaLimit(h)              [s\h]             Inertia Limit
+$If %MTS% == 0 InertiaConstant(au)          [s]             Inertia Constant
+*InertiaConstant(au)                         [s]             Inertia Constant
+$If %MTS% == 0 InertiaLimit(h)              [s\h]           Inertia Limit
+*InertiaLimit(h)                             [s\h]           Inertia Limit
+$If %MTS% == 0 PrimaryResponse(h)           [s\h]           Primary Response
+*PrimaryResponse(h)                          [MWh]           Primary Response
 ;
 
 *Parameters as used within the loop
@@ -328,10 +333,14 @@ $If %MTS% == 0 $LOAD SectorXStorageInitial
 $LOAD SectorXStorageProfile
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
 $If %TransmissionGrid% == 1 $LOAD PTDF
-$If %MTS% == 0 $LOAD InertiaConstant
-*New
-$If %MTS% == 0 $LOAD InertiaLimit
 
+* New
+$If %MTS% == 0 $LOAD InertiaConstant
+*$LOAD InertiaConstant
+$If %MTS% == 0 $LOAD InertiaLimit
+*$LOAD InertiaLimit
+$If %MTS% == 0 $LOAD PrimaryResponse
+*$LOAD PrimaryResponse
 ;
 
 $If %Verbose% == 0 $goto skipdisplay
@@ -425,9 +434,14 @@ $If %MTS% == 0 SectorXStorageInitial,
 SectorXStorageProfile,
 $If %RetrieveStatus% == 1 , CommittedCalc
 $If %TransmissionGrid% == 1, PTDF
-$If %MTS% == 0, InertiaConstant
-* New
-$If %MTS% == 0, InertiaLimit
+
+*New
+$If %MTS% == 0 $LOAD InertiaConstant
+*$LOAD InertiaConstant
+$If %MTS% == 0 $LOAD InertiaLimit
+*$LOAD InertiaLimit
+$If %MTS% == 0 $LOAD PrimaryResponse
+*$LOAD PrimaryResponse
 ;
 
 $label skipdisplay
@@ -494,7 +508,12 @@ SectorXFlexDemand(nx,h)                 [MW]    FLexible boundary sector demand 
 SectorXFlexSupply(nx,h)                 [MW]    FLexible boundary sector supply at each time step of each nx node
 $If %MTS% == 1 SectorXStorageInitial(nx)
 $If %MTS% == 1 SectorXStorageFinalMin(nx)
+
+*New
 $If %MTS% == 0 SysInertia(h)            [s]     System Inertia
+*SysInertia(h)                           [s]     System Inertia
+$If %MTS% == 0 PrimaryResponse_Available(au,h)         [MW]    Primary Response available per unit
+*PrimaryResponse_Available(au,h)         [MW]    Primary Response available per unit
 ;
 
 free variable
@@ -641,8 +660,16 @@ EQ_BS_Spillage_limits_upper
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 $If %TransmissionGrid% == 1 EQ_DC_Power_Flow
 $If %TransmissionGrid% == 1 EQ_Total_Injected_Power
+
+*New
 $If %MTS% == 0 EQ_SysInertia
-$If %MTS% == 0 EQ_I_limit
+*EQ_SysInertia
+$If %MTS% == 0 EQ_Inertia_limit
+*EQ_Inertia_limit
+$If %MTS% == 0 EQ_Primary_Response_capability
+*EQ_Primary_Response_capability
+$If %MTS% == 0 EQ_Demand_balance_PrimaryResponse
+*EQ_Demand_balance_PrimaryResponse
 ;
 
 $If %RetrieveStatus% == 0 $goto skipequation
@@ -874,6 +901,15 @@ EQ_No_Flexible_Demand(n,i)..
          0
 ;
 
+*New
+$ifthen %MTS% == 0
+*Hourly demand balance in the Primary Response market
+EQ_Demand_balance_PrimaryResponse(i)..
+         sum((u),PrimaryResponse_Available(u,i)*Reserve(u))
+         =E=(PrimaryResponse(i))
+;
+$endIf
+
 *Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(n,i)..
          sum((u),Reserve_2U(u,i)*Reserve(u)*Location(u,n))
@@ -995,6 +1031,24 @@ EQ_3U_limit_chp(chp,i)..
 
 ;
 
+*New
+* Primary Response capability
+*$ifthen %MTS% == 0
+*EQ_Primary_Response_capability(u,i)$(Power(u,i) <= ((PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i))*0.9))..
+*         PrimaryResponse_Available(u,i) =L= ((PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i))*0.1)
+*;
+*EQ_Primary_Response_capability(u,i)$(Power(u,i) > ((PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i))*0.9))..
+*         PrimaryResponse_Available(u,i) =L= ((PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i))-Power(u,i))
+*;
+*$endIf
+$ifthen %MTS% == 0
+EQ_Primary_Response_capability(u,i)..
+         PrimaryResponse_Available(u,i) =L= ((PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i)))
+;
+$endIf
+
+
+* New
 *MARCO INERTIA RESERVES
 $ifthen %MTS% == 0
 EQ_SysInertia(i)..
@@ -1007,9 +1061,8 @@ EQ_SysInertia(i)..
 *          sum(u,((InertiaConstant(u)*TimeStep)/(Pi*50)))
 ;
 
-EQ_I_limit(u,i)..
+EQ_Inertia_limit(u,i)..
 *         0
-* New
          InertiaLimit(i)
          =l=
          SysInertia(i)
@@ -1548,8 +1601,16 @@ EQ_BS_Spillage_limits_upper,
 $If %RetrieveStatus% == 1 EQ_CommittedCalc,
 $If %TransmissionGrid% == 1 EQ_DC_Power_Flow,
 $If %TransmissionGrid% == 1 EQ_Total_Injected_Power,
+
+*new
 $If %MTS% == 0 EQ_SysInertia,
-$If %MTS% == 0 EQ_I_limit,
+*EQ_SysInertia,
+$If %MTS% == 0 EQ_Inertia_limit,
+*EQ_Inertia_limit,
+$If %MTS% == 0 EQ_Demand_balance_PrimaryResponse,
+*EQ_Demand_balance_PrimaryResponse,
+$If %MTS% == 0 EQ_Primary_Response_capability,
+*EQ_Primary_Response_capability,
 /
 ;
 UCM_SIMPLE.optcr = 0.01;
@@ -1752,7 +1813,14 @@ UnitHourlyShutDownCost(au,h)
 UnitHourlyRampingCost(au,h)
 UnitHourlyProductionCost(au,h)
 UnitHourlyProfit(au,h)
+
+*New
 $If %MTS% == 0 OutputSysInertia(h)
+*OutputSysInertia(h)
+$If %MTS% == 0 OutputPrimaryResponse(h)
+*OutputPrimaryResponse(h)
+$If %MTS% == 0 OutputPrimaryResponse_Available(au,h)
+*OutputPrimaryResponse_Available(au,h)
 ;
 
 $If %ActivateAdvancedReserves% == 2 OutputMaxOutageUp(n,z)=max(smax((au,tc),PowerCapacity(au)/Nunits(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n)), smax(l,FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
@@ -1841,7 +1909,14 @@ ShadowPrice_RampDown_TC(u,z) = EQ_RampDown_TC.m(u,z);
 OutputRampRate(u,z) = - Power.L(u,z-1)$(ord(z) > 1) - PowerInitial(u)$(ord(z) = 1) + Power.L(u,z);
 OutputStartUp(au,z) = StartUp.L(au,z);
 OutputShutDown(au,z) = ShutDown.L(au,z);
+
+*New
 $If %MTS%==0 OutputSysInertia(z) = SysInertia.L(z);
+*OutputSysInertia(z) = SysInertia.L(z);
+$If %MTS%==0 OutputPrimaryResponse(z)=PrimaryResponse(z);
+*OutputPrimaryResponse(z)=PrimaryResponse(z);
+$If %MTS%==0 OutputPrimaryResponse_Available(au,z) = PrimaryResponse_Available.L(au,z);
+*OutputPrimaryResponse_Available(au,z) = PrimaryResponse_Available.L(au,z);
 
 *FIXME: what about other sectors
 *OutputEmissions(n,p,z) = sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n)) / sum(u,Power.L(u,z)*Location(u,n));
@@ -1945,7 +2020,6 @@ ShadowPrice_3U,
 OutputReserve_2U,
 OutputReserve_2D,
 OutputReserve_3U,
-$If %MTS%==0 OutputSysInertia,
 ShadowPrice_RampUp_TC,
 ShadowPrice_RampDown_TC,
 OutputRampRate,
@@ -1962,6 +2036,15 @@ OutputMaxOutageDown,
 OutputDemand_2U,
 OutputDemand_3U,
 OutputDemand_2D,
+
+*New
+$If %MTS%==0 OutputSysInertia,
+*OutputSysInertia,
+$If %MTS%==0 OutputPrimaryResponse,
+*OutputPrimaryResponse,
+$If %MTS%==0 OutputPrimaryResponse_Available,
+*OutputPrimaryResponse_Available,
+
 status,
 UnitHourlyPowerRevenue
 UnitHourly2URevenue
@@ -1975,6 +2058,7 @@ UnitHourlyShutDownCost
 UnitHourlyRampingCost
 UnitHourlyProductionCost
 UnitHourlyProfit
+
 ;
 
 *display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L, power.L;

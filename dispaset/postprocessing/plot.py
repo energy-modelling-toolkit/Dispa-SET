@@ -629,7 +629,7 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
             else:
                 level = levels
 
-        if 'OutputSectorXStorageLevel' in results:
+        if 'OutputSectorXStorageLevel' in results and not results['OutputSectorXStorageLevel'].empty:
             levX = filter_by_zone(filter_sector(results['OutputSectorXStorageLevel'], inputs), inputs, z, sector=True)
             levX = levX * filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).loc[
                 levX.columns].T.values / 1e3  # GWh of storage

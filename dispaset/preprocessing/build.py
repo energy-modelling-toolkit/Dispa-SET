@@ -12,7 +12,7 @@ from future.builtins import int
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_temperatures, check_clustering, \
     isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves, check_p2bs, check_boundary_sector, \
-    check_BSFlexDemand, check_BSFlexSupply
+    check_BSFlexDemand, check_BSFlexSupply, check_PrimaryResponse
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
@@ -137,7 +137,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             GridData = pd.DataFrame()
 
     # Inertia Limit:
-    InertiaLimit = load_time_series(config, config['InertiaLimit']).fillna(0)
+    if 'InertiaLimit' in config and os.path.isfile(config['InertiaLimit']):
+        InertiaLimit = load_time_series(config, config['InertiaLimit']).fillna(0)
+    else:
+        logging.warning('No Inertia Limit will be considered (no valid file provided)')
+        InertiaLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
+        # logging.warning('No Inertia Limit will be considered (no valid file provided)')
+        # InertiaLimit = pd.DataFrame(index=config['idx_long'])
     
     # Boundary Sector Interconnections:
     if 'BoundarySectorInterconnections' in config and os.path.isfile(config['BoundarySectorInterconnections']):
@@ -165,6 +171,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                            default=config['default']['ShareOfFlexibleDemand'])
     Reserve2D = NodeBasedTable('Reserve2D', config, default=None)
     Reserve2U = NodeBasedTable('Reserve2U', config, default=None)
+    
+    # Primary Response:
+    if 'PrimaryResponse' in config and os.path.isfile(config['PrimaryResponse']):
+        PrimaryResponse = load_time_series(config, config['PrimaryResponse']).fillna(0)
+    else:
+        logging.warning('No Primary Response requirement will be considered (no valid file provided)')
+        PrimaryResponse = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
+
 
     # Curtailment:
     CostCurtailment = NodeBasedTable('CostCurtailment', config, default=config['default']['CostCurtailment'])
@@ -319,7 +333,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         zones_bs = [x for x in zones_bs if pd.isnull(x) == False]
     if 'nan' in zones_bs:
         zones_bs.remove('nan')
-	zones_bss = np.unique(zones_bs + list(BoundarySector.index)).tolist()
+	
+    zones_bss = np.unique(zones_bs+list(BoundarySector.index)).tolist()
 
     if 'SectorXDemand' in config and os.path.isfile(config['SectorXDemand']):
         SectorXDemand = GenericTable(zones_bs, 'SectorXDemand', config, default=0)
@@ -370,9 +385,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         BS_forced_spillage = pd.DataFrame(index=idx_long)
 
     lines_bs = BS_spillage.columns
-
-    CostXSpillage = GenericTable(lines_bs, 'CostXSpillage', config, default=config['default']['PriceOfSpillage'])
-
+   
+    if 'CostXSpillage' in config and os.path.isfile(config['CostXSpillage']):
+        CostXSpillage = GenericTable(lines_bs, 'CostXSpillage', config, default=config['default']['PriceOfSpillage'])
+    else:
+        logging.warning('No CostXSpillage will be considered (no valid file provided)')
+        CostXSpillage = pd.DataFrame(index=config['idx_long'])    
+        
     # Read BS Flexible demand & supply
     if 'SectorXFlexibleDemand' in config and os.path.isfile(config['SectorXFlexibleDemand']):
         SectorXFlexibleDemand = GenericTable(zones_bs, 'SectorXFlexibleDemand', config, default=0)
@@ -438,6 +457,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     check_temperatures(plants, Temperatures)
     check_FlexibleDemand(ShareOfFlexibleDemand)
     check_reserves(Reserve2D, Reserve2U, Load)
+    check_PrimaryResponse(PrimaryResponse, Load)
 
     # Fuel prices:
     # fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2',
@@ -738,7 +758,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'SectorXFlexibleDemand': SectorXFlexibleDemand, 'SectorXFlexibleSupply': SectorXFlexibleSupply,
                'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel, 
                'SectorXFloodControl': SectorXFloodControl, 
-               'CostXSpillage':CostXSpillage, 'InertiaLimit': InertiaLimit}
+               'CostXSpillage':CostXSpillage, 'InertiaLimit': InertiaLimit, 'PrimaryResponse': PrimaryResponse}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
@@ -909,11 +929,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXStorageProfile'] = ['nx', 'h']
     sets_param['SectorXAlertLevel'] = ['nx', 'h']
     sets_param['SectorXFloodControl'] = ['nx', 'h']
-    if MTS == 0:
-        sets_param['InertiaConstant'] = ['au']
-        sets_param['InertiaLimit'] = ['h']
+    # if MTS == 0:
+    sets_param['InertiaConstant'] = ['au']
+    sets_param['InertiaLimit'] = ['h']
+    sets_param['PrimaryResponse'] = ['h']
     if (grid_flag == "DC-Power Flow"):
         sets_param['PTDF'] = ['l', 'n']   
+    
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -1274,8 +1296,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # %%###############################################################################################################
     # Inertia limit to parameters dict
     # parameters['InertiaLimit']['val'] = InertiaLimit['InertiaLimit'].values
-    if MTS == 0:
-        parameters['InertiaLimit']['val'] = InertiaLimit.iloc[:, 0].values
+    # if MTS == 0:
+    if len(finalTS['InertiaLimit'].columns) != 0:
+        parameters['InertiaLimit']['val']= finalTS['InertiaLimit'].iloc[:, 0].values
+        # Primary Response to parameters dict
+    if len(finalTS['PrimaryResponse'].columns) != 0:
+        parameters['PrimaryResponse']['val'] = finalTS['PrimaryResponse'].iloc[:, 0].values
     
     # Maximum Line Capacity
     if (grid_flag == "DC-Power Flow"):

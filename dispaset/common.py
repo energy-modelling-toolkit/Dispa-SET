@@ -158,7 +158,7 @@ commons['PathParameters'] = {
     # # Hydrogen data
     # 'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
     # Reserves input data
-    'Reserve2U': 160, 'Reserve2D': 161,
+    'PrimaryResponse': 159, 'Reserve2U': 160, 'Reserve2D': 161, 
     # Other costs related data
     'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostCurtailment': 171,
     # Fuel price related data
