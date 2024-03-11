@@ -61,6 +61,11 @@ $setglobal ActivateFlexibleDemand 1
 * Activate advanced reserve demand
 $setglobal ActivateAdvancedReserves 0
 
+*New
+* Definition of the equations that will be present in Frequency Constrainted UC/OD
+* (1 for FC-UC/OD 0 for UC/OD)
+$setglobal FC 0
+
 *===============================================================================
 *Definition of   sets and parameters
 *===============================================================================
@@ -77,6 +82,8 @@ s(au)            Storage Units (with reservoir)
 p2h(au)          Power to heat units
 th(au)           Units with thermal storage
 thms(au)         Thermal storage units only
+*New
+cu(au)           Conventional units only
 *Fuels
 f                Fuel types
 *Technologies
@@ -199,12 +206,14 @@ $If %TransmissionGrid% == 1 PTDF(l,n)       [p.u.]          Power Transfer Distr
 
 * New
 $If %MTS% == 0 InertiaConstant(au)          [s]             Inertia Constant
-*InertiaConstant(au)                         [s]             Inertia Constant
 $If %MTS% == 0 InertiaLimit(h)              [s\h]           Inertia Limit
-*InertiaLimit(h)                             [s\h]           Inertia Limit
-$If %MTS% == 0 PrimaryResponse(h)           [s\h]           Primary Response
-*PrimaryResponse(h)                          [MWh]           Primary Response
+$If %MTS% == 0 Droop(au)                    [%]             Droop
+$If %MTS% == 0 SystemGainLimit(h)           [GW\Hz]         System Gain Limit
+$If %MTS% == 0 PrimaryReserveLimit(h)       [MWh]           Primary Reserve
+
 ;
+
+
 
 *Parameters as used within the loop
 PARAMETERS
@@ -222,6 +231,12 @@ AccumulatedOverSupply_inital(n)             [MWh]           Initial value of the
 scalar FirstHour,LastHour,LastKeptHour,day,ndays,failed,srp,nsrp;
 FirstHour = 1;
 scalar TimeStep;
+
+*MADRID
+
+scalar SystemFrequency, MaxRoCoF;
+SystemFrequency = 50;
+MaxRoCoF = 0.2;
 
 *Threshold values for p2h partecipation to reserve market as spinning/non-spinning reserves (TO BE IMPLEMENTED IN CONFIGFILE)
 srp = 1;
@@ -250,6 +265,8 @@ $LOAD s
 $LOAD p2x
 $LOAD chp
 $LOAD p2h
+*New
+$LOAD cu
 $LOAD th
 $LOAD xu
 $LOAD thms
@@ -336,11 +353,10 @@ $If %TransmissionGrid% == 1 $LOAD PTDF
 
 * New
 $If %MTS% == 0 $LOAD InertiaConstant
-*$LOAD InertiaConstant
 $If %MTS% == 0 $LOAD InertiaLimit
-*$LOAD InertiaLimit
-$If %MTS% == 0 $LOAD PrimaryResponse
-*$LOAD PrimaryResponse
+$If %MTS% == 0 $LOAD Droop
+$If %MTS% == 0 $LOAD SystemGainLimit
+$If %MTS% == 0 $LOAD PrimaryReserveLimit
 ;
 
 $If %Verbose% == 0 $goto skipdisplay
@@ -361,6 +377,8 @@ s,
 p2x,
 chp,
 p2h,
+*New
+cu,
 th,
 h2,
 thms,
@@ -437,11 +455,10 @@ $If %TransmissionGrid% == 1, PTDF
 
 *New
 $If %MTS% == 0 $LOAD InertiaConstant
-*$LOAD InertiaConstant
 $If %MTS% == 0 $LOAD InertiaLimit
-*$LOAD InertiaLimit
-$If %MTS% == 0 $LOAD PrimaryResponse
-*$LOAD PrimaryResponse
+$If %MTS% == 0 $LOAD Droop
+$If %MTS% == 0 $LOAD SystemGainLimit
+$If %MTS% == 0 $LOAD PrimaryReserveLimit
 ;
 
 $label skipdisplay
@@ -510,10 +527,15 @@ $If %MTS% == 1 SectorXStorageInitial(nx)
 $If %MTS% == 1 SectorXStorageFinalMin(nx)
 
 *New
-$If %MTS% == 0 SysInertia(h)            [s]     System Inertia
-*SysInertia(h)                           [s]     System Inertia
-$If %MTS% == 0 PrimaryResponse_Available(au,h)         [MW]    Primary Response available per unit
-*PrimaryResponse_Available(au,h)         [MW]    Primary Response available per unit
+$If %MTS% == 0 SysInertia(h)                       [s]         System Inertia
+$If %MTS% == 0 PrimaryReserve_Available(h)         [MW]        Primary Reserve available in the system
+$If %MTS% == 0 SystemGain(h)                       [GW\Hz]     System Gain
+*MADRID
+$If %MTS% == 0 PowerLoss(h)                  [MW]        Primary Reserve available in the system
+*$If %MTS% == 0 MaxInstantGenerator(h)                  [MW]        Primary Reserve available in the system
+*New
+TotalDemand_2U(h)                       [MW]    Total Spinning reserve up
+
 ;
 
 free variable
@@ -528,7 +550,13 @@ OptimizationError
 Error
 $If %TransmissionGrid% == 1 InjectedPower(h,n) [p.u]   Power injected to each node of the system
 $If %TransmissionGrid% == 1 Flow(l,h)          [MW]    Flow through lines
+
+*New
+*LoadRamp(n,h)                           [MW]    Load ramp
 ;
+
+*Binary Variables
+*LoadRampAux(n, h);
 
 *===============================================================================
 *Assignment of initial values
@@ -663,13 +691,20 @@ $If %TransmissionGrid% == 1 EQ_Total_Injected_Power
 
 *New
 $If %MTS% == 0 EQ_SysInertia
-*EQ_SysInertia
 $If %MTS% == 0 EQ_Inertia_limit
-*EQ_Inertia_limit
-$If %MTS% == 0 EQ_Primary_Response_capability
-*EQ_Primary_Response_capability
-$If %MTS% == 0 EQ_Demand_balance_PrimaryResponse
-*EQ_Demand_balance_PrimaryResponse
+$If %MTS% == 0 EQ_SystemGain
+$If %MTS% == 0 EQ_SystemGain_limit
+$If %MTS% == 0 EQ_PrimaryReserve_Available
+$If %MTS% == 0 EQ_PrimaryReserve_Capability
+$If %MTS% == 0 EQ_Demand_balance_PrimaryReserve
+*MADRID
+$If %MTS% == 0 EQ_PowerLoss
+*$If %MTS% == 0 EQ_MaxInstantGenerator
+
+*New
+EQ_Tot_Demand_2U
+*EQ_Load_Ramp
+*EQ_Load_Ramp_Aux
 ;
 
 $If %RetrieveStatus% == 0 $goto skipequation
@@ -901,25 +936,39 @@ EQ_No_Flexible_Demand(n,i)..
          0
 ;
 
-*New
-$ifthen %MTS% == 0
-*Hourly demand balance in the Primary Response market
-EQ_Demand_balance_PrimaryResponse(i)..
-         sum((u),PrimaryResponse_Available(u,i)*Reserve(u))
-         =E=(PrimaryResponse(i))
-;
-$endIf
-
 *Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(n,i)..
          sum((u),Reserve_2U(u,i)*Reserve(u)*Location(u,n))
          + sum((chp),Reserve_2U(chp,i)*Reserve(chp)*Location(chp,n))
          + CurtailmentReserve_2U(n,i) + LL_2U(n,i)
          =E=
+*New
+         Demand("2U",n,i)
 $If %ActivateAdvancedReserves% == 2 +(Demand("2U",n,i) + max(smax((u,tc),PowerCapacity(u)/Nunits(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0)))*(1-K_QuickStart(n))
 $If %ActivateAdvancedReserves% == 1 +(Demand("2U",n,i) + smax((u,tc),PowerCapacity(u)/Nunits(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)))*(1-K_QuickStart(n))
-$If %ActivateAdvancedReserves% == 0 +(Demand("2U",n,i))*(1-K_QuickStart(n))
+*$If %ActivateAdvancedReserves% == 0 +(Demand("2U",n,i))*(1-K_QuickStart(n))
 ;
+
+*New
+*Hourly total demand in the upwards spinning reserve market for the system
+EQ_Tot_Demand_2U(i)..
+         sum((n),Demand("2U",n,i))
+         =E=
+         TotalDemand_2U(i)
+;
+
+
+
+*New NOT WORKING
+* Big-M constraints to linearize the division
+*EQ_Load_Ramp_Aux(n, i)$(ord(i) > 1)..
+*    ResidualLoad(n, i-1) - ResidualLoad(n, i) =L= 0.0000001 * (1 - LoadRampAux(n, i));
+*    ResidualLoad(n, i) - ResidualLoad(n, i-1) =L= 5 * (1 - LoadRampAux(n, i));
+
+* Define the division using the binary variable
+*EQ_Load_Ramp(n, i)..
+*    LoadRamp(n, i) =E= (ResidualLoad(n, i) - ResidualLoad(n, i-1))/ResidualLoad(n, i);
+
 
 *Hourly demand balance in the upwards non-spinning reserve market for each node
 EQ_Demand_balance_3U(n,i)..
@@ -1031,19 +1080,64 @@ EQ_3U_limit_chp(chp,i)..
 
 ;
 
-*New
-* Primary Response capability
-*$ifthen %MTS% == 0
-*EQ_Primary_Response_capability(u,i)$(Power(u,i) <= ((PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i))*0.9))..
-*         PrimaryResponse_Available(u,i) =L= ((PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i))*0.1)
-*;
-*EQ_Primary_Response_capability(u,i)$(Power(u,i) > ((PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i))*0.9))..
-*         PrimaryResponse_Available(u,i) =L= ((PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i))-Power(u,i))
-*;
-*$endIf
+
+
+
+
+
+*MADRID
+
 $ifthen %MTS% == 0
-EQ_Primary_Response_capability(u,i)..
-         PrimaryResponse_Available(u,i) =L= ((PowerCapacity(u)*LoadMaximum(u,i)*Committed(u,i)))
+EQ_PowerLoss(u,i)$(ord(u))..
+   PowerLoss(i) =g= Power(u, i);
+
+*EQ_MaxInstantGenerator(u, i)$(MaxInstantPower(i) - 1 < Power(u, i))..
+*   MaxInstantGenerator(i) =e= ord(u);
+
+
+
+
+
+$endIf
+
+
+
+
+*New
+*MARCO PRIMARY RESERVE
+$ifthen %MTS% == 0
+EQ_SystemGain(i)..
+         SystemGain(i)
+         =E=
+          sum(cu,(PowerCapacity(cu)*Committed(cu,i))/(Droop(cu)*50*1000))
+;
+
+EQ_SystemGain_limit(i)..
+         0
+$If %FC% == 1 +SystemGainLimit(i)
+         =l=
+         SystemGain(i)
+;
+
+EQ_PrimaryReserve_Available(i)..
+         PrimaryReserve_Available(i)
+         =E=
+         SystemGain(i)*0.8
+*aumentar luego *1000
+;
+
+EQ_PrimaryReserve_Capability(i)..
+         PrimaryReserve_Available(i)
+         =L=
+         sum(cu,(PowerCapacity(cu)*LoadMaximum(cu,i)*Committed(cu,i)*Reserve(cu))-Power(cu,i))
+;
+
+*Hourly demand balance in the Primary Reserve market
+EQ_Demand_balance_PrimaryReserve(i)..
+         0
+$If %FC% == 1 +PrimaryReserveLimit(i)
+         =l=
+         PrimaryReserve_Available(i)
 ;
 $endIf
 
@@ -1054,16 +1148,12 @@ $ifthen %MTS% == 0
 EQ_SysInertia(i)..
          SysInertia(i)
          =E=
-*          sum(u,((Power(u,i)*(InertiaConstant(u))/(Pi*50)))))
-*111          sum(u,((PowerCapacity(u)*Committed(u,i)*InertiaConstant(u))/(Pi*50)))
-          sum(u,(Committed(u,i)*InertiaConstant(u)))
-*          sum(u,(((PowerCapacity(u)/10)*Committed(u,i)*InertiaConstant(u))/(Pi*50)))
-*          sum(u,((InertiaConstant(u)*TimeStep)/(Pi*50)))
+         sum(cu,PowerCapacity(cu)*Committed(cu,i)*InertiaConstant(cu))/1000
 ;
 
 EQ_Inertia_limit(u,i)..
-*         0
-         InertiaLimit(i)
+         0
+$If %FC% == 1 +InertiaLimit(i)
          =l=
          SysInertia(i)
 ;
@@ -1604,13 +1694,18 @@ $If %TransmissionGrid% == 1 EQ_Total_Injected_Power,
 
 *new
 $If %MTS% == 0 EQ_SysInertia,
-*EQ_SysInertia,
 $If %MTS% == 0 EQ_Inertia_limit,
-*EQ_Inertia_limit,
-$If %MTS% == 0 EQ_Demand_balance_PrimaryResponse,
-*EQ_Demand_balance_PrimaryResponse,
-$If %MTS% == 0 EQ_Primary_Response_capability,
-*EQ_Primary_Response_capability,
+$If %MTS% == 0 EQ_SystemGain,
+$If %MTS% == 0 EQ_SystemGain_limit,
+$If %MTS% == 0 EQ_PrimaryReserve_Available,
+$If %MTS% == 0 EQ_PrimaryReserve_Capability,
+$If %MTS% == 0 EQ_Demand_balance_PrimaryReserve,
+*MADRID
+$If %MTS% == 0 EQ_PowerLoss,
+*$If %MTS% == 0 EQ_MaxInstantGenerator,
+
+EQ_Tot_Demand_2U,
+*EQ_Load_Ramp,
 /
 ;
 UCM_SIMPLE.optcr = 0.01;
@@ -1816,11 +1911,14 @@ UnitHourlyProfit(au,h)
 
 *New
 $If %MTS% == 0 OutputSysInertia(h)
-*OutputSysInertia(h)
-$If %MTS% == 0 OutputPrimaryResponse(h)
-*OutputPrimaryResponse(h)
-$If %MTS% == 0 OutputPrimaryResponse_Available(au,h)
-*OutputPrimaryResponse_Available(au,h)
+$If %MTS% == 0 OutputSystemGain(h)
+$If %MTS% == 0 OutputPrimaryReserve_Available(h)
+*MADRID
+$If %MTS% == 0 OutputPowerLoss(h)
+*$If %MTS% == 0 OutputMaxInstantGenerator(h)
+
+OutputTotalDemand_2U(h)
+*OutputLoadRamp(n,h)
 ;
 
 $If %ActivateAdvancedReserves% == 2 OutputMaxOutageUp(n,z)=max(smax((au,tc),PowerCapacity(au)/Nunits(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n)), smax(l,FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
@@ -1833,9 +1931,18 @@ $If %ActivateAdvancedReserves% == 1 OutputMaxOutageDown(n,z)=smax(s,StorageCharg
 $If %ActivateAdvancedReserves% == 1 OutputDemand_2U(n,z)=(Demand("2U",n,z) + OutputMaxOutageUp(n,z))*(1-K_QuickStart(n));
 $If %ActivateAdvancedReserves% == 1 OutputDemand_3U(n,z)=Demand("2U",n,z) + OutputMaxOutageUp(n,z);
 $If %ActivateAdvancedReserves% == 1 OutputDemand_2D(n,z)=Demand("2D",n,z) + OutputMaxOutageDown(n,z);
-$If %ActivateAdvancedReserves% == 0 OutputDemand_2U(n,z)=(Demand("2U",n,z))*(1-K_QuickStart(n));
+
+*New
+*$If %ActivateAdvancedReserves% == 0 OutputDemand_2U(n,z)=(Demand("2U",n,z))*(1-K_QuickStart(n));
+$If %ActivateAdvancedReserves% == 0 OutputDemand_2U(n,z)=Demand("2U",n,z);
+
+*New
+*$If %ActivateAdvancedReserves% == 0 OutputDemand_3U(n,z)=Demand("2U",n,z);
 $If %ActivateAdvancedReserves% == 0 OutputDemand_3U(n,z)=Demand("2U",n,z);
+
 $If %ActivateAdvancedReserves% == 0 OutputDemand_2D(n,z)=Demand("2D",n,z);
+
+
 OutputCommitted(au,z)=Committed.L(au,z);
 OutputFlow(l,z)=Flow.L(l,z);
 $If %TransmissionGrid% == 1 OutputInjectedPower(n,z)=InjectedPower.L(z,n);
@@ -1912,11 +2019,15 @@ OutputShutDown(au,z) = ShutDown.L(au,z);
 
 *New
 $If %MTS%==0 OutputSysInertia(z) = SysInertia.L(z);
-*OutputSysInertia(z) = SysInertia.L(z);
-$If %MTS%==0 OutputPrimaryResponse(z)=PrimaryResponse(z);
-*OutputPrimaryResponse(z)=PrimaryResponse(z);
-$If %MTS%==0 OutputPrimaryResponse_Available(au,z) = PrimaryResponse_Available.L(au,z);
-*OutputPrimaryResponse_Available(au,z) = PrimaryResponse_Available.L(au,z);
+$If %MTS%==0 OutputSystemGain(z) = SystemGain.L(z);
+$If %MTS%==0 OutputPrimaryReserve_Available(z) = PrimaryReserve_Available.L(z);
+*MADRID
+$If %MTS%==0 OutputPowerLoss(z) = PowerLoss.L(z);
+*$If %MTS%==0 OutputMaxInstantGenerator(z) = MaxInstantGenerator.L(z);
+
+*New
+OutputTotalDemand_2U(z) = TotalDemand_2U.L(z);
+*OutputLoadRamp(n,z) = LoadRamp.L(n,z);
 
 *FIXME: what about other sectors
 *OutputEmissions(n,p,z) = sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n)) / sum(u,Power.L(u,z)*Location(u,n));
@@ -1952,7 +2063,7 @@ UnitHourlyRampingCost(u,z) = CostRampUpH.L(u,z) + CostRampDownH.L(u,z);
 UnitHourlyProductionCost(au,z) = sum(u, UnitHourlyFixedCost(u,z) + UnitHourlyStartUpCost(u,z) + UnitHourlyShutDownCost(u,z) + UnitHourlyRampingCost(u,z))
                                 + UnitHourlyVariableCost(au,z);
 UnitHourlyProfit(au,z) = UnitHourlyRevenue(au,z) - UnitHourlyProductionCost(au,z);
-*$If %MTS% == 0 OutputSysInertia(z) = SysInertia.L(z);
+
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
@@ -2039,11 +2150,11 @@ OutputDemand_2D,
 
 *New
 $If %MTS%==0 OutputSysInertia,
-*OutputSysInertia,
-$If %MTS%==0 OutputPrimaryResponse,
-*OutputPrimaryResponse,
-$If %MTS%==0 OutputPrimaryResponse_Available,
-*OutputPrimaryResponse_Available,
+$If %MTS%==0 OutputSystemGain,
+$If %MTS%==0 OutputPrimaryReserve_Available,
+*MADRID
+$If %MTS%==0 OutputPowerLoss,
+*$If %MTS%==0 OutputMaxInstantGenerator,
 
 status,
 UnitHourlyPowerRevenue

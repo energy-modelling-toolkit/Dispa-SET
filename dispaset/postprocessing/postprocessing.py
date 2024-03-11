@@ -1121,91 +1121,97 @@ def get_frequency_security_constraints(inputs, results):
     :param results:     DispaSET results
     """
     
-        
     OutputCommitted = results['OutputCommitted']
     OutputPower = results['OutputPower'] 
-    TotalOutputPower = OutputPower.sum(axis=1)
     units = inputs['units']
-    
+        
     # Filter "units" to keep rows with 'WAT', 'GAS', 'BIO', 'OIL' in the "Fuel" column
-    units = units[units['Fuel'].isin(['WAT', 'GAS', 'BIO', 'OIL'])]
-    
+    convunits = units[units['Fuel'].isin(['WAT', 'GAS', 'BIO', 'OIL'])]
+        
     # Get the list of generator names from the filtered "units"
     generator_list = units.Unit.tolist()
-    
+    convgenerator_list = convunits.Unit.tolist()
+            
     # Filter the dataframe to keep only the columns that exist in the dataframe
     generator_list = [col for col in generator_list if col in OutputCommitted.columns]
-    
-    # Keep only the columns in "OutputCommitted" that are in "generator_list"
-    OutputSyncCommitted = OutputCommitted[generator_list]
-    
+        
+    # Filter the dataframe to keep only the columns that exist in the dataframe
+    convgenerator_list = [col for col in convgenerator_list if col in OutputCommitted.columns]
+        
+    # Keep only the columns in "OutputCommitted" that are in "convgenerator_list"
+    OutputSyncCommitted = OutputCommitted[convgenerator_list]
+        
     # Create an empty DataFrame for the result
-    GeneratorContingency = pd.DataFrame(columns=['Hour', 'GeneratorName', 'PowerCapacity'])
+    GeneratorContingency = pd.DataFrame(columns=['TIMESTAMP', 'GeneratorName', 'PowerCapacity'])
     
+        
     # Iterate through the rows of OutputSyncCommitted
-    for hour, row in OutputSyncCommitted.iterrows():
+    for timestamp, row in OutputSyncCommitted.iterrows():
         # Find generators with commitment value of 1
         committed_generators = [col for col in row.index if row[col] == 1]
-    
+        
         # If there are committed generators, find the one with the highest PowerCapacity
         if committed_generators:
-            max_committed_generator = max(committed_generators, key=lambda x: units.loc[x, 'PowerCapacity'])
-            max_committed_power = units.loc[max_committed_generator, 'PowerCapacity']
-        
+            max_committed_generator = max(committed_generators, key=lambda x: convunits.loc[x, 'PowerCapacity'])
+            max_committed_power = convunits.loc[max_committed_generator, 'PowerCapacity']
+            
             # Append the result to GeneratorContingency
-            GeneratorContingency = GeneratorContingency.append({'Hour': hour,
+            GeneratorContingency = GeneratorContingency.append({'TIMESTAMP': timestamp,
                                                                 'GeneratorName': max_committed_generator,
                                                                 'PowerCapacity': max_committed_power},
-                                                               ignore_index=True)
+                                                                 ignore_index=True)
+    
+    
+    # Inicializar un DataFrame vacío para almacenar los resultados
+    total_power_per_time = pd.DataFrame(columns=['TIMESTAMP', 'TotalPower'])
+    
+    # Iterar sobre las filas de 'OutputCommitted'
+    for timestamp, row in OutputCommitted.iterrows():
+        # Filtrar 'relevant_units' para obtener solo las columnas de generadores encendidos (valor igual a 1)
+        committed_generators = [col for col in row.index if row[col] == 1]
+    
+        # Crear una serie booleana indicando si cada generador está encendido
+        is_committed = units['Unit'].isin(committed_generators)
+        
+        # Filtrar el DataFrame original para incluir solo generadores encendidos
+        committed_units = units[is_committed]
+        
+        # Calcular la suma de PowerCapacity para generadores encendidos
+        total_power = committed_units['PowerCapacity'].sum()
+        total_power_per_time = total_power_per_time.append({'TIMESTAMP': timestamp, 'TotalPower': total_power}, ignore_index=True)
+    
     
     # Set the 'Hour' column as the index
-    GeneratorContingency.set_index('Hour', inplace=True)
-    
+    GeneratorContingency.set_index('TIMESTAMP', inplace=True)
+    total_power_per_time.set_index('TIMESTAMP', inplace=True)
+        
     # Print the resulting DataFrame
     print(GeneratorContingency)
-    
+        
     # Merge DataFrames across columns
-    dispatch = pd.concat([GeneratorContingency, TotalOutputPower], axis=1)
-    
+    dispatch = pd.concat([GeneratorContingency, total_power_per_time], axis=1)
+        
     # rename columns
-    dispatch = dispatch.rename(columns={'PowerCapacity': 'pcontingency',0: 'pcommitted'})
+    dispatch = dispatch.rename(columns={'PowerCapacity': 'pcontingency','TotalPower': 'pcommitted'})
     dispatch['ploss'] = (dispatch['pcontingency']/(dispatch['pcommitted']-dispatch['pcontingency']))*-1
+    # dispatch['ploss'] = (dispatch['pcontingency'])*-1
+    
     dispatch = dispatch.reset_index()
-
+    
     # Find the ploss max for each GeneratorName
     max_ploss = dispatch.groupby('GeneratorName')['ploss'].max()
 
-    # # Find the ploss min for each GeneratorName
-    # min_ploss = dispatch.groupby('GeneratorName')['ploss'].min()
 
-    # Save the original dispatch
-    dispatch.to_csv('dispatch.csv', index=False)
 
-    # # Filter the original dispatch using the max_ploss and min_ploss for each GeneratorName
-    # filtered_dispatch = dispatch[
-    #     #(
-    #     dispatch.set_index(['GeneratorName', 'ploss'])
-    #                 .index.isin(max_ploss.items()) 
-    #                 #| 
-    #                 #dispatch.set_index(['GeneratorName', 'ploss'])
-    #                 #.index.isin(min_ploss.items()))
-    #                               ]
-    # filtered_dispatch.to_csv('filtered_dispatch.csv', index=False)
-    filtered_dispatch = dispatch
 # %% power swing solutions
-    # to save the results of inertia and pprim into the dispatch result
-    # dispatch = filtered_dispatch
-    filtered_dispatch['optimal_k'] = None
-    filtered_dispatch['optimal_H'] = None
-    
-    # Create an empty dictionary to store results
+# Create an empty dictionary to store results
     freq_security = {}
     
     # Crear un archivo Excel para almacenar los resultados
     with pd.ExcelWriter('power_swing_results.xlsx', engine='xlsxwriter') as writer:
         contingency_count = 1  # Inicializar el contador de hojas
     
-        for index, row in filtered_dispatch.iterrows():
+        for index, row in dispatch.iterrows():
             # Perform the operations on each row
     
             def power_swing(y, t, k, H):
@@ -1214,18 +1220,18 @@ def get_frequency_security_constraints(inputs, results):
                 if t < 1:
                     ploss = 0
                     pprim = 0
-                elif t < 5:
+                elif t < time_preparation:
                     ploss = row['ploss']
                     deltap = ploss
                     pprim = 0
                 else:
-                    ploss = row['ploss']
+                    ploss = row['ploss'] 
                     pcommitted = row['pcommitted']
-                    pprim = (-k * f) / pcommitted * (t-5)
+                    pcontingency = row['pcontingency']
+                    pprim = (-k * f) / (pcommitted-pcontingency) * (t-time_preparation)
                     deltap = ploss + pprim
     
-                delf = deltap / (2 * H)
-    
+                delf = deltap*1 / (2 * H )
                 return [deltap, delf]
     
             # Initial conditions
@@ -1256,14 +1262,17 @@ def get_frequency_security_constraints(inputs, results):
     
             # Search for the first solution by iterating through values of H and k
             lower_bound_H = 1
-            upper_bound_H = 100  # Adjust the upper bound as needed
+            upper_bound_H = 1000  # Adjust the upper bound as needed
             # lower_bound_k = 0
             # upper_bound_k = 4000  # Adjust the upper bound as needed
             step = 1
     
             found_solution = False
             # min_k = None                                  # k variable
+            
+            # Set the constant and time preparation values
             k = 1700  # Valor constante de k
+            time_preparation = 5
             min_H = None
     
             for H in range(lower_bound_H, upper_bound_H + 1, step):
@@ -1278,12 +1287,13 @@ def get_frequency_security_constraints(inputs, results):
                 #     break              # k variable
     
             if found_solution:
-                print(f"k (fixed at 1700) that satisfies constraints: {k}")
+                print(f"The preparation time for the Primary Reserve is set at: {time_preparation}")
+                print(f"The proportional gain constant k of the speed regulators is set at: {k}")
                 #print(f"Minimum k that satisfies constraints: {min/_k}")
                 print(f"Minimum H that satisfies constraints: {min_H}")
                 # Update the DataFrame with the new values
-                filtered_dispatch.at[index, 'k'] = k  # Store in 'k'
-                filtered_dispatch.at[index, 'min_H'] = min_H  # Store in 'min_H'
+                dispatch.at[index, 'k'] = k  # Store in 'k'
+                dispatch.at[index, 'min_H'] = min_H  # Store in 'min_H'
     
                 # Solve the ODE system with the optimal k and H
                 sol = odeint(power_swing, y0, t, args=(k, min_H))
@@ -1298,6 +1308,7 @@ def get_frequency_security_constraints(inputs, results):
                 pcontingency = row['pcontingency']
     
                 # Store results in the DataFrame
+                results_df['TIMESTAMP'] = row['TIMESTAMP']
                 results_df['Frequency'] = f
                 results_df['RoCoF'] = der_f
                 results_df['DeltaP'] = deltap
@@ -1324,24 +1335,24 @@ def get_frequency_security_constraints(inputs, results):
                 fig, ax1 = plt.subplots(figsize=(12, 8))
             
                 # Frequency Values Plot (Left Y-axis)
-                ax1.plot(t, f, color='tab:blue', linestyle='-', label='f')
-                ax1.plot(t, der_f, color='tab:orange', linestyle='-', label='der(f)')
-                ax1.set_xlabel('Time')
-                ax1.set_ylabel('Frequency', color='tab:blue')
-                ax1.tick_params(axis='y', labelcolor='tab:blue')
-                ax1.legend(loc='upper left')
+                ax1.plot(t, f, color='tab:blue', linestyle='-', label='$∆f_{COI}$')
+                ax1.plot(t, der_f, color='tab:orange', linestyle='-', label='$d(∆f_{COI})$')
+                ax1.set_xlabel('Time [s]', fontsize=16)
+                ax1.set_ylabel('Frequency [p.u.]', color='tab:blue', fontsize=16)
+                ax1.tick_params(axis='y', labelcolor='tab:blue', labelsize=14)
+                ax1.legend(loc='upper left', fontsize=14)
             
                 # Power Values Plot (Right Y-axis)
                 ax2 = ax1.twinx()
-                ax2.plot(t, deltap, color='tab:green', linestyle='--', label='deltap')
-                ax2.plot(t, ploss, color='tab:red', linestyle='--', label='ploss')
-                ax2.plot(t, pprim, color='tab:purple', linestyle='--', label='pprim')
-                ax2.set_ylabel('Power', color='tab:red')
-                ax2.tick_params(axis='y', labelcolor='tab:red')
-                ax2.legend(loc='upper right')
+                ax2.plot(t, deltap, color='tab:green', linestyle='--', label='∆Power')
+                ax2.plot(t, ploss, color='tab:red', linestyle='--', label='PowerLoss')
+                ax2.plot(t, pprim, color='tab:purple', linestyle='--', label='PrimaryReserve')
+                ax2.set_ylabel('Power [p.u.]', color='tab:red', fontsize=16)
+                ax2.tick_params(axis='y', labelcolor='tab:red', labelsize=14)
+                ax2.legend(loc='upper right', fontsize=14)
             
                 # Overall Plot Settings
-                plt.title('Power Swing')
+                plt.title('Power Swing', fontsize=18)
                 plt.xlim(0, 60)
                 plt.tight_layout()
                 plt.show()
@@ -1350,26 +1361,26 @@ def get_frequency_security_constraints(inputs, results):
                 print("No solution found within the specified range of H and k that satisfies constraints.")
     
     # Crear un DataFrame vacío para almacenar los resultados
-    summary = pd.DataFrame(columns=['Contingency', 'Inertia','PrimaryResponse'])
+    summary = pd.DataFrame(columns=['TIMESTAMP', 'Contingency', 'TotalPowerCommitted', 'KineticEnergy', 'Inertia','PrimaryResponse'])
+    
+    # Para obtener el valor de Kinetic Energy
+    for key, df in freq_security.items():
+        # Calcula la nueva columna 'KineticEnergy'
+        df['KineticEnergy'] = df['min_H'] * df['pcontingency'] - df['pcommitted']
     
     # Iterar sobre los DataFrames en el diccionario y tomar el primer valor de 'A' y 'B'
     for nombre_df, df in freq_security.items():
+        primer_timestamp = df['TIMESTAMP'].iloc[0]
         primer_contingency = df['pcontingency'].iloc[0]  # Primer valor de la columna 'A'
+        primer_pcommitted = df['pcommitted'].iloc[0]
+        primer_KineticEnergy = df['KineticEnergy'].iloc[0]  # Primer valor de la columna 'KineticEnergy'
         primer_inertia = df['min_H'].iloc[0]  # Primer valor de la columna 'B'
-        max_PrimaryResponseMW = df['PrimaryResponseMW'].max()  # Valor maximo de la columna 'B'
+        max_PrimaryResponseMW = df['PrimaryResponseMW'].max()  # Valor maximo de la columna 'PrimaryResponse'
         
         # Agregar los valores a 'Summary'
-        summary = summary.append({'Contingency': primer_contingency, 'Inertia': primer_inertia, 'PrimaryResponse': max_PrimaryResponseMW}, ignore_index=True)
+        summary = summary.append({'TIMESTAMP': primer_timestamp, 'Contingency': primer_contingency, 'TotalPowerCommitted': primer_pcommitted, 'KineticEnergy': primer_KineticEnergy, 'Inertia': primer_inertia, 'PrimaryResponse': max_PrimaryResponseMW}, ignore_index=True)
     
-    # Copiar valores de 'B' en 'D' donde los valores en 'A' y 'C' coinciden
-    for index, row in dispatch.iterrows():
-        valor_a = row['pcontingency']
-        coincidencia = summary[summary['Contingency'] == valor_a]
-        if len(coincidencia) > 0:
-            dispatch.at[index, 'Inertia'] = coincidencia['Inertia'].values[0]
-            # dispatch.at[index, 'PrimaryResponse'] = coincidencia['PrimaryResponse'].values[0]
-    dispatch['Inertia'] = dispatch['Inertia']*2
-    dispatch.rename(columns={'index': 'TIMESTAMP'}, inplace=True)
     dispatch.set_index('TIMESTAMP', inplace=True)
+    summary.set_index('TIMESTAMP', inplace=True)
         
     return freq_security, summary, dispatch

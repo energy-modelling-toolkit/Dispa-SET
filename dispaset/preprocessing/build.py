@@ -12,7 +12,7 @@ from future.builtins import int
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_temperatures, check_clustering, \
     isStorage, check_chp, check_p2h, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves, check_p2bs, check_boundary_sector, \
-    check_BSFlexDemand, check_BSFlexSupply, check_PrimaryResponse
+    check_BSFlexDemand, check_BSFlexSupply, check_PrimaryReserveLimit
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
@@ -145,6 +145,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # logging.warning('No Inertia Limit will be considered (no valid file provided)')
         # InertiaLimit = pd.DataFrame(index=config['idx_long'])
     
+    # Gain Limit:
+    if 'SystemGainLimit' in config and os.path.isfile(config['SystemGainLimit']):
+        SystemGainLimit = load_time_series(config, config['SystemGainLimit']).fillna(0)
+    else:
+        logging.warning('No Gain Limit will be considered (no valid file provided)')
+        SystemGainLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
+        # logging.warning('No Inertia Limit will be considered (no valid file provided)')
+        # InertiaLimit = pd.DataFrame(index=config['idx_long'])
+    
     # Boundary Sector Interconnections:
     if 'BoundarySectorInterconnections' in config and os.path.isfile(config['BoundarySectorInterconnections']):
         BS_flows = load_time_series(config, config['BoundarySectorInterconnections']).fillna(0)
@@ -171,13 +180,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                            default=config['default']['ShareOfFlexibleDemand'])
     Reserve2D = NodeBasedTable('Reserve2D', config, default=None)
     Reserve2U = NodeBasedTable('Reserve2U', config, default=None)
-    
-    # Primary Response:
-    if 'PrimaryResponse' in config and os.path.isfile(config['PrimaryResponse']):
-        PrimaryResponse = load_time_series(config, config['PrimaryResponse']).fillna(0)
+    # aqui deberia inicializar los df de los resultados que no estan con timestamp
+    # Primary Reserve Required:
+    if 'PrimaryReserveLimit' in config and os.path.isfile(config['PrimaryReserveLimit']):
+        PrimaryReserveLimit = load_time_series(config, config['PrimaryReserveLimit']).fillna(0)
     else:
-        logging.warning('No Primary Response requirement will be considered (no valid file provided)')
-        PrimaryResponse = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
+        logging.warning('No Primary Reserve requirement will be considered (no valid file provided)')
+        PrimaryReserveLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
 
 
     # Curtailment:
@@ -283,8 +292,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     check_p2h(config, plants_p2h)
     
     # Defining the CONVENTIONAL units:
-    #plants_conventional = plants[[u in commons['tech_conventional'] for u in plants['Technology']]]
-    #check_conventional(config, plants_conventional)
+    plants_conventional = plants[[u in commons['tech_conventional'] for u in plants['Technology']]]
+    # check_conventional(config, plants_conventional)
 
     # All heating units:
     # plants_heat = pd.concat([plants_heat, plants_chp])
@@ -457,7 +466,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     check_temperatures(plants, Temperatures)
     check_FlexibleDemand(ShareOfFlexibleDemand)
     check_reserves(Reserve2D, Reserve2U, Load)
-    check_PrimaryResponse(PrimaryResponse, Load)
+    check_PrimaryReserveLimit(PrimaryReserveLimit, Load)
 
     # Fuel prices:
     # fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2',
@@ -681,6 +690,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     Plants_p2h = Plants_merged[[u in commons['tech_p2ht'] for u in Plants_merged['Technology']]].copy()
     # check power to heat plants:
     check_p2h(config, Plants_p2h)
+    
+    # Filter conventional units
+    Plants_conventional = Plants_merged[[u in commons['tech_conventional'] for u in Plants_merged['Technology']]].copy()
+    # check conventional plants:
+    # check_conventional(config, Plants_conventional)
 
     # # Filter heat only plants
     # Plants_heat_only = Plants_merged[[u in commons['tech_heat'] for u in Plants_merged['Technology']]].copy()
@@ -758,7 +772,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'SectorXFlexibleDemand': SectorXFlexibleDemand, 'SectorXFlexibleSupply': SectorXFlexibleSupply,
                'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel, 
                'SectorXFloodControl': SectorXFloodControl, 
-               'CostXSpillage':CostXSpillage, 'InertiaLimit': InertiaLimit, 'PrimaryResponse': PrimaryResponse}
+               'CostXSpillage':CostXSpillage, 'InertiaLimit': InertiaLimit,  'SystemGainLimit': SystemGainLimit,'PrimaryReserveLimit': PrimaryReserveLimit}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
@@ -842,6 +856,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets['asu'] = Plants_merged[[u in [x for x in commons['Technologies'] if x in commons['tech_storage'] +
                                        commons['tech_thermal_storage']] for u in
                                  Plants_merged['Technology']]].index.tolist()
+    sets['cu'] = Plants_conventional.index.tolist()
 
     ###################################################################################################################
     ############################################   Parameters    ######################################################
@@ -932,7 +947,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # if MTS == 0:
     sets_param['InertiaConstant'] = ['au']
     sets_param['InertiaLimit'] = ['h']
-    sets_param['PrimaryResponse'] = ['h']
+    sets_param['Droop'] = ['au']
+    sets_param['SystemGainLimit'] = ['h']
+    sets_param['PrimaryReserveLimit'] = ['h']
     if (grid_flag == "DC-Power Flow"):
         sets_param['PTDF'] = ['l', 'n']   
     
@@ -966,7 +983,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
     if MTS == 0:
         for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
-                    'CostRampUp', 'StorageCapacity', 'StorageSelfDischarge', 'StorageChargingCapacity', 'InertiaConstant']:
+                    'CostRampUp', 'StorageCapacity', 'StorageSelfDischarge', 'StorageChargingCapacity', 'InertiaConstant', 'Droop']:
             parameters[var]['val'] = Plants_merged[var].values
     else:    
         for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
@@ -1299,9 +1316,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # if MTS == 0:
     if len(finalTS['InertiaLimit'].columns) != 0:
         parameters['InertiaLimit']['val']= finalTS['InertiaLimit'].iloc[:, 0].values
-        # Primary Response to parameters dict
-    if len(finalTS['PrimaryResponse'].columns) != 0:
-        parameters['PrimaryResponse']['val'] = finalTS['PrimaryResponse'].iloc[:, 0].values
+    # System Gain to parameters dict
+    if len(finalTS['SystemGainLimit'].columns) != 0:
+        parameters['SystemGainLimit']['val']= finalTS['SystemGainLimit'].iloc[:, 0].values
+    # Primary Reserve to parameters dict
+    if len(finalTS['PrimaryReserveLimit'].columns) != 0:
+        parameters['PrimaryReserveLimit']['val'] = finalTS['PrimaryReserveLimit'].iloc[:, 0].values
     
     # Maximum Line Capacity
     if (grid_flag == "DC-Power Flow"):

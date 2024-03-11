@@ -31,7 +31,7 @@ commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF
 # List of VRES technologies:
 commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 # List of Conventional technologies:
-#commons['tech_conventional'] = ['HDAM', 'HROR', 'COMC', 'GTUR', 'STUR']
+commons['tech_conventional'] = ['HDAM', 'HROR', 'COMC', 'GTUR', 'STUR']
 # List of storage technologies:
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
 # commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP', 'HDAMC']
@@ -155,10 +155,12 @@ commons['PathParameters'] = {
     # 'PTDFMatrix': 145,
     # Inertia Limit data
     'InertiaLimit': 146,
+    # Gain Limit data
+    'SystemGainLimit': 147,
     # # Hydrogen data
     # 'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
     # Reserves input data
-    'PrimaryResponse': 159, 'Reserve2U': 160, 'Reserve2D': 161, 
+    'PrimaryReserveLimit': 159, 'Reserve2U': 160, 'Reserve2D': 161, 
     # Other costs related data
     'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostCurtailment': 171,
     # Fuel price related data
@@ -182,5 +184,9 @@ commons['default'] = {
     'DemandFlexibility': 162, 'ShareOfQuickStartUnits': 163,
     'ValueOfLostLoad': 204, 'PriceOfSpillage': 205, 'WaterValue': 206,
     # Inertia requirement default
-    'InertiaLimit': 146
+    'InertiaLimit': 146,
+    # Gain requirement default
+    'SystemGainLimit': 147,
+    # Inertia requirement default
+    'PrimaryReserveLimit': 159
 }

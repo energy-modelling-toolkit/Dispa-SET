@@ -124,6 +124,8 @@ def generic_reserve(load):
 
     :param load:                Dataframe of load timeseries
     """
-    up = (10 * load.max() + 150 ** 2) ** 0.5 - 150
-    down = 0.5 * up
+    # up = (10 * load.max() + 150 ** 2) ** 0.5 - 150
+    # down = 0.5 * up
+    up = load.apply(lambda col: ((10 * col + 150 ** 2) ** 0.5) - 150)
+    down = up   
     return pd.Series(up, index=load.index), pd.Series(down, index=load.index)

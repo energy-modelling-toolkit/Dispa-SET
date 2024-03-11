@@ -623,20 +623,20 @@ def check_reserves(Reserve2D, Reserve2U, Load):
             logging.warning('No 2D reserve requirement data has been found for zone ' + z +
                             '. Using the standard formula')
 
-def check_PrimaryResponse(PrimaryResponse, Load):
+def check_PrimaryReserveLimit(PrimaryReserveLimit, Load):
     """
     Function that checks the validity of the reserve requirement time series
-    :param PrimaryResponse:   DataFrame of Primary Response
+    :param PrimaryReserve:   DataFrame of Primary Reserve Limit
     :param Load:        DataFrame of Loads
     """
-    if (PrimaryResponse.sum(axis=1) < 0).any():
-        logging.critical('The Primary Response table contains negative values')
+    if (PrimaryReserveLimit.sum(axis=1) < 0).any():
+        logging.critical('The Primary Reserve Limit table contains negative values')
         sys.exit(1)
-    if (Load.sum(axis=1) - PrimaryResponse.sum(axis=1) < 0).any():
-        logging.critical('The Primary Response table contains values higher than demand')
+    if (Load.sum(axis=1) - PrimaryReserveLimit.sum(axis=1) < 0).any():
+        logging.critical('The Primary Reserve Limit table contains values higher than demand')
         sys.exit(1)
     else:
-        logging.warning('No Primary Response requirement data has been found')
+        logging.warning('No Primary Reserve Limit requirement data has been found')
 
 def check_temperatures(plants, Temperatures):
     """
