@@ -38,10 +38,26 @@ cd Dispa-SET
 conda env create  # Automatically creates environment based on environment.yml
 conda activate dispaset # Activate the environment
 pip install -e . # Install editable local version
-pytest # Ensure that the test cases are running
+```
+The above commands create a dedicated environment so that your anaconda configuration remains clean from the required dependencies installed.
+
+At this point, it is necessary to make sure that the GAMS API is properly installed in the newly created environment:
+- Make sure to define an evironment variable GAMSDIR pointing to the gams installation folder (e.g. C:\GAMS\win62\47.7.0)
+- For GAMS version 45 and higher, the api can be installed directly from pip, replacing the x values below with the installed version of gams:
+```bash
+pip install gamsapi==4x.x.x
+```
+- For older version of gams, the API can be compiled from the apifile/Python directory in the gams installation folder. The the path to the library must then be added to the PYTHONPATH environment variable. For example, in linux:
+```bash
+cd /path/to/gams/apifiles/Python/api_310
+python gamssetup.py install
+export PYTHONPATH=/path/to/gams/apifiles/Python/gams:/path/to/gams/apifiles/Python/api_310
+```
+- For very old versions of GAMS (e.g. 24.x, 25.x), it is possible to install the old low-level api from pip. Note that if this does not work, the api must be de-installed and compiled from the gams apifile folder.
+```bash
+pip install gdxcc, gamsxcc, optcc
 ```
 
-The above commands create a dedicated environment so that your anaconda configuration remains clean from the required dependencies installed.
 To check that everything runs fine, you can build and run a test case by typing:
 ```bash
 dispaset -c ConfigFiles/ConfigTest.xlsx build simulate
