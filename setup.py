@@ -49,10 +49,7 @@ setup(
         "pandas >= 0.19",
         "xlrd >= 0.9",
         "matplotlib >= 1.5.1",
-        "gdxcc >= 7",
         "xlrd == 1.2.0",
-        "gamsxcc",
-        "optcc",
         "networkx"
     ],
     entry_points={
