@@ -234,9 +234,10 @@ scalar TimeStep;
 
 *MADRID
 
-scalar SystemFrequency, MaxRoCoF;
+scalar SystemFrequency, RoCoFMax, DeltaFrequencyMax;
 SystemFrequency = 50;
-MaxRoCoF = 0.2;
+RoCoFMax = 0.2;
+DeltaFrequencyMax = 0.8;
 
 *Threshold values for p2h partecipation to reserve market as spinning/non-spinning reserves (TO BE IMPLEMENTED IN CONFIGFILE)
 srp = 1;
@@ -1121,9 +1122,8 @@ $If %FC% == 1 +SystemGainLimit(i)
 
 EQ_PrimaryReserve_Available(i)..
          PrimaryReserve_Available(i)
-         =E=
-         SystemGain(i)*0.8
-*aumentar luego *1000
+         =l=
+         SystemGain(i)*0.8*1000
 ;
 
 EQ_PrimaryReserve_Capability(i)..
@@ -1134,7 +1134,7 @@ EQ_PrimaryReserve_Capability(i)..
 
 *Hourly demand balance in the Primary Reserve market
 EQ_Demand_balance_PrimaryReserve(i)..
-         0
+         400
 $If %FC% == 1 +PrimaryReserveLimit(i)
          =l=
          PrimaryReserve_Available(i)
