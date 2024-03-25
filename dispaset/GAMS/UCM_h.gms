@@ -1134,7 +1134,7 @@ EQ_PrimaryReserve_Capability(i)..
 
 *Hourly demand balance in the Primary Reserve market
 EQ_Demand_balance_PrimaryReserve(i)..
-         400
+         0
 $If %FC% == 1 +PrimaryReserveLimit(i)
          =l=
          PrimaryReserve_Available(i)

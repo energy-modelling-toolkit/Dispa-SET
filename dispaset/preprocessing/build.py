@@ -393,13 +393,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     else:
         BS_forced_spillage = pd.DataFrame(index=idx_long)
 
-    lines_bs = BS_spillage.columns
+    # lines_bs = BS_spillage.columns
+    lines_bs = ReservoirScaledInflows.columns
    
     if 'CostXSpillage' in config and os.path.isfile(config['CostXSpillage']):
         CostXSpillage = GenericTable(lines_bs, 'CostXSpillage', config, default=config['default']['PriceOfSpillage'])
+        
     else:
         logging.warning('No CostXSpillage will be considered (no valid file provided)')
-        CostXSpillage = pd.DataFrame(index=config['idx_long'])    
+        CostXSpillage = pd.DataFrame(index=config['idx_long']) 
         
     # Read BS Flexible demand & supply
     if 'SectorXFlexibleDemand' in config and os.path.isfile(config['SectorXFlexibleDemand']):
@@ -833,7 +835,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['lx'] = BSInterconnections
-    sets['slx'] = BSSpillage
+    # sets['slx'] = BSSpillage
+    sets['slx'] = ReservoirScaledInflows.columns.tolist()
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
@@ -1366,13 +1369,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         if slx in BS_Spillages.columns:
             parameters['SectorXMaximumSpillage']['val'][i, :] = finalTS['BSMaxSpillage'][slx]
     #Cost of Spillage boundary sector
+        if slx in ReservoirScaledInflows.columns:
             parameters['CostXSpillage']['val'][i, :] = finalTS['CostXSpillage'][slx]  
     # Check values:
     check_MinMaxFlows(parameters['FlowXMinimum']['val'], parameters['FlowXMaximum']['val'])
 
     parameters['LineXNode'] = incidence_matrix(sets, 'lx', parameters, 'LineXNode', nodes='nx')
 
-    parameters['SectorXSpillageNode'] = incidence_matrix(sets, 'slx', parameters, 'SectorXSpillageNode', nodes='nx')
+    # parameters['SectorXSpillageNode'] = incidence_matrix(sets, 'slx', parameters, 'SectorXSpillageNode', nodes='nx')
 
     # PTDF MATRIX 
     if (grid_flag == "DC-Power Flow"):
