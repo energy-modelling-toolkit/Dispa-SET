@@ -786,7 +786,7 @@ def adjust_unit_capacity(SimData, u_idx, scaling=1, value=None, singleunit=False
 
 
 
-def adjust_capacity(inputs, tech_fuel, scaling=1, value=None, singleunit=False, sto_fp_time_range=None, write_gdx=False, dest_path=''):
+def adjust_capacity(inputs, tech_fuel, scaling=1, value=None, singleunit=False, sto_fp_time_range=None, write_gdx=False, dest_path='', temp_path='Inputs.gdx'):
     """
     Function used to modify the installed capacities in the Dispa-SET generated input data
     The function update the Inputs.p file in the simulation directory at each call
@@ -797,6 +797,7 @@ def adjust_capacity(inputs, tech_fuel, scaling=1, value=None, singleunit=False, 
     :param singleunit:        Set to true if the technology should remain lumped in a single unit
     :param sto_fp_time_range: Ignored for non storage units. Specifies the range of full power time contained in the storage
                               the units have to fit in. If none, infinite range is considered
+    :param temp_path:         The path to the location where to temporary build the Inputs.gdx
     :param write_gdx:         boolean defining if Inputs.gdx should be also overwritten with the new data
     :param dest_path:         Simulation environment path to write the new input data. If unspecified, no data is written!
     :return:                  New SimData dictionary
@@ -848,9 +849,9 @@ def adjust_capacity(inputs, tech_fuel, scaling=1, value=None, singleunit=False, 
         with open(os.path.join(dest_path, 'Inputs.p'), 'wb') as pfile:
             pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
         if write_gdx:
-            write_variables(SimData['config'], 'Inputs.gdx', [SimData['sets'], SimData['parameters']])
-            shutil.copy('Inputs.gdx', dest_path + '/')
-            os.remove('Inputs.gdx')
+            write_variables(SimData['config'], temp_path, [SimData['sets'], SimData['parameters']])
+            shutil.copy(temp_path, os.path.join(dest_path, 'Inputs.gdx'))
+            os.remove(temp_path)
     return SimData
 
 def ranges_from_tresholds(thresholds, only_thresholds=False):
