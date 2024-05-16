@@ -334,7 +334,11 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         profiles[profiles >= 1E300] = np.nan
     if 'profilesSectorX' in locals():
         profilesSectorX[profilesSectorX >= 1E300] = np.nan
-
+    #check storage hours less than 8
+    for storagereservoir in SimData['sets']['nx']:
+        if SimData['parameters']['SectorXStorageHours']['val'][SimData['sets']['nx'].index(storagereservoir)] <= 8:
+           profilesSectorX[storagereservoir] = 0
+    # profilesSectorX = profilesSectorX.dropna(axis=1)
     if config['SectorXFlexibleDemand'] != '':
         SectorXFlexDemand[SectorXFlexDemand >= 1E300] = np.nan
 

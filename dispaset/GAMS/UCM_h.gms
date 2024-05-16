@@ -186,6 +186,7 @@ K_QuickStart(n)                             [n.a.]          Part of the reserve 
 QuickStartPower(au,h)                       [MW\h\u]        Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
 SectorXStorageCapacity(nx)                  [MWh]           Storage capacity of the boundary sector
 SectorXStorageSelfDischarge(nx)             [%]             Boundary sector storage self discharge
+SectorXStorageHours(nx)                     [h]             Boundary sector storage hours
 SectorXStorageMinimum(nx)                   [MWh]           Boundary sector storage minimum
 $If %MTS% == 0 SectorXStorageInitial(nx)    [MWh]           Boundary sector storage initial state of charge
 SectorXStorageProfile(nx,h)                 [%]             Boundary sector storage level respected at the end of each horizon
@@ -313,6 +314,7 @@ $LOAD SectorXFlexSupplyInputInitial
 $LOAD SectorXFlexMaxSupply
 $LOAD SectorXStorageCapacity
 $LOAD SectorXStorageSelfDischarge
+$LOAD SectorXStorageHours
 $LOAD SectorXStorageMinimum
 $LOAD SectorXAlertLevel
 $LOAD SectorXFloodControl
@@ -405,6 +407,7 @@ SectorXFlexSupplyInputInitial,
 SectorXFlexMaxSupply,
 SectorXStorageCapacity,
 SectorXStorageSelfDischarge,
+SectorXStorageHours,
 SectorXStorageMinimum,
 SectorXAlertLevel,
 SectorXFloodControl,
@@ -434,8 +437,8 @@ POSITIVE VARIABLES
 AccumulatedOverSupply(n,h)              [MWh]   Accumulated oversupply due to the flexible demand
 CostStartUpH(au,h)                      [EUR]   Cost of starting up
 CostShutDownH(au,h)                     [EUR]   cost of shutting down
-CostRampUpH(u,h)                        [EUR]   Ramping cost
-CostRampDownH(u,h)                      [EUR]   Ramping cost
+CostRampUpH(au,h)                        [EUR]   Ramping cost
+CostRampDownH(au,h)                      [EUR]   Ramping cost
 CurtailedPower(n,h)                     [MW]    Curtailed power at node n
 CurtailmentReserve_2U(n,h)              [MW]    Curtailed power used for reserves at node n
 CurtailmentReserve_3U(n,h)              [MW]    Curtailed power used for reserves at node n
@@ -637,7 +640,7 @@ EQ_SystemCost(i)..
          SystemCost(i)
          =E=
          sum(au,CostFixed(au)*TimeStep*Committed(au,i))
-         +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
+         +sum(au,CostRampUpH(au,i) + CostRampDownH(au,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
          +sum((nx,xu),CostVariable(xu,i) * PowerX(nx,xu,i)*TimeStep)
@@ -664,7 +667,7 @@ EQ_SystemCost(i)..
          =E=
          sum(au,CostFixed(au)*TimeStep*Committed(au,i))
          +sum(au,CostStartUpH(au,i) + CostShutDownH(au,i))
-         +sum(u,CostRampUpH(u,i) + CostRampDownH(u,i))
+         +sum(au,CostRampUpH(au,i) + CostRampDownH(au,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
          +sum((nx,xu),CostVariable(xu,i) * PowerX(nx,xu,i)*TimeStep)
@@ -754,16 +757,16 @@ EQ_CostShutDown(au,i)$(sum(tr,Technology(au,tr))=0)..
          CostShutDown(au)*ShutDown(au,i)
 ;
 
-EQ_CostRampUp(u,i)$(CostRampUp(u) <> 0)..
-         CostRampUpH(u,i)
+EQ_CostRampUp(au,i)$(CostRampUp(au) <> 0)..
+         CostRampUpH(au,i)
          =G=
-         CostRampUp(u)*(Power(u,i)-PowerInitial(u)$(ord(i) = 1)-Power(u,i-1)$(ord(i) > 1))
+         CostRampUp(au)*(Power(au,i)-PowerInitial(au)$(ord(i) = 1)-Power(au,i-1)$(ord(i) > 1))
 ;
 
-EQ_CostRampDown(u,i)$(CostRampDown(u) <> 0)..
-         CostRampDownH(u,i)
+EQ_CostRampDown(au,i)$(CostRampDown(au) <> 0)..
+         CostRampDownH(au,i)
          =G=
-         CostRampDown(u)*(PowerInitial(u)$(ord(i) = 1)+Power(u,i-1)$(ord(i) > 1)-Power(u,i))
+         CostRampDown(au)*(PowerInitial(au)$(ord(i) = 1)+Power(au,i-1)$(ord(i) > 1)-Power(au,i))
 ;
 
 EQ_Residual_Load(n,i)..
@@ -1045,7 +1048,7 @@ EQ_Boundary_Sector_Storage_boundaries(nx,i)$(ord(i) = card(i))..
          SectorXStorageLevel(nx,i) + SectorXStorageLevelViolation(nx)
 ;
 
-EQ_Boundary_Sector_Storage_Cyclic(nx)$(SectorXStorageCapacity(nx)<10000000)..
+EQ_Boundary_Sector_Storage_Cyclic(nx)$(SectorXStorageHours(nx)>=8)..
          SectorXStorageFinalMin(nx)
          =E=
          SectorXStorageInitial(nx)
@@ -1619,8 +1622,8 @@ OutputSectorXFlexSupply(nx,h)
 OutputPowerMustRun(u,h)
 $If not %LPFormulation% == 1 OutputCostStartUpH(au,h)
 $If not %LPFormulation% == 1 OutputCostShutDownH(au,h)
-$If not %LPFormulation% == 1 OutputCostRampUpH(u,h)
-$If not %LPFormulation% == 1 OutputCostRampDownH(u,h)
+$If not %LPFormulation% == 1 OutputCostRampUpH(au,h)
+$If not %LPFormulation% == 1 OutputCostRampDownH(au,h)
 ShadowPrice_2U(n,h)
 ShadowPrice_2D(n,h)
 ShadowPrice_3U(n,h)
@@ -1681,6 +1684,7 @@ OutputStorageLevel(s,z)=StorageLevel.L(s,z)/max(1,StorageCapacity(s)*Nunits(s)*A
 OutputStorageLevel(th,z)=StorageLevel.L(th,z)/max(1,StorageCapacity(th)*Nunits(th));
 OutputStorageLevelViolation_H(au,z) = StorageLevelViolation_H.L(au,z);
 OutputSectorXStorageLevel(nx,z) = SectorXStorageLevel.L(nx,z)/max(1,SectorXStorageCapacity(nx));
+*OutputSectorXStorageLevel(nx,z)$(SectorXStorageHours(nx)>=8) = SectorXStorageLevel.L(nx,z)/max(1,SectorXStorageCapacity(nx));
 OutputSectorXSelfDischarge(nx,z) = SectorXStorageSelfDischarge(nx)*SectorXStorageLevel.L(nx,z)*TimeStep;
 OutputSectorXStorageShadowPrice(nx,z) = EQ_Boundary_Sector_Storage_balance.m(nx,z);
 OutputSectorXStorageLevelViolation_H(nx,z) = SectorXStorageLevelViolation_H.l(nx,z);
@@ -1722,8 +1726,8 @@ StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
 OutputPowerMustRun(u,z) = PowerMustRun(u,z);
 $If not %LPFormulation% == 1 OutputCostStartUpH(au,z) = CostStartUpH.L(au,z);
 $If not %LPFormulation% == 1 OutputCostShutDownH(au,z) = CostShutDownH.L(au,z);
-$If not %LPFormulation% == 1 OutputCostRampUpH(u,z) = CostRampUpH.L(u,z);
-$If not %LPFormulation% == 1 OutputCostRampDownH(u,z) = CostRampDownH.L(u,z);
+$If not %LPFormulation% == 1 OutputCostRampUpH(au,z) = CostRampUpH.L(au,z);
+$If not %LPFormulation% == 1 OutputCostRampDownH(au,z) = CostRampDownH.L(au,z);
 
 ShadowPrice_2U(n,z) =  EQ_Demand_balance_2U.m(n,z);
 ShadowPrice_2D(n,z) =  EQ_Demand_balance_2D.m(n,z);
@@ -1769,7 +1773,7 @@ UnitHourlyFixedCost(u,z) = Committed.L(u,z) * CostFixed(u);
 UnitHourlyVariableCost(au,z) = Power.L(au,z) * CostVariable(au,z);
 UnitHourlyStartUpCost(u,z) = StartUp.L(u,z) * CostStartUp(u);
 UnitHourlyShutDownCost(u,z) = ShutDown.L(u,z) * CostShutDown(u);
-UnitHourlyRampingCost(u,z) = CostRampUpH.L(u,z) + CostRampDownH.L(u,z);
+UnitHourlyRampingCost(au,z) = CostRampUpH.L(au,z) + CostRampDownH.L(au,z);
 UnitHourlyProductionCost(au,z) = sum(u, UnitHourlyFixedCost(u,z) + UnitHourlyStartUpCost(u,z) + UnitHourlyShutDownCost(u,z) + UnitHourlyRampingCost(u,z))
                                 + UnitHourlyVariableCost(au,z);
 UnitHourlyProfit(au,z) = UnitHourlyRevenue(au,z) - UnitHourlyProductionCost(au,z);
