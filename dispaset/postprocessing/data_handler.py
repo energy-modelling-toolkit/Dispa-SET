@@ -50,6 +50,10 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'OutputCostStartUpH': ('u', 'h'),
             'OutputCostRampUpH': ('u', 'h'),
             'OutputCostRampDownH': ('u', 'h'),
+            'OutputSysInertia': ('h'), 
+            'OutputSystemGain': ('h'),
+            'OutputPowerLoss': ('h'),
+            'OutputPrimaryReserve_Available': ('h'),
             'status': tuple(),
             '*': tuple()
             }
@@ -173,7 +177,8 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'OutputCurtailmentReserve_2U', 'OutputCurtailmentReserve_3U', 'OutputMaxOutageUp',
                    'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D',
                    'OutputFlowX', 'OutputSectorXStorageAlertViolation', 'OutputSectorXFloodControlViolation',
-                   'OutputCostStartUpH', 'OutputCostRampUpH']
+                   'OutputCostStartUpH', 'OutputCostRampUpH',
+                   'OutputSysInertia', 'OutputSystemGain', 'OutputPowerLoss', 'OutputPrimaryReserve_Available']
 
     # Setting the proper index to the result dataframes:
     for key in chain(keys, keys_sparse):

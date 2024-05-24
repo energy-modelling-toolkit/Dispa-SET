@@ -529,7 +529,7 @@ $If %MTS% == 1 SectorXStorageFinalMin(nx)
 
 *New
 $If %MTS% == 0 SysInertia(h)                       [s]         System Inertia
-$If %MTS% == 0 PrimaryReserve_Available(h)         [MW]        Primary Reserve available in the system
+$If %MTS% == 0 PrimaryReserve_Available(cu,h)         [MW]        Primary Reserve available in the system
 $If %MTS% == 0 SystemGain(h)                       [GW\Hz]     System Gain
 *MADRID
 $If %MTS% == 0 PowerLoss(h)                  [MW]        Primary Reserve available in the system
@@ -697,6 +697,7 @@ $If %MTS% == 0 EQ_SystemGain
 $If %MTS% == 0 EQ_SystemGain_limit
 $If %MTS% == 0 EQ_PrimaryReserve_Available
 $If %MTS% == 0 EQ_PrimaryReserve_Capability
+$If %MTS% == 0 EQ_PrimaryReserve_Boundary
 $If %MTS% == 0 EQ_Demand_balance_PrimaryReserve
 *MADRID
 $If %MTS% == 0 EQ_PowerLoss
@@ -1109,8 +1110,8 @@ $endIf
 $ifthen %MTS% == 0
 EQ_SystemGain(i)..
          SystemGain(i)
-         =E=
-          sum(cu,(PowerCapacity(cu)*Committed(cu,i))/(Droop(cu)*50*1000))
+         =l=
+          sum(cu,(PowerCapacity(cu)*Committed(cu,i))/(Droop(cu)*SystemFrequency))
 ;
 
 EQ_SystemGain_limit(i)..
@@ -1121,15 +1122,27 @@ $If %FC% == 1 +SystemGainLimit(i)
 ;
 
 EQ_PrimaryReserve_Available(i)..
-         PrimaryReserve_Available(i)
+         sum(cu,PrimaryReserve_Available(cu,i))
          =l=
-         SystemGain(i)*0.8*1000
+         SystemGain(i)*DeltaFrequencyMax
 ;
 
-EQ_PrimaryReserve_Capability(i)..
-         PrimaryReserve_Available(i)
+*EQ_PrimaryReserve_Capability(i)..
+*         PrimaryReserve_Available(i)
+*         =L=
+*         sum(cu,(PowerCapacity(cu)*LoadMaximum(cu,i)*Committed(cu,i)*Reserve(cu))-Power(cu,i))
+*;
+
+EQ_PrimaryReserve_Capability(cu,i)..
+         PrimaryReserve_Available(cu,i)
          =L=
-         sum(cu,(PowerCapacity(cu)*LoadMaximum(cu,i)*Committed(cu,i)*Reserve(cu))-Power(cu,i))
+         (PowerCapacity(cu)*LoadMaximum(cu,i)*Committed(cu,i)*Reserve(cu))-Power(cu,i)
+;
+
+EQ_PrimaryReserve_Boundary(cu,i)..
+         PrimaryReserve_Available(cu,i)
+         =L=
+         PowerCapacity(cu)*0.15
 ;
 
 *Hourly demand balance in the Primary Reserve market
@@ -1137,7 +1150,7 @@ EQ_Demand_balance_PrimaryReserve(i)..
          0
 $If %FC% == 1 +PrimaryReserveLimit(i)
          =l=
-         PrimaryReserve_Available(i)
+         sum(cu,PrimaryReserve_Available(cu,i))
 ;
 $endIf
 
@@ -1699,6 +1712,7 @@ $If %MTS% == 0 EQ_SystemGain,
 $If %MTS% == 0 EQ_SystemGain_limit,
 $If %MTS% == 0 EQ_PrimaryReserve_Available,
 $If %MTS% == 0 EQ_PrimaryReserve_Capability,
+$If %MTS% == 0 EQ_PrimaryReserve_Boundary,
 $If %MTS% == 0 EQ_Demand_balance_PrimaryReserve,
 *MADRID
 $If %MTS% == 0 EQ_PowerLoss,
@@ -1912,7 +1926,7 @@ UnitHourlyProfit(au,h)
 *New
 $If %MTS% == 0 OutputSysInertia(h)
 $If %MTS% == 0 OutputSystemGain(h)
-$If %MTS% == 0 OutputPrimaryReserve_Available(h)
+$If %MTS% == 0 OutputPrimaryReserve_Available(cu,h)
 *MADRID
 $If %MTS% == 0 OutputPowerLoss(h)
 *$If %MTS% == 0 OutputMaxInstantGenerator(h)
@@ -2020,7 +2034,7 @@ OutputShutDown(au,z) = ShutDown.L(au,z);
 *New
 $If %MTS%==0 OutputSysInertia(z) = SysInertia.L(z);
 $If %MTS%==0 OutputSystemGain(z) = SystemGain.L(z);
-$If %MTS%==0 OutputPrimaryReserve_Available(z) = PrimaryReserve_Available.L(z);
+$If %MTS%==0 OutputPrimaryReserve_Available(cu,z) = PrimaryReserve_Available.L(cu,z);
 *MADRID
 $If %MTS%==0 OutputPowerLoss(z) = PowerLoss.L(z);
 *$If %MTS%==0 OutputMaxInstantGenerator(z) = MaxInstantGenerator.L(z);
