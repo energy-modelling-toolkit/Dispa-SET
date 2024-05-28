@@ -172,7 +172,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'OutputXNotServed', 'OutputPowerX', 'OutputSectorXStorageLevel',
                    'OutputSectorXStorageInput', 'OutputSectorXStorageShadowPrice',
                    'SectorXShadowPrice', 'OutputXNotServed', 'OutputSectorXStorageLevelViolation_H',
-                   'OutputSectorXSpillage', 'LostLoad_SectorXSpillage',
+                   'OutputSectorXSpillage', 'LostLoad_SectorXSpillage','OutputSectorXWaterNotWithdrawn',
                    'OutputBSFlexDemand', 'OutputSectorXFlexSupply', 'OutputResidualLoad',
                    'OutputCurtailmentReserve_2U', 'OutputCurtailmentReserve_3U', 'OutputMaxOutageUp',
                    'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D',
