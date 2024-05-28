@@ -22,6 +22,8 @@ option
     solprint = off,     // solver's solution output printed
     sysout = off;       // solver's system output printed
 
+Option solver=gurobi;
+
 $onempty
 
 *===============================================================================
