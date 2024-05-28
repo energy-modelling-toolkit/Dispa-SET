@@ -599,7 +599,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     BoundarySector.rename(columns={'STOCapacity': 'SectorXStorageCapacity',
                                    'STOSelfDischarge': 'SectorXStorageSelfDischarge',
                                    # 'STOMaxChargingPower': 'BoundarySectorStorageChargingCapacity',
-                                   'STOMinSOC': 'SectorXStorageMinimum'}, inplace=True)
+                                   'STOMinSOC': 'SectorXStorageMinimum','STOHours':'SectorXStorageHours'}, inplace=True)
 
     Plants_merged.rename(columns={'StartUpCost': 'CostStartUp',
                                   'RampUpMax': 'RampUpMaximum',
@@ -941,6 +941,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXFlexSupplyInputInitial'] = ['nx']
     sets_param['SectorXFlexMaxSupply'] = ['nx']
     sets_param['SectorXStorageCapacity'] = ['nx']
+    sets_param['SectorXStorageHours'] = ['nx']
     sets_param['SectorXStorageSelfDischarge'] = ['nx']
     sets_param['SectorXStorageMinimum'] = ['nx']
     sets_param['SectorXStorageInitial'] = ['nx']
@@ -980,7 +981,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # %%
     # List of parameters whose value is known and provided in the dataframe BoundarySector
-    for var in ['SectorXStorageCapacity', 'SectorXStorageSelfDischarge']:
+    for var in ['SectorXStorageCapacity', 'SectorXStorageSelfDischarge', 'SectorXStorageHours']:
         parameters[var]['val'] = BoundarySector[var].values
 
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
@@ -1284,7 +1285,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         unit_to_zone = dict(zip(Plants_merged['Unit'], Plants_merged['Zone']))
     MaxCostVariable = CostVariable.groupby(unit_to_zone, axis=1).max()
     BoundarySector['Sector'] = BoundarySector.index
-    BoundarySector['Zone'] = BoundarySector.index.map(zone_to_bs_mapping(plants_all_bs))
+    # BoundarySector['Zone'] = BoundarySector.index.map(zone_to_bs_mapping(plants_all_bs))
     zones = list(MaxCostVariable.columns)
     for unit in range(len(BoundarySector)):
         # c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
