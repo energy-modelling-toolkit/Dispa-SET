@@ -281,7 +281,7 @@ def check_p2bs(config, plants):
     """
     keys = [col for col in plants if col.startswith('ChargingEfficiencySector') or col.startswith('EfficiencySector')]
     NonNaNKeys = []
-    StrKeys = [col for col in plants if col.startswith('Sector')]
+    StrKeys = [col for col in plants if col.startswith('Sector') and not col.startswith('SectorX')]
 
     if len(plants) == 0:  # If there are no P2HT units, exit the check
         return True

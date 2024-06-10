@@ -1116,7 +1116,8 @@ $ifthen %MTS% == 0
 EQ_SystemGain(i)..
          SystemGain(i)
          =l=
-          sum(cu,(PowerCapacity(cu)*Committed(cu,i))/(Droop(cu)*SystemFrequency))
+         0
+$If %FC% == 1 +sum(cu,(PowerCapacity(cu)*Committed(cu,i))/(Droop(cu)*SystemFrequency))
 ;
 
 EQ_SystemGain_limit(i)..

@@ -31,20 +31,20 @@ commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF
 # List of VRES technologies:
 commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 # List of Conventional technologies:
-commons['tech_conventional'] = ['HDAM', 'HROR', 'COMC', 'GTUR', 'STUR']
+commons['tech_conventional'] = ['HDAM', 'HROR', 'COMC', 'GTUR', 'STUR']#MARCO
 # List of storage technologies:
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
 # commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP', 'HDAMC']
 # List of power to heat technologies:
 commons['tech_p2ht'] = ['P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
 # List of power to boundary sector technologies
-commons['tech_p2bs'] = []#'P2GS', 'ALKE', 'PEME', 'SOXE', 'P2BS', 'PEFC',
-                        #'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 'HDAMC', 'HRORC', 'HDLZ',
-                        #'COMCX', 'GTURX', 'ICENX', 'STURX'
+commons['tech_p2bs'] = ['P2GS', 'ALKE', 'PEME', 'SOXE', 'P2BS', 'PEFC',
+                        'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 'HDAMC', 'HRORC', 'HDLZ',
+                        'COMCX', 'GTURX', 'ICENX', 'STURX']#MARCO
 # # List of heat only technologies:
 # commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
 # List of noundary sector only technologies:
-commons['tech_boundary_sector'] = []#'BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP', 'HOBOX'
+commons['tech_boundary_sector'] = ['BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP', 'HOBOX']#MARCO
 # List of thermal storage technologies:
 commons['tech_thermal_storage'] = ['THMS']
 # List of CHP types:
@@ -151,12 +151,12 @@ commons['PathParameters'] = {
     # Geo data
     'GeoData': 136,
     # DC-Power Flow data
-    'GridData': 145,
+    'GridData': 147,
     # 'PTDFMatrix': 145,
     # Inertia Limit data
-    'InertiaLimit': 146,
+    'InertiaLimit': 148,
     # Gain Limit data
-    'SystemGainLimit': 147,
+    'SystemGainLimit': 149,
     # # Hydrogen data
     # 'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
     # Reserves input data
@@ -184,9 +184,9 @@ commons['default'] = {
     'DemandFlexibility': 162, 'ShareOfQuickStartUnits': 163,
     'ValueOfLostLoad': 204, 'PriceOfSpillage': 205, 'WaterValue': 206,
     # Inertia requirement default
-    'InertiaLimit': 146,
+    'InertiaLimit': 148,
     # Gain requirement default
-    'SystemGainLimit': 147,
+    'SystemGainLimit': 149,
     # Inertia requirement default
     'PrimaryReserveLimit': 159
 }

@@ -198,8 +198,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         BoundarySector = pd.read_csv(config['BoundarySectorData'],
                                      na_values=commons['na_values'],
                                      keep_default_na=False, index_col='Sector')
+    # MARCO CHANGE: they are with another names ('STOCapacity': 'SectorXStorageCapacity',
+    # 'STOSelfDischarge': 'SectorXStorageSelfDischarge',
+    # 'STOMaxChargingPower': 'BoundarySectorStorageChargingCapacity',
+    # 'STOMinSOC': 'SectorXStorageMinimum','STOHours':'SectorXStorageHours'}, inplace=True)
+
+    # else:
+    #     for key in ['SectorXStorageCapacity', 'SectorXStorageSelfDischarge','SectorXStorageHours']:
+    #         BoundarySector[key] = np.nan
+        for key in ['STOCapacity', 'STOSelfDischarge','STOMaxChargingPower', 'STOMinSOC', 'STOHours']:
+            if key not in BoundarySector.columns:
+                BoundarySector[key] = np.nan     
     else:
-        for key in ['SectorXStorageCapacity', 'SectorXStorageSelfDischarge']:
+        for key in ['STOCapacity', 'STOSelfDischarge','STOMaxChargingPower', 'STOMinSOC', 'STOHours']:
             BoundarySector[key] = np.nan
 
     # Power plants:
@@ -217,7 +228,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             plants = pd.concat([plants, tmp], ignore_index=True, sort=False)
     # remove invalid power plants:
     plants = select_units(plants, config)
-    filter_col = [col for col in plants if col.startswith('Sector')]
+    filter_col = [col for col in plants if col.startswith('Sector') and not col.startswith('SectorX')]
     plants[filter_col] = plants[filter_col].astype(str)
 
     # Some columns can be in two format (absolute or per unit). If not specified, they are set to zero:
@@ -232,11 +243,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             plants[key] = 0
 
     # If not present, add the non-compulsory fields to the units table:
+    # MARCO CHANGE: AGREGAR COLUMNAS QUE SON NECESARIAS PARA LAS NUEVAS FUNCIONES
     for key in ['CHPPowerLossFactor', 'CHPPowerToHeat', 'CHPType', 'STOCapacity', 'STOSelfDischarge',
                 'STOMaxChargingPower', 'STOChargingEfficiency', 'CHPMaxHeat', 'WaterWithdrawal',
-                'WaterConsumption']:
+                'WaterConsumption', 'InertiaConstant', 'SectorXStorageHours', 'Droop']:
         if key not in plants.columns:
             plants[key] = np.nan
+    # MARCO CHANGE: AGREGAR UN CAMPO DE NUMERO DE SECTORES Y QUE REVISE AUTOMATICAMENTE
     for key in ['Sector1', 'Sector2']: 
         if key not in plants.columns:
             plants[key] = ''
@@ -328,7 +341,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         ReservoirScaledOutflows = pd.DataFrame(index=config['idx_long'])
         
     Temperatures = NodeBasedTable('Temperatures', config)
-
+    
+    # MARCO CHANGE: definir si viene de powerplants data o ya solo vendra del archivo definido en el configfile Boundary Sector Inputs
     # Detecting boundary zones:
     # filter_bs_cols = [col for col in plants_all_bs if col.startswith('Sector')]
     zones_bs = BoundarySector.index.to_list()
@@ -650,7 +664,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 Plants_merged.loc[u, 'StorageChargingCapacity'] = Plants_merged.loc[u, 'StorageChargingCapacity'] * \
                                                                   config['modifiers']['Storage']
 
-    filter_col = [col for col in Plants_merged if col.startswith('Sector')]
+    filter_col = [col for col in Plants_merged if col.startswith('Sector') and not col.startswith('SectorX')]
     Plants_merged[filter_col] = Plants_merged[filter_col].astype(str)
 
     # Defining the hydro storages:
@@ -1104,8 +1118,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     for i, u in enumerate(sets['nx']):
         if u in finalTS['SectorXDemand']:
             parameters['SectorXDemand']['val'][i, :] = finalTS['SectorXDemand'][u][idx_sim].values
-
-        parameters['CostXNotServed']['val'][i, :] = finalTS['CostXNotServed'][u][idx_sim].values
+        # MARCO CHANGE
+        if u in finalTS['CostXNotServed']:
+            parameters['CostXNotServed']['val'][i, :] = finalTS['CostXNotServed'][u][idx_sim].values
 
     # Boundary Sector time series
     for i, u in enumerate(sets['nx']):
@@ -1426,7 +1441,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # for i in range(len(sets['n_th'])):
     #     parameters['Location_th']['val'][:, i] = (Plants_merged['Zone_th'] == zones_th[i]).values
 
-    sectors = [col for col in plants if col.startswith('Sector')]
+    sectors = [col for col in plants if col.startswith('Sector') and not col.startswith('SectorX')] 
     for i in range(len(sets['nx'])):
         for s in sectors:
             parameters['LocationX']['val'][:, i] = np.logical_or(parameters['LocationX']['val'][:, i],

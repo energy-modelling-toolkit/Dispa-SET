@@ -306,7 +306,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                 profilesSectorX = temp_results['OutputSectorXStorageLevel'].set_index(idx)
         else: 
             logging.info('BS Storage Sectors were not computed')
-            profilesSectorX = temp_results['OutputStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
+            profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
             0).set_index(idx)
 
         if 'SectorXFlexibleDemand' in config and config['SectorXFlexibleDemand'] != '':
