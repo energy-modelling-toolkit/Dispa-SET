@@ -123,7 +123,13 @@ def filter_by_zone(PowerOutput, inputs, z, thermal = None, sector = False):
             loc = loc[~loc['Sector1'].str.contains('nan')].dropna(how='any').drop_duplicates()
             result = loc.groupby('Sector1', as_index=False).first()[['Zone', 'Sector1']]
             result.set_index('Zone', inplace=True)
-            value = result.loc[z, 'Sector1']
+            # value = result.loc[z, 'Sector1']
+            try:
+                value = result.loc[z, 'Sector1']
+            except KeyError:
+            # Maneja el caso donde 'Sector1' no existe
+                value = None  # O alguna otra acción que desees tomar
+
             # Check if the value is a pandas Series
             if isinstance(value, pd.Series):
                 indices = value.tolist()

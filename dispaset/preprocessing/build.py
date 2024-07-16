@@ -194,7 +194,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Boundary Sectors:
     BoundarySector = pd.DataFrame()
-    if os.path.isfile(config['BoundarySectorData']):
+    if 'BoundarySectorData' in config and os.path.isfile(config['BoundarySectorData']):
         BoundarySector = pd.read_csv(config['BoundarySectorData'],
                                      na_values=commons['na_values'],
                                      keep_default_na=False, index_col='Sector')
@@ -407,15 +407,24 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     else:
         BS_forced_spillage = pd.DataFrame(index=idx_long)
 
-    # lines_bs = BS_spillage.columns
-    lines_bs = ReservoirScaledInflows.columns
+    if 'BoundarySectorMaxSpillage' in config and os.path.isfile(config['BoundarySectorMaxSpillage']): 
+        lines_bs = BS_spillage.columns              #ALIZON: CON BS
+    else:
+        lines_bs = ReservoirScaledInflows.columns   #MARCO: SIN BS 
    
-    if 'CostXSpillage' in config and os.path.isfile(config['CostXSpillage']):
-        CostXSpillage = GenericTable(lines_bs, 'CostXSpillage', config, default=config['default']['PriceOfSpillage'])
-        
+    if 'CostXSpillage' in config and config['CostXSpillage'] != '' and os.path.isfile(config['CostXSpillage']):
+        CostXSpillage = GenericTable(lines_bs, 'CostXSpillage', config, default=config['default']['CostXSpillage'])
+    
     else:
         logging.warning('No CostXSpillage will be considered (no valid file provided)')
         CostXSpillage = pd.DataFrame(index=config['idx_long']) 
+    
+    if 'CostSpillage' in config and os.path.isfile(config['CostSpillage']):
+        CostSpillage = GenericTable(lines_bs, 'CostSpillage', config, default=config['default']['CostSpillage'])
+        
+    else:
+        logging.warning('No CostSpillage will be considered (no valid file provided)')
+        CostSpillage = pd.DataFrame(index=config['idx_long'])
         
     # Read BS Flexible demand & supply
     if 'SectorXFlexibleDemand' in config and os.path.isfile(config['SectorXFlexibleDemand']):
@@ -788,10 +797,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'SectorXFlexibleDemand': SectorXFlexibleDemand, 'SectorXFlexibleSupply': SectorXFlexibleSupply,
                'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel, 
                'SectorXFloodControl': SectorXFloodControl, 
-               'CostXSpillage':CostXSpillage, 'InertiaLimit': InertiaLimit,  'SystemGainLimit': SystemGainLimit,'PrimaryReserveLimit': PrimaryReserveLimit}
+               'CostSpillage':CostSpillage, 'CostXSpillage':CostXSpillage, 'InertiaLimit': InertiaLimit,  'SystemGainLimit': SystemGainLimit,'PrimaryReserveLimit': PrimaryReserveLimit}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
+        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
+
+    # Merge the following time series with weighted averages
+    for key in ['CostSpillage']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
 
     # Merge the following time series by weighted average based on storage capacity
@@ -849,8 +862,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets['au'] = Plants_merged.index.tolist()
     sets['l'] = Interconnections
     sets['lx'] = BSInterconnections
-    # sets['slx'] = BSSpillage
-    sets['slx'] = ReservoirScaledInflows.columns.tolist()
+    if 'BoundarySectorMaxSpillage' in config and os.path.isfile(config['BoundarySectorMaxSpillage']): 
+        sets['slx'] = BSSpillage                               #ALIZON: CON BS
+    else:
+        sets['slx'] = ReservoirScaledInflows.columns.tolist()    #MARCO: SIN BS 
     sets['f'] = commons['Fuels']
     sets['p'] = ['CO2']
     sets['s'] = Plants_sto.index.tolist()
@@ -900,6 +915,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['CostXStorageAlert'] = ['nx','h']
     sets_param['CostXFloodControl'] = ['nx','h']
     sets_param['CostXSpillage'] = ['slx','h']
+    sets_param['CostSpillage'] = ['au','h'] #Marco
     sets_param['Curtailment'] = ['n']
     sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
@@ -1372,7 +1388,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
         
             parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
-    
+
+    # Cost Spillage without BS
+    for i, au in enumerate(sets['au']):
+            if au in finalTS['ScaledInflows'].columns:     #MARCO: SIN BS
+                parameters['CostSpillage']['val'][i, :] = finalTS['CostSpillage'][au]     
 
     # Maximum Boundary Sector Line Capacity
     for i, lx in enumerate(sets['lx']):
@@ -1385,14 +1405,16 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         if slx in BS_Spillages.columns:
             parameters['SectorXMaximumSpillage']['val'][i, :] = finalTS['BSMaxSpillage'][slx]
     #Cost of Spillage boundary sector
-        if slx in ReservoirScaledInflows.columns:
-            parameters['CostXSpillage']['val'][i, :] = finalTS['CostXSpillage'][slx]  
+        if 'BoundarySectorMaxSpillage' in config and os.path.isfile(config['BoundarySectorMaxSpillage']): 
+            parameters['CostXSpillage']['val'][i, :] = finalTS['CostXSpillage'][slx] #ALIZON: CON BS
+ 
     # Check values:
     check_MinMaxFlows(parameters['FlowXMinimum']['val'], parameters['FlowXMaximum']['val'])
 
     parameters['LineXNode'] = incidence_matrix(sets, 'lx', parameters, 'LineXNode', nodes='nx')
 
-    # parameters['SectorXSpillageNode'] = incidence_matrix(sets, 'slx', parameters, 'SectorXSpillageNode', nodes='nx')
+    if 'BoundarySectorMaxSpillage' in config and os.path.isfile(config['BoundarySectorMaxSpillage']): 
+        parameters['SectorXSpillageNode'] = incidence_matrix(sets, 'slx', parameters, 'SectorXSpillageNode', nodes='nx')    #ALIZON: CON BS
 
     # PTDF MATRIX 
     if (grid_flag == "DC-Power Flow"):

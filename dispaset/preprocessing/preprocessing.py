@@ -159,7 +159,10 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         temp_config['ReservoirLevels'] = ''
 
     # use a LP formulation
-    temp_config['SimulationType'] = 'LP clustered'
+    if config['SimulationType'] in ['LP', 'Standard', 'No clustering']:
+        temp_config['SimulationType'] = 'LP'
+    else:
+        temp_config['SimulationType'] = 'LP clustered'
 
     # Adjust time step:
     if TimeStep is not None:
@@ -298,16 +301,16 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                              'form the zones in the MTS module')
             sys.exit(0)
             
-        if 'SectorXReservoirLevels' in config and config['SectorXReservoirLevels'] != '':
-            if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
-                profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
-                0).set_index(idx)
-            else:
-                profilesSectorX = temp_results['OutputSectorXStorageLevel'].set_index(idx)
-        else: 
-            logging.info('BS Storage Sectors were not computed')
-            profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
-            0).set_index(idx)
+        # if 'SectorXReservoirLevels' in config and config['SectorXReservoirLevels'] != '':
+        #     if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
+        #         profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
+        #         0).set_index(idx)
+        #     else:
+        #         profilesSectorX = temp_results['OutputSectorXStorageLevel'].set_index(idx)
+        # else: 
+        #     logging.info('BS Storage Sectors were not computed')
+        #     profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
+        #     0).set_index(idx)
 
         if 'SectorXFlexibleDemand' in config and config['SectorXFlexibleDemand'] != '':
             if 'OutputSectorXFlexDemand' not in temp_results:

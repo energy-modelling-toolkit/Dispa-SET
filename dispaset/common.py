@@ -31,7 +31,7 @@ commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF
 # List of VRES technologies:
 commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 # List of Conventional technologies:
-commons['tech_conventional'] = ['HDAM', 'HROR', 'COMC', 'GTUR', 'STUR']#MARCO
+commons['tech_conventional'] = ['HDAM', 'COMC', 'GTUR', 'STUR']#MARCO
 # List of storage technologies:
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
 # commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP', 'HDAMC']
@@ -43,8 +43,8 @@ commons['tech_p2bs'] = ['P2GS', 'ALKE', 'PEME', 'SOXE', 'P2BS', 'PEFC',
                         'COMCX', 'GTURX', 'ICENX', 'STURX']#MARCO
 # # List of heat only technologies:
 # commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
-# List of noundary sector only technologies:
-commons['tech_boundary_sector'] = ['BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP', 'HOBOX']#MARCO
+# List of boundary sector only technologies:
+commons['tech_boundary_sector'] = ['BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP', 'HOBOX']#MARCO , 'HDAMC', 'HRORC'
 # List of thermal storage technologies:
 commons['tech_thermal_storage'] = ['THMS']
 # List of CHP types:
@@ -133,7 +133,7 @@ commons['StdParameters'] = {
     # Horizon Settings
     'DataTimeStep': 60, 'SimulationTimeStep': 61,
     # Simulation Options
-    'SimulationType': 76, 'ReserveCalculation': 77, 'AllowCurtailment': 78, 'TransmissionGridType': 79, 'FrequencyServices': 80,
+    'SimulationType': 76, 'ReserveCalculation': 77, 'AllowCurtailment': 78, 'TransmissionGridType': 79, 'FrequencyStability': 80,
     # Mid-term scheduling related
     'HydroScheduling': 98, 'HydroSchedulingHorizon': 99, 'InitialFinalReservoirLevel': 100
 }
@@ -151,21 +151,22 @@ commons['PathParameters'] = {
     # Geo data
     'GeoData': 136,
     # DC-Power Flow data
-    'GridData': 147,
+    'GridData': 154,
     # 'PTDFMatrix': 145,
     # Inertia Limit data
-    'InertiaLimit': 148,
+    'InertiaLimit': 155,
     # Gain Limit data
-    'SystemGainLimit': 149,
+    'SystemGainLimit': 156,
     # # Hydrogen data
     # 'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
     # Reserves input data
     'PrimaryReserveLimit': 159, 'Reserve2U': 160, 'Reserve2D': 161, 
     # Other costs related data
-    'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostCurtailment': 171,
+    'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostNotServed': 170, 'CostCurtailment': 171,
     # Fuel price related data
     'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
-    'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187 
+    'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187,
+    'CostSpillage': 205
 
 }
 
@@ -178,15 +179,15 @@ commons['default'] = {
     'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
     'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187,
     # Other price defaults
-    'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostCurtailment': 171,
+    'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostNotServed': 170, 'CostCurtailment': 171,
     # Optimization and infeasibility cost data
     'ShareOfFlexibleDemand': 125, 'LoadShedding': 129,
     'DemandFlexibility': 162, 'ShareOfQuickStartUnits': 163,
-    'ValueOfLostLoad': 204, 'PriceOfSpillage': 205, 'WaterValue': 206,
+    'ValueOfLostLoad': 204, 'CostSpillage': 205, 'WaterValue': 206,
     # Inertia requirement default
-    'InertiaLimit': 148,
+    'InertiaLimit': 155,
     # Gain requirement default
-    'SystemGainLimit': 149,
+    'SystemGainLimit': 156,
     # Inertia requirement default
     'PrimaryReserveLimit': 159
 }

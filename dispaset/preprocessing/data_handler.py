@@ -723,11 +723,14 @@ def load_config_excel(ConfigFile, AbsPath=True):
         PathParameters['SectorXReservoirLevels'] = 144
         PathParameters['SectorXAlertLevel'] = 145
         PathParameters['SectorXFloodControl'] = 146
-        PathParameters['CostXNotServed'] = 170
-        PathParameters['CostXSpillage'] = 205
-        PathParameters['CostCurtailment'] = 171
-        default['CostXNotServed'] = 170
-        default['CostCurtailment'] = 171
+        
+        PathParameters['CostXNotServed'] = 172
+        
+        PathParameters['CostXSpillage'] = 207
+        
+        default['CostXNotServed'] = 172
+        default['CostXSpillage'] = 207
+
 
         for p in StdParameters:
             config[p] = sheet.cell_value(StdParameters[p], 2)
@@ -888,8 +891,8 @@ def load_config_excel(ConfigFile, AbsPath=True):
         PathParameters['SectorXFlexibleSupply'] = 142
         PathParameters['BoundarySectorMaxSpillage'] = 143
         PathParameters['SectorXReservoirLevels'] = 144
-        # PathParameters['SectorXAlertLevel'] = 145
-        # PathParameters['SectorXFloodControl'] = 146
+        PathParameters['SectorXAlertLevel'] = 145
+        PathParameters['SectorXFloodControl'] = 146
         PathParameters['CostXNotServed'] = 170
         PathParameters['CostXSpillage'] = 205
         PathParameters['CostCurtailment'] = 171

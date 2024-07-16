@@ -66,7 +66,7 @@ $setglobal ActivateAdvancedReserves 0
 *New
 * Definition of the equations that will be present in Frequency Constrainted UC/OD
 * (1 for FC-UC/OD 0 for UC/OD)
-$setglobal FC 0
+$setglobal FC 1
 
 *===============================================================================
 *Definition of   sets and parameters
@@ -78,8 +78,8 @@ mk               Markets
 au               All Units
 u(au)            Generation units
 chp(u)           CHP units
-p2x(au)         Power to X
-xu(au)          Boundary sector only units
+p2x(au)          Power to X
+xu(au)           Boundary sector only units
 s(au)            Storage Units (with reservoir)
 p2h(au)          Power to heat units
 th(au)           Units with thermal storage
@@ -95,12 +95,12 @@ tr(t)            Renewable generation technologies
 p                Pollutants
 *Nodes
 n                Nodes
-nx             Boundary sector nodes
-nx_CC             Boundary sector nodes without the EndCascade node
+nx               Boundary sector nodes
+nx_CC            Boundary sector nodes without the EndCascade node
 *Lines
 l                Lines
-lx             Boundary sector lines
-slx             Boundary sector spillage lines
+lx               Boundary sector lines
+slx              Boundary sector spillage lines
 *Simulations options
 h                Hours
 i(h)             Subset of simulated hours for one iteration
@@ -134,6 +134,7 @@ CostRampDown(au)                             [EUR\MW]        Ramp-down costs
 CostShutDown(au)                             [EUR\u]         Shut-down costs
 CostStartUp(au)                              [EUR\u]         Start-up costs
 CostVariable(au,h)                          [EUR\MW]        Variable costs
+CostSpillage(au,h)                          [EUR\MW]        Cost of spillage 
 CostXStorageAlert(nx,h)                     [EUR\MW]        Cost of violating storage alert level boundary sector
 CostXFloodControl(nx,h)                     [EUR\MW]        Cost of violating storage flood control level boundary sector
 CostXSpillage(slx,h)                        [EUR\MW]        Cost of spillage for boundary sector
@@ -213,6 +214,11 @@ $If %MTS% == 0 InertiaLimit(h)              [s\h]           Inertia Limit
 $If %MTS% == 0 Droop(au)                    [%]             Droop
 $If %MTS% == 0 SystemGainLimit(h)           [GW\Hz]         System Gain Limit
 $If %MTS% == 0 PrimaryReserveLimit(h)       [MWh]           Primary Reserve
+*InertiaConstant(au)          [s]             Inertia Constant
+*InertiaLimit(h)              [s\h]           Inertia Limit
+*Droop(au)                    [%]             Droop
+*SystemGainLimit(h)           [GW\Hz]         System Gain Limit
+*PrimaryReserveLimit(h)       [MWh]           Primary Reserve
 
 ;
 
@@ -283,6 +289,7 @@ $LOAD CHPMaxHeat
 $LOAD CHPType
 $LOAD Config
 $LOAD CostFixed
+$LOAD CostSpillage
 $LOAD CostXStorageAlert
 $LOAD CostXFloodControl
 $LOAD CostXSpillage
@@ -362,6 +369,11 @@ $If %MTS% == 0 $LOAD InertiaLimit
 $If %MTS% == 0 $LOAD Droop
 $If %MTS% == 0 $LOAD SystemGainLimit
 $If %MTS% == 0 $LOAD PrimaryReserveLimit
+*$LOAD InertiaConstant
+*$LOAD InertiaLimit
+*$LOAD Droop
+*$LOAD SystemGainLimit
+*$LOAD PrimaryReserveLimit
 ;
 
 $If %Verbose% == 0 $goto skipdisplay
@@ -399,6 +411,7 @@ CostShutDown,
 CostStartUp,
 CostRampUp,
 CostVariable,
+CostSpillage,
 CostXStorageAlert,
 CostXFloodControl,
 CostXSpillage,
@@ -456,15 +469,20 @@ SectorXAlertLevel,
 SectorXFloodControl,
 $If %MTS% == 0 SectorXStorageInitial,
 SectorXStorageProfile,
-$If %RetrieveStatus% == 1 , CommittedCalc
-$If %TransmissionGrid% == 1, PTDF
+$If %RetrieveStatus% == 1 CommittedCalc,
+$If %TransmissionGrid% == 1 PTDF,
 
 *New
-$If %MTS% == 0 $LOAD InertiaConstant
-$If %MTS% == 0 $LOAD InertiaLimit
-$If %MTS% == 0 $LOAD Droop
-$If %MTS% == 0 $LOAD SystemGainLimit
-$If %MTS% == 0 $LOAD PrimaryReserveLimit
+$If %MTS% == 0 InertiaConstant,
+$If %MTS% == 0 InertiaLimit,
+$If %MTS% == 0 Droop,
+$If %MTS% == 0 SystemGainLimit,
+$If %MTS% == 0 PrimaryReserveLimit,
+*InertiaConstant,
+*InertiaLimit,
+*Droop,
+*SystemGainLimit,
+*PrimaryReserveLimit
 ;
 
 $label skipdisplay
@@ -536,8 +554,12 @@ $If %MTS% == 1 SectorXStorageFinalMin(nx)
 $If %MTS% == 0 SysInertia(h)                       [s]         System Inertia
 $If %MTS% == 0 PrimaryReserve_Available(cu,h)         [MW]        Primary Reserve available in the system
 $If %MTS% == 0 SystemGain(h)                       [GW\Hz]     System Gain
+*SysInertia(h)                       [s]         System Inertia
+*PrimaryReserve_Available(cu,h)         [MW]        Primary Reserve available in the system
+*SystemGain(h)                       [GW\Hz]     System Gain
 *MADRID
 $If %MTS% == 0 PowerLoss(h)                  [MW]        Primary Reserve available in the system
+*PowerLoss(h)                  [MW]        Primary Reserve available in the system
 *$If %MTS% == 0 MaxInstantGenerator(h)                  [MW]        Primary Reserve available in the system
 *New
 TotalDemand_2U(h)                       [MW]    Total Spinning reserve up
@@ -704,8 +726,17 @@ $If %MTS% == 0 EQ_PrimaryReserve_Available
 $If %MTS% == 0 EQ_PrimaryReserve_Capability
 $If %MTS% == 0 EQ_PrimaryReserve_Boundary
 $If %MTS% == 0 EQ_Demand_balance_PrimaryReserve
+*EQ_SysInertia
+*EQ_Inertia_limit
+*EQ_SystemGain
+*EQ_SystemGain_limit
+*EQ_PrimaryReserve_Available
+*EQ_PrimaryReserve_Capability
+*EQ_PrimaryReserve_Boundary
+*EQ_Demand_balance_PrimaryReserve
 *MADRID
 $If %MTS% == 0 EQ_PowerLoss
+*EQ_PowerLoss
 *$If %MTS% == 0 EQ_MaxInstantGenerator
 
 *New
@@ -745,7 +776,7 @@ EQ_SystemCost(i)..
          +sum(nx,CostXStorageAlert(nx,i)*SectorXStorageAlertViolation(nx,i)*TimeStep)
 *         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep
          +sum(nx,CostXFloodControl(nx,i)*SectorXFloodControlViolation(nx,i)*TimeStep)
-*         +sum(au,CostSpillage(au,i)*spillage(au,i))
+         +sum(au,CostSpillage(au,i)*spillage(au,i)*TimeStep)
          +sum(slx,CostXSpillage(slx,i)*SectorXSpillage(slx,i)*TimeStep)
          +sum(slx,SectorXSpillage(slx,i)*TimeStep)
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
@@ -772,7 +803,7 @@ EQ_SystemCost(i)..
          +sum(nx,CostXStorageAlert(nx,i)*SectorXStorageAlertViolation(nx,i)*TimeStep)
 *         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep
          +sum(nx,CostXFloodControl(nx,i)*SectorXFloodControlViolation(nx,i)*TimeStep)
-*          +sum(au,CostSpillage(au,i)*spillage(au,i))
+         +sum(au,CostSpillage(au,i)*spillage(au,i)*TimeStep)
          +sum(slx,CostXSpillage(slx,i)*SectorXSpillage(slx,i)*TimeStep)
          +sum(slx,SectorXSpillage(slx,i)*TimeStep)
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
@@ -1720,8 +1751,17 @@ $If %MTS% == 0 EQ_PrimaryReserve_Available,
 $If %MTS% == 0 EQ_PrimaryReserve_Capability,
 $If %MTS% == 0 EQ_PrimaryReserve_Boundary,
 $If %MTS% == 0 EQ_Demand_balance_PrimaryReserve,
+*EQ_SysInertia,
+*EQ_Inertia_limit,
+*EQ_SystemGain,
+*EQ_SystemGain_limit,
+*EQ_PrimaryReserve_Available,
+*EQ_PrimaryReserve_Capability,
+*EQ_PrimaryReserve_Boundary,
+*EQ_Demand_balance_PrimaryReserve,
 *MADRID
 $If %MTS% == 0 EQ_PowerLoss,
+*EQ_PowerLoss,
 *$If %MTS% == 0 EQ_MaxInstantGenerator,
 
 EQ_Tot_Demand_2U,
@@ -1933,8 +1973,12 @@ UnitHourlyProfit(au,h)
 $If %MTS% == 0 OutputSysInertia(h)
 $If %MTS% == 0 OutputSystemGain(h)
 $If %MTS% == 0 OutputPrimaryReserve_Available(cu,h)
+*OutputSysInertia(h)
+*OutputSystemGain(h)
+*OutputPrimaryReserve_Available(cu,h)
 *MADRID
 $If %MTS% == 0 OutputPowerLoss(h)
+*OutputPowerLoss(h)
 *$If %MTS% == 0 OutputMaxInstantGenerator(h)
 
 OutputTotalDemand_2U(h)
@@ -2042,8 +2086,12 @@ OutputShutDown(au,z) = ShutDown.L(au,z);
 $If %MTS%==0 OutputSysInertia(z) = SysInertia.L(z);
 $If %MTS%==0 OutputSystemGain(z) = SystemGain.L(z);
 $If %MTS%==0 OutputPrimaryReserve_Available(cu,z) = PrimaryReserve_Available.L(cu,z);
+*OutputSysInertia(z) = SysInertia.L(z);
+*OutputSystemGain(z) = SystemGain.L(z);
+*OutputPrimaryReserve_Available(cu,z) = PrimaryReserve_Available.L(cu,z);
 *MADRID
 $If %MTS%==0 OutputPowerLoss(z) = PowerLoss.L(z);
+*OutputPowerLoss(z) = PowerLoss.L(z);
 *$If %MTS%==0 OutputMaxInstantGenerator(z) = MaxInstantGenerator.L(z);
 
 *New
@@ -2173,8 +2221,12 @@ OutputDemand_2D,
 $If %MTS%==0 OutputSysInertia,
 $If %MTS%==0 OutputSystemGain,
 $If %MTS%==0 OutputPrimaryReserve_Available,
+*OutputSysInertia,
+*OutputSystemGain,
+*OutputPrimaryReserve_Available,
 *MADRID
 $If %MTS%==0 OutputPowerLoss,
+*OutputPowerLoss,
 *$If %MTS%==0 OutputMaxInstantGenerator,
 
 status,
