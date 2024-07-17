@@ -157,12 +157,13 @@ commons['PathParameters'] = {
     'InertiaLimit': 155,
     # Gain Limit data
     'SystemGainLimit': 156,
-    # # Hydrogen data
-    # 'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
+    # Hydrogen data
+    'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
     # Reserves input data
     'PrimaryReserveLimit': 159, 'Reserve2U': 160, 'Reserve2D': 161, 
     # Other costs related data
-    'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostNotServed': 170, 'CostCurtailment': 171,
+    'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostH2Slack': 170, 
+    'CostCurtailment': 171, 'CostNotServed': 172,
     # Fuel price related data
     'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
     'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187,
@@ -179,7 +180,8 @@ commons['default'] = {
     'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
     'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187,
     # Other price defaults
-    'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostNotServed': 170, 'CostCurtailment': 171,
+    'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostH2Slack': 170,
+    'CostCurtailment': 171, 'CostNotServed': 172,
     # Optimization and infeasibility cost data
     'ShareOfFlexibleDemand': 125, 'LoadShedding': 129,
     'DemandFlexibility': 162, 'ShareOfQuickStartUnits': 163,

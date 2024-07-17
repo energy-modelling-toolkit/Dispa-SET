@@ -710,22 +710,22 @@ def load_config_excel(ConfigFile, AbsPath=True):
         modifiers = commons['modifiers']
         default = commons['default']
 
-        # Introduce scaled outflows
-        PathParameters['ReservoirScaledOutflows'] = 134
+        # # Introduce scaled outflows (revisar)
+        # PathParameters['ReservoirScaledOutflows'] = 134
+                
         # Also include boundary sector data
-        PathParameters['SectorXDemand'] = 137
-        PathParameters['BoundarySectorData'] = 138
-        PathParameters['BoundarySectorNTC'] = 139
-        PathParameters['BoundarySectorInterconnections'] = 140
-        PathParameters['SectorXFlexibleDemand'] = 141
-        PathParameters['SectorXFlexibleSupply'] = 142
-        PathParameters['BoundarySectorMaxSpillage'] = 143
-        PathParameters['SectorXReservoirLevels'] = 144
-        PathParameters['SectorXAlertLevel'] = 145
-        PathParameters['SectorXFloodControl'] = 146
+        PathParameters['SectorXDemand'] = 143
+        PathParameters['BoundarySectorData'] = 144
+        PathParameters['BoundarySectorNTC'] = 145
+        PathParameters['BoundarySectorInterconnections'] = 146
+        PathParameters['SectorXFlexibleDemand'] = 147
+        PathParameters['SectorXFlexibleSupply'] = 148
+        PathParameters['BoundarySectorMaxSpillage'] = 149
+        PathParameters['SectorXReservoirLevels'] = 150
+        PathParameters['SectorXAlertLevel'] = 151
+        PathParameters['SectorXFloodControl'] = 152
         
         PathParameters['CostXNotServed'] = 172
-        
         PathParameters['CostXSpillage'] = 207
         
         default['CostXNotServed'] = 172
