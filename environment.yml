@@ -17,9 +17,6 @@ dependencies:
   - cartopy >= 0.20
   - pip >= 9.0.1
   - pip:
-    - gdxcc
-    - gamsxcc
-    - optcc
     - setuptools_scm
     - pytest-cov
     - codecov

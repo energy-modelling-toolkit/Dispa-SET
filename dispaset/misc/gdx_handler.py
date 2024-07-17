@@ -50,7 +50,6 @@ def import_local_lib(lib):
             'Pre-compiled GAMS libraries are only available for python 3.7 64 bits under windows. '
             'You are using platform ' + sys.platform + ' and architecture ' + platform.architecture()[0] +
             'Please install the gams API using: "pip install gamsxcc gdxcc optcc"')
-        sys.exit(1)
 
     if lib == 'gams':
         try:
@@ -88,8 +87,18 @@ if package_exists('gdxcc'):
     import gdxcc
 else:
     logging.warning('Could not import gdxcc. Trying to use pre-compiled libraries')
-    if import_local_lib('gdxcc'):
+    try:
+        if sys.platform == 'win32' and platform.architecture()[0] == '64bit' and sys.version[:3] == '3.7':
+            sys.path.append(os.path.join(path_ext, 'gams_api/win64/'))
         import gdxcc
+    except ImportError:
+        logging.critical('Importing gdxcc from the new gams api')
+        try:
+            import gams.core.gdx as gdxcc
+        except ImportError:
+            logging.critical("gdxcc module could not be imported from Externals. GDX cannot be produced or read"
+                             'Please install the gams API using: "pip install gamsxcc gdxcc optcc"')
+            sys.exit(1)    
 
 
 #####################
@@ -216,8 +225,19 @@ def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
     :returns:        Dictionary with all the collected values (within lists)
     """
 
-    from gdxcc import gdxSymbolInfo, gdxCreate, gdxCreateD, gdxOpenRead, GMS_SSSIZE, gdxDataReadDone, \
-        new_gdxHandle_tp, gdxDataReadStr, gdxFindSymbol, gdxErrorStr, gdxDataReadStrStart, gdxGetLastError
+    try:
+        from gdxcc import gdxSymbolInfo, gdxCreate, gdxCreateD, gdxOpenRead, GMS_SSSIZE, gdxDataReadDone, \
+            new_gdxHandle_tp, gdxDataReadStr, gdxFindSymbol, gdxErrorStr, gdxDataReadStrStart, gdxGetLastError
+    except ImportError: 
+        try:
+            from gams.core.gdx import gdxSymbolInfo, gdxCreate, gdxCreateD, gdxOpenRead, GMS_SSSIZE, gdxDataReadDone, \
+                new_gdxHandle_tp, gdxDataReadStr, gdxFindSymbol, gdxErrorStr, gdxDataReadStrStart, gdxGetLastError
+        except ImportError:
+            logging.critical("gdxcc module could not be imported. GDX cannot read"
+                             'Please install the gams API"')
+            sys.exit(1)
+
+
     out = {}
     tgdx = tm.time()
     gdxHandle = new_gdxHandle_tp()
@@ -391,6 +411,10 @@ def get_gams_path(gams_dir=None):
     out = None
 
     # first check if the gams path is defined as environment variable.
+
+    if "GAMSDIR" in os.environ:
+        logging.debug('Using GAMSDIR environmental variable {} '.format(os.environ['GAMSDIR']))
+        return os.environ['GAMSDIR']
 
     if "GAMSPATH" in os.environ:
         logging.debug('Using GAMSPATH environmental variable {} '.format(os.environ['GAMSPATH']))
