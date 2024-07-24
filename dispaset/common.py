@@ -37,12 +37,14 @@ commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
 # commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP', 'HDAMC']
 # List of power to heat technologies:
 commons['tech_p2ht'] = ['P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
+# List of power to h2 technologies
+commons['tech_p2h2'] = ['PEFC', 'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 'P2GS', 'ALKE', 'PEME', 'SOXE']
 # List of power to boundary sector technologies
 commons['tech_p2bs'] = ['P2GS', 'ALKE', 'PEME', 'SOXE', 'P2BS', 'PEFC',
                         'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 'HDAMC', 'HRORC', 'HDLZ',
                         'COMCX', 'GTURX', 'ICENX', 'STURX']#MARCO
-# # List of heat only technologies:
-# commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
+# List of heat only technologies:
+commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
 # List of boundary sector only technologies:
 commons['tech_boundary_sector'] = ['BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP', 'HOBOX']#MARCO , 'HDAMC', 'HRORC'
 # List of thermal storage technologies:
@@ -134,6 +136,7 @@ commons['StdParameters'] = {
     'DataTimeStep': 60, 'SimulationTimeStep': 61,
     # Simulation Options
     'SimulationType': 76, 'ReserveCalculation': 77, 'AllowCurtailment': 78, 'TransmissionGridType': 79, 'FrequencyStability': 80,
+    'SectorCoupling': 81,
     # Mid-term scheduling related
     'HydroScheduling': 98, 'HydroSchedulingHorizon': 99, 'InitialFinalReservoirLevel': 100
 }
@@ -159,6 +162,8 @@ commons['PathParameters'] = {
     'SystemGainLimit': 156,
     # Hydrogen data
     'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
+    # Storage data
+    'StorageAlertLevels': 140, 'StorageFloodControl': 141, 
     # Reserves input data
     'PrimaryReserveLimit': 159, 'Reserve2U': 160, 'Reserve2D': 161, 
     # Other costs related data
@@ -167,7 +172,7 @@ commons['PathParameters'] = {
     # Fuel price related data
     'PriceOfNuclear': 180, 'PriceOfBlackCoal': 181, 'PriceOfGas': 182, 'PriceOfFuelOil': 183,
     'PriceOfBiomass': 184, 'PriceOfLignite': 185, 'PriceOfPeat': 186, 'PriceOfAmmonia': 187,
-    'CostSpillage': 205
+    'CostOfSpillage': 205
 
 }
 
@@ -185,7 +190,7 @@ commons['default'] = {
     # Optimization and infeasibility cost data
     'ShareOfFlexibleDemand': 125, 'LoadShedding': 129,
     'DemandFlexibility': 162, 'ShareOfQuickStartUnits': 163,
-    'ValueOfLostLoad': 204, 'CostSpillage': 205, 'WaterValue': 206,
+    'ValueOfLostLoad': 204, 'CostOfSpillage': 205, 'WaterValue': 206,
     # Inertia requirement default
     'InertiaLimit': 155,
     # Gain requirement default
