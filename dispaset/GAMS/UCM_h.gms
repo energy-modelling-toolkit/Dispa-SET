@@ -66,7 +66,7 @@ $setglobal ActivateAdvancedReserves 0
 *New
 * Definition of the equations that will be present in Frequency Constrainted UC/OD
 * (1 for FC-UC/OD 0 for UC/OD)
-$setglobal FC 1
+$setglobal FC 0
 
 *===============================================================================
 *Definition of   sets and parameters

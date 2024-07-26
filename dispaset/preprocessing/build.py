@@ -354,14 +354,30 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     ReservoirLevels = UnitBasedTable(plants_all_sto, 'ReservoirLevels', config,
                                      fallbacks=['Unit', 'Technology', 'Zone'],
                                      default=0)
-    StorageAlertLevels = UnitBasedTable(plants_all_sto, 'StorageAlertLevels', config,
-                                        fallbacks=['Unit', 'Technology', 'Zone'],
-                                        default=0)
-    StorageFloodControl = UnitBasedTable(plants_all_sto, 'StorageFloodControl', config,
-                                        fallbacks=['Unit', 'Technology', 'Zone'],
-                                        default=1)
-    ReservoirScaledInflows = UnitBasedTable(plants_all_sto, 'ReservoirScaledInflows', config,
-                                            fallbacks=['Unit', 'Technology', 'Zone'], default=0)
+    
+    if 'StorageAlertLevels' in config and os.path.isfile(config['StorageAlertLevels']):
+        StorageAlertLevels = UnitBasedTable(plants_all_sto, 'StorageAlertLevels', config,
+                                            fallbacks=['Unit', 'Technology', 'Zone'],
+                                            default=0)
+    else:
+        logging.warning('No Storage Alert Levels will be considered (no valid file provided)')
+        StorageAlertLevels = pd.DataFrame(index=config['idx_long'])
+        
+    if 'StorageFloodControl' in config and os.path.isfile(config['StorageFloodControl']):
+        StorageFloodControl = UnitBasedTable(plants_all_sto, 'StorageFloodControl', config,
+                                            fallbacks=['Unit', 'Technology', 'Zone'],
+                                            default=1)
+    else:
+        logging.warning('No Storage Flood Control will be considered (no valid file provided)')
+        StorageFloodControl = pd.DataFrame(index=config['idx_long'])    
+    
+    if 'ReservoirScaledInflows' in config and os.path.isfile(config['ReservoirScaledInflows']):
+        ReservoirScaledInflows = UnitBasedTable(plants_all_sto, 'ReservoirScaledInflows', config,
+                                                fallbacks=['Unit', 'Technology', 'Zone'], default=0)
+    else:
+        logging.warning('No historical Reservoir Scaled Inflows will be considered (no valid file provided)')
+        ReservoirScaledInflows = pd.DataFrame(index=config['idx_long'])
+
     if 'ReservoirScaledOutflows' in config and os.path.isfile(config['ReservoirScaledOutflows']):
         ReservoirScaledOutflows = UnitBasedTable(plants_all_sto, 'ReservoirScaledOutflows', config,
                                                  fallbacks=['Unit', 'Technology', 'Zone'], default=0)
@@ -373,10 +389,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         CostOfSpillage = UnitBasedTable(plants_all_sto, 'CostOfSpillage', config,
                               fallbacks=['Unit', 'Technology', 'Zone'],
                               default=0)
-    #     CostOfSpillage = GenericTable(lines_bs, 'CostOfSpillage', config, default=config['default']['CostOfSpillage'])
-    # else:
-    #     logging.warning('No CostOfSpillage will be considered (no valid file provided)')
-    #     CostOfSpillage = pd.DataFrame(index=config['idx_long'])
+    else:
+        logging.warning('No CostOfSpillage will be considered (no valid file provided)')
+        CostOfSpillage = pd.DataFrame(index=config['idx_long'])
     
     Temperatures = NodeBasedTable('Temperatures', config)
     
@@ -864,20 +879,21 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
                 # %% Store all times series and format
 
-    # Formatting all time series (merging, resempling) and store in the FinalTS dict
-    finalTS = {'Load': Load, 'Reserve2D': reserve_2D_tot, 'Reserve2U': reserve_2U_tot,
-               'Efficiencies': Efficiencies,
-               'NTCs': NTCs, 'Inter_RoW': Inter_RoW,
-               'LoadShedding': LoadShedding, 'CostLoadShedding': CostLoadShedding, 'CostCurtailment': CostCurtailment,
-               'ScaledInflows': ReservoirScaledInflows, 'ScaledOutflows': ReservoirScaledOutflows,
-               'ReservoirLevels': ReservoirLevels, 'Outages': Outages, 'AvailabilityFactors': AF,
-               'CostHeatSlack': CostHeatSlack, 'HeatDemand': HeatDemand,
-               'StorageAlertLevels': StorageAlertLevels, 'StorageFloodControl': StorageFloodControl,
-               'ShareOfFlexibleDemand': ShareOfFlexibleDemand,
-               'PriceTransmission': PriceTransmission,'CostH2Slack': CostH2Slack,
-               'H2RigidDemand': H2RigidDemand, 'H2FlexibleDemand': H2FlexibleDemand,
-               'CostOfSpillage':CostOfSpillage,
-               'InertiaLimit': InertiaLimit,  'SystemGainLimit': SystemGainLimit,'PrimaryReserveLimit': PrimaryReserveLimit}
+    if (SectorCoupling_flag == 'Off'):    
+        # Formatting all time series (merging, resempling) and store in the FinalTS dict
+        finalTS = {'Load': Load, 'Reserve2D': reserve_2D_tot, 'Reserve2U': reserve_2U_tot,
+                   'Efficiencies': Efficiencies,
+                   'NTCs': NTCs, 'Inter_RoW': Inter_RoW,
+                   'LoadShedding': LoadShedding, 'CostLoadShedding': CostLoadShedding, 'CostCurtailment': CostCurtailment,
+                   'ScaledInflows': ReservoirScaledInflows, 'ScaledOutflows': ReservoirScaledOutflows,
+                   'ReservoirLevels': ReservoirLevels, 'Outages': Outages, 'AvailabilityFactors': AF,
+                   'CostHeatSlack': CostHeatSlack, 'HeatDemand': HeatDemand,
+                   'StorageAlertLevels': StorageAlertLevels, 'StorageFloodControl': StorageFloodControl,
+                   'ShareOfFlexibleDemand': ShareOfFlexibleDemand,
+                   'PriceTransmission': PriceTransmission,'CostH2Slack': CostH2Slack,
+                   'H2RigidDemand': H2RigidDemand, 'H2FlexibleDemand': H2FlexibleDemand,
+                   'CostOfSpillage':CostOfSpillage,
+                   'InertiaLimit': InertiaLimit,  'SystemGainLimit': SystemGainLimit,'PrimaryReserveLimit': PrimaryReserveLimit}
 
     if (SectorCoupling_flag == 'On'):
         # Formatting all time series (merging, resempling) and store in the FinalTS dict
@@ -891,6 +907,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                    'ScaledInflows': ReservoirScaledInflows, 'ScaledOutflows': ReservoirScaledOutflows,
                    'ReservoirLevels': ReservoirLevels, 'Outages': Outages, 'AvailabilityFactors': AF,
                    'CostHeatSlack': CostHeatSlack, 'HeatDemand': HeatDemand,
+                   'StorageAlertLevels': StorageAlertLevels, 'StorageFloodControl': StorageFloodControl,
                    'ShareOfFlexibleDemand': ShareOfFlexibleDemand,
                    'PriceTransmission': PriceTransmission,'CostH2Slack': CostH2Slack,
                    'H2RigidDemand': H2RigidDemand, 'H2FlexibleDemand': H2FlexibleDemand,
@@ -1500,7 +1517,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
     if (SectorCoupling_flag == 'On'):    
         BoundarySector['Sector'] = BoundarySector.index
-    # BoundarySector['Zone'] = BoundarySector.index.map(zone_to_bs_mapping(plants_all_bs))
+        BoundarySector['Zone'] = BoundarySector.index.map(zone_to_bs_mapping(plants_all_bs))
     
     zones = list(MaxCostVariable.columns)
 
@@ -1514,14 +1531,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             if not found:
                 parameters['CostXStorageAlert']['val'][unit, :] = 0
     
-            # Special case for biomass plants, which are not included in EU ETS:
-            if Plants_merged['Fuel'][unit] == 'BIO':
-                parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'][c] / \
-                                                             Plants_merged['Efficiency'][unit]
-                found = True
-            if not found:
-                logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] +
-                                ' in unit ' + Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
+            # # Special case for biomass plants, which are not included in EU ETS:
+            # if Plants_merged['Fuel'][unit] == 'BIO':
+            #     parameters['CostVariable']['val'][unit, :] = FuelPrices['PriceOfBiomass'][c] / \
+            #                                                  Plants_merged['Efficiency'][unit]
+            #     found = True
+            # if not found:
+            #     logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] +
+            #                     ' in unit ' + Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
         # Assign storage flood control level costs to the unit with highest variable costs inside the zone
         for unit in range(len(BoundarySector)):
             # c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
