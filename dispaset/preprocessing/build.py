@@ -1234,10 +1234,31 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                                                     len(idx_sim))
         
         # Setting the storage alert levels
-        if s in Plants_all_sto.index:
-            parameters['StorageAlertLevel']['val'][i, :] = finalTS['StorageAlertLevels'][s][idx_sim].values
-            parameters['StorageFloodControl']['val'][i, :] = finalTS['StorageFloodControl'][s][idx_sim].values
-            parameters['CostOfSpillage']['val'][i, :] = finalTS['CostOfSpillage'][s][idx_sim].values
+    if len(finalTS['StorageAlertLevels'].columns) != 0:
+        for i, s in enumerate(sets['asu']):
+            if s in finalTS['StorageAlertLevels'].columns:
+                parameters['StorageAlertLevels']['val'][i, :] = finalTS['StorageAlertLevels'][s][idx_sim].values
+            else:
+                logging.warning('Storage Alert Levels not found for unit ' + s + '. Assuming no Storage Alert Levels')
+
+    if len(finalTS['StorageFloodControl'].columns) != 0:
+        for i, s in enumerate(sets['asu']):
+            if s in finalTS['StorageFloodControl'].columns:
+                parameters['StorageFloodControl']['val'][i, :] = finalTS['StorageFloodControl'][s][idx_sim].values
+            else:
+                logging.warning('Storage Flood Control not found for unit ' + s + '. Assuming no Storage Flood Control')
+
+    if len(finalTS['CostOfSpillage'].columns) != 0:
+        for i, s in enumerate(sets['asu']):
+            if s in finalTS['CostOfSpillage'].columns:
+                parameters['CostOfSpillage']['val'][i, :] = finalTS['CostOfSpillage'][s][idx_sim].values
+            else:
+                logging.warning('Cost Of Spillage not found for unit ' + s + '. Assuming no Cost Of Spillage')
+
+        # if s in Plants_all_sto.index:
+        #     parameters['StorageAlertLevels']['val'][i, :] = finalTS['StorageAlertLevels'][s][idx_sim].values
+        #     parameters['StorageFloodControl']['val'][i, :] = finalTS['StorageFloodControl'][s][idx_sim].values
+        #     parameters['CostOfSpillage']['val'][i, :] = finalTS['CostOfSpillage'][s][idx_sim].values
 
         # The initial level is the same as the first value of the profile:
         if s in Plants_sto.index:
