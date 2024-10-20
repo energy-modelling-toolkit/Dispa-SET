@@ -43,7 +43,11 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
     hydro_flag = config.get('HydroScheduling', "")  # If key does not exist it returns ""
     if (hydro_flag == "") or (hydro_flag == "Off"):
         logging.info('Simulation without mid therm scheduling')
-        SimData = build_single_run(config)
+        if os.path.isfile(config['SectorXReservoirLevels']):
+            HISTORICAL = 1
+        else:
+            HISTORICAL = 0
+        SimData = build_single_run(config,HISTORICAL=HISTORICAL)
     else:
         if (config['SectorXFlexibleDemand'] != '') and (config['SectorXFlexibleSupply'] == ''):
             [new_profiles, new_SectorXFlexDemand, new_profilesSectorX] = mid_term_scheduling(config, mts_plot=mts_plot,
@@ -254,7 +258,11 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     # Solving reservoir levels for all regions simultaneously
     elif config['HydroScheduling'] == 'Regional':
         logging.info('\n\nLaunching regional Mid-Term Scheduling \n')
-        SimData = build_single_run(temp_config, MTS=1)  # Create temporary SimData
+        if os.path.isfile(config['SectorXReservoirLevels']):
+            HISTORICAL = 1
+        else:
+            HISTORICAL = 0
+        SimData = build_single_run(temp_config, MTS=1, HISTORICAL=HISTORICAL)  # Create temporary SimData
         units = SimData['units']
         r = solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
                        gams_folder=temp_config['GAMS_folder'],

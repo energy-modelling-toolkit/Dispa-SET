@@ -25,7 +25,7 @@ from ..misc.gdx_handler import write_variables
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
 
-def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=None, SectorXFlexSupply=None, MTS=0,
+def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=None, SectorXFlexSupply=None, MTS=0,HISTORICAL=1,
                      profilesSectorX=None):
     """
     This function reads the DispaSET config, loads the specified data,
@@ -393,7 +393,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 key = [key for key, val in FuelEntries.items() if val == fuel][0]
                 FuelPrices[fuel] = pd.DataFrame(index=config['idx_long'])
                 for unit, zone in loc.items():
-                    if (unit, key) in ft.iteritems():
+                    if ft[unit] == key:
                         if zone in fp.columns:
                             FuelPrices[fuel][unit] = fp[zone]
                 FuelPrices[fuel] = FuelPrices[fuel].loc[config['idx_long']]
@@ -404,7 +404,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 FuelPrices[fuel] = pd.DataFrame(index=config['idx_long'])
                 key = [key for key, val in FuelEntries.items() if val == fuel][0]
                 for unit in ft.index:
-                    if (unit, key) in ft.iteritems():
+                    if ft[unit] == key:
                         FuelPrices[fuel][unit] = config['default'][fuel]
     for unit_name, price in FuelPrices.items():
         missing_columns = list(set(plants['Unit']) - set(price.columns))
@@ -454,7 +454,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     BoundarySector.rename(columns={'STOCapacity': 'SectorXStorageCapacity',
                                    'STOSelfDischarge': 'SectorXStorageSelfDischarge',
                                    # 'STOMaxChargingPower': 'BoundarySectorStorageChargingCapacity',
-                                   'STOMinSOC': 'SectorXStorageMinimum','STOHours':'SectorXStorageHours'}, inplace=True)
+                                   'STOMinSOC': 'SectorXStorageMinimum','STOHours':'SectorXStorageHours','STOCapacityMWh':'SectorXStorageCapacityMWh'}, inplace=True)
 
     Plants_merged.rename(columns={'StartUpCost': 'CostStartUp',
                                   'RampUpMax': 'RampUpMaximum',
@@ -778,6 +778,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXFlexMaxSupply'] = ['nx']
     sets_param['SectorXStorageCapacity'] = ['nx']
     sets_param['SectorXStorageHours'] = ['nx']
+    sets_param['SectorXStorageCapacityMWh'] = ['nx']
     sets_param['SectorXStorageSelfDischarge'] = ['nx']
     sets_param['SectorXStorageMinimum'] = ['nx']
     sets_param['SectorXStorageInitial'] = ['nx']
@@ -808,7 +809,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # %%
     # List of parameters whose value is known and provided in the dataframe BoundarySector
-    for var in ['SectorXStorageCapacity', 'SectorXStorageSelfDischarge', 'SectorXStorageHours']:
+    for var in ['SectorXStorageCapacity', 'SectorXStorageSelfDischarge', 'SectorXStorageHours','SectorXStorageCapacityMWh']:
         parameters[var]['val'] = BoundarySector[var].values
 
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
@@ -907,6 +908,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 finalTS['SectorXFloodControl'][nx] - 1 <= 1e-11):
             parameters['SectorXFloodControl']['val'][i, :] = finalTS['SectorXFloodControl'][nx][idx_sim].values
         parameters['SectorXStorageInitial']['val'][i] = parameters['SectorXStorageProfile']['val'][i, 0] * \
+                                                        BoundarySector['SectorXStorageCapacity'][nx]
+        parameters['SectorXStorageFinalMin']['val'][i] = parameters['SectorXStorageProfile']['val'][i, 0] * \
                                                         BoundarySector['SectorXStorageCapacity'][nx]
     # Storage Inflows:
     for i, s in enumerate(sets['asu']):
@@ -1313,7 +1316,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Simulation data:
     SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units_nonclustered': plants,
                'units': Plants_merged,
-               'geo': geo, 'version': dispa_version}
+               'geo': geo, 'version': dispa_version,'sectors':BoundarySector[['Zone']]}
 
     # list_vars = []
     gdx_out = "Inputs.gdx"
@@ -1338,6 +1341,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             for line in fin:
                 line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
                 line = line.replace('$setglobal MTS 0', '$setglobal MTS 1')
+                line = line.replace('$setglobal HISTORICAL 0', '$setglobal HISTORICAL 1')
                 fout.write(line)
             fin.close()
             fout.close()
@@ -1350,6 +1354,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
         for line in fin:
             line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+            line = line.replace('$setglobal HISTORICAL 0', '$setglobal HISTORICAL 1')
             fout.write(line)
         fin.close()
         fout.close()
@@ -1383,6 +1388,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                          'bardisplay': 2,
                          'epint': 0,
                          'lbheur': 1,
+                         #'iis': 1,
                          }
         logging.info('Default Cplex setting used')
     elif config['CplexSetting'] == '' and config['CplexAccuracy'] != '':
@@ -1398,6 +1404,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                          'bardisplay': 2,
                          'epint': 0,
                          'lbheur': 1,
+                         #'iis': 1,
                          }
     elif config['CplexSetting'] == 'Default':
         cplex_options = {'epgap': float(config['CplexAccuracy']),  # TODO: For the moment hardcoded, it has to be moved to a config file
@@ -1412,6 +1419,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                          'bardisplay': 2,
                          'epint': 0,
                          'lbheur': 1,
+                         #'iis': 1,
                          }
         logging.info('Default Cplex setting used')
     elif config['CplexSetting'] == 'Agressive':
@@ -1440,6 +1448,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                          'flowcovers': 2,
                          'flowpaths': 2,
                          'fraccuts': 2,
+                         #'iis': 1,
                          }
         logging.info('Agressive Cplex setting used')
     else:

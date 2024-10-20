@@ -629,16 +629,34 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
             else:
                 level = levels
 
+        # if 'OutputSectorXStorageLevel' in results:
+        #     levX = filter_by_zone(filter_sector(results['OutputSectorXStorageLevel'], inputs), inputs, z, sector=True)
+        #     levX = levX * filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).loc[
+        #         levX.columns].T.values / 1e3  # GWh of storage
+        #     # the same for the minimum level:
+        #     minlevX = filter_by_zone(filter_sector(inputs['param_df']['SectorXStorageProfile'], inputs), inputs, z,
+        #                              sector=True)
+        #     minlevX = minlevX * filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).loc[
+        #         minlevX.columns].T.values / 1e3  # GWh of storage
+        #     levels = pd.concat([level, levX], axis=1)
+
+    #         if aggregation is True:
+    #             level = level.sum(axis=1)
+    #         else:
+    #             level = levels
+    # else:
+    #     level = None
+    #     minlevel = None
         if 'OutputSectorXStorageLevel' in results:
-            levX = filter_by_zone(filter_sector(results['OutputSectorXStorageLevel'], inputs), inputs, z, sector=True)
-            levX = levX * filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).loc[
+            levX = filter_by_zone(results['OutputSectorXStorageLevel'], inputs, z, sector=True)
+            levX = levX * inputs['param_df']['SectorXStorageCapacityMWh'].loc[
                 levX.columns].T.values / 1e3  # GWh of storage
             # the same for the minimum level:
-            minlevX = filter_by_zone(filter_sector(inputs['param_df']['SectorXStorageProfile'], inputs), inputs, z,
-                                     sector=True)
-            minlevX = minlevX * filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).loc[
+            minlevX = filter_by_zone(inputs['param_df']['SectorXStorageProfile'], inputs, z, sector=True)
+            minlevX = minlevX * inputs['param_df']['SectorXStorageCapacityMWh'].loc[
                 minlevX.columns].T.values / 1e3  # GWh of storage
-            levels = pd.concat([level, levX], axis=1)
+            minlevel=minlevX.sum(axis=1)
+            levels = (pd.concat([level, levX], axis=1)).sum(axis=1).rename("HDAMC")
             if aggregation is True:
                 level = level.sum(axis=1)
             else:
@@ -646,7 +664,6 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
     else:
         level = None
         minlevel = None
-
     if 'OutputPowerConsumption' in results:
         demand_p2h = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1000  # GW
         demand_p2h = demand_p2h.sum(axis=1)
@@ -780,7 +797,8 @@ def plot_storage_levels(inputs, results, z):
     #            inputs['units'].loc[u, 'Zone'] == z and inputs['units'].loc[u, 'Technology'] == 'P2GS']
     HDAM_unit = [u for u in inputs['units'].index if
                  inputs['units'].loc[u, 'Zone'] == z and inputs['units'].loc[u, 'Technology'] == 'HDAM']
-
+    HDAMC_unit = [u for u in inputs['units'].index if
+                 inputs['units'].loc[u, 'Zone'] == z and inputs['units'].loc[u, 'Technology'] == 'HDAM']
     BATS_level = results['OutputStorageLevel'][BATS_unit]
     # H2_level = results['OutputStorageLevel'][H2_unit]
     HDAM_level = results['OutputStorageLevel'][HDAM_unit]

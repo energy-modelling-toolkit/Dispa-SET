@@ -115,11 +115,10 @@ def filter_by_zone(PowerOutput, inputs, z, thermal = None, sector = False):
             PowerOutputCopy = PowerOutput.copy()
             Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if loc[u] == z]]
         if sector == True:
-            loc = inputs['units'][['Zone', 'Sector1']]
-            loc = loc[~loc['Sector1'].str.contains('nan')].dropna(how='any').drop_duplicates()
-            result = loc.groupby('Sector1', as_index=False).first()[['Zone', 'Sector1']]
-            result.set_index('Zone', inplace=True)
-            value = result.loc[z, 'Sector1']
+            loc = inputs['sectors'].reset_index()
+            loc = loc[loc['Zone'].str.contains(r'^[A-Za-z]+$', na=False)]
+            result=loc.set_index('Zone')
+            value = result.loc[z, 'Sector']
             # Check if the value is a pandas Series
             if isinstance(value, pd.Series):
                 indices = value.tolist()

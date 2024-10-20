@@ -46,6 +46,7 @@ $set InputFileName Inputs.gdx
 * (1 for LP 0 for MIP TC)
 $setglobal LPFormulation 0
 $setglobal MTS 0
+$setglobal HISTORICAL 1
 
 * Flag to retrieve status or not
 * (1 to retrieve 0 to not)
@@ -188,7 +189,8 @@ SectorXStorageCapacity(nx)                  [MWh]           Storage capacity of 
 SectorXStorageSelfDischarge(nx)             [%]             Boundary sector storage self discharge
 SectorXStorageHours(nx)                     [h]             Boundary sector storage hours
 SectorXStorageMinimum(nx)                   [MWh]           Boundary sector storage minimum
-$If %MTS% == 0 SectorXStorageInitial(nx)    [MWh]           Boundary sector storage initial state of charge
+$If %MTS% == 0   SectorXStorageInitial(nx)    [MWh]           Boundary sector storage initial state of charge
+$if %MTS% == 1 $if %HISTORICAL% == 1        SectorXStorageInitial(nx) [MWh] Boundary sector storage initial state of charge
 SectorXStorageProfile(nx,h)                 [%]             Boundary sector storage level respected at the end of each horizon
 SectorXAlertLevel(nx,h)                     [MWh]           Storage alert of the boundary sector - Will only be violated to avoid power rationing
 SectorXFloodControl(nx,h)                   [MWh]           Storage flood control of the boundary sector
@@ -201,6 +203,7 @@ LoadMaximum(au,h)                           [%]             Maximum load given A
 PowerMustRun(au,h)                          [MW\u]          Minimum power output
 StorageFinalMin(au)                         [MWh]           Minimum storage level at the end of the optimization horizon
 $If %MTS% == 0 SectorXStorageFinalMin(nx)   [MWh]           Minimum boundary sector storage level at the end of the optimization horizon
+$if %MTS% == 1 $if %HISTORICAL% == 1        SectorXStorageFinalMin(nx)   [MWh]           Minimum boundary sector storage level at the end of the optimization horizon
 *MaxFlexDemand(n)                            [MW]            Maximum value of the flexible demand parameter
 MaxOverSupply(n,h)                          [MWh]           Maximum flexible demand accumultation
 AccumulatedOverSupply_inital(n)             [MWh]           Initial value of the flexible demand accumulation
@@ -319,6 +322,7 @@ $LOAD SectorXStorageMinimum
 $LOAD SectorXAlertLevel
 $LOAD SectorXFloodControl
 $If %MTS% == 0 $LOAD SectorXStorageInitial
+$if %MTS% == 1 $if %HISTORICAL% == 1 $LOAD SectorXStorageInitial
 $LOAD SectorXStorageProfile
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
 ;
@@ -412,6 +416,7 @@ SectorXStorageMinimum,
 SectorXAlertLevel,
 SectorXFloodControl,
 $If %MTS% == 0 SectorXStorageInitial,
+$if %MTS% == 1 $if %HISTORICAL% == 1 SectorXStorageInitial,
 SectorXStorageProfile,
 $If %RetrieveStatus% == 1 , CommittedCalc
 ;
@@ -478,8 +483,8 @@ SectorXStorageLevelViolation(nx)        [MWh]   Unsatisfied boundary sector wate
 SectorXStorageLevelViolation_H(nx,h)    [MWh]   Unsatisfied boundary sector storage level constraint at end of simulation timestep
 SectorXFlexDemand(nx,h)                 [MW]    FLexible boundary sector demand at each time step of each nx node
 SectorXFlexSupply(nx,h)                 [MW]    FLexible boundary sector supply at each time step of each nx node
-$If %MTS% == 1 SectorXStorageInitial(nx)
-$If %MTS% == 1 SectorXStorageFinalMin(nx)
+$if %MTS% == 1 $if %HISTORICAL% == 0 SectorXStorageInitial(nx)
+$if %MTS% == 1 $if %HISTORICAL% == 0 SectorXStorageFinalMin(nx)
 ;
 
 free variable
@@ -1431,7 +1436,7 @@ EQ_Boundary_Sector_Storage_alert,
 EQ_Boundary_Sector_Flood_Control,
 EQ_Boundary_Sector_Storage_balance,
 EQ_Boundary_Sector_Storage_boundaries,
-$If %MTS% == 1 EQ_Boundary_Sector_Storage_Cyclic,
+$if %MTS% == 1 $if %HISTORICAL% == 0 EQ_Boundary_Sector_Storage_Cyclic,
 EQ_Storage_MaxCharge,
 EQ_Storage_MaxDischarge ,
 EQ_SystemCost,
@@ -1497,6 +1502,7 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          StorageFinalMin(thms) =  sum(i$(ord(i)=card(i)),StorageProfile(thms,i)*StorageCapacity(thms)*Nunits(thms)*AvailabilityFactor(thms,i));
          StorageFinalMin(chp) =  sum(i$(ord(i)=card(i)),StorageProfile(chp,i)*StorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,i));
 $If %MTS% == 0     SectorXStorageFinalMin(nx) = sum(i$(ord(i)=card(i)),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
+$if %MTS% == 1 $if %HISTORICAL% == 1     SectorXStorageFinalMin(nx) = sum(i$(ord(i)=card(i)),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 *$If %MTS% == 0     SectorXStorageInitial(nx) = sum(i$(ord(i)=1),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 
 $If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
@@ -1530,6 +1536,7 @@ $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital_dbg;
          StorageInitial(thms) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(thms,i));
          StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
 $If %MTS% == 0   SectorXStorageInitial(nx) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),SectorXStorageLevel.L(nx,i));
+$if %MTS% == 1 $if %HISTORICAL% == 1   SectorXStorageInitial(nx) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),SectorXStorageLevel.L(nx,i));
          SectorXFlexDemandInputInitial(nx) = sum(i$(ord(i)<LastKeptHour+1), SectorXFlexDemandInput(nx,i) - SectorXFlexDemand.L(nx,i));
          SectorXFlexSupplyInputInitial(nx) = sum(i$(ord(i)<LastKeptHour+1), SectorXFlexSupplyInput(nx,i) - SectorXFlexSupply.L(nx,i));
 $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),AccumulatedOverSupply.L(n,i));
@@ -1688,8 +1695,8 @@ OutputSectorXStorageLevel(nx,z) = SectorXStorageLevel.L(nx,z)/max(1,SectorXStora
 OutputSectorXSelfDischarge(nx,z) = SectorXStorageSelfDischarge(nx)*SectorXStorageLevel.L(nx,z)*TimeStep;
 OutputSectorXStorageShadowPrice(nx,z) = EQ_Boundary_Sector_Storage_balance.m(nx,z);
 OutputSectorXStorageLevelViolation_H(nx,z) = SectorXStorageLevelViolation_H.l(nx,z);
-$If %MTS% == 1 OutputSectorXStorageFinalMin(nx) = SectorXStorageFinalMin.L(nx)/max(1,SectorXStorageCapacity(nx));
-$If %MTS% == 1 OutputSectorXStorageInitial(nx) = SectorXStorageInitial.L(nx)/max(1,SectorXStorageCapacity(nx));
+$if %MTS% == 1 $if %HISTORICAL% == 0 OutputSectorXStorageFinalMin(nx) = SectorXStorageFinalMin.L(nx)/max(1,SectorXStorageCapacity(nx));
+$if %MTS% == 1 $if %HISTORICAL% == 0 OutputSectorXStorageInitial(nx) = SectorXStorageInitial.L(nx)/max(1,SectorXStorageCapacity(nx));
 OutputSectorXStorageInput(nx,z) = SectorXStorageInput.l(nx,z);
 OutputSectorXWaterNotWithdrawn(nx,z) = SectorXWaterNotWithdrawn.l(nx,z);
 OutputSectorXSpillage(slx,z) = SectorXSpillage.l(slx,z);
@@ -1875,7 +1882,8 @@ UnitHourlyProfit
 ;
 
 *display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L, power.L;
-$If %MTS%==1 display OutputPowerConsumption, heat.L, powerconsumption.L, power.L, EQ_Boundary_Sector_Storage_Cyclic.L;
+*$If %MTS%==1 display OutputPowerConsumption, heat.L, powerconsumption.L, power.L;
+$If %MTS%==1 $if %HISTORICAL% == 0 display OutputPowerConsumption, heat.L, powerconsumption.L, power.L, EQ_Boundary_Sector_Storage_Cyclic.L;
 $If %MTS%==0 display OutputPowerConsumption, heat.L, powerconsumption.L, power.L;
 
 $onorder
