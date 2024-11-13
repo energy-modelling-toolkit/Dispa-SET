@@ -1612,9 +1612,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
 
     # Cost Spillage without BS
-    for i, au in enumerate(sets['au']):
-            if au in finalTS['ScaledInflows'].columns:     #MARCO: SIN BS
-                parameters['CostOfSpillage']['val'][i, :] = finalTS['CostOfSpillage'][au]     
+    for i, wat in enumerate(sets['wat']):
+            if wat in finalTS['ScaledInflows'].columns:     #MARCO: SIN BS
+                parameters['CostOfSpillage']['val'][i, :] = finalTS['CostOfSpillage'][wat]     
 
     # Maximum Boundary Sector Line Capacity
     for i, lx in enumerate(sets['lx']):

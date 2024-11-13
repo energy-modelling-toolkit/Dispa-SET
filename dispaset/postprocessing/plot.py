@@ -583,6 +583,7 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
     :param rng:         Date range to be considered in the plot
     :param rug_plot:    Rug plot on/off
     """
+    
     if colors is None:
         colors = commons['colors']
     if colors is not None:
@@ -635,7 +636,7 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
                 levX.columns].T.values / 1e3  # GWh of storage
             # the same for the minimum level:
             minlevX = filter_by_zone(filter_sector(inputs['param_df']['SectorXStorageProfile'], inputs), inputs, z,
-                                     sector=True)
+                                      sector=True)
             minlevX = minlevX * filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).loc[
                 minlevX.columns].T.values / 1e3  # GWh of storage
             levels = pd.concat([level, levX], axis=1)
@@ -729,6 +730,10 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
     # Generation plot:
     if rug_plot:
         ZoneGeneration = filter_by_zone(results['OutputPower'], inputs, z)
+        
+        if rng is not None:
+           ZoneGeneration = ZoneGeneration.loc[rng]  # Apply rng filter to ZoneGeneration
+           
         if ZoneGeneration.empty:
             logging.warning('No generation present in zone:' + z + '. Rug plot can not be ploted. Skipping!')
         else:

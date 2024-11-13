@@ -66,7 +66,7 @@ $setglobal ActivateAdvancedReserves 0
 *New
 * Definition of the equations that will be present in Frequency Constrainted UC/OD
 * (1 for FC-UC/OD 0 for UC/OD)
-$setglobal FC 0
+$setglobal FC 1
 
 *===============================================================================
 *Definition of   sets and parameters
@@ -234,11 +234,6 @@ $If %MTS% == 0 InertiaLimit(h)              [s\h]           Inertia Limit
 $If %MTS% == 0 Droop(au)                    [%]             Droop
 $If %MTS% == 0 SystemGainLimit(h)           [GW\Hz]         System Gain Limit
 $If %MTS% == 0 PrimaryReserveLimit(h)       [MWh]           Primary Reserve
-*InertiaConstant(au)          [s]             Inertia Constant
-*InertiaLimit(h)              [s\h]           Inertia Limit
-*Droop(au)                    [%]             Droop
-*SystemGainLimit(h)           [GW\Hz]         System Gain Limit
-*PrimaryReserveLimit(h)       [MWh]           Primary Reserve
 
 ;
 
@@ -408,11 +403,6 @@ $If %MTS% == 0 $LOAD InertiaLimit
 $If %MTS% == 0 $LOAD Droop
 $If %MTS% == 0 $LOAD SystemGainLimit
 $If %MTS% == 0 $LOAD PrimaryReserveLimit
-*$LOAD InertiaConstant
-*$LOAD InertiaLimit
-*$LOAD Droop
-*$LOAD SystemGainLimit
-*$LOAD PrimaryReserveLimit
 ;
 
 $If %Verbose% == 0 $goto skipdisplay
@@ -534,11 +524,6 @@ $If %MTS% == 0 InertiaLimit,
 $If %MTS% == 0 Droop,
 $If %MTS% == 0 SystemGainLimit,
 $If %MTS% == 0 PrimaryReserveLimit,
-*InertiaConstant,
-*InertiaLimit,
-*Droop,
-*SystemGainLimit,
-*PrimaryReserveLimit
 ;
 
 $label skipdisplay
@@ -620,12 +605,8 @@ $If %MTS% == 1 SectorXStorageFinalMin(nx)
 $If %MTS% == 0 SysInertia(h)                       [s]         System Inertia
 $If %MTS% == 0 PrimaryReserve_Available(cu,h)         [MW]        Primary Reserve available in the system
 $If %MTS% == 0 SystemGain(h)                       [GW\Hz]     System Gain
-*SysInertia(h)                       [s]         System Inertia
-*PrimaryReserve_Available(cu,h)         [MW]        Primary Reserve available in the system
-*SystemGain(h)                       [GW\Hz]     System Gain
 *MADRID
 $If %MTS% == 0 PowerLoss(h)                  [MW]        Primary Reserve available in the system
-*PowerLoss(h)                  [MW]        Primary Reserve available in the system
 *$If %MTS% == 0 MaxInstantGenerator(h)                  [MW]        Primary Reserve available in the system
 *New
 TotalDemand_2U(h)                       [MW]    Total Spinning reserve up
@@ -754,7 +735,7 @@ EQ_Storage_minimum
 EQ_Storage_alert
 EQ_Storage_flood_control
 EQ_Storage_level
-*EQ_Storage_input
+EQ_Storage_input
 EQ_Storage_MaxDischarge
 EQ_Storage_MaxCharge
 EQ_Storage_balance
@@ -808,17 +789,8 @@ $If %MTS% == 0 EQ_PrimaryReserve_Available
 $If %MTS% == 0 EQ_PrimaryReserve_Capability
 $If %MTS% == 0 EQ_PrimaryReserve_Boundary
 $If %MTS% == 0 EQ_Demand_balance_PrimaryReserve
-*EQ_SysInertia
-*EQ_Inertia_limit
-*EQ_SystemGain
-*EQ_SystemGain_limit
-*EQ_PrimaryReserve_Available
-*EQ_PrimaryReserve_Capability
-*EQ_PrimaryReserve_Boundary
-*EQ_Demand_balance_PrimaryReserve
 *MADRID
 $If %MTS% == 0 EQ_PowerLoss
-*EQ_PowerLoss
 *$If %MTS% == 0 EQ_MaxInstantGenerator
 
 *New
@@ -1436,12 +1408,12 @@ EQ_Storage_level(au,i)..
          StorageCapacity(au)$(s(au) or p2h2(au))*AvailabilityFactor(au,i)$(s(au) or p2h2(au))*Nunits(au)$(s(au) or p2h2(au))
 ;
 
-** Storage charging is bounded by the maximum capacity
-*EQ_Storage_input(s,i)..
-*         StorageInput(s,i)
-*         =L=
-*         StorageChargingCapacity(s)*(Nunits(s)-Committed(s,i))
-*;
+* Storage charging is bounded by the maximum capacity
+EQ_Storage_input(s,i)..
+         StorageInput(s,i)
+         =L=
+         StorageChargingCapacity(s)*(Nunits(s)-Committed(s,i))
+;
 
 * The system could curtail by pumping and turbining at the same time if Nunits>1. This should be included into the curtailment equation!
 
@@ -1908,7 +1880,7 @@ EQ_Storage_minimum,
 EQ_Storage_alert,
 EQ_Storage_flood_control,
 EQ_Storage_level,
-*EQ_Storage_input,
+EQ_Storage_input,
 EQ_Storage_balance,
 $If %MTS% == 1 EQ_Storage_Cyclic,
 EQ_Storage_boundaries,
@@ -1960,17 +1932,8 @@ $If %MTS% == 0 EQ_PrimaryReserve_Available,
 $If %MTS% == 0 EQ_PrimaryReserve_Capability,
 $If %MTS% == 0 EQ_PrimaryReserve_Boundary,
 $If %MTS% == 0 EQ_Demand_balance_PrimaryReserve,
-*EQ_SysInertia,
-*EQ_Inertia_limit,
-*EQ_SystemGain,
-*EQ_SystemGain_limit,
-*EQ_PrimaryReserve_Available,
-*EQ_PrimaryReserve_Capability,
-*EQ_PrimaryReserve_Boundary,
-*EQ_Demand_balance_PrimaryReserve,
 *MADRID
 $If %MTS% == 0 EQ_PowerLoss,
-*EQ_PowerLoss,
 *$If %MTS% == 0 EQ_MaxInstantGenerator,
 
 EQ_Tot_Demand_2U,
@@ -2033,7 +1996,7 @@ $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCos
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
 
 $If %Verbose% == 0 $goto skipdisplay3
-Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M,  EQ_Flow_limits_lower.M ;
+Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M,  EQ_Flow_limits_lower.M ;
 $label skipdisplay3
 
          status("model",i) = UCM_SIMPLE.Modelstat;
@@ -2134,6 +2097,7 @@ $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 $If %ActivateFlexibleDemand% == 1 OutputAccumulatedOverSupply(n,h)
 $If %ActivateFlexibleDemand% == 1 ShadowPriceDemandModulation(n,h)
 ShadowPrice(n,h)
+Demand_Balance_DA(n,h)
 HeatShadowPrice(n_th,h)
 H2ShadowPrice(n_h2,h)
 SectorXShadowPrice(nx,h)
@@ -2202,12 +2166,8 @@ UnitHourlyProfit(au,h)
 $If %MTS% == 0 OutputSysInertia(h)
 $If %MTS% == 0 OutputSystemGain(h)
 $If %MTS% == 0 OutputPrimaryReserve_Available(cu,h)
-*OutputSysInertia(h)
-*OutputSystemGain(h)
-*OutputPrimaryReserve_Available(cu,h)
 *MADRID
 $If %MTS% == 0 OutputPowerLoss(h)
-*OutputPowerLoss(h)
 *$If %MTS% == 0 OutputMaxInstantGenerator(h)
 
 OutputTotalDemand_2U(h)
@@ -2291,6 +2251,7 @@ $If not %LPFormulation% == 1 LostLoad_RampDown(n,z)  = sum(au,LL_RampDown.L(au,z
 $If not %LPFormulation% == 1 LostLoad_RampUp_Unit(au,z) = LL_RampUp.L(au,z);
 $If not %LPFormulation% == 1 LostLoad_RampDown_Unit(au,z) = LL_RampDown.L(au,z);
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
+Demand_balance_DA(n,z) = EQ_Demand_balance_DA.L(n,z);
 HeatShadowPrice(n_th,z) = EQ_Heat_Demand_balance.m(n_th,z);
 H2ShadowPrice(n_h2,z) = EQ_H2_Demand_balance.m(n_h2,z);
 LostLoad_WaterSlack(au) = WaterSlack.L(au);
@@ -2433,6 +2394,7 @@ $If not %LPFormulation% == 1 LostLoad_RampDown,
 $If not %LPFormulation% == 1 LostLoad_RampUp_Unit,
 $If not %LPFormulation% == 1 LostLoad_RampDown_Unit,
 ShadowPrice,
+Demand_balance_DA,
 ShadowPrice_2U,
 ShadowPrice_2D,
 ShadowPrice_3U,
@@ -2479,12 +2441,8 @@ OutputDemand_2D,
 $If %MTS%==0 OutputSysInertia,
 $If %MTS%==0 OutputSystemGain,
 $If %MTS%==0 OutputPrimaryReserve_Available,
-*OutputSysInertia,
-*OutputSystemGain,
-*OutputPrimaryReserve_Available,
 *MADRID
 $If %MTS%==0 OutputPowerLoss,
-*OutputPowerLoss,
 *$If %MTS%==0 OutputMaxInstantGenerator,
 
 status,
@@ -2581,7 +2539,7 @@ display day,FirstHour,LastHour,LastKeptHour;
 Display PowerInitial,CommittedInitial,StorageInitial,StorageFinalMin;
 $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
-$If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
-$If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
+$If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
+$If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
 
 Display Flow.L,Power.L,Committed.L,ShedLoad.L,StorageLevel.L,StorageInput.L,SystemCost.L,Spillage.L,StorageLevel.L,StorageInput.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L,WaterSlack.L ,StorageLevelViolation.L;
