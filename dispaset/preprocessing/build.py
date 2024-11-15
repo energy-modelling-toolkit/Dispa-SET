@@ -512,7 +512,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
             
     # Update reservoir levels with newly computed ones from the mid-term scheduling
-    if (SectorCoupling_flag == 'Off'): 
+    if (SectorCoupling_flag == "") or (SectorCoupling_flag == 'Off'): 
         if profiles is not None:
             plants_all_sto.set_index(plants_all_sto.loc[:, 'Unit'], inplace=True, drop=True)
             for key in profiles.columns:
@@ -817,9 +817,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Check heat only units
     check_heat(config, Plants_heat_only)
 
-    # Filter boundary sector only plants
-    Plants_boundary_sector_only = Plants_merged[
-        [u in commons['tech_boundary_sector'] for u in Plants_merged['Technology']]].copy()
+    if (SectorCoupling_flag == 'On'): 
+        # Filter boundary sector only plants
+        Plants_boundary_sector_only = Plants_merged[
+            [u in commons['tech_boundary_sector'] for u in Plants_merged['Technology']]].copy()
+    else:
+        Plants_boundary_sector_only = pd.DataFrame()
     # Check heat only units
     check_boundary_sector(config, Plants_boundary_sector_only)
 
@@ -879,7 +882,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
                 # %% Store all times series and format
 
-    if (SectorCoupling_flag == 'Off'):    
+    if (SectorCoupling_flag == "") or (SectorCoupling_flag == 'Off'):    
         # Formatting all time series (merging, resempling) and store in the FinalTS dict
         finalTS = {'Load': Load, 'Reserve2D': reserve_2D_tot, 'Reserve2U': reserve_2U_tot,
                    'Efficiencies': Efficiencies,
@@ -1176,10 +1179,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # parameters[var]['val'] = Plants_sto[var].values
         parameters[var]['val'] = Plants_merged[var].values
 
-    # The storage discharge efficiency is actually given by the unit efficiency:
-    parameters['StorageDischargeEfficiency']['val'] = np.concatenate((Plants_sto['Efficiency'].values,
-                                                                      Plants_thms['Efficiency'].values, 
-                                                                      Plants_h2['Efficiency'].values), axis=None)
+    # # The storage discharge efficiency is actually given by the unit efficiency:
+    # parameters['StorageDischargeEfficiency']['val'] = np.concatenate((Plants_sto['Efficiency'].values,
+    #                                                                   Plants_thms['Efficiency'].values, 
+    #                                                                   Plants_h2['Efficiency'].values), axis=None)
 
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
     for var in ['CHPPowerToHeat', 'CHPPowerLossFactor', 'CHPMaxHeat']:
@@ -1612,9 +1615,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
 
     # Cost Spillage without BS
-    for i, wat in enumerate(sets['wat']):
-            if wat in finalTS['ScaledInflows'].columns:     #MARCO: SIN BS
-                parameters['CostOfSpillage']['val'][i, :] = finalTS['CostOfSpillage'][wat]     
+    if 'CostOfSpillage' in config and os.path.isfile(config['CostOfSpillage']):
+        for i, wat in enumerate(sets['wat']):
+                if wat in finalTS['ScaledInflows'].columns:     #MARCO: SIN BS
+                    parameters['CostOfSpillage']['val'][i, :] = finalTS['CostOfSpillage'][wat]     
 
     # Maximum Boundary Sector Line Capacity
     for i, lx in enumerate(sets['lx']):

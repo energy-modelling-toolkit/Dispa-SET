@@ -49,7 +49,7 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
         logging.info('Simulation without mid therm scheduling')
         SimData = build_single_run(config)
     
-    elif (SectorCoupling_flag == 'Off'):
+    elif (SectorCoupling_flag == "") or (SectorCoupling_flag == 'Off'):
         if config['H2FlexibleDemand'] != '':
             [new_profiles, new_PtLDemand] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
@@ -289,7 +289,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             gdx_to_list(config['GAMS_folder'], config['SimulationDirectory'] + '/' + resultfile, varname='all',
                         verbose=True), fixindex=True, verbose=True)
         _check_results(temp_results)
-        if config['SectorCoupling'] == 'Off':
+        if config['SectorCoupling']=="" or config['SectorCoupling'] == 'Off':
             if 'OutputStorageLevel' not in temp_results:
                 logging.critical('Storage levels in the selected region were not computed, please check that storage units '
                                  'are present in the power plant database! If not, unselect zones with no storage units '
@@ -417,7 +417,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         logging.error('HydroScheduling parameter should be either "Regional" or "Zonal" (case sensitive). ')
         sys.exit()
 
-    if config['SectorCoupling'] == 'Off':
+    if config['SectorCoupling']=="" or config['SectorCoupling'] == 'Off':
         # replace all 1.000000e+300 values by nan since they correspond to undefined in GAMS:
         if 'profiles' in locals():
             profiles[profiles >= 1E300] = np.nan
@@ -455,7 +455,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                     os.path.join(sim_folder, 'Inputs_MTS.gdx'))
 
     # Re-index to the main simulation time step:
-    if config['SectorCoupling'] == 'Off':
+    if config['SectorCoupling']=="" or config['SectorCoupling'] == 'Off':
         if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
             profiles = profiles.reindex(idx_long, method='nearest')
     
