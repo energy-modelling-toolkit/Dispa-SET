@@ -31,7 +31,7 @@ commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF
 # List of VRES technologies:
 commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 # List of Conventional technologies:
-commons['tech_conventional'] = ['HDAM', 'COMC', 'GTUR', 'STUR']#MARCO
+commons['tech_conventional'] = ['HDAM', 'COMC', 'GTUR', 'STUR', 'BATS']#MARCO
 # List of storage technologies:
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
 # commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP', 'HDAMC']
