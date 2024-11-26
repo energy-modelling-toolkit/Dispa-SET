@@ -1631,7 +1631,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         if slx in BS_Spillages.columns:
             parameters['SectorXMaximumSpillage']['val'][i, :] = finalTS['BSMaxSpillage'][slx]
     #Cost of Spillage boundary sector
-        if 'BoundarySectorMaxSpillage' in config and os.path.isfile(config['BoundarySectorMaxSpillage']): 
+        if 'CostXSpillage' in config and os.path.isfile(config['CostXSpillage']): 
             parameters['CostXSpillage']['val'][i, :] = finalTS['CostXSpillage'][slx] #ALIZON: CON BS
  
     # Check values:
