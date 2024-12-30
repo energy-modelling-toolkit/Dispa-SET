@@ -32,6 +32,8 @@ commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF
 commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 # List of Conventional technologies:
 commons['tech_conventional'] = ['HDAM', 'COMC', 'GTUR', 'STUR', 'BATS']#MARCO
+# List of Batteries technologies:
+commons['tech_batteries'] = ['BATS']#MARCO
 # List of storage technologies:
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
 # commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP', 'HDAMC']
@@ -160,12 +162,14 @@ commons['PathParameters'] = {
     'InertiaLimit': 155,
     # Gain Limit data
     'SystemGainLimit': 156,
+    # FFR Gain Limit data
+    'FFRGainLimit': 157,
     # Hydrogen data
     'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
     # Storage data
     'StorageAlertLevels': 140, 'StorageFloodControl': 141, 
     # Reserves input data
-    'PrimaryReserveLimit': 159, 'Reserve2U': 160, 'Reserve2D': 161, 
+    'FFRLimit': 158, 'PrimaryReserveLimit': 159, 'Reserve2U': 160, 'Reserve2D': 161, 
     # Other costs related data
     'PriceOfCO2': 166, 'CostHeatSlack': 167, 'CostLoadShedding': 168, 'PriceTransmission': 169, 'CostH2Slack': 170, 
     'CostCurtailment': 171, 'CostNotServed': 172,
@@ -195,6 +199,8 @@ commons['default'] = {
     'InertiaLimit': 155,
     # Gain requirement default
     'SystemGainLimit': 156,
+    # FFR Gain requirement default
+    'FFRGainLimit': 157,
     # Inertia requirement default
-    'PrimaryReserveLimit': 159
+    'FFRLimit': 158, 'PrimaryReserveLimit': 159
 }

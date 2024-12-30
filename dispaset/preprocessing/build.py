@@ -12,7 +12,7 @@ from future.builtins import int
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, check_temperatures, \
     check_clustering, isStorage, check_chp, check_p2h, check_h2, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves, check_PtLDemand, check_heat, check_p2bs, check_boundary_sector, \
-    check_BSFlexDemand, check_BSFlexSupply, check_PrimaryReserveLimit
+    check_BSFlexDemand, check_BSFlexSupply, check_FFRLimit, check_PrimaryReserveLimit
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
@@ -148,7 +148,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # logging.warning('No Inertia Limit will be considered (no valid file provided)')
         # InertiaLimit = pd.DataFrame(index=config['idx_long'])
     
-    # Gain Limit:
+    # PFR Gain Limit:
     if 'SystemGainLimit' in config and os.path.isfile(config['SystemGainLimit']):
         SystemGainLimit = load_time_series(config, config['SystemGainLimit']).fillna(0)
     else:
@@ -156,6 +156,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         SystemGainLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
         # logging.warning('No Inertia Limit will be considered (no valid file provided)')
         # InertiaLimit = pd.DataFrame(index=config['idx_long'])
+        
+    # FFR Gain Limit:
+    if 'FFRGainLimit' in config and os.path.isfile(config['FFRGainLimit']):
+        FFRGainLimit = load_time_series(config, config['FFRGainLimit']).fillna(0)
+    else:
+        logging.warning('No FFR Gain Limit will be considered (no valid file provided)')
+        FFRGainLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
     
     # Boundary Sector Interconnections:    
     if (SectorCoupling_flag == 'On'):
@@ -186,6 +193,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     Reserve2U = NodeBasedTable('Reserve2U', config, default=None)
     # aqui deberia inicializar los df de los resultados que no estan con timestamp
     
+    # FFR Required:
+    if 'FFRLimit' in config and os.path.isfile(config['FFRLimit']):
+        FFRLimit = load_time_series(config, config['FFRLimit']).fillna(0)
+    else:
+        logging.warning('No FFR requirement will be considered (no valid file provided)')
+        FFRLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
+
     # Primary Reserve Required:
     if 'PrimaryReserveLimit' in config and os.path.isfile(config['PrimaryReserveLimit']):
         PrimaryReserveLimit = load_time_series(config, config['PrimaryReserveLimit']).fillna(0)
@@ -574,6 +588,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     check_temperatures(plants, Temperatures)
     check_FlexibleDemand(ShareOfFlexibleDemand)
     check_reserves(Reserve2D, Reserve2U, Load)
+    check_FFRLimit(FFRLimit, Load)
     check_PrimaryReserveLimit(PrimaryReserveLimit, Load)
 
     # Fuel prices:
@@ -811,6 +826,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     Plants_conventional = Plants_merged[[u in commons['tech_conventional'] for u in Plants_merged['Technology']]].copy()
     # check conventional plants:
     # check_conventional(config, Plants_conventional)
+    
+    # Filter batteries units
+    Plants_batteries = Plants_merged[[u in commons['tech_batteries'] for u in Plants_merged['Technology']]].copy()
 
     # Filter heat only plants
     Plants_heat_only = Plants_merged[[u in commons['tech_heat'] for u in Plants_merged['Technology']]].copy()
@@ -896,7 +914,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                    'PriceTransmission': PriceTransmission,'CostH2Slack': CostH2Slack,
                    'H2RigidDemand': H2RigidDemand, 'H2FlexibleDemand': H2FlexibleDemand,
                    'CostOfSpillage':CostOfSpillage,
-                   'InertiaLimit': InertiaLimit,  'SystemGainLimit': SystemGainLimit,'PrimaryReserveLimit': PrimaryReserveLimit}
+                   'InertiaLimit': InertiaLimit, 'SystemGainLimit': SystemGainLimit, 'FFRGainLimit': FFRGainLimit,
+                   'FFRLimit': FFRLimit,'PrimaryReserveLimit': PrimaryReserveLimit}
 
     if (SectorCoupling_flag == 'On'):
         # Formatting all time series (merging, resempling) and store in the FinalTS dict
@@ -919,7 +938,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                    'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel, 
                    'SectorXFloodControl': SectorXFloodControl, 
                    'CostOfSpillage':CostOfSpillage, 'CostXSpillage':CostXSpillage, 
-                   'InertiaLimit': InertiaLimit,  'SystemGainLimit': SystemGainLimit,'PrimaryReserveLimit': PrimaryReserveLimit}
+                   'InertiaLimit': InertiaLimit, 'SystemGainLimit': SystemGainLimit, 'FFRGainLimit': FFRGainLimit,'FFRLimit': FFRLimit,'PrimaryReserveLimit': PrimaryReserveLimit}
 
 
     # Merge the following time series with weighted averages
@@ -1019,6 +1038,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                        commons['tech_thermal_storage']] for u in
                                  Plants_merged['Technology']]].index.tolist()
     sets['cu'] = Plants_conventional.index.tolist()
+    sets['ba'] = Plants_batteries.index.tolist()
 
     ###################################################################################################################
     ############################################   Parameters    ######################################################
@@ -1127,6 +1147,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['Droop'] = ['au']
     sets_param['SystemGainLimit'] = ['h']
     sets_param['PrimaryReserveLimit'] = ['h']
+    sets_param['FFRGainLimit'] = ['h']
+    sets_param['FFRLimit'] = ['h']
     if (grid_flag == 'DC-Power Flow'):
         sets_param['PTDF'] = ['l', 'n']   
     
@@ -1579,6 +1601,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # System Gain to parameters dict
     if len(finalTS['SystemGainLimit'].columns) != 0:
         parameters['SystemGainLimit']['val']= finalTS['SystemGainLimit'].iloc[:, 0].values
+    # FFR Gain to parameters dict
+    if len(finalTS['FFRGainLimit'].columns) != 0:
+        parameters['FFRGainLimit']['val']= finalTS['FFRGainLimit'].iloc[:, 0].values
+    # FFR to parameters dict
+    if len(finalTS['FFRLimit'].columns) != 0:
+        parameters['FFRLimit']['val'] = finalTS['FFRLimit'].iloc[:, 0].values
     # Primary Reserve to parameters dict
     if len(finalTS['PrimaryReserveLimit'].columns) != 0:
         parameters['PrimaryReserveLimit']['val'] = finalTS['PrimaryReserveLimit'].iloc[:, 0].values

@@ -623,6 +623,21 @@ def check_reserves(Reserve2D, Reserve2U, Load):
             logging.warning('No 2D reserve requirement data has been found for zone ' + z +
                             '. Using the standard formula')
 
+def check_FFRLimit(FFRLimit, Load):
+    """
+    Function that checks the validity of the reserve requirement time series
+    :param FFR:   DataFrame of FFR Limit
+    :param Load:        DataFrame of Loads
+    """
+    if (FFRLimit.sum(axis=1) < 0).any():
+        logging.critical('The FFR Limit table contains negative values')
+        sys.exit(1)
+    if (Load.sum(axis=1) - FFRLimit.sum(axis=1) < 0).any():
+        logging.critical('The FFR Limit table contains values higher than demand')
+        sys.exit(1)
+    else:
+        logging.warning('No FFR Limit requirement data has been found')
+        
 def check_PrimaryReserveLimit(PrimaryReserveLimit, Load):
     """
     Function that checks the validity of the reserve requirement time series

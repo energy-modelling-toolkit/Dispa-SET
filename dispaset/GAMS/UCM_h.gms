@@ -88,6 +88,7 @@ hu(au)           Heat only units
 thms(au)         Thermal storage units only
 *New
 cu(au)           Conventional units only
+ba(au)           Batteries only
 *Fuels
 f                Fuel types
 *Technologies
@@ -233,7 +234,9 @@ $If %MTS% == 0 InertiaConstant(au)          [s]             Inertia Constant
 $If %MTS% == 0 InertiaLimit(h)              [s\h]           Inertia Limit
 $If %MTS% == 0 Droop(au)                    [%]             Droop
 $If %MTS% == 0 SystemGainLimit(h)           [GW\Hz]         System Gain Limit
+$If %MTS% == 0 FFRGainLimit(h)              [GW\Hz]         FFR Gain Limit
 $If %MTS% == 0 PrimaryReserveLimit(h)       [MWh]           Primary Reserve
+$If %MTS% == 0 FFRLimit(h)                  [MWh]           Fast Frequency Reserve
 
 ;
 
@@ -260,7 +263,7 @@ scalar TimeStep;
 
 scalar SystemFrequency, RoCoFMax, DeltaFrequencyMax;
 SystemFrequency = 50;
-RoCoFMax = 0.2;
+RoCoFMax = 0.5;
 DeltaFrequencyMax = 0.8;
 
 *Threshold values for p2h partecipation to reserve market as spinning/non-spinning reserves (TO BE IMPLEMENTED IN CONFIGFILE)
@@ -296,6 +299,7 @@ $LOAD chp
 $LOAD p2h
 *New
 $LOAD cu
+$LOAD ba
 $LOAD th
 $LOAD tc
 $LOAD hu
@@ -402,7 +406,9 @@ $If %MTS% == 0 $LOAD InertiaConstant
 $If %MTS% == 0 $LOAD InertiaLimit
 $If %MTS% == 0 $LOAD Droop
 $If %MTS% == 0 $LOAD SystemGainLimit
+$If %MTS% == 0 $LOAD FFRGainLimit
 $If %MTS% == 0 $LOAD PrimaryReserveLimit
+$If %MTS% == 0 $LOAD FFRLimit
 ;
 
 $If %Verbose% == 0 $goto skipdisplay
@@ -523,7 +529,9 @@ $If %MTS% == 0 InertiaConstant,
 $If %MTS% == 0 InertiaLimit,
 $If %MTS% == 0 Droop,
 $If %MTS% == 0 SystemGainLimit,
+$If %MTS% == 0 FFRGainLimit,
 $If %MTS% == 0 PrimaryReserveLimit,
+$If %MTS% == 0 FFRLimit,
 ;
 
 $label skipdisplay
@@ -605,6 +613,8 @@ $If %MTS% == 1 SectorXStorageFinalMin(nx)
 $If %MTS% == 0 SysInertia(h)                       [s]         System Inertia
 $If %MTS% == 0 PrimaryReserve_Available(cu,h)         [MW]        Primary Reserve available in the system
 $If %MTS% == 0 SystemGain(h)                       [GW\Hz]     System Gain
+$If %MTS% == 0 FFR_Available(ba,h)         [MW]        Fast Frequency Reserve available in the system
+$If %MTS% == 0 FFRGain(h)                       [GW\Hz]     FFR Gain
 *MADRID
 $If %MTS% == 0 PowerLoss(h)                  [MW]        Primary Reserve available in the system
 *$If %MTS% == 0 MaxInstantGenerator(h)                  [MW]        Primary Reserve available in the system
@@ -789,6 +799,14 @@ $If %MTS% == 0 EQ_PrimaryReserve_Available
 $If %MTS% == 0 EQ_PrimaryReserve_Capability
 $If %MTS% == 0 EQ_PrimaryReserve_Boundary
 $If %MTS% == 0 EQ_Demand_balance_PrimaryReserve
+
+$If %MTS% == 0 EQ_FFRGain
+$If %MTS% == 0 EQ_FFRGain_limit
+$If %MTS% == 0 EQ_FFR_Available
+$If %MTS% == 0 EQ_FFR_Capability
+$If %MTS% == 0 EQ_FFR_Boundary
+$If %MTS% == 0 EQ_Demand_balance_FFR
+
 *MADRID
 $If %MTS% == 0 EQ_PowerLoss
 *$If %MTS% == 0 EQ_MaxInstantGenerator
@@ -1231,7 +1249,7 @@ EQ_PrimaryReserve_Capability(cu,i)..
 EQ_PrimaryReserve_Boundary(cu,i)..
          PrimaryReserve_Available(cu,i)
          =L=
-         PowerCapacity(cu)*0.15
+         PowerCapacity(cu)*Committed(cu,i)*0.15
 ;
 
 *Hourly demand balance in the Primary Reserve market
@@ -1240,6 +1258,56 @@ EQ_Demand_balance_PrimaryReserve(i)..
 $If %FC% == 1 +PrimaryReserveLimit(i)
          =l=
          sum(cu,PrimaryReserve_Available(cu,i))
+;
+$endIf
+
+*New
+*MARCO FFR
+$ifthen %MTS% == 0
+EQ_FFRGain(i)..
+         FFRGain(i)
+         =l=
+         0
+$If %FC% == 1 +sum(ba,(PowerCapacity(ba)*Committed(ba,i))/(Droop(ba)*SystemFrequency))
+;
+
+EQ_FFRGain_limit(i)..
+         0
+$If %FC% == 1 +FFRGainLimit(i)
+         =l=
+         FFRGain(i)
+;
+
+EQ_FFR_Available(i)..
+         sum(ba,FFR_Available(ba,i))
+         =l=
+         FFRGain(i)*DeltaFrequencyMax
+;
+
+*EQ_PrimaryReserve_Capability(i)..
+*         PrimaryReserve_Available(i)
+*         =L=
+*         sum(cu,(PowerCapacity(cu)*LoadMaximum(cu,i)*Committed(cu,i)*Reserve(cu))-Power(cu,i))
+*;
+
+EQ_FFR_Capability(ba,i)..
+         FFR_Available(ba,i)
+         =L=
+         (PowerCapacity(ba)*LoadMaximum(ba,i)*Committed(ba,i)*Reserve(ba))-Power(ba,i)
+;
+
+EQ_FFR_Boundary(ba,i)..
+         FFR_Available(ba,i)
+         =L=
+         PowerCapacity(ba)
+;
+
+*Hourly demand balance in the FFR market
+EQ_Demand_balance_FFR(i)..
+         0
+$If %FC% == 1 +FFRLimit(i)
+         =l=
+         sum(ba,FFR_Available(ba,i))
 ;
 $endIf
 
@@ -1932,6 +2000,13 @@ $If %MTS% == 0 EQ_PrimaryReserve_Available,
 $If %MTS% == 0 EQ_PrimaryReserve_Capability,
 $If %MTS% == 0 EQ_PrimaryReserve_Boundary,
 $If %MTS% == 0 EQ_Demand_balance_PrimaryReserve,
+
+$If %MTS% == 0 EQ_FFRGain,
+$If %MTS% == 0 EQ_FFRGain_limit,
+$If %MTS% == 0 EQ_FFR_Available,
+$If %MTS% == 0 EQ_FFR_Capability,
+$If %MTS% == 0 EQ_FFR_Boundary,
+$If %MTS% == 0 EQ_Demand_balance_FFR,
 *MADRID
 $If %MTS% == 0 EQ_PowerLoss,
 *$If %MTS% == 0 EQ_MaxInstantGenerator,
@@ -2166,6 +2241,8 @@ UnitHourlyProfit(au,h)
 $If %MTS% == 0 OutputSysInertia(h)
 $If %MTS% == 0 OutputSystemGain(h)
 $If %MTS% == 0 OutputPrimaryReserve_Available(cu,h)
+$If %MTS% == 0 OutputFFRGain(h)
+$If %MTS% == 0 OutputFFR_Available(ba,h)
 *MADRID
 $If %MTS% == 0 OutputPowerLoss(h)
 *$If %MTS% == 0 OutputMaxInstantGenerator(h)
@@ -2291,6 +2368,8 @@ OutputShutDown(au,z) = ShutDown.L(au,z);
 $If %MTS%==0 OutputSysInertia(z) = SysInertia.L(z);
 $If %MTS%==0 OutputSystemGain(z) = SystemGain.L(z);
 $If %MTS%==0 OutputPrimaryReserve_Available(cu,z) = PrimaryReserve_Available.L(cu,z);
+$If %MTS%==0 OutputFFRGain(z) = FFRGain.L(z);
+$If %MTS%==0 OutputFFR_Available(ba,z) = FFR_Available.L(ba,z);
 *OutputSysInertia(z) = SysInertia.L(z);
 *OutputSystemGain(z) = SystemGain.L(z);
 *OutputPrimaryReserve_Available(cu,z) = PrimaryReserve_Available.L(cu,z);
@@ -2441,6 +2520,8 @@ OutputDemand_2D,
 $If %MTS%==0 OutputSysInertia,
 $If %MTS%==0 OutputSystemGain,
 $If %MTS%==0 OutputPrimaryReserve_Available,
+$If %MTS%==0 OutputFFRGain,
+$If %MTS%==0 OutputFFR_Available,
 *MADRID
 $If %MTS%==0 OutputPowerLoss,
 *$If %MTS%==0 OutputMaxInstantGenerator,
