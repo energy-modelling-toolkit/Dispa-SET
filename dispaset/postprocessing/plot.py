@@ -555,9 +555,12 @@ def plot_zone_capacities(inputs, results, plot=True):
 
 
 def update_colors(inputs, colors, new_colors=None, random_seed=42):
-    if new_colors:
-        for key in inputs['sets']['nx']:
-            if key in new_colors.items():
+    # Check if 'nx' exists in inputs['sets']
+    nx_keys = inputs.get('sets', {}).get('nx', [])
+    
+    if new_colors and nx_keys:
+        for key in nx_keys:
+            if key in new_colors:
                 colors[key] = new_colors[key]
             else:
                 colors[key] = None
