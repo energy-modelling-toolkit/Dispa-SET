@@ -398,11 +398,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     else:
         logging.warning('No historical outflows will be considered (no valid file provided)')
         ReservoirScaledOutflows = pd.DataFrame(index=config['idx_long'])
-        
+    # TODO: Check if plants_all_sto esta bien para asignar el CostOfSpillage  
     if 'CostOfSpillage' in config and os.path.isfile(config['CostOfSpillage']):
         CostOfSpillage = UnitBasedTable(plants_all_sto, 'CostOfSpillage', config,
                               fallbacks=['Unit', 'Technology', 'Zone'],
                               default=0)
+    elif 'CostOfSpillage' in config:
+        CostOfSpillage = UnitBasedTable(plants_all_sto, 'CostOfSpillage', config, default=config['default']['CostOfSpillage'])    
     else:
         logging.warning('No CostOfSpillage will be considered (no valid file provided)')
         CostOfSpillage = pd.DataFrame(index=config['idx_long'])
@@ -1956,7 +1958,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
                 logging.info('Simulation with NTC')
                 for line in fin:
-                    line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+                    # line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
                     fout.write(line)
                 fin.close()
                 fout.close()
