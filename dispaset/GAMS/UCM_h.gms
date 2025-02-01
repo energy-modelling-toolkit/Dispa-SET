@@ -1665,16 +1665,16 @@ EQ_CHP_max_heat(chp,i)..
 ;
 
 * Power to X units                                                                                                                                              
-EQ_P2X_Power_Balance(au,i)..
-         Heat(au,i)$(p2h(au))
+EQ_P2X_Power_Balance(p2h,i)..
+         Heat(p2h,i)
          =E=
-         PowerConsumption(au,i)$(p2h(au)) * Efficiency(au,i)$(p2h(au))
+         PowerConsumption(p2h,i) * Efficiency(p2h,i)
 ;
 
-EQ_Max_Power_Consumption(au,i)..
-         PowerConsumption(au,i)$(p2h(au))
+EQ_Max_Power_Consumption(p2h,i)..
+         PowerConsumption(p2h,i)
          =L=
-         PowerCapacity(au)$(p2h(au)) * Committed(au,i)$(p2h(au))
+         PowerCapacity(p2h) * Committed(p2h,i)
 ;
 
 * Power to h2 units                                         
@@ -1919,7 +1919,9 @@ EQ_Demand_balance_3U,
 $If not %LPFormulation% == 1 EQ_Power_must_run,
 EQ_P2X_Power_Balance,
 EQ_Max_Power_Consumption,
-EQ_Power_Balance_of_BS_units,
+EQ_Power_Balance_of_BS_units,                                         
+EQ_P2H2,
+EQ_Max_P2H2,
 EQ_Max_Power_Consumption_of_BS_units,
 EQ_Boundary_sector_only_power_available
 EQ_Boundary_sector_only_power_available_min
