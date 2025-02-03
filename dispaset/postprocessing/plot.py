@@ -227,7 +227,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         if not shiftedload.index.equals(demand.index):
             logging.critical('The shiftedload time series must have the same index as the demand')
             sys.exit(1)
-        load_change += -shiftedload
+        load_change += +shiftedload
         load_changed = True
     reduced_demand = demand + load_change
     if plot_lines:
