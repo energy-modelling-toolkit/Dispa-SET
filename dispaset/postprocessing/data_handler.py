@@ -160,7 +160,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
             'LostLoad_RampDown', 'LostLoad_2D', 'ShadowPrice', 'StorageShadowPrice',
             'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U',
             'status']  # 'status'
-
+    # TODO: Check backward compatibility
     keys_sparse = ['OutputPower', 'OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted',
                    'OutputCurtailedPower', 'OutputFlow', 'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel',
                    'OutputStorageInput', 'OutputHeat',
@@ -178,7 +178,12 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D',
                    'OutputFlowX', 'OutputSectorXStorageAlertViolation', 'OutputSectorXFloodControlViolation',
                    'OutputCostStartUpH', 'OutputCostRampUpH',
-                   'OutputSysInertia', 'OutputSystemGain', 'OutputPowerLoss', 'OutputPrimaryReserve_Available']
+                   'OutputSysInertia', 'OutputSystemGain', 'OutputPowerLoss', 'OutputPrimaryReserve_Available', 
+                   'LostLoad_2D', 'OutputCurtailedHeat', 'OutputCurtailmentPerUnit', 'OutputH2Output', 
+                   'OutputHeatSlack', 'OutputOptimalityGap', 'OutputOptimizationCheck', 
+                   'OutputOptimizationError', 'OutputPtLDemand', 'OutputStorageSlack', 
+                   'OutputSystemCostD', 'SMML-SystemMinusesMaximalLoad', 'SMNL-SystemMinusesNominalLoad',
+                   'UnitHourly2URevenue', 'UnitHourlyProductionCost', 'UnitHourlyStartUpCost', 'UnitHourlyVariableCost']
 
     # Setting the proper index to the result dataframes:
     for key in chain(keys, keys_sparse):

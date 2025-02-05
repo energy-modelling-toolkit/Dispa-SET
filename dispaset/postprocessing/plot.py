@@ -13,7 +13,7 @@ from matplotlib import cm
 from matplotlib.patches import Patch
 
 from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage, \
-    get_power_flow_tracing, get_EFOH, filter_by_heating_zone, filter_by_tech_list, filter_sector
+    get_power_flow_tracing, get_heat_plot_data, get_EFOH, filter_by_heating_zone, filter_by_tech_list, filter_sector
 from ..common import commons
 
 
@@ -127,7 +127,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         if ntc_limits is not None:
             axes[n - 1].set_ylim(ntc_limits[0], ntc_limits[1])
     else:
-        fig, axes = plt.subplots(nrows=n - 1, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
+        fig, axes = plt.subplots(nrows=n, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
                                  gridspec_kw={'height_ratios': [2.7, .8], 'hspace': 0.04})
 
     # Create left axis:
@@ -141,6 +141,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     labels = []
     patches = []
     colorlist = []
+
 
     # Plot reservoir levels (either separated or as one value)
     if level is not None and not level.empty:
@@ -199,7 +200,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         labels.append(col2)
         patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
-
+    # TODO: Check plots backward compatibility
     # Plot curtailment:
     if isinstance(curtailment, pd.Series):
         if not curtailment.index.equals(demand.index):
@@ -235,11 +236,17 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
 
     line_shedload = mlines.Line2D([], [], color='black', alpha=alpha, label='New load', linestyle='dashed')
     line_demand = mlines.Line2D([], [], color='black', label='Load')
+    line_SOC = mlines.Line2D([], [], color='black', label='SOC')
 
     if not load_changed and level is None:
         plt.legend(handles=[line_demand] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
     elif not load_changed:
-        plt.legend(handles=[line_demand] + [line_SOC] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
+        legend_elements = patches[::-1]  # Empezamos solo con los patches
+        if line_demand is not None:
+            legend_elements.insert(0, line_demand)  # Agregamos line_demand si no es None       
+        if line_SOC is not None:
+            legend_elements.append(line_SOC)  # Agregamos line_SOC si no es None        
+        plt.legend(handles=legend_elements, loc=4, bbox_to_anchor=(1.2, 0.5))
     elif level is None or level.empty:
         plt.legend(handles=[line_demand] + [line_shedload] + patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
         if plot_lines:
@@ -575,7 +582,7 @@ def update_colors(inputs, colors, new_colors=None, random_seed=42):
     colors.update(missing_colors)
 
 
-def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=None, storage_limits=None,
+def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatch_limits=None, storage_limits=None,
               ntc_limits=None, units=['GW', 'GWh'], hide_storage_plot=False, colors=None):
     """
     Generates plots from the dispa-SET results for one specific zone
@@ -583,6 +590,7 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
     :param inputs:      DispaSET inputs
     :param results:     DispaSET results
     :param z:           Considered zone (e.g. 'BE')
+    :param z_th:        Considered thermal zone (e.g. 'BE_th')
     :param rng:         Date range to be considered in the plot
     :param rug_plot:    Rug plot on/off
     """
@@ -628,10 +636,33 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
                 if levels[col].max() == 0 and levels[col].min() == 0:
                     del levels[col]
 
+
+            lev_heat = filter_by_heating_zone(results['OutputStorageLevel'], inputs, z_th)
+            lev_heat = lev_heat * inputs['units']['StorageCapacity'].loc[lev_heat.columns] * inputs['units']['Nunits'].loc[
+                lev_heat.columns] / 1e3  # GWh of storage
+            # Filter storage levels for thermal storage
+            level_heat = filter_by_storage(lev_heat, inputs, StorageSubset='thms')
+            levels_heat = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
+            # the same for the minimum level:
+            minlev_heat = filter_by_heating_zone(results['OutputStorageLevel'], inputs, z_th)
+            minlev_heat = minlev_heat * inputs['units']['StorageCapacity'].loc[minlev_heat.columns] * inputs['units']['Nunits'].loc[
+                minlev_heat.columns] / 1e3  # GWh of storage     
+            minlevel_heat = filter_by_storage(minlev_heat, inputs, StorageSubset='thms').sum(axis=1)
+            for t in commons['tech_thermal_storage']:
+                temp = filter_by_tech(level_heat, inputs, t)
+                levels_heat[t] = temp.sum(axis=1)
+            levels_heat.dropna(axis=1, inplace=True)
+    
+            for col in levels_heat.columns:
+                if levels_heat[col].max() == 0 and levels_heat[col].min() == 0:
+                    del levels_heat[col]
+    
             if aggregation is True:
                 level = level.sum(axis=1)
+                level_heat = level_heat.sum(axis=1)
             else:
                 level = levels
+                level_heat = levels_heat
 
         if 'OutputSectorXStorageLevel' in results and not results['OutputSectorXStorageLevel'].empty:
             levX = filter_by_zone(filter_sector(results['OutputSectorXStorageLevel'], inputs), inputs, z, sector=True)
@@ -729,6 +760,35 @@ def plot_zone(inputs, results, z='', rng=None, rug_plot=True, dispatch_limits=No
                       shedload=shed_load,
                       shiftedload=shifted_load, ntc=ntc, rng=rng, alpha=0.5, dispatch_limits=dispatch_limits,
                       storage_limits=storage_limits, ntc_limits=ntc_limits, units=units, figsize=figsize, colors=colors)
+    
+    # TODO: Check backward compatibility
+    # Plot heat dispatch
+    Nzones_th = len(inputs['sets']['n_th'])
+    if Nzones_th > 0 and (z_th is None or (z_th not in inputs['sets']['n_th'])):
+        z_th = inputs['sets']['n_th'][np.random.randint(Nzones_th)]
+        logging.info('Randomly selected thermal zone: ' + z_th)
+
+    if Nzones_th > 0:
+        heat_demand = inputs['param_df']['HeatDemand'][z_th] / 1000
+        heat_demand = pd.DataFrame(heat_demand, columns=[z_th])
+        heat_demand = heat_demand[z_th]
+        heat_plotdata = get_heat_plot_data(inputs, results, z_th) / 1000
+
+        if 'OutputCurtailedHeat' in results and z_th in results['OutputCurtailedHeat'].columns:
+            heat_curtailment = results['OutputCurtailedHeat'][z_th] / 1000  # GW
+        else:
+            heat_curtailment = None
+        
+        # Make sure the index matches rng
+        heat_demand = heat_demand.reindex(rng)  
+        heat_plotdata = heat_plotdata.reindex(rng)
+        if heat_curtailment is not None:
+            heat_curtailment = heat_curtailment.reindex(rng)
+        else:
+            print("heat_curtailment is None. Check your input data.")
+               
+        plot_dispatch(heat_demand, heat_plotdata, y_ax='Heat', level=level_heat, minlevel=minlevel_heat, curtailment=heat_curtailment, rng=rng,
+                      alpha=0.5)
 
     # Generation plot:
     if rug_plot:

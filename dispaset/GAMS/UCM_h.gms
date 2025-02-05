@@ -2112,8 +2112,8 @@ Error.L = sum((i,n), CostLoadShedding(n,i)*ShedLoad.L(n,i)
           +Config("ValueOfLostLoad","val")*(LL_MaxPower.L(n,i)+LL_MinPower.L(n,i))
           +0.8*Config("ValueOfLostLoad","val")*(LL_2U.L(n,i)+LL_2D.L(n,i)+LL_3U.L(n,i)))
           +sum((au,i), 0.7*Config("ValueOfLostLoad","val")*(LL_RampUp.L(au,i)+LL_RampDown.L(au,i)))
-          +sum((i,n_th), CostHeatSlack(n_th,i) * HeatSlack.L(n_th,i))
-          +sum((i,n_h2), CostH2Slack(n_h2,i) * H2Slack.L(n_h2,i));
+          +sum((n_th,i), CostHeatSlack(n_th,i) * HeatSlack.L(n_th,i))
+          +sum((n_h2,i), CostH2Slack(n_h2,i) * H2Slack.L(n_h2,i));
 *         +sum((i,n_th), CostHeatSlack(n_th,i) * HeatSlack.L(n_th,i))
 ;
 OptimalityGap.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = UCM_SIMPLE.objVal - UCM_SIMPLE.objEst;
