@@ -458,8 +458,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         else:
             logging.warning('No CostXNotServed will be considered (no valid file provided)')
             CostXNotServed = pd.DataFrame(index=config['idx_long']) 
-
-        BoundarySector = BoundarySector.reindex(zones_bs)
+        # TODO: CHECK THIS LINE
+        # BoundarySector = BoundarySector.reindex(zones_bs)
+        BoundarySector = BoundarySector[BoundarySector.index.isin(zones_bs)]
         BoundarySector.fillna(0, inplace=True)
         
         if 'SectorXReservoirLevels' in config and os.path.isfile(config['SectorXReservoirLevels']):

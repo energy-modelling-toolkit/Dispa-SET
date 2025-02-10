@@ -278,6 +278,12 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
 
     # Solving reservoir levels for all regions simultaneously
     elif config['HydroScheduling'] == 'Regional':
+        temp_results = {}
+        profiles = pd.DataFrame(index=idx)
+        SectorXFlexDemand = pd.DataFrame(index=idx)
+        SectorXFlexSupply = pd.DataFrame(index=idx)
+        profilesSectorX = pd.DataFrame()
+        
         logging.info('\n\nLaunching regional Mid-Term Scheduling \n')
         SimData = build_single_run(temp_config, MTS=1)  # Create temporary SimData
         units = SimData['units']
@@ -318,6 +324,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                 for u_old in units.loc[u, 'FormerUnits']:
                     profiles[u_old] = profiles[u]
                 profiles.drop(u, axis=1, inplace=True)
+            # TODO: CHECK WHO COMMENTED THIS PART (MARCO)
             # if config['H2FlexibleDemand'] != '':
             #     for u in PtLDemand:
             #         if u not in units.index:
@@ -359,7 +366,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                                  'are present in the power plant database! If not, unselect zones with no storage units '
                                  'form the zones in the MTS module')
                 sys.exit(0)
-                
+            # TODO: CHECK WHO COMMENTED THIS PART (MARCO) 
             # if 'SectorXReservoirLevels' in config and config['SectorXReservoirLevels'] != '':
             #     if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
             #         profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
@@ -386,22 +393,22 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                 logging.info('BS Flexible Demand Sectors were not computed')
                 SectorXFlexDemand = temp_results['OutputCommitted'].reindex(range(1, len(idx) + 1)).fillna(
                 0).set_index(idx)
-    
-            if 'SectorXFlexibleSupply' in config and config['SectorXFlexibleSupply'] != '':
-                if 'OutputSectorXFlexSupply' not in temp_results:
-                    logging.critical('PtL Demand in the selected region was not computed')
-                    sys.exit(0)
+            # TODO: CHECK HOW TO CORRECT THIS PART DELETING THE COMMENT
+            # if 'SectorXFlexibleSupply' in config and config['SectorXFlexibleSupply'] != '':
+            #     if 'OutputSectorXFlexSupply' not in temp_results:
+            #         logging.critical('PtL Supply in the selected region was not computed')
+            #         sys.exit(0)
                     
-                if len(temp_results['OutputSectorXFlexSupply']) < len(idx):
-                    SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].reindex(range(1, len(idx) + 1)).fillna(
-                        0).set_index(
-                        idx)
-                else:
-                    SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].set_index(idx)
-            else:
-                logging.info('BS Flexible Supply Sectors were not computed')
-                SectorXFlexSupply = temp_results['OutputCommitted'].reindex(range(1, len(idx) + 1)).fillna(
-                0).set_index(idx)
+            #     if len(temp_results['OutputSectorXFlexSupply']) < len(idx):
+            #         SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].reindex(range(1, len(idx) + 1)).fillna(
+            #             0).set_index(
+            #             idx)
+            #     else:
+            #         SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].set_index(idx)
+            # else:
+            #     logging.info('BS Flexible Supply Sectors were not computed')
+            #     SectorXFlexSupply = temp_results['OutputCommitted'].reindex(range(1, len(idx) + 1)).fillna(
+            #     0).set_index(idx)
     
             # Updating the profiles table with the original unit names:
             if 'profiles' in locals():

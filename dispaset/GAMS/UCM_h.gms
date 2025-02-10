@@ -1987,6 +1987,8 @@ $If %MTS% == 1 EQ_Max_Capacity_PtL,
 $If %MTS% == 0 EQ_PtL_Demand,
 EQ_Tot_Flex_Demand_BS,
 EQ_Max_Flex_Capacity_BS,
+*CHECK OLD FORMULATION FOR LINE 1991
+EQ_BS_Flex_Demand,
 EQ_Tot_Flex_Supply_BS,
 EQ_Max_Flex_Supply_BS,
 EQ_BS_Spillage_limits_upper,
