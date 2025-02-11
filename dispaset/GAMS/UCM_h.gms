@@ -716,8 +716,8 @@ EQ_Demand_balance_DA
 EQ_Demand_balance_2U
 EQ_Demand_balance_3U
 EQ_Demand_balance_2D
-EQ_P2H
-EQ_Max_P2H
+*EQ_P2H (not working)
+*EQ_Max_P2H (not working)
 EQ_P2H2
 EQ_Max_P2H2
 EQ_P2X_Power_Balance
@@ -1923,8 +1923,8 @@ EQ_Power_Balance_of_BS_units,
 EQ_P2H2,
 EQ_Max_P2H2,
 EQ_Max_Power_Consumption_of_BS_units,
-EQ_Boundary_sector_only_power_available
-EQ_Boundary_sector_only_power_available_min
+EQ_Boundary_sector_only_power_available,
+EQ_Boundary_sector_only_power_available_min,
 EQ_Power_available,
 EQ_Heat_available,
 EQ_thms_Heat_available,
