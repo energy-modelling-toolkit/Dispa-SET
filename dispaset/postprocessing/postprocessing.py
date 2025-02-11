@@ -94,7 +94,7 @@ def filter_sector(InputParam, inputs):
         InputParamCopy = InputParamCopy.loc[InputParamCopy.index.intersection(loc.index.to_list())]
     return InputParamCopy
 
-def filter_by_zone(PowerOutput, inputs, z, thermal = None, sector = False):
+def filter_by_zone(PowerOutput, inputs, z, thermal=None, sector=False):
     """
     This function filters the dispaset Output dataframes by zone
 
@@ -117,6 +117,8 @@ def filter_by_zone(PowerOutput, inputs, z, thermal = None, sector = False):
         if sector == True:
             loc = inputs['sectors'].reset_index()
             loc = loc[loc['Zone'].str.contains(r'^[A-Za-z]+$', na=False)]
+            # TODO: this line depends too much on the sector id, need to be change
+            # MARCO loc = loc[loc['Zone'].str.contains(r'^[A-Za-z0-9]+$', na=False)]
             result=loc.set_index('Zone')
             value = result.loc[z, 'Sector']
             # Check if the value is a pandas Series
