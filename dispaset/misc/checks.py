@@ -8,6 +8,7 @@ import platform
 import sys
 import os
 import subprocess
+import logging
 
 
 def get_gams_path():
@@ -288,4 +289,16 @@ if success_gdxcc and success_path:
     if success and os.path.isfile('test.gdx'):
         print('GDX successfully written. Cleaning up')
         os.remove('test.gdx')
+
+
+def check_gams():
+    """
+    Function that checks if GAMS is properly installed and accessible
+    """
+    from .gdx_handler import get_gams_path
+    gamspath = get_gams_path()
+    if not gamspath:
+        logging.error('GAMS installation not found. Please check your installation and environment variables.')
+        return False
+    return True
 

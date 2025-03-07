@@ -3,6 +3,7 @@ import logging
 import sys
 from collections import OrderedDict
 from itertools import chain
+import os
 
 import numpy as np
 import pandas as pd
@@ -136,9 +137,9 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
     if not 'param_df' in inputs:
         inputs['param_df'] = ds_to_df(inputs)
 
-    # We need to pass the dir in config if we run it in clusters. PBS script fail to autolocate
-    gams_dir = get_gams_path(gams_dir=inputs['config']['GAMS_folder'].encode())
-    if not gams_dir:  # couldn't locate
+    # Get GAMS path from config or try to locate it
+    gams_dir = get_gams_path(inputs.get('config', {}).get('GAMS_folder'))
+    if not gams_dir:
         logging.error('GAMS path cannot be located. Cannot parse gdx files')
         return False
 
@@ -462,3 +463,28 @@ def ds_to_df(inputs):
                 'Only three dimensions currently supported. Parameter ' + p + ' has ' + str(dim) + ' dimensions.')
             sys.exit(1)
     return out
+
+
+def get_results(inputs, sim_folder):
+    """
+    Function that reads the results from a simulation folder and returns them as a dictionary of pandas dataframes
+
+    :param inputs: Dictionary containing the configuration of the simulation
+    :param sim_folder: Path to the simulation folder
+    :return: Dictionary containing the results as pandas dataframes
+    """
+    # Get the GAMS directory from the config
+    gams_dir = get_gams_path(inputs['config']['GAMS_folder'])
+    if not gams_dir:
+        logging.error('Could not find GAMS installation. Please check your configuration.')
+        return None
+
+    # Read the results file
+    result_file = os.path.join(sim_folder, 'Results.gdx')
+    if not os.path.exists(result_file):
+        logging.error('Results file not found: ' + result_file)
+        return None
+
+    # Read the results
+    results = get_gdx(gams_dir, result_file)
+    return results

@@ -7,7 +7,7 @@ import shutil
 from .str_handler import force_str
 
 def solve_high_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file='Results.gdx', output_lst=False):
-    """Use higher level apis to run GAMSy"""
+    """Use higher level apis to run GAMS"""
     # create GAMS workspace:
     gams_folder = force_str(gams_folder)
     from gams import GamsWorkspace
@@ -31,56 +31,5 @@ def solve_high_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file
     for filename in [gams_file_base + '.lst', gams_file_base + '.log', 'debug.gdx']:
         if os.path.isfile(os.path.join(ws.working_directory, filename)):
             shutil.copy(os.path.join(ws.working_directory, filename), sim_folder)
-    logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
-    return status
-
-
-def solve_low_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file='Results.gdx', output_lst=False, logoption=3):
-    """Use lower level apis to run GAMS. Based on GAMS xpexample2.py.
-     We use the same signature as in solve_high_level for consistency when we call it.
-     As we define the working directory to be the simulation directory we do not need to define the output names
-     and move them around the filesystem"""
-    from gamsxcc import new_gamsxHandle_tp, gamsxRunExecDLL, gamsxFree, gamsxCreateD, GMS_SSSIZE
-    from optcc import new_optHandle_tp, optReadDefinition, optSetStrStr, optSetIntStr, optHandleToPtr, optFree, \
-        optCreateD
-
-    sim_folder = force_str(sim_folder)
-    gams_folder = force_str(gams_folder)
-    model = os.path.abspath(os.path.join(sim_folder, gams_file))
-
-    def callGams(gamsxHandle, optHandle, sysDir, model):
-        deffile = force_str(os.path.join(sysDir, 'optgams.def'))
-
-        if optReadDefinition(optHandle, deffile):
-            logging.error("*** Error ReadDefinition, cannot read def file:" + deffile)
-            return False
-
-        optSetStrStr(optHandle, "SysDir", sysDir)
-        optSetStrStr(optHandle, "WorkDir", sim_folder)
-        optSetStrStr(optHandle, "Input", model)
-        optSetIntStr(optHandle, "LogOption", logoption)
-        ret = gamsxRunExecDLL(gamsxHandle, optHandleToPtr(optHandle), sysDir, 1)
-        if ret[0] != 0:
-            logging.error("*** Error RunExecDLL: Error in GAMS call = " + str(ret[1]))
-            if 'White space' in str(ret[1]):
-                logging.error("The Unix GAMS API does not accept white spaces. Move dispaset to a folder that does not contain white spaces")
-            return False
-
-        return True
-
-    optHandle = new_optHandle_tp()
-    gamsxHandle = new_gamsxHandle_tp()
-
-    try:
-        __ = gamsxCreateD(gamsxHandle, gams_folder, GMS_SSSIZE)
-        __ = optCreateD(optHandle, gams_folder, GMS_SSSIZE)
-        time0 = time.time()
-        status = callGams(gamsxHandle, optHandle, gams_folder, model)
-    except Exception as e:
-        logging.error('The following error occured when trying to solve the model in gams: ' + str(e))
-        return False
-    finally:
-        optFree(optHandle)
-        gamsxFree(gamsxHandle)
     logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
     return status

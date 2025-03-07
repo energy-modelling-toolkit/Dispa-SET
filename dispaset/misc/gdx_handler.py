@@ -23,15 +23,20 @@ import time as tm
 
 import numpy as np
 import pandas as pd
+from datetime import datetime, timedelta
 
 from .str_handler import shrink_to_64, force_str
 
 
-def package_exists(package):
-    # http://stackoverflow.com/questions/14050281/how-to-check-if-a-python-module-exists-without-importing-it
-    import pkgutil
-    package_loader = pkgutil.find_loader(package)
-    return package_loader is not None
+def package_exists(package_name):
+    """
+    Function that checks if a package is installed
+    """
+    try:
+        __import__(package_name)
+        return True
+    except ImportError:
+        return False
 
 
 def import_local_lib(lib):
@@ -194,9 +199,9 @@ def write_variables(config, gdx_out, list_vars):
     :param gdx_out:         (Relative) path to the gdx file to be written
     :param list_vars:       List with the sets and parameters to be written
     """
-    gams_dir = get_gams_path(gams_dir=config['GAMS_folder'].encode())
+    gams_dir = get_gams_path(config.get('GAMS_folder'))
     if not gams_dir:  # couldn't locate
-        logging.critical('GDXCC: Could not find the specified gams directory: ' + gams_dir)
+        logging.critical('GDXCC: Could not find a valid GAMS installation. Please check your configuration and environment variables.')
         sys.exit(1)
     gams_dir = force_str(gams_dir)
     config['GAMS_folder'] = gams_dir  # updating the config dictionary
@@ -390,123 +395,104 @@ def get_gdx(gams_dir, resultfile):
                             fixindex=True, verbose=True)
 
 
-def get_gams_path(gams_dir=None):
+def get_gams_path(gams_folder=None):
     """
-    Function that attempts to search for the GAMS installation path (required to write the GDX or run gams)
+    Get the GAMS installation path using the following priority:
+    1. User provided path (if valid)
+    2. GAMSPATH environment variable
+    3. GAMSDIR environment variable
+    4. Try to locate gams executable in common paths
+    5. On Linux, try to locate using the 'locate' command
+    6. Prompt user for path
 
-    It returns the path if it has been found, or an empty string otherwise. If a gams_dir argument is passed
-    it tries to validate before searching
-
-    Currently works for Windows, Linux and OSX. More searching rules and patterns should be added in the future
+    :param gams_folder: Optional user-provided GAMS path
+    :return: Path to GAMS installation or None if not found
     """
-    if isinstance(gams_dir, bytes):
-        gams_dir = gams_dir.decode()
-    if gams_dir is not None:
-        if os.path.isdir(gams_dir):
-            return gams_dir.encode()
-        else:
-            logging.warning('The provided path for GAMS (' + gams_dir + ') does not exist. Trying to locate...')
-
-    import subprocess
-    out = None
-
-    # first check if the gams path is defined as environment variable.
-
-    if "GAMSDIR" in os.environ:
-        logging.debug('Using GAMSDIR environmental variable {} '.format(os.environ['GAMSDIR']))
-        return os.environ['GAMSDIR']
-
-    if "GAMSPATH" in os.environ:
-        logging.debug('Using GAMSPATH environmental variable {} '.format(os.environ['GAMSPATH']))
-        return os.environ['GAMSPATH']
-
-    try:
-        from shutil import which
-        out = which('gams')
-        if out is not None:
-            out = os.path.dirname(out)
-    except ImportError:
-        logging.warning("Couldn't use which to locate gams.")
-
-        # Else try to locate
-        if sys.platform == 'linux2' or sys.platform == 'linux':
-            try:
-                tmp = subprocess.check_output(['locate', '-i', 'libgamscall64.so']).decode()
-            except:
-                tmp = ''
-            lines = tmp.split('\n')
-            for line in lines:
-                path = line.strip('libgamscall64.so')
-                if os.path.exists(path):
-                    out = path
-                break
-        elif sys.platform == 'win32':
-            paths = ['C:\\GAMS', 'C:\\Program Files\\GAMS', 'C:\\Program Files (x86)\\GAMS']
-            lines_32 = []
-            lines_64 = []
-            for path in paths:
-                if os.path.exists(path):
-                    paths_32 = [path + os.sep + tmp for tmp in os.listdir(path) if
-                                tmp.startswith('win32') and os.path.exists(path + os.sep + tmp)]
-                    paths_64 = [path + os.sep + tmp for tmp in os.listdir(path) if
-                                tmp.startswith('win64') and os.path.exists(path + os.sep + tmp)]
-                    for path1 in paths_32:
-                        lines_32 = lines_32 + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
-                                               tmp.startswith('24') and os.path.isfile(
-                                                   path1 + os.sep + tmp + os.sep + 'gams.exe')]
-                    for path1 in paths_64:
-                        lines_64 = lines_64 + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
-                                               tmp.startswith('24') and os.path.isfile(
-                                                   path1 + os.sep + tmp + os.sep + 'gams.exe')]
-            for line in lines_64:
-                if os.path.exists(line):
-                    out = line
-                break
-            if out is None:  # The 32-bit version of gams should never be preferred
-                for line in lines_32:
-                    if os.path.exists(line):
-                        out = line
-                        logging.critical('It seems that the installed version of gams is 32-bit, which might cause consol '
-                                         'crashing and compatibility problems. Please consider using GAMS 64-bit')
-                    break
-        elif sys.platform == 'darwin':
-            paths = ['/Applications/']
-            lines = []
-            for path in paths:
-                if os.path.exists(path):
-                    paths1 = [path + os.sep + tmp for tmp in os.listdir(path) if
-                              tmp.startswith('GAMS') and os.path.exists(path + os.sep + tmp)]
-                    for path1 in paths1:
-                        lines = lines + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
-                                         tmp.startswith('sysdir') and os.path.isfile(
-                                             path1 + os.sep + tmp + os.sep + 'gams')]
-            if len(lines) == 0:
-                tmp = subprocess.check_output(['mdfind', '-name', 'libgamscall64.dylib'])
-                lines = [x.strip('libgamscall64.dylib') for x in tmp.split('\n')]
-            for line in lines:
-                if os.path.exists(line):
-                    out = line
-                break
-
-    if out is not None:
-        logging.info('Detected ' + out + ' as GAMS path on this computer')
-    else:
-        tmp = input('Specify the path to GAMS within quotes (e.g. "C:\\\\GAMS\\\\win64\\\\24.3"): ')
-        if os.path.isdir(tmp):
-            if sys.platform == 'win32':
-                if os.path.isfile(tmp + os.sep + 'gams.exe'):
-                    out = tmp
-                else:
-                    logging.critical('The provided path is not a valid windows gams folder')
-                    return False
-            elif sys.platform == 'linux2':
-                if os.path.isfile(tmp + os.sep + 'gamslib'):  # does not always work... gamslib_ml
-                    out = tmp
-                else:
-                    logging.critical('The provided path is not a valid linux gams folder')
-                    return False
+    # If a path is provided, try to use it first
+    if gams_folder:
+        if isinstance(gams_folder, bytes):
+            gams_folder = gams_folder.decode()
+        if os.path.exists(gams_folder):
+            if platform.system() == 'Windows':
+                if os.path.exists(os.path.join(gams_folder, 'gams.exe')):
+                    return gams_folder
             else:
-                if os.path.isdir(tmp):
-                    out = tmp
+                if os.path.exists(os.path.join(gams_folder, 'gams')):
+                    return gams_folder
+        logging.warning(f'The provided GAMS path ({gams_folder}) is not valid. Trying to locate automatically...')
 
-    return out
+    # Try environment variables
+    gams_path = os.environ.get('GAMSPATH')
+    if gams_path and os.path.exists(gams_path):
+        return gams_path
+
+    gams_path = os.environ.get('GAMSDIR')
+    if gams_path and os.path.exists(gams_path):
+        return gams_path
+
+    # Try to locate gams executable
+    if platform.system() == 'Windows':
+        # Common Windows paths
+        common_paths = [
+            r'C:\GAMS',
+            r'C:\Program Files\GAMS',
+            r'C:\Program Files (x86)\GAMS',
+            os.path.expanduser('~\GAMS'),
+        ]
+        
+        for base_path in common_paths:
+            if os.path.exists(base_path):
+                # Look for the most recent version
+                versions = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
+                if versions:
+                    latest_version = sorted(versions)[-1]
+                    gams_path = os.path.join(base_path, latest_version)
+                    if os.path.exists(os.path.join(gams_path, 'gams.exe')):
+                        return gams_path
+    else:
+        # Linux/Mac paths
+        common_paths = [
+            '/opt/gams',
+            '/usr/local/gams',
+            os.path.expanduser('~/gams'),
+        ]
+        
+        for base_path in common_paths:
+            if os.path.exists(base_path):
+                # Look for the most recent version
+                versions = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
+                if versions:
+                    latest_version = sorted(versions)[-1]
+                    gams_path = os.path.join(base_path, latest_version)
+                    if os.path.exists(os.path.join(gams_path, 'gams')):
+                        return gams_path
+
+        # On Linux, try to locate using the 'locate' command
+        if platform.system() == 'Linux':
+            try:
+                from subprocess import check_output
+                tmp = check_output(['locate', '-i', 'libgamscall64.so']).decode()
+                lines = tmp.split('\n')
+                for line in lines:
+                    path = line.strip('libgamscall64.so')
+                    if os.path.exists(path):
+                        # Try to find the gams executable in the parent directory
+                        parent_dir = os.path.dirname(path)
+                        if os.path.exists(os.path.join(parent_dir, 'gams')):
+                            return parent_dir
+            except Exception as e:
+                logging.debug(f"Could not use 'locate' command to find GAMS: {str(e)}")
+
+    # If not found, prompt user
+    print("\nGAMS installation not found. Please provide the path to your GAMS installation.")
+    print("This should be the directory containing the GAMS executable (gams.exe on Windows, gams on Linux/Mac)")
+    while True:
+        gams_path = input("GAMS path: ").strip()
+        if os.path.exists(gams_path):
+            if platform.system() == 'Windows':
+                if os.path.exists(os.path.join(gams_path, 'gams.exe')):
+                    return gams_path
+            else:
+                if os.path.exists(os.path.join(gams_path, 'gams')):
+                    return gams_path
+        print("Invalid path. Please try again.")
