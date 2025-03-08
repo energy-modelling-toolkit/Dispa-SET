@@ -11,7 +11,7 @@ def solve_high_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file
     # create GAMS workspace:
     gams_folder = force_str(gams_folder)
     from gams import GamsWorkspace
-    ws = GamsWorkspace(system_directory=str(gams_folder), debug=0)
+    ws = GamsWorkspace(system_directory=str(gams_folder), debug=2)
     # Delete debug.gdx if it exists
     debug_file = os.path.join(sim_folder, 'debug.gdx')
     if os.path.exists(debug_file):
