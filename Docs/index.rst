@@ -56,6 +56,7 @@ Contents
    workflow
    data
    model
+   sector_coupling
    formulations
    implementation
    mid_term

@@ -158,6 +158,27 @@ Optimization Variables
     ========================== ======= =============================================================
 
 
+Boundary Sector Variables
+------------------------
+
+.. table::
+
+    ========================== ======= =============================================================
+    Name                       Units   Description
+    ========================== ======= =============================================================
+    SectorXStorageLevel(nx,h)  MWh     Storage level of charge in boundary sector
+    SectorXSpillage(slx,h)     MW      Spillage from boundary sector x to boundary sector y
+    LL_SectorXSpillage(nx,h)   MWh     Spillage from boundary sector storage
+    LL_SectorXFlexDemand(nx)   MWh     Deficit in flex demand
+    LL_SectorXFlexSupply(nx)   MWh     Deficit in flex supply
+    SectorXStorageLevelViolation(nx)  MWh  Unsatisfied boundary sector level at end of period
+    SectorXStorageLevelViolation_H(nx,h) MWh  Unsatisfied storage level at end of timestep
+    SectorXFlexDemand(nx,h)    MW      Flexible boundary sector demand at each timestep
+    SectorXFlexSupply(nx,h)    MW      Flexible boundary sector supply at each timestep
+    SectorXStorageInput(nx,h)  MW      Boundary sector storage input/output
+    ========================== ======= =============================================================
+
+
 Free Variables
 --------------
 
@@ -235,6 +256,8 @@ The costs can be broken down as:
 * spillage: due to spillage in storage.
 * H2: cost of unsatisfied hydrogen by production from electrolyzers
 * Water : cost of water coming from unsatisfied water level at the end of the optimization period.
+
+For additional cost terms related to sector coupling, see :ref:`sector_coupling`.
 
 The variable production costs (in EUR/MWh), are determined by fuel and emission prices corrected by the efficiency (which is considered to be constant for all levels of output in this version of the model) and the emission rate of the unit (equation ):
 
@@ -831,3 +854,94 @@ References
 .. [1] Quoilin, S., Hidalgo Gonzalez, I., & Zucker, A. (2017). Modelling Future EU Power Systems Under High Shares of Renewables: The Dispa-SET 2.1 open-source model. Publications Office of the European Union. 
 .. [2] Quoilin, S., Nijs, W., Hidalgo, I., & Thiel, C. (2015). Evaluation of simplified flexibility evaluation tools using a unit commitment model. IEEE Digital Library. 
 .. [3] Quoilin, S., Gonzalez Vazquez, I., Zucker, A., & Thiel, C. (2014). Available technical flexibility for balancing variable renewable energy sources: case study in Belgium. Proceedings of the 9th Conference on Sustainable Development of Energy, Water and Environment Systems. 
+
+Boundary Sector Model
+--------------------
+
+The boundary sector model (SectorX) extends the power system optimization to include interactions with other energy sectors through storage and conversion processes. This formulation allows modeling sector coupling with various energy carriers (e.g., heat, hydrogen, etc.) while maintaining the temporal and operational constraints of the power system.
+
+Sets
+~~~~
+
+Additional sets for the boundary sector model include:
+
+.. table::
+
+    ======= =================================================================================
+    Name    Description
+    ======= =================================================================================
+    nx      Boundary sector nodes
+    nx_CC   Boundary sector nodes without the EndCascade node
+    lx      Boundary sector lines
+    slx     Boundary sector spillage lines
+    xu(au)  Boundary sector only units
+    ======= =================================================================================
+
+Parameters
+~~~~~~~~~~
+
+Key parameters specific to the boundary sector model:
+
+.. table::
+
+    ======================================= ======= =============================================================
+    Name                                    Units   Description
+    ======================================= ======= =============================================================
+    SectorXDemand(nx,h)                     MWh     Demand profile in boundary sectors
+    X2PowerConversionMultiplier(nx,au,h)    %       Discharge efficiency for boundary sector
+    Power2XConversionMultiplier(nx,au,h)    %       Charging efficiency for boundary sector
+    SectorXStorageCapacity(nx)              MWh     Storage capacity of the boundary sector
+    SectorXStorageSelfDischarge(nx)         %       Boundary sector storage self discharge rate
+    SectorXStorageMinimum(nx)               MWh     Boundary sector storage minimum level
+    SectorXStorageProfile(nx,h)             %       Required storage level profile
+    SectorXAlertLevel(nx,h)                 MWh     Storage alert level - violated only to avoid rationing
+    SectorXFloodControl(nx,h)               MWh     Storage flood control level
+    ======================================= ======= =============================================================
+
+Storage Constraints
+~~~~~~~~~~~~~~~~~
+
+The boundary sector storage is subject to several key constraints:
+
+1. Storage Level Minimum:
+
+.. math::
+    \mathit{SectorXStorageMinimum}_{nx} \leq \mathit{SectorXStorageLevel}_{nx,i}
+
+2. Storage Level Maximum:
+
+.. math::
+    \mathit{SectorXStorageLevel}_{nx,i} \leq \mathit{SectorXStorageCapacity}_{nx}
+
+3. Storage Balance:
+
+.. math::
+    \begin{split}
+    \mathit{SectorXStorageLevel}_{nx,i} = & \mathit{SectorXStorageInitial}_{nx} \cdot \delta_{i=1} + \mathit{SectorXStorageLevel}_{nx,i-1} \cdot (1-\delta_{i=1}) \\
+    & + \mathit{SectorXStorageInput}_{nx,i} \cdot \mathit{TimeStep} \\
+    & - \mathit{SectorXStorageSelfDischarge}_{nx} \cdot \mathit{SectorXStorageLevel}_{nx,i} \cdot \mathit{TimeStep}
+    \end{split}
+
+where :math:`\delta_{i=1}` is 1 for the first time step and 0 otherwise.
+
+4. Storage Final Level:
+
+.. math::
+    \mathit{SectorXStorageFinalMin}_{nx} \leq \mathit{SectorXStorageLevel}_{nx,i} + \mathit{SectorXStorageLevelViolation}_{nx}
+
+for the final time step i.
+
+Storage Input/Output
+~~~~~~~~~~~~~~~~~~~
+
+The storage input/output is governed by conversion efficiencies:
+
+.. math::
+    \begin{split}
+    \mathit{SectorXStorageInput}_{nx,i} = & \sum_{au} \mathit{Power2XConversionMultiplier}_{nx,au,i} \cdot \mathit{PowerConsumption}_{au,i} \cdot \mathit{LocationX}_{au,nx} \\
+    & - \sum_{au} \mathit{X2PowerConversionMultiplier}_{nx,au,i} \cdot \mathit{Power}_{au,i} \cdot \mathit{LocationX}_{au,nx}
+    \end{split}
+
+This equation represents the net storage input as the difference between charging (with Power2X efficiency) and discharging (with X2Power efficiency).
+
+The boundary sector model allows for flexible operation while respecting storage constraints and maintaining the energy balance across sectors. The formulation can be used to model various sector coupling applications such as power-to-heat, power-to-hydrogen, or other energy conversion and storage processes.
