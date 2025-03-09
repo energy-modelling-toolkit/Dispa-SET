@@ -41,7 +41,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'python_docs_theme',
+    'sphinx_rtd_theme',
 #    'sphinx.ext.pngmath',
 ]
 
