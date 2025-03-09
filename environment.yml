@@ -1,8 +1,7 @@
-name: dispaset
+name: dispaset2
 
 dependencies:
   - python >= 3.8
-  - future >= 0.15
   - click >= 3.3
   - numpy >= 1.10
   - scipy >= 0.15

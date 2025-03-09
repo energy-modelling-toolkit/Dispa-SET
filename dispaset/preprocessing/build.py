@@ -7,7 +7,6 @@ import sys
 
 import numpy as np
 import pandas as pd
-from future.builtins import int
 
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, check_temperatures, \
     check_clustering, isStorage, check_chp, check_p2h, check_h2, check_df, check_MinMaxFlows, \
@@ -616,7 +615,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 key = [key for key, val in FuelEntries.items() if val == fuel][0]
                 FuelPrices[fuel] = pd.DataFrame(index=config['idx_long'])
                 for unit, zone in loc.items():
-                    if (unit, key) in ft.iteritems():
+                    if (unit, key) in ft.items():
                         if zone in fp.columns:
                             FuelPrices[fuel][unit] = fp[zone]
                 FuelPrices[fuel] = FuelPrices[fuel].loc[config['idx_long']]
@@ -627,7 +626,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 FuelPrices[fuel] = pd.DataFrame(index=config['idx_long'])
                 key = [key for key, val in FuelEntries.items() if val == fuel][0]
                 for unit in ft.index:
-                    if (unit, key) in ft.iteritems():
+                    if (unit, key) in ft.items():
                         FuelPrices[fuel][unit] = config['default'][fuel]
     for unit_name, price in FuelPrices.items():
         missing_columns = list(set(plants['Unit']) - set(price.columns))

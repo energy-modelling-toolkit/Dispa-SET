@@ -140,7 +140,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
     config['idx'] = pd.date_range(start=dt.datetime(*config['StartDate']),
                                   end=dt.datetime(*config['StopDate']),
-                                  freq=commons['TimeStep']).tz_localize(None)
+                                  freq=commons['TimeStep'],tz=None)
     # Indexes including the last look-ahead period
     enddate_long = config['idx'][-1] + dt.timedelta(days=config['LookAhead'])
     idx_long = pd.date_range(start=config['idx'][0], end=enddate_long, freq=commons['TimeStep'])

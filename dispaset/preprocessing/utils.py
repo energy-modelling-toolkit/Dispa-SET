@@ -330,6 +330,7 @@ def _merge_two_dicts(x, y):
 
 
 def _get_index(df_, idx):
+    """Helper function to get former indexes and units from a dataframe"""
     former_indexes = [_flatten_list(list(df_.loc[i]['FormerIndexes'].values)) for i in idx]
     former_units = [_flatten_list(list(df_.loc[i]['FormerUnits'].values)) for i in idx]
     return former_indexes, former_units
@@ -397,12 +398,12 @@ def group_plants(plants, method, df_grouped=False, group_list=None):
     if not df_grouped:
         plants_merged['FormerIndexes'] = [list(plants.loc[i]['index'].values) for i in idx]
         plants_merged['FormerUnits'] = [list(plants.loc[i]['Unit'].values) for i in idx]
-
     else:
         # case in which the plants have already been clustered once => nested lists in FormerIndexes
         former_indexes, former_units = _get_index(plants, idx)
         plants_merged['FormerIndexes'] = list(former_indexes)
         plants_merged['FormerUnits'] = list(former_units)
+
     return plants_merged
 
 
