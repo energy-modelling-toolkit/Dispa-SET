@@ -46,6 +46,33 @@ Key parameters specific to the sector coupling model:
     SectorXFloodControl(nx,h)               MWh     Storage flood control level
     ======================================= ======= =============================================================
 
+
+
+Variables
+---------
+
+Additional variables specific to the boundary sector model:
+
+.. table::
+
+    ========================== ======= =============================================================
+    Name                       Units   Description
+    ========================== ======= =============================================================
+    SectorXStorageLevel(nx,h)  MWh     Storage level of charge in boundary sector
+    SectorXSpillage(slx,h)     MW      Spillage from boundary sector x to boundary sector y
+    LL_SectorXSpillage(nx,h)   MWh     Spillage from boundary sector storage
+    LL_SectorXFlexDemand(nx)   MWh     Deficit in flex demand
+    LL_SectorXFlexSupply(nx)   MWh     Deficit in flex supply
+    SectorXStorageLevelViolation(nx)  MWh  Unsatisfied boundary sector level at end of period
+    SectorXStorageLevelViolation_H(nx,h) MWh  Unsatisfied storage level at end of timestep
+    SectorXFlexDemand(nx,h)    MW      Flexible boundary sector demand at each timestep
+    SectorXFlexSupply(nx,h)    MW      Flexible boundary sector supply at each timestep
+    SectorXStorageInput(nx,h)  MW      Boundary sector storage input/output
+    ========================== ======= =============================================================
+
+
+
+
 Sector Coupling Units
 --------------------
 
