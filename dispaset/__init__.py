@@ -93,6 +93,7 @@ from .preprocessing.preprocessing import build_simulation, mid_term_scheduling
 from .preprocessing.utils import adjust_capacity, adjust_ntc,adjust_flexibility
 
 from .solve import solve_GAMS
+from .solve_linopy import solve_linopy
 
 from .postprocessing.data_handler import get_sim_results, ds_to_df
 
@@ -103,9 +104,9 @@ from .postprocessing.plot import plot_energy_zone_fuel, plot_zone_capacities, pl
     plot_storage_levels, plot_EFOH, plot_H2_and_demand, plot_tech_cap, \
     H2_demand_satisfaction, plot_ElyserCap_vs_Utilization, plot_power_flow_tracing_matrix, plot_co2
 
-if importlib.util.find_spec("cartopy"):
-    from .postprocessing.geoplot import plot_net_flows_map, plot_line_congestion_map
-else:
-    logging.warning("Cartopy module not found. The geoplot functions will not be available")
+#if importlib.util.find_spec("cartopy"):
+#    from .postprocessing.geoplot import plot_net_flows_map, plot_line_congestion_map
+#else:
+#    logging.warning("Cartopy module not found. The geoplot functions will not be available")
 
 from .cli import *
