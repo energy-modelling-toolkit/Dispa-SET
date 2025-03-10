@@ -541,7 +541,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                                                    'of: ' + str(
                         config['default']['ReservoirLevelInitial']) + ' will be used')
                 else:
-                    ReservoirLevels[key].update(profiles[key])
+                    ReservoirLevels.loc[:, key] = profiles[key]
                     logging.info(
                         'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
         
@@ -552,7 +552,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     logging.warning('The H2 flexible demand "' + key + '" provided by the MTS is not found in the '
                                                                        'H2FlexibleDemand table')
                 else:
-                    H2FlexibleDemand[key].update(PtLDemand[key])
+                    H2FlexibleDemand.loc[:, key] = PtLDemand[key]
 
     if (SectorCoupling_flag == 'On'): 
         if profilesSectorX is not None:
@@ -561,7 +561,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the '
                                                                       'ReservoirLevels table')
                 else:
-                    SectorXReservoirLevels[key].update(profilesSectorX[key])
+                    SectorXReservoirLevels.loc[:, key] = profilesSectorX[key]
                     logging.info(
                         'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
     
@@ -572,7 +572,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     logging.warning('The BS flexible demand "' + key + '" provided by the MTS is not found in the '
                                                                        'SectorXFlexibleDemand table')
                 else:
-                    SectorXFlexibleDemand[key].update(SectorXFlexDemand[key])
+                    SectorXFlexibleDemand.loc[:, key] = SectorXFlexDemand[key]
     
         # Update SectorXFlexSupply (SectorXFlexibleSupply with demand from mid term scheduling)
         if SectorXFlexSupply is not None and any(SectorXFlexibleSupply) > 0:
@@ -581,7 +581,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     logging.warning('The BS flexible demand "' + key + '" provided by the MTS is not found in the '
                                                                        'SectorXFlexibleSupply table')
                 else:
-                    SectorXFlexibleSupply[key].update(SectorXFlexSupply[key])
+                    SectorXFlexibleSupply.loc[:, key] = SectorXFlexSupply[key]
 
     # data checks:
     check_AvailabilityFactors(plants, AF)
