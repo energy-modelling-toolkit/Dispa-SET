@@ -197,7 +197,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                 results[key].index = index
             # Variables whose index is not complete (sparse formulation)
             else:
-                results[key].index = index_long[results[key].index - 1]
+                results[key].index = index_long.iloc[results[key].index - 1]
                 if key in keys_sparse:
                     results[key] = results[key].reindex(index).fillna(0)
         else:
@@ -206,7 +206,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
             results[key] = results[key].reindex(sorted(results[key].columns), axis=1)
         if key in ['OutputPowerX']:
             results[key] = results[key].loc[:, (results[key] != 0).any(axis=0)]
-
+    
     # Include water slack in the results (only one number)
     if 'LostLoad_StorageLevelViolation' in results:
         results['LostLoad_StorageLevelViolation'] = results['LostLoad_StorageLevelViolation']

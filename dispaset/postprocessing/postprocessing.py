@@ -112,23 +112,21 @@ def filter_by_zone(PowerOutput, inputs, z, thermal = None, sector = False):
     if thermal:
         loc = inputs['units']['Zone_th']
         PowerOutputCopy = PowerOutput.copy()
-        Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if loc[u] == z]]
+        Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if loc.loc[u] == z]]
     else:
         if sector != True:
             loc = inputs['units']['Zone']
             PowerOutputCopy = PowerOutput.copy()
-            Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if loc[u] == z]]
+            Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if loc.loc[u] == z]]
         if sector == True:
             loc = inputs['units'][['Zone', 'Sector1']]
             loc = loc[~loc['Sector1'].str.contains('nan')].dropna(how='any').drop_duplicates()
             result = loc.groupby('Sector1', as_index=False).first()[['Zone', 'Sector1']]
             result.set_index('Zone', inplace=True)
-            # value = result.loc[z, 'Sector1']
             try:
                 value = result.loc[z, 'Sector1']
             except KeyError:
-            # Maneja el caso donde 'Sector1' no existe
-                value = None  # O alguna otra acción que desees tomar
+                value = None  # Or some other default value
 
             # Check if the value is a pandas Series
             if isinstance(value, pd.Series):

@@ -135,7 +135,6 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
                 logging.error(
                     'No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c +
                     ' does not exist')
-        #                sys.exit(1)
         SingleFile = False
     elif path != '':
         logging.critical(
@@ -146,9 +145,9 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
     if len(paths) == 0:
         logging.info('No data file specified for the table ' + varname + '. Using default value ' + str(default))
         if default is None:
-            out = pd.DataFrame(index=config['idx_long'])
+            out = pd.DataFrame(index=config['idx_long'], dtype=float)
         elif isinstance(default, (float, int)):
-            out = pd.DataFrame(default, index=config['idx_long'], columns=plants['Unit'])
+            out = pd.DataFrame(default, index=config['idx_long'], columns=plants['Unit'], dtype=float)
         else:
             logging.critical('Default value provided for table ' + varname + ' is not valid')
             sys.exit(1)
@@ -166,7 +165,7 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
         if not SingleFile:
             data.columns = pd.MultiIndex.from_tuples(columns, names=['Zone', 'Data'])
         # For each plant and each fallback key, try to find the corresponding column in the data
-        out = pd.DataFrame(index=config['idx_long'])
+        out = pd.DataFrame(index=config['idx_long'], dtype=float)
         new_header = []
         for j in plants.index:
             warning = True
@@ -184,11 +183,10 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
                 if header in data:
                     if SingleFile:
                         new_header.append(u)
-                        out = pd.concat([out, data[header]], axis=1)
+                        out = pd.concat([out, data[header].astype(float)], axis=1)
                     else:
                         new_header.append(u)
-                        # out[u] = data[header]
-                        out = pd.concat([out, data[header]], axis=1)
+                        out = pd.concat([out, data[header].astype(float)], axis=1)
                     found = True
                     if i > 0 and warning:
                         logging.warning(
@@ -201,8 +199,7 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
                         'No specific information was found for unit ' + u + ' in table ' + varname +
                         '. Using default value ' + str(default))
                 if default is not None:
-                    # out[u] = default
-                    out = pd.concat([out, pd.DataFrame(index=out.index, columns=[u]).fillna(default)], axis=1)
+                    out = pd.concat([out, pd.DataFrame(index=out.index, columns=[u], dtype=float).fillna(default)], axis=1)
                     new_header.append(u)
         out.columns = new_header
     if not out.columns.is_unique:
@@ -242,16 +239,16 @@ def GenericTable(headers, varname, config, default=None):
     if len(paths) == 0:
         logging.info('No data file specified for the table ' + varname + '. Using default value ' + str(default))
         if default is None:
-            out = pd.DataFrame(index=config['idx_long'])
+            out = pd.DataFrame(index=config['idx_long'], dtype=float)
         elif isinstance(default, (float, int)):
-            out = pd.DataFrame(default, index=config['idx_long'], columns=headers)
+            out = pd.DataFrame(default, index=config['idx_long'], columns=headers, dtype=float)
         else:
             logging.critical('Default value provided for table ' + varname + ' is not valid')
             sys.exit(1)
     else:  # assembling the files in a single dataframe:
         data = load_time_series(config, paths['all'])
         # For each plant and each fallback key, try to find the corresponding column in the data
-        out = pd.DataFrame(index=config['idx_long'])
+        out = pd.DataFrame(index=config['idx_long'], dtype=float)
         for header in headers:
             if header in data:
                 out[header] = data[header]
@@ -390,6 +387,8 @@ def load_time_series(config, path, header='infer'):
     """
 
     data = pd.read_csv(path, index_col=0, parse_dates=True, header=header, keep_default_na=False)
+    # Replace empty strings with NaN before converting to float
+    data = data.replace('', np.nan).astype(float)
 
     if not data.index.is_unique:
         logging.critical('The index of data file ' + path + ' is not unique. Please check the data')
@@ -399,6 +398,7 @@ def load_time_series(config, path, header='infer'):
         logging.error('The index of data file ' + path + ' is not monotonously increasing. '
                                                          'Trying to check if it can be parsed with a "day first" format ')
         data = pd.read_csv(path, index_col=0, parse_dates=True, header=header, dayfirst=True, keep_default_na=False)
+        data = data.replace('', np.nan).astype(float)
         if not data.index.is_monotonic_increasing:
             logging.critical('Could not parse index of ' + path + '. To avoid problems make sure that '
                                                                   'you use the proper american date format (yyyy-mm-dd hh:mm:ss)')
@@ -473,7 +473,7 @@ def load_time_series(config, path, header='infer'):
 
     # re-indexing with the longer index (including look-ahead) and filling possibly missing data at the beginning and
     # at the end:
-    return data.reindex(config['idx_long'], method='nearest').fillna(method='bfill')
+    return data.reindex(config['idx_long'], method='nearest').fillna(method='bfill').astype(float)
 
 
 def load_config(ConfigFile, AbsPath=True):
@@ -842,7 +842,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
     #             config['default'][param] = DEFAULTS[param]
     #             logging.warning(
     #                 'No value was provided in config file for {}. Will use {}'.format(param, DEFAULTS[param]))
-    #             config['default'][param] = DEFAULTS[param]
+    #                 config['default'][param] = DEFAULTS[param]
 
     #     if AbsPath:
     #         # Changing all relative paths to absolute paths. Relative paths must be defined
@@ -978,7 +978,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
             if config[param] == '':
                 config[param] = NonEmptyarameters[param]
 
-                # List of parameters for which an external file path must be specified:
+        # List of parameters for which an external file path must be specified:
         PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
                   'ReservoirScaledInflows', 'PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'CostXSpillage',
                   'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat', 'HeatDemand',
