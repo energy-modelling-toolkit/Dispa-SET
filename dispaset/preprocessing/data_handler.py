@@ -405,7 +405,7 @@ def load_time_series(config, path, header='infer'):
             sys.exit(1)
 
     # First convert numerical indexes into datetimeindex:
-    if data.index.is_numeric():
+    if str(data.index.dtype).startswith(('int', 'float')):
         if len(data) == len(config['idx']):  # The data has the same length as the provided index range
             logging.info('A numerical index has been found for file ' + path +
                          '. It has the same length as the target simulation and is therefore considered valid')
@@ -473,7 +473,7 @@ def load_time_series(config, path, header='infer'):
 
     # re-indexing with the longer index (including look-ahead) and filling possibly missing data at the beginning and
     # at the end:
-    return data.reindex(config['idx_long'], method='nearest').fillna(method='bfill').astype(float)
+    return data.reindex(config['idx_long'], method='nearest').bfill().astype(float)
 
 
 def load_config(ConfigFile, AbsPath=True):
@@ -758,7 +758,6 @@ def load_config_excel(ConfigFile, AbsPath=True):
                 config['default'][param] = DEFAULTS[param]
                 logging.warning(
                     'No value was provided in config file for {}. Will use {}'.format(param, DEFAULTS[param]))
-                config['default'][param] = DEFAULTS[param]
 
         if AbsPath:
             # Changing all relative paths to absolute paths. Relative paths must be defined
@@ -926,7 +925,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
     #             config['default'][param] = DEFAULTS[param]
     #             logging.warning(
     #                 'No value was provided in config file for {}. Will use {}'.format(param, DEFAULTS[param]))
-    #             config['default'][param] = DEFAULTS[param]
+    #                 config['default'][param] = DEFAULTS[param]
 
     #     if AbsPath:
     #         # Changing all relative paths to absolute paths. Relative paths must be defined
