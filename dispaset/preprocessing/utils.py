@@ -85,7 +85,8 @@ def BoundarySectorEfficiencyTimeSeries(config, plants, zones_bs):
             for u in plants.index:
                 if (plants.loc[u, 'Technology'] in commons['tech_p2bs']) and (plants.loc[u, s] == n):
                     Efficiencies[n][u] = plants.loc[u, 'Efficiency'+s]
-        Efficiencies[n].fillna(0, inplace=True)
+        if n in Efficiencies:
+            Efficiencies[n] = Efficiencies[n].fillna(0)
     ChargingEfficiencies = {}
     for n in zones_bs:
         ChargingEfficiencies[n] = pd.DataFrame(columns=plants.index, index=config['idx_long'])
@@ -93,7 +94,8 @@ def BoundarySectorEfficiencyTimeSeries(config, plants, zones_bs):
             for u in plants.index:
                 if (plants.loc[u, 'Technology'] in commons['tech_p2bs']) and (plants.loc[u, s] == n):
                     ChargingEfficiencies[n][u] = plants.loc[u, 'ChargingEfficiency'+s]
-        ChargingEfficiencies[n].fillna(0, inplace=True)
+        if n in ChargingEfficiencies:
+            ChargingEfficiencies[n] = ChargingEfficiencies[n].fillna(0)
     return {'Efficiency': Efficiencies, 'ChargingEfficiency': ChargingEfficiencies}
 
 
@@ -571,6 +573,7 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
             sys.exit(1)
     if "Nunits" not in plants:
         plants["Nunits"] = 1
+    plants['PowerCapacity'] = plants['PowerCapacity'].astype(float)
     plants.loc[plants['PowerCapacity'] == 0, 'PowerCapacity'] = 1e-9
 
     Nunits = len(plants)
@@ -580,12 +583,12 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
     # Fill nan values:
     string_keys = ['Zone', 'Technology', 'Fuel', 'CHPType', 'Sector1']
     for key in string_keys:
-        plants[key].fillna("", inplace=True)
+        plants[key] = plants[key].fillna("")
     for key in ['PartLoadMin', 'StartUpTime', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost',
                 'WaterWithdrawal', 'WaterConsumption']:
-        plants[key].fillna(0, inplace=True)
+        plants[key] = plants[key].fillna(0)
     for key in ['RampUpRate', 'RampDownRate']:
-        plants[key].fillna(1e9, inplace=True)
+        plants[key] = plants[key].fillna(1e9)
 
     # Checking the validity of the selected clustering method
     plants["index"] = plants.index
