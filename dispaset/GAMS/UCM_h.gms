@@ -43,8 +43,8 @@ $set InputFileName Inputs.gdx
 
 * Definition of the equations that will be present in LP or MIP
 * (1 for LP 0 for MIP TC)
-$setglobal LPFormulation 0
-$setglobal MTS 0
+$setglobal LPFormulation 1
+$setglobal MTS 1
 
 * Flag to transmission grid model option
 * (1 for DC-PowerFlow 0 for NTC)
@@ -96,8 +96,8 @@ tc(t)
 p                Pollutants
 *Nodes
 n                Nodes
-n_th             Thermal nodes
-n_h2             Hydrogen nodes
+*BS n_th             Thermal nodes
+*BS n_h2             Hydrogen nodes
 nx               Boundary sector nodes
 nx_CC            Boundary sector nodes without the EndCascade node
 *Lines
@@ -142,9 +142,9 @@ CostOfSpillage(au,h)                          [EUR\MW]        Cost of spillage
 CostWaterValue(au,h)                        [EUR\MW]        Cost of storage level violation for each unit
 CostStorageAlert(au,h)                      [EUR\MW]        Cost of violating storage alert level
 CostFloodControl(au,h)                      [EUR\MW]        Cost of violating storage flood level
-CostHeatSlack(n_th,h)                       [EUR\MWh]       Cost of supplying heat via other means
-CostH2Slack(n_h2,h)                         [EUR\MWh]       Cost of supplying H2 by other means
-H2Demand(n_h2,h)                            [MW]            H2 rigid demand
+*BS CostHeatSlack(n_th,h)                       [EUR\MWh]       Cost of supplying heat via other means
+*BS CostH2Slack(n_h2,h)                         [EUR\MWh]       Cost of supplying H2 by other means
+*BS H2Demand(n_h2,h)                            [MW]            H2 rigid demand
 CostXStorageAlert(nx,h)                     [EUR\MW]        Cost of violating storage alert level boundary sector
 CostXFloodControl(nx,h)                     [EUR\MW]        Cost of violating storage flood control level boundary sector
 CostXSpillage(slx,h)                        [EUR\MW]        Cost of spillage for boundary sector
@@ -164,15 +164,15 @@ FlowXMaximum(lx,h)                          [MW]            Boundary sector line
 FlowXMinimum(lx,h)                          [MW]            Boundary sector line minimum flow
 Fuel(au,f)                                  [n.a.]          Fuel type {1 0}
 SectorXDemand(nx,h)                         [MWh\nx]        Demand profile in boundary sectors
-HeatDemand(n_th,h)                          [MWh\u]         Heat demand profile for chp units
+*BS HeatDemand(n_th,h)                          [MWh\u]         Heat demand profile for chp units
 LineNode(l,n)                               [n.a.]          Incidence matrix {-1 +1}
 LineXNode(lx,nx)                            [n.a.]          Incidence matrix {-1 +1}
 SectorXSpillageNode(slx,nx)                 [n.a.]          Incidence matrix {-1 +1}
 SectorXMaximumSpillage(slx,h)               [MW]            Maximum allowed spillage
 LoadShedding(n,h)                           [MW]            Load shedding capacity
 Location(au,n)                              [n.a.]          Location {1 0}
-Location_th(au,n_th)                        [n.a.]          Location {1 0}
-Location_h2(au,n_h2)                        [n.a.]          Location {1 0}
+*BS Location_th(au,n_th)                        [n.a.]          Location {1 0}
+*BS Location_h2(au,n_h2)                        [n.a.]          Location {1 0}
 LocationX(au,nx)                            [n.a.]          Location {1 0}
 Markup(u,h)                                 [EUR\MW]        Markup
 OutageFactor(au,h)                          [%]             Outage Factor (100% = full outage)
@@ -198,11 +198,25 @@ StorageInflow(au,h)                         [MW\u]          Storage inflows (pot
 StorageInitial(au)                          [MWh]           Storage level before initial period
 StorageProfile(au,h)                        [%]             Storage level to be respected at the end of each horizon
 StorageMinimum(au)                          [MWh]           Storage minimum
+
+*CHP STORAGE
+CHPStorageCapacity(chp)                         [MWh\u]         Storage capacity
+CHPStorageDischargeEfficiency(chp)              [%]             Discharge efficiency
+CHPStorageOutflow(chp,h)                        [MW\u]          Storage outflows
+CHPStorageInflow(chp,h)                         [MW\u]          Storage inflows (potential energy)
+CHPStorageInitial(chp)                          [MWh]           Storage level before initial period
+CHPStorageProfile(chp,h)                        [%]             Storage level to be respected at the end of each horizon
+CHPStorageMinimum(chp)                          [MWh]           Storage minimum
+CHPStorageChargingCapacity(chp)                 [MW\u]          Storage capacity
+CHPStorageChargingEfficiency(chp)               [%]             Charging efficiency
+CHPStorageSelfDischarge(chp)                    [%\day]         Self-discharge of the storage units
+
+
 Technology(au,t)                            [n.a.]          Technology type {1 0}
 TimeDownMinimum(au)                         [h]             Minimum down time
 TimeUpMinimum(au)                           [h]             Minimum up time
-PtLDemandInput(n_h2,h)                      [MWh]           Demand of H2 for PtL at each timestep (useless for MTS)
-MaxCapacityPtL(n_h2)                        [MW]            Max capacity of PtL
+*BS PtLDemandInput(n_h2,h)                      [MWh]           Demand of H2 for PtL at each timestep (useless for MTS)
+*BS MaxCapacityPtL(n_h2)                        [MW]            Max capacity of PtL
 SectorXFlexDemandInput(nx,h)                [MWh]           Flexible demand inside BS at each timestep (unless for MTS)
 SectorXFlexDemandInputInitial(nx)           [MWh]           Cumulative flexible demand inside the loop
 SectorXFlexMaxCapacity(nx)                  [MW]            Max capacity for BS Flexible demand
@@ -249,6 +263,9 @@ $If %MTS% == 0 SectorXStorageFinalMin(nx)   [MWh]           Minimum boundary sec
 MaxFlexDemand(n)                            [MW]            Maximum value of the flexible demand parameter
 MaxOverSupply(n,h)                          [MWh]           Maximum flexible demand accumultation
 AccumulatedOverSupply_inital(n)             [MWh]           Initial value of the flexible demand accumulation
+
+*CHP STORAGE
+CHPStorageFinalMin(chp)                         [MWh]           Minimum storage level at the end of the optimization horizon
 ;
 
 * Scalar variables necessary to the loop:
@@ -276,8 +293,8 @@ $gdxin %inputfilename%
 
 $LOAD mk
 $LOAD n
-$LOAD n_th
-$LOAD n_h2
+*BS $LOAD n_th
+*BS $LOAD n_h2
 $LOAD nx
 $LOAD nx_CC
 $LOAD l
@@ -312,8 +329,8 @@ $LOAD CHPMaxHeat
 $LOAD CHPType
 $LOAD Config
 $LOAD CostFixed
-$LOAD CostHeatSlack
-$LOAD CostH2Slack
+*BS $LOAD CostHeatSlack
+*BS $LOAD CostH2Slack
 $LOAD CostOfSpillage
 $LOAD CostXStorageAlert
 $LOAD CostXFloodControl
@@ -340,15 +357,15 @@ $If %TransmissionGrid% == 0 $LOAD FlowMinimum
 $LOAD FlowXMaximum
 $LOAD FlowXMinimum
 $LOAD Fuel
-$LOAD HeatDemand
+*BS $LOAD HeatDemand
 $LOAD LineNode
 $LOAD LineXNode
 $LOAD SectorXSpillageNode
 $LOAD SectorXMaximumSpillage
 $LOAD LoadShedding
 $LOAD Location
-$LOAD Location_th
-$LOAD Location_h2
+*BS $LOAD Location_th
+*BS $LOAD Location_h2
 $LOAD LocationX
 $LOAD Markup
 $LOAD Nunits
@@ -374,14 +391,27 @@ $LOAD StorageAlertLevel
 $LOAD StorageFloodControl
 $LOAD StorageHours
 $LOAD StorageOutflow
+
+*CHP STORAGE
+$LOAD CHPStorageCapacity
+$LOAD CHPStorageDischargeEfficiency
+$LOAD CHPStorageOutflow
+$LOAD CHPStorageInflow
+$LOAD CHPStorageInitial
+$LOAD CHPStorageProfile
+$LOAD CHPStorageMinimum
+$LOAD CHPStorageChargingCapacity
+$LOAD CHPStorageChargingEfficiency
+$LOAD CHPStorageSelfDischarge
+
 $LOAD Technology
 $LOAD TimeDownMinimum
 $LOAD TimeUpMinimum
 $LOAD CostRampUp
 $LOAD CostRampDown
-$LOAD PtLDemandInput
-$LOAD MaxCapacityPtL
-$LOAD H2Demand
+*BS $LOAD PtLDemandInput
+*BS $LOAD MaxCapacityPtL
+*BS $LOAD H2Demand
 $LOAD SectorXFlexDemandInput
 $LOAD SectorXFlexDemandInputInitial
 $LOAD SectorXFlexMaxCapacity
@@ -414,8 +444,8 @@ $If %Verbose% == 0 $goto skipdisplay
 Display
 mk,
 n,
-n_th,
-n_h2,
+*BSn_th,
+*BS n_h2,
 nx,
 nx_CC,
 l,
@@ -472,8 +502,8 @@ LineXNode,
 SectorXSpillageNode,
 SectorXMaximumSpillage,
 Location,
-Location_th,
-Location_h2,
+*BS Location_th,
+*BS Location_h2,
 LocationX,
 LoadShedding,
 Markup,
@@ -500,6 +530,19 @@ StorageAlertLevel,
 StorageFloodControl,
 StorageHours,
 StorageOutflow,
+
+*CHP STORAGE
+CHPStorageCapacity,
+CHPStorageDischargeEfficiency,
+CHPStorageOutflow,
+CHPStorageInflow,
+CHPStorageInitial,
+CHPStorageProfile,
+CHPStorageMinimum,
+CHPStorageChargingCapacity,
+CHPStorageChargingEfficiency,
+CHPStorageSelfDischarge,
+
 Technology,
 TimeDownMinimum,
 TimeUpMinimum,
@@ -558,8 +601,8 @@ CostRampDownH(au,h)                     [EUR]   Ramping cost
 CurtailedPower(n,h)                     [MW]    Curtailed power at node n
 CurtailmentReserve_2U(n,h)              [MW]    Curtailed power used for reserves at node n
 CurtailmentReserve_3U(n,h)              [MW]    Curtailed power used for reserves at node n
-CurtailedHeat(n_th,h)                   [MW]    Curtailed heat at node n_th
-CurtailedH2(n_h2,h)                     [MW]    Curtailed hydrogen at node n_h2
+*BS CurtailedHeat(n_th,h)                   [MW]    Curtailed heat at node n_th
+*BS CurtailedH2(n_h2,h)                     [MW]    Curtailed hydrogen at node n_h2
 $If %TransmissionGrid% == 0 Flow(l,h)   [MW]    Flow through lines
 FlowX(lx,h)                             [MW]    Flow through boundary sector lines
 Power(au,h)                             [MW]    Power output
@@ -590,13 +633,22 @@ SystemCost(h)                           [EUR]   Hourly system cost
 Reserve_2U(au,h)                        [MW]    Spinning reserve up
 Reserve_2D(au,h)                        [MW]    Spinning reserve down
 Reserve_3U(au,h)                        [MW]    Non spinning quick start reserve up
+
+*CHP STORAGE
 Heat(au,h)                              [MW]    Heat output by chp plant
-HeatSlack(n_th,h)                       [MW]    Heat satisfied by other sources
-H2Slack(n_h2,h)                         [MW]    H2 demand satisfied by other sources
+CHPStorageInput(chp,h)                      [MW]   Charging input for CHP units
+CHPStorageLevel(chp,h)                      [MWh]   Storage level of charge
+CHPSlack(chp)                           [MWh]   Unsatisfied heat level constraint at end of optimization
+CHPStorageSlack(chp,h)                      [MWh]   Unsatisfied storage level constraint at end of simulation timestep
+CHPStorageLevelViolation(chp)               [MWh]   Unsatisfied heat level constraint at end of optimization period
+CHPStorageLevelViolation_H(chp,h)               [MWh]   Unsatisfied storage level constraint at end of simulation timestep
+
+*BS HeatSlack(n_th,h)                       [MW]    Heat satisfied by other sources
+*BS H2Slack(n_h2,h)                         [MW]    H2 demand satisfied by other sources
 WaterSlack(au)                          [MWh]   Unsatisfied water level constraint at end of optimization period
 StorageSlack(au,h)                      [MWh]   Unsatisfied storage level constraint at end of simulation timestep
-H2Output(au,h)                          [MWh]   H2 output from H2 storage to fulfill demand
-PtLDemand(n_h2,h)                       [MW]    Demand of H2 for PtL at each time step for each n_h2 node
+*BS H2Output(au,h)                          [MWh]   H2 output from H2 storage to fulfill demand
+*BS PtLDemand(n_h2,h)                       [MW]    Demand of H2 for PtL at each time step for each n_h2 node
 XNotServed(nx,h)                        [MW]    Boundary sector demand satisfied by other sources
 StorageLevelViolation(au)               [MWh]   Unsatisfied water level constraint at end of optimization period
 StorageLevelViolation_H(au,h)           [MWh]   Unsatisfied storage level constraint at end of simulation timestep
@@ -627,6 +679,8 @@ DemandModulation(n,h)               [MW]    Difference between the flexible dema
 PowerX(nx,au,h)                     [MW]    Power output in boundary sector
 SectorXStorageInput(nx,h)           [MW]    Boundary Sector Storage input - output
 ResidualLoad(n,h)                   [MW]    Residual Load
+*MARCO
+*P2XStorageFlow(p2x,h)               [MW]    Power to X Storage flow (input - output)
 ObjectiveFunction(h)
 OptimalityGap(h)
 OptimizationError
@@ -688,13 +742,13 @@ EQ_CHP_extraction_Pmax
 EQ_CHP_extraction
 EQ_CHP_backpressure
 *EQ_CHP_demand_satisfaction 
-EQ_Heat_Demand_balance
-EQ_H2_Demand_balance
+*BS EQ_Heat_Demand_balance
+*BS EQ_H2_Demand_balance
 EQ_BS_Demand_balance
 EQ_BS_Demand_balance2
 EQ_CHP_max_heat
 EQ_Heat_Storage_balance
-EQ_Heat_Storage_minimum
+*BS EQ_Heat_Storage_minimum
 EQ_Heat_Storage_level
 EQ_Heat_Storage_input
 EQ_Heat_Storage_MaxDischarge
@@ -715,30 +769,31 @@ EQ_Demand_balance_3U
 EQ_Demand_balance_2D
 *EQ_P2H (not working)
 *EQ_Max_P2H (not working)
-EQ_P2H2
-EQ_Max_P2H2
-EQ_P2X_Power_Balance
-EQ_Max_Power_Consumption
+*EQ_P2H2
+*BS EQ_Max_P2H2
+*BS EQ_P2X_Power_Balance
+*EQ_Max_Power_Consumption
 EQ_Power_Balance_of_BS_units
-EQ_Max_Power_Consumption_of_BS_units
+*BS EQ_Max_Power_Consumption_of_BS_units
+*BS EQ_Max_Power_of_BS_units
 EQ_Boundary_sector_only_power_available
 EQ_Boundary_sector_only_power_available_min
 EQ_Power_must_run
 EQ_Power_available
-EQ_Heat_available
-EQ_thms_Heat_available
+*BS EQ_Heat_available
+*BS EQ_thms_Heat_available
 EQ_Reserve_2U_capability
 EQ_Reserve_2D_capability
 EQ_Reserve_3U_capability
-EQ_p2h_Reserve_2U_capability
-EQ_p2h_Reserve_2D_capability
-EQ_p2h_Reserve_3U_capability
-EQ_2U_limit_p2h
-EQ_2D_limit_p2h
-EQ_3U_limit_p2h
-EQ_2U_limit_chp
-EQ_2D_limit_chp
-EQ_3U_limit_chp
+*BS EQ_p2h_Reserve_2U_capability
+*BS EQ_p2h_Reserve_2D_capability
+*BS EQ_p2h_Reserve_3U_capability
+*BS EQ_2U_limit_p2h
+*BS EQ_2D_limit_p2h
+*BS EQ_3U_limit_p2h
+*BS EQ_2U_limit_chp
+*BS EQ_2D_limit_chp
+*BS EQ_3U_limit_chp
 EQ_Storage_minimum
 EQ_Storage_alert
 EQ_Storage_flood_control
@@ -773,9 +828,9 @@ EQ_Flexible_Demand_Max
 EQ_Flexible_Demand_Modulation_Min
 EQ_Flexible_Demand_Modulation_Max
 EQ_No_Flexible_Demand
-EQ_Tot_DemandPtL
-EQ_Max_Capacity_PtL
-EQ_PtL_Demand
+*BS EQ_Tot_DemandPtL
+*BS EQ_Max_Capacity_PtL
+*BS EQ_PtL_Demand
 EQ_Tot_Flex_Supply_BS
 EQ_Max_Flex_Supply_BS
 EQ_Tot_Flex_Demand_BS
@@ -833,15 +888,15 @@ EQ_SystemCost(i)..
          sum(au,CostFixed(au)*TimeStep*Committed(au,i))
          +sum(au,CostRampUpH(au,i) + CostRampDownH(au,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
-         +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
-         +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
-         +sum((nx,xu),CostVariable(xu,i) * PowerX(nx,xu,i)*TimeStep)
+*BS         +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
+*BS         +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
+*BS         +sum((nx,xu),CostVariable(xu,i) * PowerX(nx,xu,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
-         +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
-         +sum(n_h2, CostH2Slack(n_h2,i) * H2Slack(n_h2,i)*TimeStep)
+*BS         +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
+*BS         +sum(n_h2, CostH2Slack(n_h2,i) * H2Slack(n_h2,i)*TimeStep)
          +sum(nx, CostXNotServed(nx,i) * XNotServed(nx,i)*TimeStep)
-         +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
+*BS         +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
@@ -865,15 +920,15 @@ EQ_SystemCost(i)..
          +sum(au,CostStartUpH(au,i) + CostShutDownH(au,i))
          +sum(au,CostRampUpH(au,i) + CostRampDownH(au,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
-         +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
-         +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
-         +sum((nx,xu),CostVariable(xu,i) * PowerX(nx,xu,i)*TimeStep)
+*BS         +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
+*BS         +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
+*BS         +sum((nx,xu),CostVariable(xu,i) * PowerX(nx,xu,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
-         +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
-         +sum(n_h2, CostH2Slack(n_h2,i) * H2Slack(n_h2,i)*TimeStep)
+*BS         +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
+*BS         +sum(n_h2, CostH2Slack(n_h2,i) * H2Slack(n_h2,i)*TimeStep)
          +sum(nx, CostXNotServed(nx,i) * XNotServed(nx,i)*TimeStep)
-         +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
+*BS         +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
@@ -995,8 +1050,8 @@ $If %TransmissionGrid% == 1         -InjectedPower(i,n)
          Demand("DA",n,i) + Demand("Flex",n,i)
          +DemandModulation(n,i)                                                                                                                                             
          +sum(s,StorageInput(s,i)*Location(s,n))
-         +sum(p2h,PowerConsumption(p2h,i)*Location(p2h,n))
-         +sum(p2h2,PowerConsumption(p2h2,i)*Location(p2h2,n))
+*BS         +sum(p2h,PowerConsumption(p2h,i)*Location(p2h,n))
+*BS         +sum(p2h2,PowerConsumption(p2h2,i)*Location(p2h2,n))
          +sum(p2x,PowerConsumption(p2x,i)*Location(p2x,n))
          +LL_MinPower(n,i)
 ;
@@ -1043,7 +1098,7 @@ EQ_No_Flexible_Demand(n,i)..
 EQ_Demand_balance_2U(n,i)..
          sum((u),Reserve_2U(u,i)*Reserve(u)*Location(u,n))
 *         + sum((p2h),Reserve_2U(p2h,i)*Reserve(p2h)*Location(p2h,n))
-         + sum((chp),Reserve_2U(chp,i)*Reserve(chp)*Location(chp,n))
+*BS CHP ESTA DENTRO DE (u)         + sum((chp),Reserve_2U(chp,i)*Reserve(chp)*Location(chp,n))
          + CurtailmentReserve_2U(n,i) + LL_2U(n,i)
          =E=
 *New
@@ -1078,7 +1133,7 @@ EQ_Tot_Demand_2U(i)..
 EQ_Demand_balance_3U(n,i)..
          sum((u),(Reserve_2U(u,i) + Reserve_3U(u,i))*Reserve(u)*Location(u,n))
 *         + sum((p2h),(Reserve_2U(p2h,i) + Reserve_3U(p2h,i))*Reserve(p2h)*Location(p2h,n))
-         + sum((chp),(Reserve_2U(chp,i) + Reserve_3U(chp,i))*Reserve(chp)*Location(chp,n))
+*BS CHP ESTA DENTRO DE (u)         + sum((chp),(Reserve_2U(chp,i) + Reserve_3U(chp,i))*Reserve(chp)*Location(chp,n))
          + CurtailmentReserve_2U(n,i) + CurtailmentReserve_3U(n,i) + LL_3U(n,i)
          =E=
          Demand("2U",n,i)
@@ -1090,7 +1145,7 @@ $If %ActivateAdvancedReserves% == 1 + smax((u,tc),PowerCapacity(u)/Nunits(u)*Tec
 EQ_Demand_balance_2D(n,i)..
          sum((u),Reserve_2D(u,i)*Reserve(u)*Location(u,n))
 *         + sum((p2h),Reserve_2D(p2h,i)*Reserve(p2h)*Location(p2h,n))
-         + sum((chp),Reserve_2D(chp,i)*Reserve(chp)*Location(chp,n))
+*BS CHP ESTA DENTRO DE (u)          + sum((chp),Reserve_2D(chp,i)*Reserve(chp)*Location(chp,n))
          + LL_2D(n,i)
          =E=
          Demand("2D",n,i)
@@ -1126,65 +1181,65 @@ EQ_Reserve_3U_capability(u,i)$(QuickStartPower(u,i) > 0)..
          (Nunits(u)-Committed(u,i))*QuickStartPower(u,i)*TimeStep
 ;
 
-EQ_p2h_Reserve_2U_capability(p2h,i)$(StorageCapacity(p2h)>=srp*Efficiency(p2h,i)*PowerCapacity(p2h))..
-         Reserve_2U(p2h,i)
-         =l=
-         PowerConsumption(p2h,i)
-;
+*BS EQ_p2h_Reserve_2U_capability(p2h,i)$(StorageCapacity(p2h)>=srp*Efficiency(p2h,i)*PowerCapacity(p2h))..
+*BS          Reserve_2U(p2h,i)
+*BS          =l=
+*BS          PowerConsumption(p2h,i)
+*BS ;
 
-EQ_p2h_Reserve_2D_capability(p2h,i)$(StorageCapacity(p2h)>=srp*Efficiency(p2h,i)*PowerCapacity(p2h))..
-         Reserve_2D(p2h,i)
-         =l=
-         PowerCapacity(p2h)*Nunits(p2h)*LoadMaximum(p2h,i)-PowerConsumption(p2h,i)
-;
+*BS EQ_p2h_Reserve_2D_capability(p2h,i)$(StorageCapacity(p2h)>=srp*Efficiency(p2h,i)*PowerCapacity(p2h))..
+*BS          Reserve_2D(p2h,i)
+*BS          =l=
+*BS          PowerCapacity(p2h)*Nunits(p2h)*LoadMaximum(p2h,i)-PowerConsumption(p2h,i)
+*BS ;
 
-EQ_p2h_Reserve_3U_capability(p2h,i)$(QuickStartPower(p2h,i) > 0 and StorageCapacity(p2h)>=srp*Efficiency(p2h,i)*PowerCapacity(p2h))..
-         Reserve_3U(p2h,i)
-         =L=
-         Nunits(p2h)*QuickStartPower(p2h,i)*TimeStep-PowerConsumption(p2h,i)
-;
+*BS EQ_p2h_Reserve_3U_capability(p2h,i)$(QuickStartPower(p2h,i) > 0 and StorageCapacity(p2h)>=srp*Efficiency(p2h,i)*PowerCapacity(p2h))..
+*BS          Reserve_3U(p2h,i)
+*BS          =L=
+*BS          Nunits(p2h)*QuickStartPower(p2h,i)*TimeStep-PowerConsumption(p2h,i)
+*BS ;
 
-EQ_2U_limit_p2h(p2h,i)..
-         Reserve_2U(p2h,i)
-         =L=
-         StorageLevel(p2h,i)/(0.25*Efficiency(p2h,i))
+*BS EQ_2U_limit_p2h(p2h,i)..
+*BS          Reserve_2U(p2h,i)
+*BS          =L=
+*BS          StorageLevel(p2h,i)/(0.25*Efficiency(p2h,i))
 
-;
+*BS ;
 
-EQ_2D_limit_p2h(p2h,i)..
-         Reserve_2D(p2h,i)
-         =l=
-         (StorageCapacity(p2h)*Nunits(p2h)-StorageLevel(p2h,i))/(0.25*Efficiency(p2h,i))
+*BS EQ_2D_limit_p2h(p2h,i)..
+*BS          Reserve_2D(p2h,i)
+*BS          =l=
+*BS          (StorageCapacity(p2h)*Nunits(p2h)-StorageLevel(p2h,i))/(0.25*Efficiency(p2h,i))
 
-;
+*BS ;
 
-EQ_3U_limit_p2h(p2h,i)..
-         Reserve_3U(p2h,i)
-         =l=
-         StorageLevel(p2h,i)/(Efficiency(p2h,i))
+*BS EQ_3U_limit_p2h(p2h,i)..
+*BS          Reserve_3U(p2h,i)
+*BS          =l=
+*BS          StorageLevel(p2h,i)/(Efficiency(p2h,i))
 
-;
+*BS ;
 
-EQ_2U_limit_chp(chp,i)..
-         Reserve_2U(chp,i)
-         =l=
-         (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))/(0.25/CHPPowerToHeat(chp))
+*BS EQ_2U_limit_chp(chp,i)..
+*BS          Reserve_2U(chp,i)
+*BS          =l=
+*BS          (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))/(0.25/CHPPowerToHeat(chp))
 
-;
+*BS ;
 
-EQ_2D_limit_chp(chp,i)..
-         Reserve_2D(chp,i)
-         =l=
-         StorageLevel(chp,i)/(0.25/CHPPowerToHeat(chp))
+*BS EQ_2D_limit_chp(chp,i)..
+*BS          Reserve_2D(chp,i)
+*BS          =l=
+*BS          StorageLevel(chp,i)/(0.25/CHPPowerToHeat(chp))
 
-;
+*BS ;
 
-EQ_3U_limit_chp(chp,i)..
-         Reserve_3U(chp,i)
-         =l=
-         (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))*(CHPPowerToHeat(chp))
+*BS EQ_3U_limit_chp(chp,i)..
+*BS          Reserve_3U(chp,i)
+*BS          =l=
+*BS          (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))*(CHPPowerToHeat(chp))
 
-;
+*BS ;
 
 
 
@@ -1331,7 +1386,7 @@ $endIf
 EQ_Power_must_run(u,i)..
          PowerMustRun(u,i) * Committed(u,i)
          - (StorageInput(u,i) * CHPPowerLossFactor(u) )$(chp(u) and (CHPType(u,'Extraction') or CHPType(u,'P2H')))
-         - (Heat(u,i) * CHPPowerLossFactor(u) )$(chp(u) and (CHPType(u,'Extraction') or CHPType(u,'P2H')))                                                      
+*         - (Heat(u,i) * CHPPowerLossFactor(u) )$(chp(u) and (CHPType(u,'Extraction') or CHPType(u,'P2H')))                                                      
          =L=
          Power(u,i)
 ;
@@ -1340,32 +1395,33 @@ EQ_Power_must_run(u,i)..
 EQ_Power_available(au,i)..
          Power(au,i)$(u(au))
          + Power(au,i)$(p2x(au))
-         + Heat(au,i)$(thms(au))
-         + Power(au,i)$(p2h(au))
+*BS         - PowerConsumption(au,i)$(p2x(au))
+*BS         + Power(au,i)$(p2h(au))
+*BS         + Heat(au,i)$(th(au))
          =L=
-         PowerCapacity(au)$(u(au))*LoadMaximum(au,i)$(u(au))*Committed(au,i)$(u(au))
-         + PowerCapacity(au)$(p2x(au))*LoadMaximum(au,i)$(p2x(au))*Nunits(au)$(p2x(au))
-         + PowerCapacity(au)$(thms(au))*LoadMaximum(au,i)$(thms(au))*Committed(au,i)$(thms(au))
+         PowerCapacity(au)$(u(au))*LoadMaximum(au,i)$(u(au))*Nunits(au)$(u(au))*Committed(au,i)$(u(au))
+         + PowerCapacity(au)$(p2x(au))*LoadMaximum(au,i)$(p2x(au))*Nunits(au)$(p2x(au))*Committed(au,i)$(p2x(au))
+*BS         + PowerCapacity(au)$(th(au))*LoadMaximum(au,i)$(th(au))*Nunits(au)$(th(au))*Committed(au,i)$(th(au))
          + 0
 ;
 
-* Maximum heat output is below the available capacity
-EQ_Heat_available(hu,i)..
-         Heat(hu,i)
-         =L=
-         PowerCapacity(hu)
-                 *LoadMaximum(hu,i)
-                        *Committed(hu,i)
-;
+*BS * Maximum heat output is below the available capacity
+*BS EQ_Heat_available(hu,i)..
+*BS          Heat(hu,i)
+*BS          =L=
+*BS          PowerCapacity(hu)
+*BS                  *LoadMaximum(hu,i)
+*BS                         *Committed(hu,i)
+*BS ;
 
-* Maximum thermal storage technology heat output is below the available capacity
-EQ_thms_Heat_available(thms,i)..
-         Heat(thms,i)
-         =L=
-         PowerCapacity(thms)
-                 *LoadMaximum(thms,i)
-                        *Committed(thms,i)
-; 
+*BS * Maximum thermal storage technology heat output is below the available capacity
+*BS EQ_thms_Heat_available(thms,i)..
+*BS          Heat(thms,i)
+*BS          =L=
+*BS          PowerCapacity(thms)
+*BS                  *LoadMaximum(thms,i)
+*BS                         *Committed(thms,i)
+*BS ; 
 
 * Maximum boundary sector output is below the available capacity
 EQ_Boundary_sector_only_power_available(nx,xu,i)..
@@ -1445,12 +1501,12 @@ EQ_Boundary_Sector_Storage_Cyclic(nx)$(SectorXStorageHours(nx)>=8)..
          =E=
          SectorXStorageInitial(nx)
 ;
-
+*MARCO
 *Storage level must be above a minimum
-EQ_Storage_minimum(au,i)..
-         StorageMinimum(au)$(s(au) or p2h2(au))*Nunits(au)$(s(au) or p2h2(au))
+EQ_Storage_minimum(au,i)$(s(au))..
+         StorageMinimum(au)
          =L=
-         StorageLevel(au,i)$(s(au) or p2h2(au))
+         StorageLevel(au,i)
 ;
 
 *Storage level should be above alert level, going below will only be violated to avoid power rationing (110% of most expensive power plant)
@@ -1468,10 +1524,10 @@ EQ_Storage_flood_control(s,i)$(StorageFloodControl(s,i) > StorageAlertLevel(s,i)
 ;
 
 *Storage level must be below storage capacity
-EQ_Storage_level(au,i)..
-         StorageLevel(au,i)$(s(au) or p2h2(au))
+EQ_Storage_level(au,i)$(s(au))..
+         StorageLevel(au,i)
          =L=
-         StorageCapacity(au)$(s(au) or p2h2(au))*AvailabilityFactor(au,i)$(s(au) or p2h2(au))*Nunits(au)$(s(au) or p2h2(au))
+         StorageCapacity(au)*AvailabilityFactor(au,i)*Nunits(au)
 ;
 
 * Storage charging is bounded by the maximum capacity
@@ -1482,50 +1538,50 @@ EQ_Storage_input(s,i)..
 ;
 
 * The system could curtail by pumping and turbining at the same time if Nunits>1. This should be included into the curtailment equation!
-
+*BS
 *Discharge is limited by the storage level
-EQ_Storage_MaxDischarge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep or StorageCapacity(au)$(p2h2(au))>PowerCapacity(au)$(p2h2(au))*TimeStep)..
+EQ_Storage_MaxDischarge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep)..
          Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
-         + H2Output(au,i)$(p2h2(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(p2h2(au)),0.0001))
+*BS         + H2Output(au,i)$(p2h2(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(p2h2(au)),0.0001))
          =L=
-         StorageInitial(au)$(s(au) or p2h2(au))$(ord(i) = 1)
-         + StorageLevel(au,i-1)$(s(au) or p2h2(au))$(ord(i) > 1)
-         + StorageInflow(au,i)$(s(au) or p2h2(au))*Nunits(au)$(s(au) or p2h2(au))*TimeStep
+         StorageInitial(au)$(s(au))$(ord(i) = 1)
+         + StorageLevel(au,i-1)$(s(au))$(ord(i) > 1)
+         + StorageInflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
 ;
-
+*BS
 *Charging is limited by the remaining storage capacity
-EQ_Storage_MaxCharge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep or StorageCapacity(au)$(p2h2(au))>PowerCapacity(au)$(p2h2(au))*TimeStep)..
+EQ_Storage_MaxCharge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep)..
          StorageInput(au,i)$(s(au))*StorageChargingEfficiency(au)$(s(au))*TimeStep
-         + StorageInput(au,i)$(p2h2(au))*TimeStep
+*BS         + StorageInput(au,i)$(p2h2(au))*TimeStep
          =L=
-         (Nunits(au)$(s(au) or p2h2(au)) * StorageCapacity(au)$(s(au) or p2h2(au))-StorageInitial(au)$(s(au) or p2h2(au)))$(ord(i) = 1)
-         + (Nunits(au)$(s(au) or p2h2(au)) * StorageCapacity(au)$(s(au) or p2h2(au))*AvailabilityFactor(au,i-1)$(s(au) or p2h2(au)) - StorageLevel(au,i-1))$(ord(i) > 1)
-         + StorageOutflow(au,i)$(s(au) or p2h2(au))*Nunits(au)$(s(au) or p2h2(au))*TimeStep
+         (Nunits(au)$(s(au)) * StorageCapacity(au)$(s(au))-StorageInitial(au)$(s(au)))$(ord(i) = 1)
+         + (Nunits(au)$(s(au)) * StorageCapacity(au)$(s(au))*AvailabilityFactor(au,i-1)$(s(au)) - StorageLevel(au,i-1))$(ord(i) > 1)
+         + StorageOutflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
 ;
-
+*BS
 *Storage balance
 EQ_Storage_balance(au,i)..
-         StorageInitial(au)$(s(au) or p2h2(au))$(ord(i) = 1)
-         +StorageLevel(au,i-1)$(s(au) or p2h2(au))$(ord(i) > 1)
-         +StorageInflow(au,i)$(s(au) or p2h2(au))*Nunits(au)$(s(au) or p2h2(au))*TimeStep
+         StorageInitial(au)$(s(au))$(ord(i) = 1)
+         +StorageLevel(au,i-1)$(s(au))$(ord(i) > 1)
+         +StorageInflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
          +StorageInput(au,i)$(s(au))*StorageChargingEfficiency(au)$(s(au))*TimeStep
-         +StorageInput(au,i)$(p2h2(au))*TimeStep
+*         +StorageInput(au,i)$(p2h2(au))*TimeStep
          =E=
-         StorageLevel(au,i)$(s(au) or p2h2(au))
-         +StorageOutflow(au,i)$(s(au) or p2h2(au))*Nunits(au)$(s(au) or p2h2(au))*TimeStep
-         +H2Output(au,i)$(p2h2(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(p2h2(au)),0.0001))
+         StorageLevel(au,i)$(s(au))
+         +StorageOutflow(au,i)$(s(au) )*Nunits(au)$(s(au))*TimeStep
+*         +H2Output(au,i)$(p2h2(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(p2h2(au)),0.0001))
          +spillage(au,i)$(s(au) or wat(au))
          +Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
          +StorageSelfDischarge(au)$(s(au))*StorageLevel(au,i)$(s(au))*TimeStep
 ;
 
 * Minimum level at the end of the optimization horizon:
-EQ_Storage_boundaries(au,i)$(ord(i) = card(i))..
-         StorageFinalMin(au)$(s(au) or p2h2(au))
+EQ_Storage_boundaries(au,i)$(ord(i) = card(i) and (s(au)))..
+         StorageFinalMin(au)
          =L=
-         StorageLevel(au,i)$(s(au) or p2h2(au))
-         + StorageLevelViolation(au)$(s(au) or p2h2(au))
-         + WaterSlack(au)$(s(au) or p2h2(au))
+         StorageLevel(au,i)
+         + StorageLevelViolation(au)
+         + WaterSlack(au)
 ;
 
 EQ_Storage_Cyclic(au)$(StorageHours(au)>=8)..
@@ -1634,60 +1690,60 @@ EQ_LoadShedding(n,i)..
 EQ_CHP_extraction(chp,i)$(CHPType(chp,'Extraction'))..
          Power(chp,i)
          =G=
-         StorageInput(chp,i) * CHPPowerToHeat(chp)
-         + Heat(chp,i) * CHPPowerToHeat(chp)
+         CHPStorageInput(chp,i) * CHPPowerToHeat(chp)
+*         + Heat(chp,i) * CHPPowerToHeat(chp)
 
 ;
 
 EQ_CHP_extraction_Pmax(chp,i)$(CHPType(chp,'Extraction') or CHPType(chp,'P2H'))..
          Power(chp,i)
          =L=
-         PowerCapacity(chp)*Nunits(chp)
-         - StorageInput(chp,i) * CHPPowerLossFactor(chp)
-         - Heat(chp,i) * CHPPowerLossFactor(chp)
+         PowerCapacity(chp)*Nunits(chp) - CHPStorageInput(chp,i) * CHPPowerLossFactor(chp)
+*         - Heat(chp,i) * CHPPowerLossFactor(chp)
 ;
 
 EQ_CHP_backpressure(chp,i)$(CHPType(chp,'Back-Pressure'))..
          Power(chp,i)
          =E=
-         StorageInput(chp,i) * CHPPowerToHeat(chp)
-         + Heat(chp,i) * CHPPowerToHeat(chp)
+         CHPStorageInput(chp,i) * CHPPowerToHeat(chp)
+*         + Heat(chp,i) * CHPPowerToHeat(chp)
 ;
 
 EQ_CHP_max_heat(chp,i)..
-         StorageInput(chp,i)
-         + Heat(chp,i)
+         CHPStorageInput(chp,i)
+*         + Heat(chp,i)
          =L=
          CHPMaxHeat(chp)*Nunits(chp)
 ;
-
-* Power to X units                                                                                                                                              
-EQ_P2X_Power_Balance(p2h,i)..
-         Heat(p2h,i)
-         =E=
-         PowerConsumption(p2h,i) * Efficiency(p2h,i)
-;
-
-EQ_Max_Power_Consumption(p2h,i)..
-         PowerConsumption(p2h,i)
-         =L=
-         PowerCapacity(p2h) * Committed(p2h,i)
-;
-
+*BS
+* Power to h units                                                                                                                                              
+*EQ_P2X_Power_Balance(p2h,i)..
+*         StorageInput(p2h,i)
+*         Heat(p2h,i)
+*         =E=
+*         PowerConsumption(p2h,i) * Efficiency(p2h,i)
+*;
+*BS
+*EQ_Max_Power_Consumption(p2h,i)..
+*         PowerConsumption(p2h,i)
+*         =L=
+*         PowerCapacity(p2h) * Committed(p2h,i)
+*;
+*BS
 * Power to h2 units                                         
-EQ_P2H2(p2h2,i)..
-*         H2Output(p2h2,i)
-         StorageInput(p2h2,i)
-         =E=
-         PowerConsumption(p2h2,i) * Efficiency(p2h2,i)
-;
+*EQ_P2H2(p2h2,i)..
+**         H2Output(p2h2,i)
+*         StorageInput(p2h2,i)
+*         =E=
+*         PowerConsumption(p2h2,i) * Efficiency(p2h2,i)
+*;
 
-
-EQ_Max_P2H2(p2h2,i)..
-         PowerConsumption(p2h2,i)
-         =L=
-         PowerCapacity(p2h2) * Committed(p2h2,i)
-;
+*BS
+*EQ_Max_P2H2(p2h2,i)..
+*         PowerConsumption(p2h2,i)
+*         =L=
+*         PowerCapacity(p2h2) * Committed(p2h2,i)
+*;
 
 *EQ_CHP_demand_satisfaction(th,i)..
 *         Heat(th,i) + HeatSlack(th,i)
@@ -1698,37 +1754,51 @@ EQ_Max_P2H2(p2h2,i)..
 * Power to boundary sector units                                                                                                                                        
 EQ_Power_Balance_of_BS_units(nx,p2x,i)..                                                                                                                                                                                                                                                    
          PowerX(nx,p2x,i)
+*         P2XStorageFlow(p2x,i)
          =E=
+*         (Power(p2x,i) * Power2XConversionMultiplier(nx,p2x,i) * LocationX(p2x,nx))$(Power2XConversionMultiplier(nx,p2x,i) <> 0)
          (PowerConsumption(p2x,i) * Power2XConversionMultiplier(nx,p2x,i) * LocationX(p2x,nx))$(Power2XConversionMultiplier(nx,p2x,i) <> 0)
-         + (Power(p2x,i) / (X2PowerConversionMultiplier(nx,p2x,i)) * LocationX(p2x,nx))$(X2PowerConversionMultiplier(nx,p2x,i) <> 0)
+         -(Power(p2x,i) / (X2PowerConversionMultiplier(nx,p2x,i)) * LocationX(p2x,nx))$(X2PowerConversionMultiplier(nx,p2x,i) <> 0)
 ;
 
-EQ_Max_Power_Consumption_of_BS_units(p2x,i)..
-         PowerConsumption(p2x,i)
-         =L=
-         StorageChargingCapacity(p2x) * Nunits(p2x)
-;
+*BS EQ_Max_Power_Consumption_of_BS_units(p2x,i)..
+*BS          PowerConsumption(p2x,i)
+*BS          =L=
+*BS          StorageChargingCapacity(p2x) * Nunits(p2x)
+*BS ;
+************************************MARCO CHECK WHY THE CONVERSION MULTIPLIERS ARE APPLIED ONLY TO SECTOR 2 ONLY***********************
+*EQ_Max_Power_Consumption_of_BS_units(nx,p2x,i)..
+*         PowerConsumption(p2x,i)
+*         =L=
+*         PowerCapacity(p2x) * Power2XConversionMultiplier(nx,p2x,i) * Nunits(p2x)
+*;
 
-EQ_Heat_Demand_balance(n_th,i)..
-         sum(chp, Heat(chp,i)*Location_th(chp,n_th))
-         + sum(p2h, Heat(p2h,i)*Location_th(p2h,n_th))
-         + sum(hu, Heat(hu,i)*Location_th(hu,n_th))
-         + sum(thms, Heat(thms,i)*Location_th(thms,n_th))
-         =E=
-         HeatDemand(n_th, i)
-         - HeatSlack(n_th,i)
-         + sum(thms, StorageInput(thms,i)*Location_th(thms,n_th))
-;
-
-EQ_H2_Demand_balance(n_h2,i)..
-         H2Slack(n_h2,i)
-         + sum(p2h2, H2Output(p2h2,i)*Location_h2(p2h2,n_h2))
-*         + sum(h2st, H2Output(h2st,i)*Location_h2(h2st,n_h2))
-         =E=
-         H2Demand(n_h2, i)
-         + PtLDemand(n_h2, i)
-*         + sum(h2st, StorageInput(h2st,i)*Location_h2(h2st,n_h2))
-;
+*EQ_Max_Power_of_BS_units(nx,p2x,i)..
+*         Power(p2x,i)
+*         =L=
+*         PowerCapacity(p2x) * Power2XConversionMultiplier(nx,p2x,i) * Nunits(p2x)
+*;
+***************************************************************************************************************************************
+*BSEQ_Heat_Demand_balance(n_th,i)..
+*BS         sum(chp, Heat(chp,i)*Location_th(chp,n_th))
+*BS         + sum(p2h, Heat(p2h,i)*Location_th(p2h,n_th))
+*BS         + sum(hu, Heat(hu,i)*Location_th(hu,n_th))
+*BS         + sum(thms, Heat(thms,i)*Location_th(thms,n_th))
+*BS         =E=
+*BS         HeatDemand(n_th, i)
+*BS         - HeatSlack(n_th,i)
+*BS         + sum(chp, StorageInput(chp,i)*Location_th(chp,n_th))
+*BS;
+*BS
+*BS EQ_H2_Demand_balance(n_h2,i)..
+*BS         H2Slack(n_h2,i)
+*BS         + sum(p2h2, H2Output(p2h2,i)*Location_h2(p2h2,n_h2))
+*BS *         + sum(h2st, H2Output(h2st,i)*Location_h2(h2st,n_h2))
+*BS         =E=
+*BS         H2Demand(n_h2, i)
+*BS         + PtLDemand(n_h2, i)
+*BS *         + sum(h2st, StorageInput(h2st,i)*Location_h2(h2st,n_h2))
+*BS ;
 
 EQ_BS_Demand_balance(nx,i)..
         sum(p2x, PowerX(nx,p2x,i))
@@ -1738,11 +1808,11 @@ EQ_BS_Demand_balance(nx,i)..
         + SectorXFlexSupply(nx,i)
         + sum(slx,SectorXSpillage(slx,i)*SectorXSpillageNode(slx,nx))
         + sum(chp, Heat(chp,i)*LocationX(chp,nx))
-        + sum(p2h, Heat(p2h,i)*LocationX(p2h,nx))
-        + sum(thms, Heat(thms,i)*LocationX(thms,nx))
+*BS        + sum(p2h, Heat(p2h,i)*LocationX(p2h,nx))
+*BS        + sum(thms, Heat(thms,i)*LocationX(thms,nx))
         =E=
         SectorXDemand(nx,i)
-        + sum(thms, StorageInput(thms,i)*LocationX(thms,nx))
+*BS        + sum(chp, StorageInput(chp,i)*LocationX(chp,nx))
         + SectorXFlexDemand(nx,i)
         + SectorXStorageInput(nx,i)
         + SectorXWaterNotWithdrawn(nx,i)
@@ -1758,91 +1828,91 @@ EQ_BS_Demand_balance2(nx,i)..
         + SectorXFlexSupply(nx,i)
         + sum(slx,SectorXSpillage(slx,i)*SectorXSpillageNode(slx,nx))
         + sum(chp, Heat(chp,i)*LocationX(chp,nx))
-        + sum(p2h, Heat(p2h,i)*LocationX(p2h,nx))
-        + sum(thms, Heat(thms,i)*LocationX(thms,nx))
+*BS        + sum(p2h, Heat(p2h,i)*LocationX(p2h,nx))
+*BS        + sum(thms, Heat(thms,i)*LocationX(thms,nx))
 ;
 
 *Heat Storage balance                                                                                                                                   
-EQ_Heat_Storage_balance(thms,i)..
-         StorageInitial(thms)$(ord(i) = 1)
-         + StorageLevel(thms,i-1)$(ord(i) > 1)
-         + StorageInput(thms,i)*TimeStep
+EQ_Heat_Storage_balance(chp,i)..
+         CHPStorageInitial(chp)$(ord(i) = 1)
+         + CHPStorageLevel(chp,i-1)$(ord(i) > 1)
+         + CHPStorageInput(chp,i)*TimeStep
          =E=
-         StorageLevel(thms,i)
-         + Heat(thms,i)*TimeStep
-         + StorageSelfDischarge(thms)*StorageLevel(thms,i)
+         CHPStorageLevel(chp,i)
+         + Heat(chp,i)*TimeStep
+         + CHPStorageSelfDischarge(chp)*CHPStorageLevel(chp,i)
 ;
 * The self-discharge proportional to the charging level is a bold hypothesis, but it avoids keeping self-discharging if the level reaches zero
 
-* Heat Storage level must be above a minimum
-EQ_Heat_Storage_minimum(thms,i)..
-         StorageMinimum(thms)
-         =L=
-         StorageLevel(thms,i)
-;
+*BS * Heat Storage level must be above a minimum
+*BS EQ_Heat_Storage_minimum(chp,i)..
+*BS          StorageMinimum(chp)
+*BS          =L=
+*BS          StorageLevel(chp,i)
+*BS ;
 
 *Storage level must be below a maximum (to make the reserves available)
-EQ_Heat_Storage_level(thms,i)..
-         StorageLevel(thms,i)
+EQ_Heat_Storage_level(chp,i)..
+         CHPStorageLevel(chp,i)
          =L=
-         StorageCapacity(thms)*AvailabilityFactor(thms,i)*Nunits(thms)
+         CHPStorageCapacity(chp)*AvailabilityFactor(chp,i)*Nunits(chp)
 ;
 
 * Heat Storage charging is bounded by the maximum capacity
-EQ_Heat_Storage_input(thms,i)..
-         StorageInput(thms,i)
+EQ_Heat_Storage_input(chp,i)..
+         CHPStorageInput(chp,i)
          =L=
-         StorageChargingCapacity(thms)*(Nunits(thms)-Committed(thms,i))
+         CHPStorageChargingCapacity(chp)*(Nunits(chp)-Committed(chp,i))
 ;
 
 * Heat storage discharge is limited by the remaining storage capacity
-EQ_Heat_Storage_MaxDischarge(thms,i)$(StorageCapacity(thms)>PowerCapacity(thms)*TimeStep)..
-         Heat(thms,i)*TimeStep/(max(StorageDischargeEfficiency(thms),0.0001))
+EQ_Heat_Storage_MaxDischarge(chp,i)$(CHPStorageCapacity(chp)>PowerCapacity(chp)*TimeStep)..
+        Heat(chp,i)*TimeStep/(max(CHPStorageDischargeEfficiency(chp),0.0001))
          =L=
-         StorageInitial(thms)$(ord(i) = 1)
-         + StorageLevel(thms,i-1)$(ord(i) > 1)
-         + StorageInflow(thms,i)*Nunits(thms)*TimeStep
+         CHPStorageInitial(chp)$(ord(i) = 1)
+         + CHPStorageLevel(chp,i-1)$(ord(i) > 1)
+         + CHPStorageInflow(chp,i)*Nunits(chp)*TimeStep
 ;
 
 * Heat storage charging is limited by the remaining storage capacity
-EQ_Heat_Storage_MaxCharge(thms,i)$(StorageCapacity(thms)>PowerCapacity(thms)*TimeStep)..
-         StorageInput(thms,i)*StorageChargingEfficiency(thms)*TimeStep
+EQ_Heat_Storage_MaxCharge(chp,i)$(CHPStorageCapacity(chp)>PowerCapacity(chp)*TimeStep)..
+         CHPStorageInput(chp,i)*CHPStorageChargingEfficiency(chp)*TimeStep
          =L=
-         (Nunits(thms) * StorageCapacity(thms)-StorageInitial(thms))$(ord(i) = 1)
-         + (Nunits(thms) * StorageCapacity(thms)*AvailabilityFactor(thms,i-1)
-         - StorageLevel(thms,i-1))$(ord(i) > 1)
-         + StorageOutflow(thms,i)*Nunits(thms)*TimeStep
+         (Nunits(chp) * CHPStorageCapacity(chp)-CHPStorageInitial(chp))$(ord(i) = 1)
+         + (Nunits(chp) * CHPStorageCapacity(chp)*AvailabilityFactor(chp,i-1)
+         - CHPStorageLevel(chp,i-1))$(ord(i) > 1)
+         + CHPStorageOutflow(chp,i)*Nunits(chp)*TimeStep
 ;
 
 * Minimum heat storage level at the end of the optimization horizon:
-EQ_Heat_Storage_boundaries(thms,i)$(ord(i) = card(i))..
-         StorageFinalMin(thms)
+EQ_Heat_Storage_boundaries(chp,i)$(ord(i) = card(i))..
+         CHPStorageFinalMin(chp)
          =L=
-         StorageLevel(thms,i)
-         + WaterSlack(thms)
-         + StorageLevelViolation(thms)
+         CHPStorageLevel(chp,i)
+         + CHPSlack(chp)
+         + CHPStorageLevelViolation(chp)
 ;
 
-
+*BS
 * Equations concerning PtL flexible demand
 * If MTS=1: assures that total demand of PtL is fullfilled
-EQ_Tot_DemandPtL(n_h2)..
-         sum(i,PtLDemandInput(n_h2,i))
-         =E=
-         sum(i,PtLDemand(n_h2,i))
-;
+*BS EQ_Tot_DemandPtL(n_h2)..
+*BS         sum(i,PtLDemandInput(n_h2,i))
+*BS         =E=
+*BS         sum(i,PtLDemand(n_h2,i))
+*BS;
 * Capacity of PtL must not be exceeded
-EQ_Max_Capacity_PtL(n_h2,i)..
-         PtLDemand(n_h2,i)
-         =L=
-         MaxCapacityPtL(n_h2)
-;
+*BS EQ_Max_Capacity_PtL(n_h2,i)..
+*BS         PtLDemand(n_h2,i)
+*BS         =L=
+*BS         MaxCapacityPtL(n_h2)
+*BS;
 * If MTS = 0: PtLDemand is not a variable anymore, but a parameter
-EQ_PtL_Demand(n_h2,i)..
-         PtLDemand(n_h2,i)
-         =E=
-         PtLDemandInput(n_h2,i)
-; 
+*BS EQ_PtL_Demand(n_h2,i)..
+*BS         PtLDemand(n_h2,i)
+*BS         =E=
+*BS         PtLDemandInput(n_h2,i)
+*BS; 
 
 
 * Equations concerning boundary sector (PtL) flexible demand
@@ -1895,8 +1965,8 @@ EQ_CHP_extraction_Pmax,
 EQ_CHP_extraction,
 EQ_CHP_backpressure,
 *EQ_CHP_demand_satisfaction,
-EQ_Heat_Demand_balance,
-EQ_H2_Demand_balance,
+*BS EQ_Heat_Demand_balance,
+*BS EQ_H2_Demand_balance,
 EQ_BS_Demand_balance,
 EQ_BS_Demand_balance2,
 EQ_CHP_max_heat,
@@ -1914,19 +1984,20 @@ EQ_Demand_balance_2U,
 EQ_Demand_balance_2D,
 EQ_Demand_balance_3U,
 $If not %LPFormulation% == 1 EQ_Power_must_run,
-EQ_P2X_Power_Balance,
-EQ_Max_Power_Consumption,
+*BS EQ_P2X_Power_Balance,
+*BS EQ_Max_Power_Consumption,
 EQ_Power_Balance_of_BS_units,                                         
-EQ_P2H2,
-EQ_Max_P2H2,
-EQ_Max_Power_Consumption_of_BS_units,
+*EQ_P2H2,
+*EQ_Max_P2H2,
+*BS EQ_Max_Power_Consumption_of_BS_units,
+*BS EQ_Max_Power_of_BS_units,
 EQ_Boundary_sector_only_power_available,
 EQ_Boundary_sector_only_power_available_min,
 EQ_Power_available,
-EQ_Heat_available,
-EQ_thms_Heat_available,
+*BS EQ_Heat_available,
+*BS EQ_thms_Heat_available,
 EQ_Heat_Storage_balance,
-EQ_Heat_Storage_minimum,
+*BS EQ_Heat_Storage_minimum,
 EQ_Heat_Storage_level,
 EQ_Heat_Storage_input,
 EQ_Heat_Storage_MaxDischarge,
@@ -1935,15 +2006,15 @@ EQ_Heat_Storage_boundaries,
 EQ_Reserve_2U_capability,
 EQ_Reserve_2D_capability,
 EQ_Reserve_3U_capability,
-EQ_p2h_Reserve_2U_capability,
-EQ_p2h_Reserve_2D_capability,
-EQ_p2h_Reserve_3U_capability,
-EQ_2U_limit_p2h,
-EQ_2D_limit_p2h,
-EQ_3U_limit_p2h,
-EQ_2U_limit_chp,
-EQ_2D_limit_chp,
-EQ_3U_limit_chp,
+*BS EQ_p2h_Reserve_2U_capability,
+*BS EQ_p2h_Reserve_2D_capability,
+*BS EQ_p2h_Reserve_3U_capability,
+*BS EQ_2U_limit_p2h,
+*BS EQ_2D_limit_p2h,
+*BS EQ_3U_limit_p2h,
+*BS EQ_2U_limit_chp,
+*BS EQ_2D_limit_chp,
+*BS EQ_3U_limit_chp,
 EQ_Storage_minimum,
 EQ_Storage_alert,
 EQ_Storage_flood_control,
@@ -1979,9 +2050,9 @@ $If %ActivateFlexibleDemand% == 1 EQ_Flexible_Demand_Max,
 $if not %ActivateFlexibleDemand% == 1 EQ_No_Flexible_Demand,
 EQ_Flexible_Demand_Modulation_Min,
 EQ_Flexible_Demand_Modulation_Max,
-$If %MTS% == 1 EQ_Tot_DemandPtL,
-$If %MTS% == 1 EQ_Max_Capacity_PtL,
-$If %MTS% == 0 EQ_PtL_Demand,
+*BS $If %MTS% == 1 EQ_Tot_DemandPtL,
+*BS $If %MTS% == 1 EQ_Max_Capacity_PtL,
+*BS $If %MTS% == 0 EQ_PtL_Demand,
 EQ_Tot_Flex_Demand_BS,
 EQ_Max_Flex_Capacity_BS,
 *CHECK OLD FORMULATION FOR LINE 1991
@@ -2060,9 +2131,9 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
 
 *        Defining the minimum level at the end of the horizon :
          StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
-         StorageFinalMin(p2h2) =  sum(i$(ord(i)=card(i)),StorageProfile(p2h2,i)*StorageCapacity(p2h2)*Nunits(p2h2)*AvailabilityFactor(p2h2,i));
-         StorageFinalMin(thms) =  sum(i$(ord(i)=card(i)),StorageProfile(thms,i)*StorageCapacity(thms)*Nunits(thms)*AvailabilityFactor(thms,i));
-         StorageFinalMin(chp) =  sum(i$(ord(i)=card(i)),StorageProfile(chp,i)*StorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,i));
+*BS         StorageFinalMin(p2h2) =  sum(i$(ord(i)=card(i)),StorageProfile(p2h2,i)*StorageCapacity(p2h2)*Nunits(p2h2)*AvailabilityFactor(p2h2,i));
+*BS         StorageFinalMin(thms) =  sum(i$(ord(i)=card(i)),StorageProfile(thms,i)*StorageCapacity(thms)*Nunits(thms)*AvailabilityFactor(thms,i));
+         CHPStorageFinalMin(chp) =  sum(i$(ord(i)=card(i)),CHPStorageProfile(chp,i)*CHPStorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,i));
 $If %MTS% == 0     SectorXStorageFinalMin(nx) = sum(i$(ord(i)=card(i)),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 *$If %MTS% == 0     SectorXStorageInitial(nx) = sum(i$(ord(i)=1),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 
@@ -2073,7 +2144,7 @@ $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCos
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
 
 $If %Verbose% == 0 $goto skipdisplay3
-Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M,  EQ_Flow_limits_lower.M ;
+Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M,  EQ_Flow_limits_lower.M ;
 $label skipdisplay3
 
          status("model",i) = UCM_SIMPLE.Modelstat;
@@ -2093,10 +2164,10 @@ $label skipdisplay3
          CommittedInitial(au) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(au,i));
          PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
          StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
-         StorageInitial(p2h) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(p2h,i));
-         StorageInitial(p2h2) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(p2h2,i));
-         StorageInitial(thms) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(thms,i));
-         StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
+*BS         StorageInitial(p2h) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(p2h,i));
+*BS         StorageInitial(p2h2) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(p2h2,i));
+*BS         StorageInitial(thms) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(thms,i));
+         CHPStorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),CHPStorageLevel.L(chp,i));
 $If %MTS% == 0   SectorXStorageInitial(nx) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),SectorXStorageLevel.L(nx,i));
          SectorXFlexDemandInputInitial(nx) = sum(i$(ord(i)<LastKeptHour+1), SectorXFlexDemandInput(nx,i) - SectorXFlexDemand.L(nx,i));
          SectorXFlexSupplyInputInitial(nx) = sum(i$(ord(i)<LastKeptHour+1), SectorXFlexSupplyInput(nx,i) - SectorXFlexSupply.L(nx,i));
@@ -2105,14 +2176,19 @@ $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i
 * Assigning StorageLevelViolation (one value per optimization horizon) to the last element of StorageLevelViolation_H
 StorageSlack.L(au,i)$(ord(i)=LastKeptHour-FirstHour+1) = Waterslack.L(au);
 StorageLevelViolation_H.L(au,i)$(ord(i)=LastKeptHour-FirstHour+1) = StorageLevelViolation.L(au);
+
+*CHP STORAGE
+CHPStorageSlack.L(chp,i)$(ord(i)=LastKeptHour-FirstHour+1) = CHPSlack.L(chp);
+CHPStorageLevelViolation_H.L(chp,i)$(ord(i)=LastKeptHour-FirstHour+1) = CHPStorageLevelViolation.L(chp);
+
 SectorXStorageLevelViolation_H.L(nx,i)$(ord(i)=LastKeptHour-FirstHour+1) = SectorXStorageLevelViolation.L(nx);
 ObjectiveFunction.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = SystemCostD.L;
 Error.L = sum((i,n), CostLoadShedding(n,i)*ShedLoad.L(n,i)
           +Config("ValueOfLostLoad","val")*(LL_MaxPower.L(n,i)+LL_MinPower.L(n,i))
           +0.8*Config("ValueOfLostLoad","val")*(LL_2U.L(n,i)+LL_2D.L(n,i)+LL_3U.L(n,i)))
           +sum((au,i), 0.7*Config("ValueOfLostLoad","val")*(LL_RampUp.L(au,i)+LL_RampDown.L(au,i)))
-          +sum((n_th,i), CostHeatSlack(n_th,i) * HeatSlack.L(n_th,i))
-          +sum((n_h2,i), CostH2Slack(n_h2,i) * H2Slack.L(n_h2,i));
+*BS          +sum((n_th,i), CostHeatSlack(n_th,i) * HeatSlack.L(n_th,i))
+*BS          +sum((n_h2,i), CostH2Slack(n_h2,i) * H2Slack.L(n_h2,i));
 *         +sum((i,n_th), CostHeatSlack(n_th,i) * HeatSlack.L(n_th,i))
 ;
 OptimalityGap.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = UCM_SIMPLE.objVal - UCM_SIMPLE.objEst;
@@ -2124,7 +2200,7 @@ $If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
 );
 
 *CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n)) + sum(s,spillage.L(s,z)* Location(s,n));
-CurtailedHeat.L(n_th,z)=sum(hu,(Nunits(hu)*PowerCapacity(hu)*LoadMaximum(hu,z)-Heat.L(hu,z))$(sum(tr,Technology(hu,tr))>=1) * Location_th(hu,n_th));
+*BS CurtailedHeat.L(n_th,z)=sum(hu,(Nunits(hu)*PowerCapacity(hu)*LoadMaximum(hu,z)-Heat.L(hu,z))$(sum(tr,Technology(hu,tr))>=1) * Location_th(hu,n_th));
 
 
 $If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,CurtailmentReserve_2U.L, CurtailmentReserve_3U.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
@@ -2167,15 +2243,15 @@ OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
 OutputCurtailmentReserve_2U(n,h)
 OutputCurtailmentReserve_3U(n,h)
-OutputCurtailedHeat(n_th,h)
+*BS OutputCurtailedHeat(n_th,h)
 OutputCurtailmentPerUnit(u,h)
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 $If %ActivateFlexibleDemand% == 1 OutputAccumulatedOverSupply(n,h)
 $If %ActivateFlexibleDemand% == 1 ShadowPriceDemandModulation(n,h)
 ShadowPrice(n,h)
 Demand_Balance_DA(n,h)
-HeatShadowPrice(n_th,h)
-H2ShadowPrice(n_h2,h)
+*BS HeatShadowPrice(n_th,h)
+*BS H2ShadowPrice(n_h2,h)
 SectorXShadowPrice(nx,h)
 LostLoad_MaxPower(n,h)
 LostLoad_MinPower(n,h)
@@ -2190,8 +2266,16 @@ $If not %LPFormulation% == 1 LostLoad_RampUp_Unit(au,z)
 $If not %LPFormulation% == 1 LostLoad_RampDown_Unit(au,z)
 OutputGenMargin(n,h)
 OutputHeat(au,h)
-OutputHeatSlack(n_th,h)
-OutputH2Slack(n_h2,h)
+
+*CHP STORAGE
+OutputCHPStorageInput(chp,h)
+OutputCHPStorageLevel(chp,h)
+OutputCHPSlack(chp,h)
+OutputCHPStorageSlack(chp,h)
+OutputCHPStorageLevelViolation_H(chp,h)
+
+*BS OutputHeatSlack(n_th,h)
+*BS OutputH2Slack(n_h2,h)
 LostLoad_WaterSlack(au)
 OutputXNotServed(nx,h)
 LostLoad_StorageLevelViolation(au)
@@ -2199,7 +2283,7 @@ LostLoad_SectorXStorageLevelViolation(nx)
 OutputSectorXStorageAlertViolation(nx,h)
 OutputSectorXFloodControlViolation(nx,h)
 StorageShadowPrice(au,h)
-OutputPtLDemand(n_h2,h)
+*BS OutputPtLDemand(n_h2,h)
 OutputSectorXFlexDemand(nx,h)
 OutputSectorXFlexSupply(nx,h)
 OutputPowerMustRun(u,h)
@@ -2283,17 +2367,24 @@ OutputPowerX(nx,au,z)=PowerX.L(nx,au,z);
 OutputPowerConsumption(au,z)=PowerConsumption.L(au,z);
 OutputResidualLoad(n,z)=ResidualLoad.L(n,z);
 OutputHeat(au,z)=Heat.L(au,z);
-OutputHeatSlack(n_th,z)=HeatSlack.L(n_th,z);
-OutputH2Slack(n_h2,z)=H2Slack.L(n_h2,z);
+*BS OutputHeatSlack(n_th,z)=HeatSlack.L(n_th,z);
+*BS OutputH2Slack(n_h2,z)=H2Slack.L(n_h2,z);
 OutputXNotServed(nx,z) = XNotServed.L(nx,z);
 OutputStorageInput(s,z)=StorageInput.L(s,z);
-OutputStorageInput(th,z)=StorageInput.L(th,z);
-OutputStorageInput(p2h2,z)=StorageInput.L(p2h2,z);
+*BS OutputStorageInput(th,z)=StorageInput.L(th,z);
+*BS OutputStorageInput(p2h2,z)=StorageInput.L(p2h2,z);
 OutputStorageLevel(s,z)=StorageLevel.L(s,z)/max(1,StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,z));
-OutputStorageLevel(p2h2,z)=StorageLevel.L(p2h2,z)/max(1,StorageCapacity(p2h2)*Nunits(p2h2)*AvailabilityFactor(p2h2,z));
-OutputStorageLevel(th,z)=StorageLevel.L(th,z)/max(1,StorageCapacity(th)*Nunits(th));
+*BS OutputStorageLevel(p2h2,z)=StorageLevel.L(p2h2,z)/max(1,StorageCapacity(p2h2)*Nunits(p2h2)*AvailabilityFactor(p2h2,z));
+*BS OutputStorageLevel(th,z)=StorageLevel.L(th,z)/max(1,StorageCapacity(th)*Nunits(th));
 OutputStorageSlack(au,z) = StorageSlack.L(au,z);
 OutputStorageLevelViolation_H(au,z) = StorageLevelViolation_H.L(au,z);
+
+*CHP STORAGE
+OutputCHPStorageInput(chp,z)=CHPStorageInput.L(chp,z);
+OutputCHPStorageLevel(chp,z)=CHPStorageLevel.L(chp,z)/max(1,CHPStorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,z));
+OutputCHPStorageSlack(chp,z) = CHPStorageSlack.L(chp,z);
+OutputCHPStorageLevelViolation_H(chp,z) = CHPStorageLevelViolation_H.L(chp,z);
+
 OutputSectorXStorageLevel(nx,z) = SectorXStorageLevel.L(nx,z)/max(1,SectorXStorageCapacity(nx));
 *OutputSectorXStorageLevel(nx,z)$(SectorXStorageHours(nx)>=8) = SectorXStorageLevel.L(nx,z)/max(1,SectorXStorageCapacity(nx));
 OutputSectorXSelfDischarge(nx,z) = SectorXStorageSelfDischarge(nx)*SectorXStorageLevel.L(nx,z)*TimeStep;
@@ -2310,8 +2401,8 @@ OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
 OutputCurtailmentReserve_2U(n,z)=CurtailmentReserve_2U.L(n,z);
 OutputCurtailmentReserve_3U(n,z)=CurtailmentReserve_3U.L(n,z);
-OutputCurtailedHeat(n_th,z)=CurtailedHeat.L(n_th,z);
-OutputCurtailmentPerUnit(u,z)=(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1);
+*BS OutputCurtailedHeat(n_th,z)=CurtailedHeat.L(n_th,z);
+*BS OutputCurtailmentPerUnit(u,z)=(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1);
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
 $If %ActivateFlexibleDemand% == 1 OutputAccumulatedOverSupply(n,z)=AccumulatedOverSupply.L(n,z);
 $If %ActivateFlexibleDemand% == 1 ShadowPriceDemandModulation(n,z)=EQ_Flexible_Demand.m(n,z);
@@ -2330,20 +2421,22 @@ $If not %LPFormulation% == 1 LostLoad_RampUp_Unit(au,z) = LL_RampUp.L(au,z);
 $If not %LPFormulation% == 1 LostLoad_RampDown_Unit(au,z) = LL_RampDown.L(au,z);
 ShadowPrice(n,z) = EQ_Demand_balance_DA.m(n,z);
 Demand_balance_DA(n,z) = EQ_Demand_balance_DA.L(n,z);
-HeatShadowPrice(n_th,z) = EQ_Heat_Demand_balance.m(n_th,z);
-H2ShadowPrice(n_h2,z) = EQ_H2_Demand_balance.m(n_h2,z);
+*BS HeatShadowPrice(n_th,z) = EQ_Heat_Demand_balance.m(n_th,z);
+*BS H2ShadowPrice(n_h2,z) = EQ_H2_Demand_balance.m(n_h2,z);
 LostLoad_WaterSlack(au) = WaterSlack.L(au);
 SectorXShadowPrice(nx,z) = EQ_BS_Demand_balance.m(nx,z);
 LostLoad_StorageLevelViolation(au) = StorageLevelViolation.L(au);
 LostLoad_SectorXStorageLevelViolation(nx) = SectorXStorageLevelViolation.L(nx);
 StorageShadowPrice(s,z) = 0 ;
-OutputPtLDemand(n_h2,z) = PtLDemand.L(n_h2,z);
+*BS OutputPtLDemand(n_h2,z) = PtLDemand.L(n_h2,z);
 OutputSectorXFlexDemand(nx,z) = SectorXFlexDemand.L(nx,z);
 OutputSectorXFlexSupply(nx,z) = SectorXFlexSupply.L(nx,z);
 StorageShadowPrice(s,z) = EQ_Storage_balance.m(s,z);
 StorageShadowPrice(p2h2,z) = EQ_Storage_balance.m(p2h2,z);
-StorageShadowPrice(th,z) = EQ_Heat_Storage_balance.m(th,z);
-OutputH2Output(p2h2,z) = H2Output.L(p2h2,z);
+StorageShadowPrice(chp,z) = EQ_Heat_Storage_balance.m(chp,z);
+*MARCO
+*StorageShadowPrice(p2x,z) = EQ_P2X_Storage_balance(p2x,Z);
+*BS OutputH2Output(p2h2,z) = H2Output.L(p2h2,z);
 OutputPowerMustRun(u,z) = PowerMustRun(u,z);
 $If not %LPFormulation% == 1 OutputCostStartUpH(au,z) = CostStartUpH.L(au,z);
 $If not %LPFormulation% == 1 OutputCostShutDownH(au,z) = CostShutDownH.L(au,z);
@@ -2395,8 +2488,8 @@ CapacityMargin(n,z) = (sum(u, Nunits(u)*PowerCapacity(u)$(not s(u))*LoadMaximum(
                       + CurtailedPower.L(n,z)
                       - Demand("DA",n,z) - Demand("Flex",n,z)
                       + DemandModulation.L(n,z)
-                      - sum(p2h,PowerConsumption.L(p2h,z)*Location(p2h,n))
-                      - sum(p2h2,PowerConsumption.L(p2h2,z)*Location(p2h2,n))
+*BS                      - sum(p2h,PowerConsumption.L(p2h,z)*Location(p2h,n))
+*BS                      - sum(p2h2,PowerConsumption.L(p2h2,z)*Location(p2h2,n))
                       - sum(s, StorageInput.L(s,z)*Location(s,n))
                       - sum(au, (Reserve_2U.L(au,z) + Reserve_3U.L(au,z))*Location(au,n))
                       - CurtailmentReserve_2U.L(n,z)
@@ -2432,8 +2525,12 @@ OutputPowerX,
 OutputPowerConsumption,
 OutputResidualLoad,
 OutputHeat,
-OutputHeatSlack,
-OutputH2Slack,
+OutputCHPStorageInput,
+OutputCHPStorageLevel,
+OutputCHPStorageSlack,
+OutputCHPStorageLevelViolation_H,
+*BS OutputHeatSlack,
+*BS OutputH2Slack,
 OutputXNotServed,
 OutputStorageInput,
 OutputStorageLevel,
@@ -2454,7 +2551,7 @@ OutputShedLoad,
 OutputCurtailedPower,
 OutputCurtailmentReserve_2U,
 OutputCurtailmentReserve_3U,
-OutputCurtailedHeat,
+*BS OutputCurtailedHeat,
 OutputCurtailmentPerUnit,
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation,
 $If %ActivateFlexibleDemand% == 1 OutputAccumulatedOverSupply,
@@ -2478,14 +2575,14 @@ Demand_balance_DA,
 ShadowPrice_2U,
 ShadowPrice_2D,
 ShadowPrice_3U,
-HeatShadowPrice,
+*BS HeatShadowPrice,
 LostLoad_WaterSlack,
 LostLoad_StorageLevelViolation,
 LostLoad_SectorXStorageLevelViolation,
 StorageShadowPrice,
-OutputPtLDemand,
+*BS OutputPtLDemand,
 OutputH2Output,
-H2ShadowPrice,
+*BS H2ShadowPrice,
 OutputSectorXFlexDemand,
 OutputSectorXFlexSupply,
 SectorXShadowPrice,
@@ -2572,13 +2669,14 @@ i(h) = no;
 i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
 *StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
 StorageFinalMin(au) =  sum(i$(ord(i)=card(i)),StorageProfile(au,i)*StorageCapacity(au)*Nunits(au)*AvailabilityFactor(au,i));
+CHPStorageFinalMin(au) =  sum(i$(ord(i)=card(i)),CHPStorageProfile(chp,i)*CHPStorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,i));
 *StorageFinalMin(au) = StorageFinalMin_dbg(au);
 
 display day,FirstHour,LastHour,LastKeptHour;
 Display PowerInitial,CommittedInitial,StorageInitial,StorageFinalMin;
 $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
-$If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
-$If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
+$If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
+$If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
 
 Display Flow.L,Power.L,Committed.L,ShedLoad.L,StorageLevel.L,StorageInput.L,SystemCost.L,Spillage.L,StorageLevel.L,StorageInput.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L,WaterSlack.L ,StorageLevelViolation.L;

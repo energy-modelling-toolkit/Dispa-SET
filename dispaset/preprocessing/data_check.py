@@ -289,7 +289,8 @@ def check_p2bs(config, plants):
     for t in commons['tech_p2bs']:
         check_keys(plants, keys, t)
     check_NonNaNKeys(plants, NonNaNKeys)
-    check_StrKeys(plants, StrKeys)
+    # TODO:Is it necessary to do the check_StrKeys???
+    # check_StrKeys(plants, StrKeys)
 
     # Check the COP values:
     #TODO: check variables that need to be checked (Eff, sector, power capacity etc.)

@@ -410,13 +410,22 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
     Temperatures = NodeBasedTable('Temperatures', config)
     
+    if (SectorCoupling_flag == 'On'):
+        zones_th = plants_chp['Sector1'].unique().tolist()
+        if '' in zones_th:
+            zones_th.remove('')
+    
+        HeatDemand = GenericTable(zones_th, 'SectorXDemand', config, default=0)
+        CostHeatSlack = GenericTable(zones_th, 'CostHeatSlack', config, default=config['default']['CostHeatSlack'])
+                
+    else:    
     # Detecting thermal zones:
-    zones_th = plants_heat['Zone_th'].unique().tolist()
-    if '' in zones_th:
-        zones_th.remove('')
-
-    HeatDemand = GenericTable(zones_th, 'HeatDemand', config, default=0)
-    CostHeatSlack = GenericTable(zones_th, 'CostHeatSlack', config, default=config['default']['CostHeatSlack'])
+        zones_th = plants_heat['Zone_th'].unique().tolist()
+        if '' in zones_th:
+            zones_th.remove('')
+    
+        HeatDemand = GenericTable(zones_th, 'HeatDemand', config, default=0)
+        CostHeatSlack = GenericTable(zones_th, 'CostHeatSlack', config, default=config['default']['CostHeatSlack'])
 
     # Detecting h2 zones:
     zones_h2 = plants_h2['Zone_h2'].unique().tolist()
@@ -454,6 +463,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         if 'CostXNotServed' in config and os.path.isfile(config['CostXNotServed']):
             CostXNotServed = GenericTable(zones_bs, 'CostXNotServed', config,
                                           default=config['default']['CostXNotServed'])
+        elif 'CostNotServed' in config:
+            CostXNotServed = GenericTable(zones_bs, 'CostNotServed', config, default=config['default']['CostNotServed'])
         else:
             logging.warning('No CostXNotServed will be considered (no valid file provided)')
             CostXNotServed = pd.DataFrame(index=config['idx_long']) 
@@ -526,33 +537,33 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         SectorXFlexibleDemand = pd.DataFrame(index=config['idx_long']) 
         SectorXFlexibleSupply = pd.DataFrame(index=config['idx_long']) 
 
-            
+    # TODO: CHECK IT HAS TO WORK WITH SECTOR COUPLING ON AND OFF 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
-    if (SectorCoupling_flag == "") or (SectorCoupling_flag == 'Off'): 
-        if profiles is not None:
-            plants_all_sto.set_index(plants_all_sto.loc[:, 'Unit'], inplace=True, drop=True)
-            for key in profiles.columns:
-                if key not in ReservoirLevels.columns:
-                    logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the '
-                                                                      'ReservoirLevels table')
-                elif key in list(ReservoirLevels.loc[:, plants_all_sto['Technology'] == 'SCSP'].columns):
-                    ReservoirLevels[key] = config['default']['ReservoirLevelInitial']
-                    logging.info('The reservoir profile "' + key + '" can not be seleceted for MTS, instead, default value '
-                                                                   'of: ' + str(
-                        config['default']['ReservoirLevelInitial']) + ' will be used')
-                else:
-                    ReservoirLevels[key].update(profiles[key])
-                    logging.info(
-                        'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
-        
-        # Update PtL demand (H2FlexibleDemand with demand from mid term scheduling)
-        if PtLDemand is not None and any(H2FlexibleDemand) > 0:
-            for key in PtLDemand.columns:
-                if key not in H2FlexibleDemand.columns:
-                    logging.warning('The H2 flexible demand "' + key + '" provided by the MTS is not found in the '
-                                                                       'H2FlexibleDemand table')
-                else:
-                    H2FlexibleDemand[key].update(PtLDemand[key])
+    # if (SectorCoupling_flag == "") or (SectorCoupling_flag == 'Off'): 
+    if profiles is not None:
+        plants_all_sto.set_index(plants_all_sto.loc[:, 'Unit'], inplace=True, drop=True)
+        for key in profiles.columns:
+            if key not in ReservoirLevels.columns:
+                logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the '
+                                                                  'ReservoirLevels table')
+            elif key in list(ReservoirLevels.loc[:, plants_all_sto['Technology'] == 'SCSP'].columns):
+                ReservoirLevels[key] = config['default']['ReservoirLevelInitial']
+                logging.info('The reservoir profile "' + key + '" can not be seleceted for MTS, instead, default value '
+                                                               'of: ' + str(
+                    config['default']['ReservoirLevelInitial']) + ' will be used')
+            else:
+                ReservoirLevels[key].update(profiles[key])
+                logging.info(
+                    'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
+    
+    # Update PtL demand (H2FlexibleDemand with demand from mid term scheduling)
+    if PtLDemand is not None and any(H2FlexibleDemand) > 0:
+        for key in PtLDemand.columns:
+            if key not in H2FlexibleDemand.columns:
+                logging.warning('The H2 flexible demand "' + key + '" provided by the MTS is not found in the '
+                                                                   'H2FlexibleDemand table')
+            else:
+                H2FlexibleDemand[key].update(PtLDemand[key])
 
     if (SectorCoupling_flag == 'On'): 
         if profilesSectorX is not None:
@@ -847,10 +858,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     check_boundary_sector(config, Plants_boundary_sector_only)
 
     # All heating plants:
-    # Plants_heat = Plants_heat_only.copy()
-    Plants_heat = Plants_chp.copy()
-    Plants_heat = pd.concat([Plants_heat, Plants_p2h])
-    Plants_heat = pd.concat([Plants_heat, Plants_thms])
+    Plants_heat = Plants_heat_only.copy()
+    # Plants_heat = Plants_chp.copy()
+    # Plants_heat = pd.concat([Plants_heat, Plants_p2h])
+    # Plants_heat = pd.concat([Plants_heat, Plants_thms])
 
     Plants_h2 = Plants_merged[[u in commons['tech_p2h2'] for u in Plants_merged['Technology']]].copy()
     # check h2 plants:
@@ -859,6 +870,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     if (SectorCoupling_flag == 'On'): 
         # Filter power to boundary sector plants
         Plants_p2bs = Plants_merged[[u in commons['tech_p2bs'] for u in Plants_merged['Technology']]].copy()
+        Plants_p2bs = Plants_p2bs.drop(Plants_chp.index, errors='ignore')
+        # Plants_p2bs = pd.concat([Plants_p2bs, Plants_chp])
+        Plants_p2bs = pd.concat([Plants_p2bs, Plants_p2h])
         # Check heat only units
         check_p2bs(config, Plants_p2bs)
     else:
@@ -866,6 +880,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Water storage
     Plants_wat = Plants_merged[(Plants_merged['Fuel'] == 'WAT') & (Plants_merged['Technology'] != 'HROR')].copy()
+
+    # all storage including chp
+    Plants_asu = Plants_merged[[u in [x for x in commons['Technologies'] if x in commons['tech_storage'] +
+                                       commons['tech_thermal_storage']] for u in
+                                 Plants_merged['Technology']]].copy()
+    # Plants_asu = pd.concat([Plants_asu, Plants_chp])
 
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config, Plants_merged, Temperatures)
@@ -1036,9 +1056,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets['wat'] = Plants_wat.index.tolist()
     sets['hu'] = Plants_heat_only.index.tolist()
     sets['xu'] = Plants_boundary_sector_only.index.tolist()
-    sets['asu'] = Plants_merged[[u in [x for x in commons['Technologies'] if x in commons['tech_storage'] +
-                                       commons['tech_thermal_storage']] for u in
-                                 Plants_merged['Technology']]].index.tolist()
+    sets['asu'] = Plants_asu.index.tolist()
     sets['cu'] = Plants_conventional.index.tolist()
     sets['ba'] = Plants_batteries.index.tolist()
 
@@ -1110,12 +1128,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['RampShutDownMaximum'] = ['au']
     sets_param['Reserve'] = [
         'au']  # changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
-    sets_param['StorageCapacity'] = ['au']
-    sets_param['StorageHours'] = ['au']
-    sets_param['StorageChargingCapacity'] = ['au']
+    sets_param['StorageCapacity'] = ['asu']
+    sets_param['StorageHours'] = ['asu']
+    sets_param['StorageChargingCapacity'] = ['asu']
     sets_param['StorageChargingEfficiency'] = ['au']
     sets_param['StorageDischargeEfficiency'] = ['asu']
-    sets_param['StorageSelfDischarge'] = ['au']
+    sets_param['StorageSelfDischarge'] = ['asu']
     sets_param['StorageInflow'] = ['asu', 'h']
     sets_param['StorageInitial'] = ['asu']
     sets_param['StorageMinimum'] = ['asu']
@@ -1123,6 +1141,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['StorageFloodControl'] = ['asu', 'h']
     sets_param['StorageOutflow'] = ['asu', 'h']
     sets_param['StorageProfile'] = ['asu', 'h']
+    
+    # CHP STORAGE
+    sets_param['CHPStorageCapacity'] = ['chp']
+    sets_param['CHPStorageChargingCapacity'] = ['chp']
+    sets_param['CHPStorageChargingEfficiency'] = ['chp']
+    sets_param['CHPStorageDischargeEfficiency'] = ['chp']
+    sets_param['CHPStorageSelfDischarge'] = ['chp']
+    sets_param['CHPStorageInflow'] = ['chp', 'h']
+    sets_param['CHPStorageInitial'] = ['chp']
+    sets_param['CHPStorageMinimum'] = ['chp']
+    sets_param['CHPStorageOutflow'] = ['chp', 'h']
+    sets_param['CHPStorageProfile'] = ['chp', 'h']
+    
     sets_param['Technology'] = ['au', 't']
     sets_param['TimeUpMinimum'] = ['au']
     sets_param['TimeDownMinimum'] = ['au']
@@ -1185,13 +1216,16 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
     if MTS == 0:
         for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
-                    'CostRampUp', 'StorageCapacity', 'StorageHours', 'StorageSelfDischarge', 'StorageChargingCapacity', 
-                    'InertiaConstant', 'Droop']:
+                    'CostRampUp', 'InertiaConstant', 'Droop']:
             parameters[var]['val'] = Plants_merged[var].values
+        for var in ['StorageCapacity', 'StorageHours', 'StorageSelfDischarge', 'StorageChargingCapacity']:
+            parameters[var]['val'] = Plants_asu[var].values                 
     else:    
         for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
-                    'CostRampUp', 'StorageCapacity', 'StorageHours', 'StorageSelfDischarge', 'StorageChargingCapacity']:
+                    'CostRampUp']:
             parameters[var]['val'] = Plants_merged[var].values
+        for var in ['StorageCapacity', 'StorageHours', 'StorageSelfDischarge', 'StorageChargingCapacity']:
+            parameters[var]['val'] = Plants_asu[var].values          
 
     # List of parameters whose value is not necessarily specified in the dataframe Plants_merged
     for var in ['Nunits']:
@@ -1211,6 +1245,47 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
     for var in ['CHPPowerToHeat', 'CHPPowerLossFactor', 'CHPMaxHeat']:
         parameters[var]['val'] = Plants_chp[var].values
+# CHP STORAGE
+    for var in ['StorageCapacity']:
+        parameters['CHPStorageCapacity']['val'] = Plants_chp[var].values
+    for var in ['StorageSelfDischarge']:
+        parameters['CHPStorageSelfDischarge']['val'] = Plants_chp[var].values
+    for var in ['StorageChargingCapacity']:
+        parameters['CHPStorageChargingCapacity']['val'] = Plants_chp[var].values
+    for var in ['StorageChargingEfficiency']:
+        parameters['CHPStorageChargingEfficiency']['val'] = Plants_chp[var].values
+    # CHPStorage Inflows:
+    for i, s in enumerate(sets['chp']):
+        
+        if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(
+                finalTS['ReservoirLevels'][s] - 1 <= 1e-11):
+            # get the time series
+            parameters['CHPStorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
+        elif s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and any(
+                finalTS['ReservoirLevels'][s] - 1 > 1e-11):
+            logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
+            sys.exit(1)
+        else:
+            logging.warning(
+                'Could not find reservoir level data for storage plant ' + s + '. Using the provided default initial '
+                                                                               'and final values')
+            parameters['CHPStorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],
+                                                                    config['default']['ReservoirLevelFinal'],
+                                                                    len(idx_sim))
+            
+        if s in finalTS['ScaledInflows']:
+            parameters['CHPStorageInflow']['val'][i, :] = finalTS['ScaledInflows'][s][idx_sim].values * \
+                                                       Plants_chp['PowerCapacity'][s]
+            if s in finalTS['ScaledOutflows']:
+                parameters['CHPStorageOutflow']['val'][i, :] = finalTS['ScaledOutflows'][s][idx_sim].values * \
+                                                            Plants_chp['PowerCapacity'][s]
+        if s in Plants_chp.index:
+            parameters['CHPStorageInitial']['val'][i] = parameters['CHPStorageProfile']['val'][i, 0] * \
+                                                     finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
+                                                     Plants_chp['StorageCapacity'][s] * Plants_chp['Nunits'][s]
+    # List of parameters whose default value is 1
+    for var in ['CHPStorageDischargeEfficiency']:
+        parameters[var] = define_parameter(sets_param[var], sets, value=1)
     
     if (SectorCoupling_flag == 'On'): 
         # Particular treatment of SectorXFlexMaxCapacity that is not a time-series and that is given from the BS Inputs database
@@ -1293,7 +1368,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
                                                      finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
                                                      Plants_thms['StorageCapacity'][s] * Plants_thms['Nunits'][s]
-
         if s in Plants_h2.index:
             parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
                                                      finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
@@ -1714,10 +1788,17 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         parameters['Fuel']['val'][unit, idx] = True
 
     # Location
+
     for i in range(len(sets['n'])):
         parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['zones'][i]).values
-    for i in range(len(sets['n_th'])):
-        parameters['Location_th']['val'][:, i] = (Plants_merged['Zone_th'] == zones_th[i]).values
+    if (SectorCoupling_flag == 'On'):    
+        for i in range(len(sets['n_th'])):
+            mask = Plants_merged['Unit'].isin(Plants_chp['Unit'])  # Filtrar las filas donde 'Unit' coincide
+            parameters['Location_th']['val'][mask, i] = (Plants_merged.loc[mask, 'Sector1'] == zones_th[i]).values         
+    else:  
+        for i in range(len(sets['n_th'])):
+            parameters['Location_th']['val'][:, i] = (Plants_merged['Zone_th'] == zones_th[i]).values
+   
     for i in range(len(sets['n_h2'])):
         parameters['Location_h2']['val'][:, i] = (Plants_merged['Zone_h2'] == zones_h2[i]).values
 
