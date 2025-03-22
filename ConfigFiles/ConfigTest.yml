@@ -1,8 +1,8 @@
 AllowCurtailment: 1
 BoundarySectorData: tests/dummy_data/boundary_sector/BS_Inputs.csv
-BoundarySectorInterconnections: tests/dummy_data/boundary_sector/BS_Flood_control.csv
+BoundarySectorInterconnections: tests/dummy_data/boundary_sector/BS_NTCs.csv
 BoundarySectorMaxSpillage: tests/dummy_data/boundary_sector/BS_Spillage_Capacity.csv
-BoundarySectorNTC: tests/dummy_data/boundary_sector/BS_AlertLevel.csv
+BoundarySectorNTC: tests/dummy_data/boundary_sector/BS_NTCs.csv
 CostCurtailment: ''
 CostH2Slack: ''
 CostHeatSlack: ''

@@ -1580,13 +1580,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             #                     ' in unit ' + Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
         # Assign storage flood control level costs to the unit with highest variable costs inside the zone
         for unit in range(len(BoundarySector)):
-            # c = Plants_merged['Zone'][unit]  # zone to which the unit belongs
-            found = False
-            if BoundarySector['Zone'][unit] in zones:
-                parameters['CostXFloodControl']['val'][unit, :] = MaxCostVariable[BoundarySector['Zone'][unit]].values
-                found = True
-            if not found:
-                parameters['CostXFloodControl']['val'][unit, :] = 0
+            parameters['CostXFloodControl']['val'][unit, :] = 0
+            # found = False
+            # if BoundarySector['Zone'][unit] in zones:
+            #     parameters['CostXFloodControl']['val'][unit, :] = MaxCostVariable[BoundarySector['Zone'][unit]].values
+            #     found = True
+            # if not found:
+            #     parameters['CostXFloodControl']['val'][unit, :] = 0
     
     # %%###############################################################################################################
     # Inertia limit to parameters dict

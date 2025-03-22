@@ -131,7 +131,11 @@ def incidence_matrix(sets, set_used, parameters, param_used, nodes='n'):
     A particular case is considered for the node "Rest Of the World", which is no explicitely defined in DispaSET
     """
     for i, l in enumerate(sets[set_used]):
-        [from_node, to_node] = l.split('->')
+        # Handle both cases: with and without spaces around the arrow
+        if ' -> ' in l:
+            [from_node, to_node] = l.split(' -> ')
+        else:
+            [from_node, to_node] = l.split('->')
         if (from_node.strip() in sets[nodes]) and (to_node.strip() in sets[nodes]):
             parameters[param_used]['val'][i, sets[nodes].index(to_node.strip())] = 1
             parameters[param_used]['val'][i, sets[nodes].index(from_node.strip())] = -1
@@ -186,23 +190,34 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
     ConList = Historical_flows.columns.tolist() + [x for x in NTC_inter.columns.tolist() if
                                                    x not in Historical_flows.columns.tolist()]
     for connection in ConList:
-        z = connection.split(' -> ')
+        # Ensure connection has the correct format with "->" separator
+        if ' -> ' in connection:
+            z = connection.split(' -> ')
+        else:
+            z = connection.split('->')
+        if len(z) == 2:
+            connection = z[0].strip() + ' -> ' + z[1].strip()
+            z = [z[0].strip(), z[1].strip()]  # Update z with stripped values
         if z[0] in Simulation_list:
             all_connections.append(connection)
             simulation_connections.append(connection)
-        # if z[0] in Simulation_list:
-        #     all_connections.append(connection)
-        #     if z[1] in Simulation_list:
-        #         simulation_connections.append(connection)
         elif z[1] in Simulation_list:
             all_connections.append(connection)
 
     df_zones_simulated = pd.DataFrame(index=index)
     for interconnection in simulation_connections:
+        # Handle both formats when looking up in NTC_inter
         if interconnection in NTC_inter.columns:
             df_zones_simulated[interconnection] = NTC_inter[interconnection]
             logging.info('Detected interconnection ' + interconnection +
                          '. The historical NTCs will be imposed as maximum flow value')
+        else:
+            # Try without spaces around arrow
+            no_spaces = interconnection.replace(' -> ', '->')
+            if no_spaces in NTC_inter.columns:
+                df_zones_simulated[interconnection] = NTC_inter[no_spaces]
+                logging.info('Detected interconnection ' + interconnection +
+                            '. The historical NTCs will be imposed as maximum flow value')
     interconnections1 = df_zones_simulated.columns
 
     # Display a warning if a zone is isolated:
@@ -214,9 +229,17 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
     df_RoW_temp = pd.DataFrame(index=index)
     connNames = []
     for interconnection in all_connections:
-        if interconnection in Historical_flows.columns and interconnection not in simulation_connections:
-            df_RoW_temp[interconnection] = Historical_flows[interconnection]
-            connNames.append(interconnection)
+        # Handle both formats when looking up in Historical_flows
+        if interconnection in Historical_flows.columns:
+            if interconnection not in simulation_connections:
+                df_RoW_temp[interconnection] = Historical_flows[interconnection]
+                connNames.append(interconnection)
+        else:
+            # Try without spaces around arrow
+            no_spaces = interconnection.replace(' -> ', '->')
+            if no_spaces in Historical_flows.columns and no_spaces not in simulation_connections:
+                df_RoW_temp[interconnection] = Historical_flows[no_spaces]
+                connNames.append(interconnection)
 
     compare_set = set()
     for k in connNames:
