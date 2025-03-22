@@ -197,7 +197,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                 results[key].index = index
             # Variables whose index is not complete (sparse formulation)
             else:
-                results[key].index = index_long.iloc[results[key].index - 1]
+                results[key].index = index_long[results[key].index - 1]
                 if key in keys_sparse:
                     results[key] = results[key].reindex(index).fillna(0)
         else:
