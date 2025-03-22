@@ -1,0 +1,147 @@
+AllowCurtailment: 1
+BoundarySectorData: ''
+CostCurtailment: ''
+CostH2Slack: ''
+CostHeatSlack: ''
+CostLoadShedding: ''
+CostNotServed: ''
+CostOfSpillage: ''
+CostXNotServed: ''
+CplexAccuracy: 0.0006
+CplexSetting: ''
+DataTimeStep: 1.0
+Demand: tests/dummy_data/Load_RealTime/##/2015.csv
+Description: Dummy configuration file for testing purposes. Two fictitious zones (Z1
+  and Z2) are simulated. The simulated period is only 7 days. There is a CHP unit
+  in zone 1
+FFRGainLimit: ''
+FFRLimit: ''
+FrequencyStability: ''
+GAMS_folder: ''
+GeoData: tests/dummy_data/Geo_Coordinates.csv
+GridData: ''
+H2FlexibleCapacity: tests/dummy_data/PtLCapacities.csv
+H2FlexibleDemand: tests/dummy_data/H2PtLDemand.csv
+H2RigidDemand: tests/dummy_data/H2Demand.csv
+HeatDemand: tests/dummy_data/HeatDemand.csv
+HorizonLength: 3
+HydroScheduling: Regional
+HydroSchedulingHorizon: Annual
+InertiaLimit: ''
+InitialFinalReservoirLevel: 1
+Interconnections: tests/dummy_data/CrossBorderFlows.csv
+LoadShedding: ''
+LookAhead: 1
+NTC: tests/dummy_data/NTCs.csv
+Outages: tests/dummy_data/Outages.csv
+PowerPlantData: tests/dummy_data/Units_testcase.csv
+PriceOfAmmonia: ''
+PriceOfBiomass: Database/FuelPrices/Biomass/2015.csv
+PriceOfBlackCoal: Database/FuelPrices/Coal/2015.csv
+PriceOfCO2: ''
+PriceOfFuelOil: Database/FuelPrices/Oil/2015.csv
+PriceOfGas: Database/FuelPrices/Gas/2015.csv
+PriceOfLignite: ''
+PriceOfNuclear: ''
+PriceOfPeat: tests/dummy_data/PriceOfPeat.csv
+PriceTransmission: ''
+PrimaryReserveLimit: ''
+RenewablesAF: tests/dummy_data/AvailabilityFactors/##/2015.csv
+Reserve2D: ''
+Reserve2U: ''
+ReserveCalculation: Generic
+ReserveParticipation:
+- COMC
+- GTUR
+- HDAM
+- HPHS
+- ICEN
+- CAES
+- BATS
+- BEVS
+- P2HT
+- ABHP
+- ASHP
+- GSHP
+- HYHP
+- WSHP
+- REHE
+ReserveParticipation_CHP:
+- COMC
+- GTUR
+- ICEN
+- STUR
+ReservoirLevels: tests/dummy_data/ReservoirLevels.csv
+ReservoirScaledInflows: tests/dummy_data/ScaledInflows.csv
+SectorCoupling: ''
+SectorXDemand: ''
+ShareOfFlexibleDemand: tests/dummy_data/ShareFlex.csv
+SimulationDirectory: Simulations/simulation_test
+SimulationTimeStep: 1.0
+SimulationType: Integer clustering
+StartDate: !!python/tuple
+- 2015
+- 1
+- 1
+- 0
+- 0
+- 0
+StopDate: !!python/tuple
+- 2015
+- 1
+- 7
+- 0
+- 0
+- 0
+StorageAlertLevels: ''
+StorageFloodControl: ''
+SystemGainLimit: ''
+Temperatures: tests/dummy_data/Temperatures.csv
+TransmissionGridType: ''
+WriteGDX: 1
+WritePickle: 1
+cplex_path: ''
+default:
+  CostCurtailment: 20.0
+  CostH2Slack: 100.0
+  CostHeatSlack: 100.0
+  CostLoadShedding: 1500.0
+  CostNotServed: ''
+  CostOfSpillage: 401.0
+  CostXNotServed: 0
+  DemandFlexibility: 4.0
+  FFRGainLimit: ''
+  FFRLimit: ''
+  InertiaLimit: ''
+  LoadShedding: 0.05
+  PriceOfAmmonia: 76.0
+  PriceOfBiomass: 33.0
+  PriceOfBlackCoal: 18.0
+  PriceOfCO2: 90.0
+  PriceOfFuelOil: 60.0
+  PriceOfGas: 44.0
+  PriceOfLignite: 15.0
+  PriceOfNuclear: 4.0
+  PriceOfPeat: 33.0
+  PriceTransmission: 0.0
+  PrimaryReserveLimit: ''
+  ReservoirLevelFinal: 0.5
+  ReservoirLevelInitial: 0.5
+  ShareOfFlexibleDemand: 0.03
+  ShareOfQuickStartUnits: 0.5
+  SystemGainLimit: ''
+  ValueOfLostLoad: 100000.0
+  WaterValue: 400.0
+modifiers:
+  Demand: 0.17
+  Solar: 5.0
+  Storage: 1.0
+  Wind: 5.0
+mts_zones:
+- Z1
+- Z2
+- ZZ3
+zones:
+- Z1
+- Z2
+- ZZ3
