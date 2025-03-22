@@ -1,7 +1,7 @@
 AllowCurtailment: 1
-BoundarySectorData: tests/dummy_data/boundary_sector/BS_Inputs.csv
+BoundarySectorData: ''
 BoundarySectorInterconnections: tests/dummy_data/boundary_sector/BS_Flood_control.csv
-BoundarySectorMaxSpillage: tests/dummy_data/boundary_sector/BS_Spillage_Capacity.csv
+BoundarySectorMaxSpillage: ''
 BoundarySectorNTC: tests/dummy_data/boundary_sector/BS_AlertLevel.csv
 CostCurtailment: ''
 CostH2Slack: ''
@@ -9,10 +9,10 @@ CostHeatSlack: ''
 CostLoadShedding: ''
 CostNotServed: ''
 CostOfSpillage: tests/dummy_data/boundary_sector/BS_Spillage_cost.csv
-CostXNotServed: tests/dummy_data/boundary_sector/BS_NotServed_cost.csv
-CostXSpillage: tests/dummy_data/boundary_sector/BS_Spillage_cost.csv
+CostXNotServed: ''
+CostXSpillage: ''
 CplexAccuracy: 0.0006
-CplexSetting: ''
+CplexSetting: Default
 DataTimeStep: 1.0
 Demand: tests/dummy_data/Load_RealTime/##/2015.csv
 Description: Dummy configuration file for testing purposes. Two fictitious zones (Z1
@@ -24,21 +24,21 @@ FrequencyStability: ''
 GAMS_folder: ''
 GeoData: tests/dummy_data/Geo_Coordinates.csv
 GridData: ''
-H2FlexibleCapacity: tests/dummy_data/PtLCapacities.csv
-H2FlexibleDemand: tests/dummy_data/H2PtLDemand.csv
-H2RigidDemand: tests/dummy_data/H2Demand.csv
-HeatDemand: tests/dummy_data/HeatDemand.csv
-HorizonLength: 3
+H2FlexibleCapacity: tests/dummy_data/boundary_sector/BS_NTCs.csv
+H2FlexibleDemand: tests/dummy_data/boundary_sector/BS_Inputs.csv
+H2RigidDemand: tests/dummy_data/boundary_sector/BS_Demand.csv
+HeatDemand: ''
+HorizonLength: 4
 HydroScheduling: Regional
 HydroSchedulingHorizon: Annual
 InertiaLimit: ''
 InitialFinalReservoirLevel: 1
-Interconnections: tests/dummy_data/CrossBorderFlows.csv
+Interconnections: ''
 LoadShedding: ''
 LookAhead: 1
 NTC: tests/dummy_data/NTCs.csv
-Outages: tests/dummy_data/Outages.csv
-PowerPlantData: tests/dummy_data/Units_testcase.csv
+Outages: ''
+PowerPlantData: tests/dummy_data/boundary_sector/BS_Units_testcase.csv
 PriceOfAmmonia: ''
 PriceOfBiomass: Database/FuelPrices/Biomass/2015.csv
 PriceOfBlackCoal: Database/FuelPrices/Coal/2015.csv
@@ -53,7 +53,7 @@ PrimaryReserveLimit: ''
 RenewablesAF: tests/dummy_data/AvailabilityFactors/##/2015.csv
 Reserve2D: ''
 Reserve2U: ''
-ReserveCalculation: Generic
+ReserveCalculation: Probabilistic
 ReserveParticipation:
 - COMC
 - GTUR
@@ -75,18 +75,19 @@ ReserveParticipation_CHP:
 - GTUR
 - ICEN
 - STUR
-ReservoirLevels: tests/dummy_data/ReservoirLevels.csv
-ReservoirScaledInflows: tests/dummy_data/ScaledInflows.csv
-SectorCoupling: 'On'
-SectorXDemand: tests/dummy_data/boundary_sector/BS_Demand.csv
-SectorXFlexibleDemand: tests/dummy_data/boundary_sector/BS_FlexibleDemand.csv
-SectorXFlexibleSupply: tests/dummy_data/boundary_sector/BS_FlexibleSupply.csv
-SectorXFloodControl: tests/dummy_data/boundary_sector/BS_Flood_control.csv
-SectorXReservoirLevels: tests/dummy_data/boundary_sector/BS_ReservoirLevels.csv
-ShareOfFlexibleDemand: tests/dummy_data/ShareFlex.csv
-SimulationDirectory: Simulations/simulation_test
+ReservoirLevels: ''
+ReservoirScaledInflows: ''
+SectorCoupling: ''
+SectorXAlertLevel: ''
+SectorXDemand: tests/dummy_data/boundary_sector/BS_Spillage_Capacity.csv
+SectorXFlexibleDemand: ''
+SectorXFlexibleSupply: ''
+SectorXFloodControl: ''
+SectorXReservoirLevels: ''
+ShareOfFlexibleDemand: ''
+SimulationDirectory: Simulations/simulation_test_bs
 SimulationTimeStep: 1.0
-SimulationType: Integer clustering
+SimulationType: Standard
 StartDate: !!python/tuple
 - 2015
 - 1
@@ -101,8 +102,8 @@ StopDate: !!python/tuple
 - 0
 - 0
 - 0
-StorageAlertLevels: ''
-StorageFloodControl: ''
+StorageAlertLevels: tests/dummy_data/boundary_sector/BS_CBFs.csv
+StorageFloodControl: tests/dummy_data/boundary_sector/BS_FlexibleDemand.csv
 SystemGainLimit: ''
 Temperatures: tests/dummy_data/Temperatures.csv
 TransmissionGridType: ''
@@ -111,12 +112,13 @@ WritePickle: 1
 cplex_path: ''
 default:
   CostCurtailment: 20.0
-  CostH2Slack: 100.0
+  CostH2Slack: 1000.0
   CostHeatSlack: 100.0
-  CostLoadShedding: 1500.0
+  CostLoadShedding: 400.0
   CostNotServed: ''
-  CostOfSpillage: 401.0
-  CostXNotServed: 0
+  CostOfSpillage: 1.0
+  CostXNotServed: ''
+  CostXSpillage: ''
   DemandFlexibility: 4.0
   FFRGainLimit: ''
   FFRLimit: ''
@@ -135,16 +137,16 @@ default:
   PrimaryReserveLimit: ''
   ReservoirLevelFinal: 0.5
   ReservoirLevelInitial: 0.5
-  ShareOfFlexibleDemand: 0.03
+  ShareOfFlexibleDemand: 0.1
   ShareOfQuickStartUnits: 0.5
   SystemGainLimit: ''
   ValueOfLostLoad: 100000.0
-  WaterValue: 400.0
+  WaterValue: 1500.0
 modifiers:
-  Demand: 0.17
-  Solar: 5.0
+  Demand: 0.16
+  Solar: 1.0
   Storage: 1.0
-  Wind: 5.0
+  Wind: 10.0
 mts_zones:
 - Z1
 - Z2
