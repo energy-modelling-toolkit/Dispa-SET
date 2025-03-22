@@ -10,8 +10,8 @@ import pandas as pd
 
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, check_temperatures, \
     check_clustering, isStorage, check_chp, check_p2h, check_h2, check_df, check_MinMaxFlows, \
-    check_FlexibleDemand, check_reserves, check_PtLDemand, check_heat, check_p2bs, check_boundary_sector, \
-    check_BSFlexDemand, check_BSFlexSupply, check_FFRLimit, check_PrimaryReserveLimit
+    check_FlexibleDemand, check_reserves, check_heat, check_p2bs, check_boundary_sector, \
+    check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_FFRLimit, check_PrimaryReserveLimit
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
@@ -1350,8 +1350,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             parameters['CostH2Slack']['val'][i, :] = finalTS['CostH2Slack'][u][idx_sim].values
         if u in finalTS['H2FlexibleDemand']:
             parameters['PtLDemandInput']['val'][i, :] = finalTS['H2FlexibleDemand'][u][idx_sim].values
-    if 'H2FlexibleCapacity' in config and config['H2FlexibleCapacity'] != '':
-        check_PtLDemand(parameters, config)
 
     if (SectorCoupling_flag == 'On'): 
     # Boundary sector demands:
@@ -1370,10 +1368,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 parameters['SectorXFlexSupplyInput']['val'][i, :] = finalTS['SectorXFlexibleSupply'][u][idx_sim].values
     
         if 'SectorXFlexibleDemand' in config:
-            check_BSFlexDemand(parameters, config)
+            check_BSFlexMaxCapacity(parameters, config, sets)
     
         if 'SectorXFlexibleSupply' in config:
-            check_BSFlexSupply(parameters, config)
+            check_BSFlexMaxSupply(parameters, config, sets)
 
     # Ramping rates are reconstructed for the non dimensional value provided
     # (start-up and normal ramping are not differentiated)

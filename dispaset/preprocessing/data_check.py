@@ -705,37 +705,30 @@ def check_df(df, StartDate=None, StopDate=None, name=''):
     return True
 
 
-def check_PtLDemand(parameters, config):
-    for i, u in enumerate(parameters['MaxCapacityPtL']['val']):
-        TotDemand = parameters['PtLDemandInput']['val'][i, :].sum() * config['SimulationTimeStep']
-        MaxProduction = parameters['MaxCapacityPtL']['val'][i] * len(parameters['PtLDemandInput']['val'][i, :]) * \
-                        config['SimulationTimeStep']
-        if TotDemand > MaxProduction:
-            logging.error('Unit ' + u + ' has a higher PtL demand than what the PtL capacity can provide')
+def check_BSFlexMaxCapacity(parameters, config, sets):
+    """
+    Function that checks if SectorXFlexMaxCapacity is at least as high as the average flexible demand input
+    """
+    for i, nx in enumerate(sets['nx']):
+        # Calculate average flexible demand
+        avg_demand = parameters['SectorXFlexDemandInput']['val'][i, :].mean()
+        # Check if max capacity is sufficient
+        if parameters['SectorXFlexMaxCapacity']['val'][i] < avg_demand:
+            logging.critical(f'Boundary sector {nx}: SectorXFlexMaxCapacity ({parameters["SectorXFlexMaxCapacity"]["val"][i]}) is lower than average flexible demand ({avg_demand})')
             sys.exit(1)
 
 
-def check_BSFlexDemand(parameters, config):
-    for i, u in enumerate(parameters['SectorXFlexMaxCapacity']['val']):
-        TotDemand = parameters['SectorXFlexDemandInput']['val'][i, :].sum() * config['SimulationTimeStep']
-        MaxProduction = parameters['SectorXFlexMaxCapacity']['val'][i] * len(
-            parameters['SectorXFlexDemandInput']['val'][i, :]) * \
-                        config['SimulationTimeStep']
-        if TotDemand > MaxProduction:
-            logging.error('Unit ' + u + ' has a higher PtL demand than what the PtL capacity can provide')
+def check_BSFlexMaxSupply(parameters, config, sets):
+    """
+    Function that checks if SectorXFlexMaxSupply is at least as high as the average flexible supply input
+    """
+    for i, nx in enumerate(sets['nx']):
+        # Calculate average flexible supply
+        avg_supply = parameters['SectorXFlexSupplyInput']['val'][i, :].mean()
+        # Check if max supply is sufficient
+        if parameters['SectorXFlexMaxSupply']['val'][i] < avg_supply:
+            logging.critical(f'Boundary sector {nx}: SectorXFlexMaxSupply ({parameters["SectorXFlexMaxSupply"]["val"][i]}) is lower than average flexible supply ({avg_supply})')
             sys.exit(1)
-
-
-def check_BSFlexSupply(parameters, config):
-    for i, u in enumerate(parameters['SectorXFlexMaxSupply']['val']):
-        TotSupply = parameters['SectorXFlexSupplyInput']['val'][i, :].sum() * config['SimulationTimeStep']
-        MaxSupply = parameters['SectorXFlexMaxSupply']['val'][i] * len(
-            parameters['SectorXFlexSupplyInput']['val'][i, :]) * \
-                    config['SimulationTimeStep']
-        if TotSupply > MaxSupply:
-            logging.error('Unit ' + u + ' has a higher PtL supply than what the PtL max supply can provide')
-            sys.exit(1)
-
 
 def check_simulation_environment(SimulationPath, store_type='pickle', firstline=7):
     """

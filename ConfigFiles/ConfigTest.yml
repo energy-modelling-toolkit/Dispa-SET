@@ -25,7 +25,7 @@ GAMS_folder: ''
 GeoData: tests/dummy_data/Geo_Coordinates.csv
 GridData: ''
 H2FlexibleCapacity: tests/dummy_data/PtLCapacities.csv
-H2FlexibleDemand: tests/dummy_data/H2PtLDemand.csv
+H2FlexibleDemand: ''
 H2RigidDemand: tests/dummy_data/H2Demand.csv
 HeatDemand: tests/dummy_data/HeatDemand.csv
 HorizonLength: 3
