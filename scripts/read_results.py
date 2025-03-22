@@ -11,13 +11,17 @@ sys.path.append(os.path.abspath('..'))
 
 # Import Dispa-SET
 import dispaset as ds
+import pandas as pd
 
 # Load the inputs and the results of the simulation
 inputs,results = ds.get_sim_results(path='../Simulations/simulation_test',cache=False)
 
-# if needed, define the plotting range for the dispatch plot:
-import pandas as pd
-rng = pd.date_range(start='2016-01-01',end='2016-12-31',freq='h')
+# Get the actual date range from the results
+if 'OutputPower' in results:
+    rng = results['OutputPower'].index
+else:
+    # Fallback to a default range if PowerDemand is not available
+    rng = pd.date_range(start='2016-01-01',end='2016-12-31',freq='h')
 
 # Generate country-specific plots
 ds.plot_zone(inputs,results,rng=rng)

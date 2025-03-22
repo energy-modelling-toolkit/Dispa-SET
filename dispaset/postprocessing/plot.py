@@ -150,6 +150,8 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
             sumplot_lev = level[cols_lvl[0:]].cumsum(axis=1)
             sumplot_lev['zero'] = 0
             sumplot_lev = sumplot_lev[['zero'] + sumplot_lev.columns[:-1].tolist()]
+            # Ensure numeric data types
+            sumplot_lev = sumplot_lev.astype(float)
             for j in range(len(sumplot_lev.columns) - 1):
                 col3 = sumplot_lev.columns[j]
                 col4 = sumplot_lev.columns[j + 1]
@@ -313,7 +315,7 @@ def plot_rug(df_series, on_off=False, cmap='Greys', fig_title='', normalized=Fal
                             figsize=(16, 0.25 * rows), squeeze=False,
                             frameon=True, gridspec_kw={'hspace': 0.15})
 
-    for (item, iseries), iax in zip(df_series.iteritems(), axes.ravel()):
+    for (item, iseries), iax in zip(df_series.items(), axes.ravel()):
         format_axis(iax)
         iax.set_ylabel(str(item)[:30], rotation='horizontal',
                        rotation_mode='anchor',
