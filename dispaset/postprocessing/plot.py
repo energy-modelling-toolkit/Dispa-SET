@@ -444,7 +444,7 @@ def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones='', show_plot
     ax.plot([-1, curtailed_power.index.size + 1], [0, 0], color='k')
 
     handles, labels = ax.get_legend_handles_labels()  # get the handles
-    ax.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.15, 0.25))
+    ax.legend(list(reversed(handles)), list(reversed(labels)), loc=4, bbox_to_anchor=(1.15, 0.25))
     if show_plot:
         plt.show()
 
@@ -468,7 +468,7 @@ def plot_energy_zone_fuel(inputs, results, PPindicators, ListZones='', show_plot
              height=ax2.get_ylim()[1] * 0.005,
              linewidth=2, color='k')
     handles, labels = ax2.get_legend_handles_labels()  # get the handles
-    ax2.legend(reversed(handles), reversed(labels), loc=4, bbox_to_anchor=(1.14, 0.25))
+    ax2.legend(list(reversed(handles)), list(reversed(labels)), loc=4, bbox_to_anchor=(1.14, 0.25))
     if show_plot:
         plt.show()
 
