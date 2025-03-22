@@ -320,7 +320,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Defining the boundary sector only units:
     if (SectorCoupling_flag == 'On'):
         plants_bs = plants[[u in commons['tech_boundary_sector'] for u in plants['Technology']]]
-        check_boundary_sector(config, plants_bs)
+        check_boundary_sector(config, plants_bs, BoundarySector)
 
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
@@ -843,8 +843,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             [u in commons['tech_boundary_sector'] for u in Plants_merged['Technology']]].copy()
     else:
         Plants_boundary_sector_only = pd.DataFrame()
-    # Check heat only units
-    check_boundary_sector(config, Plants_boundary_sector_only)
+    # Check boundary sector units
+    check_boundary_sector(config, Plants_boundary_sector_only, BoundarySector)
 
     # All heating plants:
     # Plants_heat = Plants_heat_only.copy()
@@ -1076,8 +1076,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
     sets_param['Efficiency'] = ['au', 'h']
-    sets_param['X2PowerConversionMultiplier'] = ['nx', 'au', 'h']
-    sets_param['Power2XConversionMultiplier'] = ['nx', 'au', 'h']
+    sets_param['X2PowerConversionMultiplier'] = ['nx', 'xu', 'h']
+    sets_param['Power2XConversionMultiplier'] = ['nx', 'xu', 'h']
     sets_param['EmissionMaximum'] = ['n', 'p']
     sets_param['EmissionRate'] = ['au', 'p']
     sets_param['FlowMaximum'] = ['l', 'h']
@@ -1404,16 +1404,16 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     if (SectorCoupling_flag == 'On'): 
         # Assign charging and discharging efficiencies for boundary sectors
-        values = np.ndarray([len(sets['nx']), len(sets['au']), len(sets['h'])])
+        values = np.ndarray([len(sets['nx']), len(sets['xu']), len(sets['h'])])
         for i in range(len(sets['nx'])):
-            for u in range(len(sets['au'])):
-                values[i, u, :] = finalTS['EfficienciesBoundarySector'][sets['nx'][i]][sets['au'][u]]
+            for u in range(len(sets['xu'])):
+                values[i, u, :] = finalTS['EfficienciesBoundarySector'][sets['nx'][i]][sets['xu'][u]]
         parameters['X2PowerConversionMultiplier'] = {'sets': sets_param['X2PowerConversionMultiplier'], 'val': values}
     
-        values = np.ndarray([len(sets['nx']), len(sets['au']), len(sets['h'])])
+        values = np.ndarray([len(sets['nx']), len(sets['xu']), len(sets['h'])])
         for i in range(len(sets['nx'])):
-            for u in range(len(sets['au'])):
-                values[i, u, :] = finalTS['ChargingEfficienciesBoundarySector'][sets['nx'][i]][sets['au'][u]]
+            for u in range(len(sets['xu'])):
+                values[i, u, :] = finalTS['ChargingEfficienciesBoundarySector'][sets['nx'][i]][sets['xu'][u]]
         parameters['Power2XConversionMultiplier'] = {'sets': sets_param['Power2XConversionMultiplier'], 'val': values}
 
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])

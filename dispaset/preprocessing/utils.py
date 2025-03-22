@@ -83,7 +83,8 @@ def BoundarySectorEfficiencyTimeSeries(config, plants, zones_bs):
         Efficiencies[n] = pd.DataFrame(columns=plants.index, index=config['idx_long'])
         for s in filter_bs_cols:
             for u in plants.index:
-                if (plants.loc[u, 'Technology'] in commons['tech_p2bs']) and (plants.loc[u, s] == n):
+                if ((plants.loc[u, 'Technology'] in commons['tech_p2bs'] or plants.loc[u, 'Technology'] in commons['tech_boundary_sector']) and 
+                    (plants.loc[u, s] == n)):
                     Efficiencies[n][u] = plants.loc[u, 'Efficiency'+s]
         if n in Efficiencies:
             Efficiencies[n] = Efficiencies[n].fillna(0)
@@ -92,7 +93,8 @@ def BoundarySectorEfficiencyTimeSeries(config, plants, zones_bs):
         ChargingEfficiencies[n] = pd.DataFrame(columns=plants.index, index=config['idx_long'])
         for s in filter_bs_cols:
             for u in plants.index:
-                if (plants.loc[u, 'Technology'] in commons['tech_p2bs']) and (plants.loc[u, s] == n):
+                if ((plants.loc[u, 'Technology'] in commons['tech_p2bs'] or plants.loc[u, 'Technology'] in commons['tech_boundary_sector']) and 
+                    (plants.loc[u, s] == n)):
                     ChargingEfficiencies[n][u] = plants.loc[u, 'ChargingEfficiency'+s]
         if n in ChargingEfficiencies:
             ChargingEfficiencies[n] = ChargingEfficiencies[n].fillna(0)

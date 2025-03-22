@@ -324,21 +324,44 @@ def check_heat(config, plants):
     return True
 
 
-def check_boundary_sector(config, plants):
+def check_boundary_sector(config, plants, BoundarySector=None):
     """
-    Function that checks the heat only unit characteristics
+    Check boundary sector units characteristics
+    :param config: Config dictionary
+    :param plants: DataFrame with plants data
+    :param BoundarySector: Optional DataFrame with boundary sector data for consistency check
     """
     keys = ['PowerCapacity', 'Efficiency']
     NonNaNKeys = []
-    StrKeys = ['Sector1']
+    StrKeys = ['Sector1','Sector2']
 
-    if len(plants) == 0:  # If there are no P2HT units, exit the check
+    if len(plants) == 0:  # If there are no boundary sector units, exit the check
         return True
 
+    # Check basic characteristics
     for t in commons['tech_boundary_sector']:
         check_keys(plants, keys, t)
     check_NonNaNKeys(plants, NonNaNKeys)
     check_StrKeys(plants, StrKeys)
+
+    # Check boundary sector name consistency
+    if BoundarySector is not None:
+        # Get valid sector names from BoundarySector table
+        valid_sectors = BoundarySector.index.tolist()
+        
+        # Check each sector column
+        for col in ['Sector1', 'Sector2']:
+            if col in plants.columns:
+                # Get unique non-empty sector values, excluding both pandas nan and string "nan"
+                sectors = plants[col].dropna().unique()
+                sectors = [s for s in sectors if str(s).strip() != '' and str(s).lower() != 'nan']
+                
+                # Check each sector value
+                for sector in sectors:
+                    if sector not in valid_sectors:
+                        logging.critical('Boundary sector "{}" found in {} column of plants table is not defined in the BoundarySector table. Valid sectors are: {}'.format(
+                            sector, col, valid_sectors))
+                        sys.exit(1)
 
     return True
 
