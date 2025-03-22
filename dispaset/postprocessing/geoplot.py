@@ -240,7 +240,8 @@ def plot_net_flows_map(inputs, results, idx=None, crs=4326, boundaries=None, mar
     ax.autoscale_view()
 
     if geomap:
-        ax.outline_patch.set_visible(False)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
     else:
         ax.set_aspect('equal')
     ax.axis('off')
@@ -346,16 +347,21 @@ def plot_line_congestion_map(inputs, results, idx=None, crs=4326, boundaries=Non
 
     sm = plt.cm.ScalarMappable(cmap=edge_cmap, norm=plt.Normalize(vmin=edge_vmin, vmax=edge_vmax))
     sm.set_array([])
-    cbar = plt.colorbar(sm)
+    
+    # Create colorbar with proper axes
+    cbar = plt.colorbar(sm, ax=ax, orientation='vertical', pad=0.02)
+    cbar.set_label('Congestion [%]')
 
     ax.update_datalim(compute_bbox_with_margins(x, y, margin_type, margin))
     ax.autoscale_view()
 
     if geomap:
-        ax.outline_patch.set_visible(False)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
     else:
         ax.set_aspect('equal')
     ax.axis('off')
     ax.set_title(title)
 
+    plt.tight_layout()
     plt.show()
