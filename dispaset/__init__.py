@@ -93,7 +93,7 @@ from .preprocessing.preprocessing import build_simulation, mid_term_scheduling
 from .preprocessing.utils import adjust_capacity, adjust_ntc,adjust_flexibility
 
 from .solve import solve_GAMS
-from .solve_linopy import solve_linopy
+#from .solve_linopy import solve_linopy
 
 from .postprocessing.data_handler import get_sim_results, ds_to_df
 
