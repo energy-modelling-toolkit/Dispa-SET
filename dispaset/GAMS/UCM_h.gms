@@ -175,7 +175,6 @@ Location(au,n)                              [n.a.]          Location {1 0}
 Location_th(au,n_th)                        [n.a.]          Location {1 0}
 Location_h2(au,n_h2)                        [n.a.]          Location {1 0}
 LocationX(au,nx)                            [n.a.]          Location {1 0}
-Markup(u,h)                                 [EUR\MW]        Markup
 OutageFactor(au,h)                          [%]             Outage Factor (100% = full outage)
 PartLoadMin(au)                             [%]             Minimum part load
 PowerCapacity(au)                           [MW\u]          Installed capacity
@@ -352,7 +351,6 @@ $LOAD Location
 $LOAD Location_th
 $LOAD Location_h2
 $LOAD LocationX
-$LOAD Markup
 $LOAD Nunits
 $LOAD OutageFactor
 $LOAD PowerCapacity
@@ -479,7 +477,6 @@ Location_th,
 Location_h2,
 LocationX,
 LoadShedding,
-Markup,
 OutageFactor,
 PartLoadMin,
 PowerCapacity,

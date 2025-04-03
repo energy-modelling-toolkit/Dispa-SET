@@ -231,50 +231,6 @@ def check_sto(config, plants, raw_data=True):
     return True
 
 
-def check_h2(config, plants):
-    """
-    Function that checks the H2 (p2h) unit characteristics
-    """
-    keys = ['PowerCapacity', 'Efficiency']
-    NonNaNKeys = []
-    StrKeys = []
-
-    if len(plants) == 0:  # If there are no P2HT units, exit the check
-        return True
-
-    check_keys(plants, keys, 'P2H2')
-    check_NonNaNKeys(plants, NonNaNKeys)
-    check_StrKeys(plants, StrKeys)
-
-    return True
-
-
-def check_p2h(config, plants):
-    """
-    Function that checks the p2h unit characteristics
-    """
-    keys = ['COP']
-    NonNaNKeys = ['COP']
-    StrKeys = []
-
-    if len(plants) == 0:  # If there are no P2HT units, exit the check
-        return True
-
-    for t in commons['tech_p2ht']:
-        check_keys(plants, keys, t)
-    check_NonNaNKeys(plants, NonNaNKeys)
-    check_StrKeys(plants, StrKeys)
-
-    # Check the COP values:
-    for u in plants.index:
-        if plants.loc[u, 'COP'] < 0 or plants.loc[u, 'COP'] > 50:
-            logging.critical('The COP value of p2h units must be comprised between 0 and 20. '
-                             'The provided value for unit ' + u + ' is "' + str(plants.loc[u, 'COP'] + '"'))
-            sys.exit(1)
-
-    return True
-
-
 def check_p2bs(config, plants):
     """
     Function that checks the p2bs unit characteristics
@@ -301,25 +257,6 @@ def check_p2bs(config, plants):
     #                          str(plants.loc[u, 'Efficiency1'] + '"')
     #                          )
     #         sys.exit(1)
-
-    return True
-
-
-def check_heat(config, plants):
-    """
-    Function that checks the heat only unit characteristics
-    """
-    keys = ['PowerCapacity', 'Efficiency']
-    NonNaNKeys = []
-    StrKeys = []
-
-    if len(plants) == 0:  # If there are no P2HT units, exit the check
-        return True
-
-    for t in commons['tech_heat']:
-        check_keys(plants, keys, t)
-    check_NonNaNKeys(plants, NonNaNKeys)
-    check_StrKeys(plants, StrKeys)
 
     return True
 
@@ -675,31 +612,6 @@ def check_PrimaryReserveLimit(PrimaryReserveLimit, Load):
         sys.exit(1)
     else:
         logging.warning('No Primary Reserve Limit requirement data has been found')
-
-def check_temperatures(plants, Temperatures):
-    """
-    Function that checks the presence and validity of the temperatures profiles for
-    units with temperature-dependent characteristics
-
-    :param plants:          List of all units
-    :param Temperatures:    Dataframe of input temperatures
-    """
-
-    plants.index = plants['Unit']
-    if 'Tnominal' in plants and is_numeric_dtype(plants['Tnominal']):
-        plants_T = plants[plants.Tnominal > 0]
-        if 'coef_COP_a' not in plants or 'coef_COP_b' not in plants:
-            logging.critical('Columns coef_COP_a and coef_COP_b must be defined in the units table')
-            sys.exit(1)
-    else:
-        plants_T = pd.DataFrame(columns=plants.columns)
-    for u in plants_T.index:
-        if plants_T.loc[u, 'Zone'] not in Temperatures:
-            logging.critical('No temperature data has been found for zone ' + plants_T.loc[u, 'Zone'] +
-                             ", although it is required for temperature-dependent unit " + u)
-            sys.exit(1)
-
-    return True
 
 
 def check_df(df, StartDate=None, StopDate=None, name=''):

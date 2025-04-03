@@ -53,15 +53,7 @@ def EfficiencyTimeSeries(config, plants, Temperatures):
     """
     Efficiencies = pd.DataFrame(columns=plants.index, index=config['idx_long'])
     for u in plants.index:
-        z = plants.loc[u, 'Zone']
-        if plants.loc[u, 'Technology'] in commons['tech_p2ht'] and plants.loc[u,'Tnominal'] in plants:
-            eff = plants.loc[u, 'COP'] + plants.loc[u, 'coef_COP_a'] * (Temperatures[z] - plants.loc[u, 'Tnominal']) + \
-                  plants.loc[u, 'coef_COP_b'] * (Temperatures[z] - plants.loc[u, 'Tnominal']) ** 2
-        elif (plants.loc[u, 'Technology'] in commons['tech_p2ht']):
-            eff = plants.loc[u, 'COP']
-        else:
-            eff = plants.loc[u, 'Efficiency']
-        Efficiencies[u] = eff
+        Efficiencies[u] = plants.loc[u, 'Efficiency']
     return Efficiencies
 
 

@@ -37,10 +37,7 @@ commons['tech_batteries'] = ['BATS']#MARCO
 # List of storage technologies:
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
 # commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP', 'HDAMC']
-# List of power to heat technologies:
-commons['tech_p2ht'] = []
-# List of power to h2 technologies
-commons['tech_p2h2'] = ['PEFC', 'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 'P2GS', 'ALKE', 'PEME', 'SOXE']
+
 # List of power to boundary sector technologies
 commons['tech_p2bs'] = ['P2GS', 'ALKE', 'PEME', 'SOXE', 'P2BS', 'PEFC',
                         'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 'HDAMC', 'HRORC', 'HDLZ',
@@ -48,12 +45,8 @@ commons['tech_p2bs'] = ['P2GS', 'ALKE', 'PEME', 'SOXE', 'P2BS', 'PEFC',
                         'P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
 # List of boundary sector to power technologies
 commons['tech_bs2p'] = ['BSPG']
-# List of heat only technologies:
-commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
 # List of boundary sector only technologies:
 commons['tech_boundary_sector'] = ['BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP', 'HOBOX', 'P2BS']#MARCO , 'HDAMC', 'HRORC'
-# List of thermal storage technologies:
-commons['tech_thermal_storage'] = ['THMS']
 # List of CHP types:
 commons['types_CHP'] = ['extraction', 'back-pressure', 'p2h']
 # DispaSET fuels:
