@@ -418,6 +418,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     HeatDemand = GenericTable(zones_th, 'HeatDemand', config, default=0)
     CostHeatSlack = GenericTable(zones_th, 'CostHeatSlack', config, default=config['default']['CostHeatSlack'])
 
+    # addding the thermal zones to the boundary sectors
+    for z in zones_th:
+        if z not in BoundarySector.index:
+            BoundarySector.loc[z,'STOCapacity'] = 0
+            BoundarySector.loc[z,'CostXNotServed'] = CostHeatSlack[z].mean()
+
     # Detecting h2 zones:
     zones_h2 = plants_h2['Zone_h2'].unique().tolist()
     if '' in zones_h2:
@@ -1181,7 +1187,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         parameters[var] = define_parameter(sets_param[var], sets, value=1e7)
 
     # Boolean parameters:
-    # for var in ['Technology', 'Fuel', 'Reserve', 'Location', 'Location_th', 'LocationX']:
     for var in ['Technology', 'Fuel', 'Reserve', 'Location', 'Location_th', 'Location_h2', 'LocationX']:
         parameters[var] = define_parameter(sets_param[var], sets, value='bool')
     # for var in [col for col in plants if col.startswith('Sector')]:
@@ -1728,8 +1733,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Location
     for i in range(len(sets['n'])):
         parameters['Location']['val'][:, i] = (Plants_merged['Zone'] == config['zones'][i]).values
-    for i in range(len(sets['n_th'])):
-        parameters['Location_th']['val'][:, i] = (Plants_merged['Zone_th'] == zones_th[i]).values
+        
     for i in range(len(sets['n_h2'])):
         parameters['Location_h2']['val'][:, i] = (Plants_merged['Zone_h2'] == zones_h2[i]).values
 
@@ -1739,6 +1743,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             for s in sectors:
                 parameters['LocationX']['val'][:, i] = np.logical_or(parameters['LocationX']['val'][:, i],
                                                                      (Plants_merged[s] == zones_bs[i]).values)
+    # Adding the CHP to their respective boundary sectors:
+    for i in range(len(sets['nx'])):
+        # Use logical OR to combine CHP values with existing boundary sector values
+        parameters['LocationX']['val'][:, i] = np.logical_or(parameters['LocationX']['val'][:, i],
+                                                             (Plants_merged['Zone_th'] == zones_bs[i]).values)
 
     # CHPType parameter:
     sets['chp_type'] = ['Extraction', 'Back-Pressure', 'P2H']

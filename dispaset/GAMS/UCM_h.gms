@@ -837,7 +837,6 @@ EQ_SystemCost(i)..
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
          +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
-         +sum((nx,xu),CostVariable(xu,i) * PowerX(nx,xu,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
@@ -869,7 +868,6 @@ EQ_SystemCost(i)..
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(hu,CostVariable(hu,i) * Heat(hu,i)*TimeStep)
          +sum(p2h,CostVariable(p2h,i) * Heat(p2h,i)*TimeStep)
-         +sum((nx,xu),CostVariable(xu,i) * PowerX(nx,xu,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
          +sum(n,CostLoadShedding(n,i)*ShedLoad(n,i)*TimeStep)
          +sum(n_th, CostHeatSlack(n_th,i) * HeatSlack(n_th,i)*TimeStep)
@@ -1691,10 +1689,11 @@ EQ_Power_Balance_of_P2X_units(nx,p2x,i)..
          PowerConsumption(p2x,i) * Power2XConversionMultiplier(nx,p2x,i) * LocationX(p2x,nx)
 ;
 
-EQ_Power_Balance_of_X2P_units(nx,x2p,i)$(X2PowerConversionMultiplier(nx,x2p,i)<>0)..                                                                                                                                                                                                                                                    
+EQ_Power_Balance_of_X2P_units(nx,x2p,i)..                                                                                                                                                                                                                                                    
          PowerX(nx,x2p,i) 
          =E=
-         Power(x2p,i)/X2PowerConversionMultiplier(nx,x2p,i)  * LocationX(x2p,nx)
+         0 + 
+         (Power(x2p,i)/X2PowerConversionMultiplier(nx,x2p,i)  * LocationX(x2p,nx))$(X2PowerConversionMultiplier(nx,x2p,i)<>0)
 ;
 
 EQ_Max_Power_Consumption_of_BS_units(p2x,i)..
@@ -1727,12 +1726,11 @@ EQ_H2_Demand_balance(n_h2,i)..
 EQ_BS_Demand_balance(nx,i)..
         sum(p2x, PowerX(nx,p2x,i))
         + sum(x2p, PowerX(nx,x2p,i))
-        + sum(xu, PowerX(nx,xu,i))
+        + sum(chp, Heat(chp,i)*LocationX(chp,nx))        
         + XNotServed(nx,i)
         + sum(lx,FlowX(lx,i)*LineXNode(lx,nx))
         + SectorXFlexSupply(nx,i)
         + sum(slx,SectorXSpillage(slx,i)*SectorXSpillageNode(slx,nx))
-        + sum(chp, Heat(chp,i)*LocationX(chp,nx))
         + sum(p2h, Heat(p2h,i)*LocationX(p2h,nx))
         + sum(thms, Heat(thms,i)*LocationX(thms,nx))
         =E=
@@ -1749,7 +1747,6 @@ EQ_BS_Demand_balance2(nx,i)..
         =L=
         sum(p2x, PowerX(nx,p2x,i))
         + sum(x2p, PowerX(nx,x2p,i))
-        + sum(xu, PowerX(nx,xu,i))
         + sum(lx,FlowX(lx,i)*LineXNode(lx,nx))
         + SectorXFlexSupply(nx,i)
         + sum(slx,SectorXSpillage(slx,i)*SectorXSpillageNode(slx,nx))
@@ -2122,7 +2119,7 @@ $If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
 CurtailedHeat.L(n_th,z)=sum(hu,(Nunits(hu)*PowerCapacity(hu)*LoadMaximum(hu,z)-Heat.L(hu,z))$(sum(tr,Technology(hu,tr))>=1) * Location_th(hu,n_th));
 
 
-$If %Verbose% == 1 Display Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,CurtailmentReserve_2U.L, CurtailmentReserve_3U.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
+$If %Verbose% == 1 Display PowerX.L,Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,CurtailmentReserve_2U.L, CurtailmentReserve_3U.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
 
 *===============================================================================
 *Result export
