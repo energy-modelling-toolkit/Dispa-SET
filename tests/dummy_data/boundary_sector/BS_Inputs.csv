@@ -1,2 +1,2 @@
 ,Sector,STOCapacity,STOSelfDischarge,STOMinSOC,MaxFlexDemand,MaxFlexSupply,CostXNotServed
-1,Z1_h2,50,,,10,,10
+1,Z1_h2,500,,,10,,10

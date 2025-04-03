@@ -726,8 +726,6 @@ EQ_Max_Power_Consumption
 EQ_Power_Balance_of_P2X_units
 EQ_Power_Balance_of_X2P_units
 EQ_Max_Power_Consumption_of_BS_units
-EQ_Boundary_sector_only_power_available
-EQ_Boundary_sector_only_power_available_min
 EQ_Power_must_run
 EQ_Power_available
 EQ_Heat_available
@@ -802,7 +800,6 @@ $If %MTS% == 0 EQ_PrimaryReserve_Available
 $If %MTS% == 0 EQ_PrimaryReserve_Capability
 $If %MTS% == 0 EQ_PrimaryReserve_Boundary
 $If %MTS% == 0 EQ_Demand_balance_PrimaryReserve
-
 $If %MTS% == 0 EQ_FFRGain
 $If %MTS% == 0 EQ_FFRGain_limit
 $If %MTS% == 0 EQ_FFR_Available
@@ -1372,19 +1369,6 @@ EQ_thms_Heat_available(thms,i)..
                         *Committed(thms,i)
 ; 
 
-* Maximum boundary sector output is below the available capacity
-EQ_Boundary_sector_only_power_available(nx,xu,i)..
-         PowerX(nx,xu,i)
-         =L=
-         PowerCapacity(xu)*LoadMaximum(xu,i)*Nunits(xu)*LocationX(xu,nx)
-;
-
-EQ_Boundary_sector_only_power_available_min(nx,xu,i)..
-         0
-         =L=
-         PowerX(nx,xu,i)
-;
-
 *Boundary Sector Storage level must be above a minimum
 EQ_Boundary_Sector_Storage_minimum(nx,i)..
          SectorXStorageMinimum(nx)
@@ -1910,7 +1894,7 @@ EQ_CHP_backpressure,
 EQ_Heat_Demand_balance,
 EQ_H2_Demand_balance,
 EQ_BS_Demand_balance,
-EQ_BS_Demand_balance2,
+*EQ_BS_Demand_balance2,
 EQ_CHP_max_heat,
 EQ_CostRampUp,
 EQ_CostRampDown,
@@ -1933,8 +1917,6 @@ EQ_Power_Balance_of_X2P_units,
 EQ_P2H2,
 EQ_Max_P2H2,
 EQ_Max_Power_Consumption_of_BS_units,
-EQ_Boundary_sector_only_power_available,
-EQ_Boundary_sector_only_power_available_min,
 EQ_Power_available,
 EQ_Heat_available,
 EQ_thms_Heat_available,
