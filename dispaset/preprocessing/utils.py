@@ -77,28 +77,24 @@ def BoundarySectorEfficiencyTimeSeries(config, plants, zones_bs):
 
     :returns:               Dictionary of Dataframes with a time series of the efficiency for each unit
     """
-    filter_bs_cols = [col for col in plants if col.startswith('Sector')]
+    # Get the sector columns (Sector1, Sector2, etc.)
+    sector_cols = [col for col in plants if col.startswith('Sector') and not col.startswith('Efficiency')]
     Efficiencies = {}
+    
     for n in zones_bs:
         Efficiencies[n] = pd.DataFrame(columns=plants.index, index=config['idx_long'])
-        for s in filter_bs_cols:
+        for s in sector_cols:
             for u in plants.index:
                 if ((plants.loc[u, 'Technology'] in commons['tech_p2bs'] or plants.loc[u, 'Technology'] in commons['tech_boundary_sector']) and 
                     (plants.loc[u, s] == n)):
-                    Efficiencies[n][u] = plants.loc[u, 'Efficiency'+s]
+                    # For p2x units, use EfficiencySectorX for Power2XConversionMultiplier
+                    # For x2p units, use EfficiencySectorX for X2PowerConversionMultiplier
+                    eff_col = 'EfficiencySector' + s[6:]  # Convert 'Sector1' to 'EfficiencySector1'
+                    Efficiencies[n][u] = plants.loc[u, eff_col]
         if n in Efficiencies:
             Efficiencies[n] = Efficiencies[n].fillna(0)
-    ChargingEfficiencies = {}
-    for n in zones_bs:
-        ChargingEfficiencies[n] = pd.DataFrame(columns=plants.index, index=config['idx_long'])
-        for s in filter_bs_cols:
-            for u in plants.index:
-                if ((plants.loc[u, 'Technology'] in commons['tech_p2bs'] or plants.loc[u, 'Technology'] in commons['tech_boundary_sector']) and 
-                    (plants.loc[u, s] == n)):
-                    ChargingEfficiencies[n][u] = plants.loc[u, 'ChargingEfficiency'+s]
-        if n in ChargingEfficiencies:
-            ChargingEfficiencies[n] = ChargingEfficiencies[n].fillna(0)
-    return {'Efficiency': Efficiencies, 'ChargingEfficiency': ChargingEfficiencies}
+    
+    return {'Efficiency': Efficiencies}
 
 
 def select_units(units, config):
