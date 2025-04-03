@@ -1087,8 +1087,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
     sets_param['Efficiency'] = ['au', 'h']
-    sets_param['X2PowerConversionMultiplier'] = ['nx', 'xu', 'h']
-    sets_param['Power2XConversionMultiplier'] = ['nx', 'xu', 'h']
+    sets_param['X2PowerConversionMultiplier'] = ['nx', 'x2p', 'h']
+    sets_param['Power2XConversionMultiplier'] = ['nx', 'p2x', 'h']
     sets_param['EmissionMaximum'] = ['n', 'p']
     sets_param['EmissionRate'] = ['au', 'p']
     sets_param['FlowMaximum'] = ['l', 'h']
@@ -1415,22 +1415,22 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     if (SectorCoupling_flag == 'On'): 
         # Initialize conversion multipliers with zeros
-        values_p2x = np.zeros([len(sets['nx']), len(sets['xu']), len(sets['h'])])
-        values_x2p = np.zeros([len(sets['nx']), len(sets['xu']), len(sets['h'])])
+        values_p2x = np.zeros([len(sets['nx']), len(sets['p2x']), len(sets['h'])])
+        values_x2p = np.zeros([len(sets['nx']), len(sets['x2p']), len(sets['h'])])
 
         # Handle p2x units
         for i in range(len(sets['nx'])):
-            for u in range(len(sets['xu'])):
-                if Plants_merged.loc[sets['xu'][u], 'Technology'] in commons['tech_p2bs']:
-                    values_p2x[i, u, :] = finalTS['EfficienciesBoundarySector'][sets['nx'][i]][sets['xu'][u]]
-                    logging.info(f"Unit {sets['xu'][u]} is a p2x unit, setting Power2XConversionMultiplier")
+            for u in range(len(sets['p2x'])):
+                if Plants_merged.loc[sets['p2x'][u], 'Technology'] in commons['tech_p2bs']:
+                    values_p2x[i, u, :] = finalTS['EfficienciesBoundarySector'][sets['nx'][i]][sets['p2x'][u]]
+                    logging.info(f"Unit {sets['p2x'][u]} is a p2x unit, setting Power2XConversionMultiplier")
 
         # Handle x2p units
         for i in range(len(sets['nx'])):
-            for u in range(len(sets['xu'])):
-                if Plants_merged.loc[sets['xu'][u], 'Technology'] in commons['tech_boundary_sector']:
-                    values_x2p[i, u, :] = finalTS['EfficienciesBoundarySector'][sets['nx'][i]][sets['xu'][u]]
-                    logging.info(f"Unit {sets['xu'][u]} is an x2p unit, setting X2PowerConversionMultiplier")
+            for u in range(len(sets['x2p'])):
+                if Plants_merged.loc[sets['x2p'][u], 'Technology'] in commons['tech_boundary_sector']:
+                    values_x2p[i, u, :] = finalTS['EfficienciesBoundarySector'][sets['nx'][i]][sets['x2p'][u]]
+                    logging.info(f"Unit {sets['x2p'][u]} is an x2p unit, setting X2PowerConversionMultiplier")
 
         # Set the parameters with the appropriate values
         parameters['Power2XConversionMultiplier'] = {'sets': sets_param['Power2XConversionMultiplier'], 'val': values_p2x}
