@@ -11,7 +11,7 @@ import pandas as pd
 from .data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, check_temperatures, \
     check_clustering, isStorage, check_chp, check_p2h, check_h2, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves, check_heat, check_p2bs, check_boundary_sector, \
-    check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_FFRLimit, check_PrimaryReserveLimit
+    check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_FFRLimit, check_PrimaryReserveLimit, check_CostXNotServed
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
@@ -452,11 +452,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             SectorXDemand = pd.DataFrame(index=config['idx_long'])    
     
         if 'CostXNotServed' in config and os.path.isfile(config['CostXNotServed']):
-            CostXNotServed = GenericTable(zones_bs, 'CostXNotServed', config,
-                                          default=config['default']['CostXNotServed'])
+            CostXNotServed = GenericTable(zones_bs, 'CostXNotServed', config)
+            check_CostXNotServed(config, CostXNotServed, zones_bs)
         else:
-            logging.warning('No CostXNotServed will be considered (no valid file provided)')
-            CostXNotServed = pd.DataFrame(index=config['idx_long']) 
+            # Create a DataFrame with the CostXNotServed values from BoundarySector
+            CostXNotServed = pd.DataFrame(index=config['idx_long'])
+            for zone in zones_bs:
+                if zone in BoundarySector.index and 'CostXNotServed' in BoundarySector.columns:
+                    CostXNotServed[zone] = BoundarySector.loc[zone, 'CostXNotServed']
+                else:
+                    logging.critical(f'CostXNotServed is not defined for boundary sector {zone} in the boundary sector data table')
+                    sys.exit(1)
+            check_CostXNotServed(config, CostXNotServed, zones_bs)
         # TODO: CHECK THIS LINE
         # BoundarySector = BoundarySector.reindex(zones_bs)
         BoundarySector = BoundarySector[BoundarySector.index.isin(zones_bs)]

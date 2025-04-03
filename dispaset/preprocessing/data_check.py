@@ -870,3 +870,25 @@ def check_simulation_environment(SimulationPath, store_type='pickle', firstline=
     else:
         logging.critical('The "type" parameter must be one of the following : "list", "excel", "pickle"')
         sys.exit(1)
+
+def check_CostXNotServed(config, CostXNotServed, zones_bs):
+    """
+    Check that CostXNotServed is properly defined for all boundary sectors
+    
+    :param config:            Dictionary with all the configuration fields loaded from the excel file
+    :param CostXNotServed:    DataFrame with CostXNotServed values
+    :param zones_bs:          List of boundary sector zones
+    """
+    if CostXNotServed.empty:
+        logging.critical('CostXNotServed is not defined for any boundary sector')
+        sys.exit(1)
+    
+    for zone in zones_bs:
+        if zone not in CostXNotServed.columns:
+            logging.critical('CostXNotServed is not defined for boundary sector ' + zone)
+            sys.exit(1)
+        if CostXNotServed[zone].isna().all():
+            logging.critical('CostXNotServed is not defined for boundary sector ' + zone)
+            sys.exit(1)
+        if (CostXNotServed[zone] == 0).all():
+            logging.warning('CostXNotServed is zero for boundary sector ' + zone + '. This may lead to unrealistic results.')
