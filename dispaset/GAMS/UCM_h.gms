@@ -1691,10 +1691,10 @@ EQ_Power_Balance_of_P2X_units(nx,p2x,i)..
          PowerConsumption(p2x,i) * Power2XConversionMultiplier(nx,p2x,i) * LocationX(p2x,nx)
 ;
 
-EQ_Power_Balance_of_X2P_units(nx,x2p,i)..                                                                                                                                                                                                                                                    
-         PowerX(nx,x2p,i)
+EQ_Power_Balance_of_X2P_units(nx,x2p,i)$(X2PowerConversionMultiplier(nx,x2p,i)<>0)..                                                                                                                                                                                                                                                    
+         PowerX(nx,x2p,i) 
          =E=
-         Power(x2p,i) / (X2PowerConversionMultiplier(nx,x2p,i)) * LocationX(x2p,nx)
+         Power(x2p,i)/X2PowerConversionMultiplier(nx,x2p,i)  * LocationX(x2p,nx)
 ;
 
 EQ_Max_Power_Consumption_of_BS_units(p2x,i)..
