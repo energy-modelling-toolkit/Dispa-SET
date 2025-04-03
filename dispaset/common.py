@@ -45,6 +45,8 @@ commons['tech_p2h2'] = ['PEFC', 'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 
 commons['tech_p2bs'] = ['P2GS', 'ALKE', 'PEME', 'SOXE', 'P2BS', 'PEFC',
                         'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 'HDAMC', 'HRORC', 'HDLZ',
                         'COMCX', 'GTURX', 'ICENX', 'STURX']#MARCO
+# List of power to boundary sector technologies
+commons['tech_bs2p'] = ['BSPG']
 # List of heat only technologies:
 commons['tech_heat'] = ['GETH', 'HOBO', 'SOTH', 'ABHP']
 # List of boundary sector only technologies:

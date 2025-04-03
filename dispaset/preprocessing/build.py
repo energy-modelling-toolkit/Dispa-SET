@@ -861,8 +861,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         Plants_p2bs = Plants_merged[[u in commons['tech_p2bs'] for u in Plants_merged['Technology']]].copy()
         # Check heat only units
         check_p2bs(config, Plants_p2bs)
+        
+        # Filter boundary sector to power plants
+        Plants_x2p = Plants_merged[[u in commons['tech_bs2p'] for u in Plants_merged['Technology']]].copy()
     else:
         Plants_p2bs = pd.DataFrame()
+        Plants_x2p = pd.DataFrame()
 
     # Water storage
     Plants_wat = Plants_merged[(Plants_merged['Fuel'] == 'WAT') & (Plants_merged['Technology'] != 'HROR')].copy()
@@ -1027,6 +1031,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets['p2h'] = Plants_p2h.index.tolist()
     sets['p2h2'] = Plants_h2.index.tolist()
     sets['p2x'] = Plants_p2bs.index.tolist()
+    sets['x2p'] = Plants_x2p.index.tolist()
     sets['th'] = Plants_heat.index.tolist()
     sets['thms'] = Plants_thms.index.tolist()
     sets['t'] = commons['Technologies']

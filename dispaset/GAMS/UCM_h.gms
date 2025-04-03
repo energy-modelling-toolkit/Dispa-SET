@@ -76,6 +76,7 @@ au               All Units
 u(au)            Generation units
 chp(u)           CHP units
 p2x(au)          Power to X
+x2p(au)          X to Power
 xu(au)           Boundary sector only units
 s(au)            Storage Units (with reservoir)
 p2h(au)          Power to heat units
@@ -293,6 +294,7 @@ $LOAD s
 $LOAD wat
 $LOAD p2h2
 $LOAD p2x
+$LOAD x2p
 $LOAD chp
 $LOAD p2h
 *New
@@ -430,6 +432,7 @@ s,
 p2h2,
 wat,
 p2x,
+x2p,
 chp,
 p2h,
 *New
@@ -718,8 +721,10 @@ EQ_Demand_balance_2D
 EQ_P2H2
 EQ_Max_P2H2
 EQ_P2X_Power_Balance
+EQ_X2P_Power_Balance
 EQ_Max_Power_Consumption
-EQ_Power_Balance_of_BS_units
+EQ_Power_Balance_of_P2X_units
+EQ_Power_Balance_of_X2P_units
 EQ_Max_Power_Consumption_of_BS_units
 EQ_Boundary_sector_only_power_available
 EQ_Boundary_sector_only_power_available_min
@@ -986,7 +991,7 @@ EQ_Residual_Load(n,i)..
 
 EQ_Demand_balance_DA(n,i)..
          sum(u,Power(u,i)*Location(u,n))
-         +sum(p2x,Power(p2x,i)*Location(p2x,n))
+         +sum(x2p,Power(x2p,i)*Location(x2p,n))
 $If %TransmissionGrid% == 0         +sum(l,Flow(l,i)*LineNode(l,n))
 $If %TransmissionGrid% == 1         -InjectedPower(i,n)
          +ShedLoad(n,i)
@@ -1339,12 +1344,12 @@ EQ_Power_must_run(u,i)..
 *Maximum power output is below the available capacity                                                                                                          
 EQ_Power_available(au,i)..
          Power(au,i)$(u(au))
-         + Power(au,i)$(p2x(au))
+         + Power(au,i)$(x2p(au))
          + Heat(au,i)$(thms(au))
          + Power(au,i)$(p2h(au))
          =L=
          PowerCapacity(au)$(u(au))*LoadMaximum(au,i)$(u(au))*Committed(au,i)$(u(au))
-         + PowerCapacity(au)$(p2x(au))*LoadMaximum(au,i)$(p2x(au))*Nunits(au)$(p2x(au))
+         + ((PowerCapacity(au))*LoadMaximum(au,i)*Nunits(au))$(x2p(au))
          + PowerCapacity(au)$(thms(au))*LoadMaximum(au,i)$(thms(au))*Committed(au,i)$(thms(au))
          + 0
 ;
@@ -1696,17 +1701,22 @@ EQ_Max_P2H2(p2h2,i)..
 *;
 
 * Power to boundary sector units                                                                                                                                        
-EQ_Power_Balance_of_BS_units(nx,p2x,i)..                                                                                                                                                                                                                                                    
+EQ_Power_Balance_of_P2X_units(nx,p2x,i)..                                                                                                                                                                                                                                                    
          PowerX(nx,p2x,i)
          =E=
-         (PowerConsumption(p2x,i) * Power2XConversionMultiplier(nx,p2x,i) * LocationX(p2x,nx))$(Power2XConversionMultiplier(nx,p2x,i) <> 0)
-         + (Power(p2x,i) / (X2PowerConversionMultiplier(nx,p2x,i)) * LocationX(p2x,nx))$(X2PowerConversionMultiplier(nx,p2x,i) <> 0)
+         PowerConsumption(p2x,i) * Power2XConversionMultiplier(nx,p2x,i) * LocationX(p2x,nx)
+;
+
+EQ_Power_Balance_of_X2P_units(nx,x2p,i)..                                                                                                                                                                                                                                                    
+         PowerX(nx,x2p,i)
+         =E=
+         Power(x2p,i) / (X2PowerConversionMultiplier(nx,x2p,i)) * LocationX(x2p,nx)
 ;
 
 EQ_Max_Power_Consumption_of_BS_units(p2x,i)..
          PowerConsumption(p2x,i)
          =L=
-         StorageChargingCapacity(p2x) * Nunits(p2x)
+         PowerCapacity(p2x) * Nunits(p2x)
 ;
 
 EQ_Heat_Demand_balance(n_th,i)..
@@ -1732,6 +1742,7 @@ EQ_H2_Demand_balance(n_h2,i)..
 
 EQ_BS_Demand_balance(nx,i)..
         sum(p2x, PowerX(nx,p2x,i))
+        + sum(x2p, PowerX(nx,x2p,i))
         + sum(xu, PowerX(nx,xu,i))
         + XNotServed(nx,i)
         + sum(lx,FlowX(lx,i)*LineXNode(lx,nx))
@@ -1753,6 +1764,7 @@ EQ_BS_Demand_balance2(nx,i)..
         + SectorXDemand(nx,i)$(SectorXDemand(nx,i)<0)
         =L=
         sum(p2x, PowerX(nx,p2x,i))
+        + sum(x2p, PowerX(nx,x2p,i))
         + sum(xu, PowerX(nx,xu,i))
         + sum(lx,FlowX(lx,i)*LineXNode(lx,nx))
         + SectorXFlexSupply(nx,i)
@@ -1916,7 +1928,8 @@ EQ_Demand_balance_3U,
 $If not %LPFormulation% == 1 EQ_Power_must_run,
 EQ_P2X_Power_Balance,
 EQ_Max_Power_Consumption,
-EQ_Power_Balance_of_BS_units,                                         
+EQ_Power_Balance_of_P2X_units,
+EQ_Power_Balance_of_X2P_units,                                  
 EQ_P2H2,
 EQ_Max_P2H2,
 EQ_Max_Power_Consumption_of_BS_units,
