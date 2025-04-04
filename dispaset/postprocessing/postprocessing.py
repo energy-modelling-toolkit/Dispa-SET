@@ -252,38 +252,6 @@ def get_plot_data(inputs, results, z):
     return plotdata
 
 
-def get_heat_plot_data(inputs, results, z_th):
-    """
-    Function that reads the results dataframe of a DispaSET simulation
-    and extract the dispatch data specific to one zone
-
-    :param results:         Pandas dataframe with the results (output of the GdxToDataframe function)
-    :param z_th:            Heating zone to be considered (e.g. 'BE_th')
-    :returns plotdata:      Dataframe with the dispatch data storage and outflows are negative
-    """
-    tmp = filter_by_heating_zone(results['OutputHeat'], inputs, z_th)
-    plotdata = aggregate_by_fuel(tmp, inputs)
-
-
-    if z_th not in results['OutputHeatSlack'].columns:
-        plotdata.loc[:, 'HeatSlack'] = 0
-    else:
-        plotdata.loc[:, 'HeatSlack'] = results['OutputHeatSlack'].loc[:, z_th]
-
-    plotdata.fillna(value=0, inplace=True)
-
-    # re-ordering columns:
-    OrderedColumns = [col for col in commons['MeritOrderHeat'] if col in plotdata.columns]
-    plotdata = plotdata[OrderedColumns]
-
-    # remove empty columns:
-    for col in plotdata.columns:
-        if plotdata[col].max() == 0 and plotdata[col].min() == 0:
-            del plotdata[col]
-
-    return plotdata
-
-
 def get_imports(flows, z):
     """ 
     Function that computes the balance of the imports/exports of a given zone
@@ -502,16 +470,6 @@ def get_result_analysis(inputs, results, units='MWh'):
         WaterData['ZoneLevel']['WaterConsumption'] = pd.concat([WaterData['ZoneLevel']['WaterConsumption'], tmp],
                                                                axis=1)
 
-    # if not inputs['param_df']['HeatDemand'].empty:
-    #     return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
-    #             'TotalHeatLoad': TotalHeatLoad, 'PeakHeatLoad': PeakHeatLoad,
-    #             'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt,
-    #             'HeatCurtailment': HeatCurtailment, 'MaxHeatCurtailment': MaxHeatCurtailemnt,
-    #             'ShedLoad': LoadShedding, 'MaxShedLoad': MaxLoadShedding,
-    #             'ShiftedLoad': ShiftedLoad_tot,
-    #             'ZoneData': ZoneData, 'Congestion': Congestion, 'StorageData': StorageData,
-    #             'UnitData': UnitData, 'FuelData': FuelData, 'WaterConsumptionData': WaterData}
-    # else:
     return {'Cost_kwh': Cost_kwh, 'TotalLoad': TotalLoad, 'PeakLoad': PeakLoad, 'NetImports': NetImports,
             'Curtailment': Curtailment, 'MaxCurtailment': MaxCurtailemnt,
             'ShedLoad': LoadShedding, 'MaxShedLoad': MaxLoadShedding,
@@ -549,9 +507,6 @@ def get_indicators_powerplant(inputs, results):
             out.loc[u, 'Generation'] = results['OutputPower'][u].sum()
         if u in results['OutputHeat']:
             out.loc[u, 'HeatGeneration'] = results['OutputHeat'][u].sum()
-    # if inputs['param_df']['HeatDemand'].empty:
-    #     # out.drop(['Zone_th'], axis=1, inplace=True)
-    #     out.loc[:, 'Zone_th'] = ''
     return out
 
 
@@ -669,16 +624,6 @@ def CostExPost(inputs, results):
             CostHeat[u] = dfin['CostVariable'][u].fillna(0) * results['OutputHeat'][u].fillna(0)
     costs['CostHeat'] = CostHeat.sum(axis=1).fillna(0)
 
-    # # %% Cost H2:
-    # CostH2 = pd.DataFrame(index=costs.index, columns=dfin['CostH2Slack'].columns)
-    # for u in dfin['CostH2Slack'].columns:
-    #     CostH2[u] = dfin['CostH2Slack'][u].fillna(0) * results['OutputStorageSlack'][u].fillna(0)
-    # costs['CostH2Slack'] = CostH2.fillna(0).sum(axis=1)
-
-    # %% Lost loads:
-    # NB: the value of lost load is currently hard coded. This will have to be updated
-    # Locate prices for LL
-    # TODO:
     costs['LostLoad'] = 80e3 * (results['LostLoad_2D'].reindex(timeindex).sum(axis=1).fillna(0) +
                                 results['LostLoad_2U'].reindex(timeindex).sum(axis=1).fillna(0) +
                                 results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0)) + \
@@ -807,6 +752,7 @@ def get_units_operation_cost(inputs, results):
 def get_EFOH(inputs, results):
     """
     Function that computes the "Equivalent Full Load Operating Hours" of the Elyzers
+    TODO: change this to make it more general
     :param inputs:      DispaSET inputs
     :param results:     DispaSET results
     :returns EFOH:      Dataframe with the EFOH of each country
