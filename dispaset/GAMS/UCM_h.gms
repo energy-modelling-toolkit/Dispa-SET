@@ -30,13 +30,6 @@ Option solver=gurobi;
 *Definition of the dataset-related options
 *===============================================================================
 
-* Print results to excel files (0 for no, 1 for yes)
-$set Verbose 0
-
-* Set debug mode. !! This breaks the loop and requires a debug.gdx file !!
-* (0 for no, 1 for yes)
-$set Debug 0
-
 * Name of the input file (Ideally, stick to the default Input.gdx)
 *$set InputFileName Input.gdx
 $set InputFileName Inputs.gdx
@@ -95,7 +88,6 @@ p                Pollutants
 *Nodes
 n                Nodes
 nx               Boundary sector nodes
-nx_CC            Boundary sector nodes without the EndCascade node
 *Lines
 l                Lines
 lx               Boundary sector lines
@@ -264,7 +256,6 @@ $gdxin %inputfilename%
 $LOAD mk
 $LOAD n
 $LOAD nx
-$LOAD nx_CC
 $LOAD l
 $LOAD lx
 $LOAD slx
@@ -381,116 +372,6 @@ $If %MTS% == 0 $LOAD PrimaryReserveLimit
 $If %MTS% == 0 $LOAD FFRLimit
 ;
 
-$If %Verbose% == 0 $goto skipdisplay
-
-Display
-mk,
-n,
-nx,
-nx_CC,
-l,
-lx,
-u,
-t,
-tr,
-tc,
-f,
-p,
-s,
-wat,
-p2x,
-x2p,
-chp,
-*New
-cu,
-h,
-AvailabilityFactor,
-CHPPowerLossFactor,
-CHPPowerToHeat,
-CHPMaxHeat,
-CHPType,
-Config,
-CostFixed,
-CostShutDown,
-CostStartUp,
-CostRampUp,
-CostVariable,
-CostOfSpillage,
-CostStorageAlert,
-CostFloodControl,
-CostXStorageAlert,
-CostXFloodControl,
-CostXSpillage,
-Demand,
-StorageDischargeEfficiency,
-Efficiency,
-EmissionMaximum,
-EmissionRate,
-FlowMaximum,
-FlowMinimum,
-FlowXMaximum,
-FlowXMinimum,
-Fuel,
-LineNode,
-LineXNode,
-SectorXSpillageNode,
-SectorXMaximumSpillage,
-Location,
-LocationX,
-LoadShedding,
-OutageFactor,
-PartLoadMin,
-PowerCapacity,
-PowerInitial,
-PriceTransmission,
-StorageChargingCapacity,
-StorageChargingEfficiency,
-StorageSelfDischarge,
-RampDownMaximum,
-RampShutDownMaximum,
-RampStartUpMaximum,
-RampUpMaximum,
-Reserve,
-StorageCapacity,
-StorageInflow,
-StorageInitial,
-StorageProfile,
-StorageMinimum,
-StorageAlertLevel,
-StorageFloodControl,
-StorageHours,
-StorageOutflow,
-Technology,
-TimeDownMinimum,
-TimeUpMinimum,
-SectorXFlexDemandInput,
-SectorXFlexDemandInputInitial,
-SectorXFlexMaxCapacity,
-SectorXFlexSupplyInput,
-SectorXFlexSupplyInputInitial,
-SectorXFlexMaxSupply,
-SectorXStorageCapacity,
-SectorXStorageSelfDischarge,
-SectorXStorageHours,
-SectorXStorageMinimum,
-SectorXAlertLevel,
-SectorXFloodControl,
-$If %MTS% == 0 SectorXStorageInitial,
-SectorXStorageProfile,
-$If %RetrieveStatus% == 1 CommittedCalc,
-$If %TransmissionGrid% == 1 PTDF,
-
-*New
-$If %MTS% == 0 InertiaConstant,
-$If %MTS% == 0 InertiaLimit,
-$If %MTS% == 0 Droop,
-$If %MTS% == 0 SystemGainLimit,
-$If %MTS% == 0 FFRGainLimit,
-$If %MTS% == 0 PrimaryReserveLimit,
-$If %MTS% == 0 FFRLimit,
-;
-
-$label skipdisplay
 
 *===============================================================================
 *Definition of variables
@@ -627,7 +508,7 @@ AccumulatedOverSupply_inital(n) = 0;
 * Time step
 TimeStep = Config("SimulationTimeStep","val");
 
-$If %Verbose% == 1 Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial;
+* Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial;
 
 $offorder
 
@@ -1323,8 +1204,6 @@ EQ_Storage_input(s,i)..
          StorageChargingCapacity(s)*(Nunits(s)-Committed(s,i))
 ;
 
-* The system could curtail by pumping and turbining at the same time if Nunits>1. This should be included into the curtailment equation!
-
 *Discharge is limited by the storage level
 EQ_Storage_MaxDischarge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep)..
          Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
@@ -1719,10 +1598,6 @@ if (Config("RollingHorizon LookAhead","day") > ndays -1, abort "The look ahead p
 if (mod(Config("RollingHorizon LookAhead","day")*24,TimeStep) <> 0, abort "The look ahead period is not a multiple of TimeStep";);
 if (mod(Config("RollingHorizon Length","day")*24,TimeStep) <> 0, abort "The rolling horizon length is not a multiple of TimeStep";);
 
-* Some parameters used for debugging:
-failed=0;
-parameter CommittedInitial_dbg(au), PowerInitial_dbg(u), StorageInitial_dbg(au), StorageFinalMin_dbg(au), AccumulatedOverSupply_inital_dbg(n);
-
 * Fixing the initial guesses:
 *PowerH.L(u,i)=PowerInitial(u);
 *Committed.L(u,i)=CommittedInitial(u);
@@ -1730,10 +1605,6 @@ parameter CommittedInitial_dbg(au), PowerInitial_dbg(u), StorageInitial_dbg(au),
 * Defining a parameter that records the solver status:
 set  tmp   "tpm"  / "model", "solver"/  ;
 parameter status(tmp,h);
-
-$if %Debug% == 1 $goto DebugSection
-
-display "OK";
 
 scalar starttime;
 set days /1,'ndays'/;
@@ -1754,29 +1625,16 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
 $If %MTS% == 0     SectorXStorageFinalMin(nx) = sum(i$(ord(i)=card(i)),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 *$If %MTS% == 0     SectorXStorageInitial(nx) = sum(i$(ord(i)=1),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 
-$If %Verbose% == 1   Display PowerInitial,CommittedInitial,StorageFinalMin;
-$If %Verbose% == 1   Display PowerInitial,StorageFinalMin;
+* Display PowerInitial,CommittedInitial,StorageFinalMin;
 
 $If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
 $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
 
-$If %Verbose% == 0 $goto skipdisplay3
-Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M,  EQ_Flow_limits_lower.M ;
-$label skipdisplay3
+* Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M,  EQ_Flow_limits_lower.M ;
+
 
          status("model",i) = UCM_SIMPLE.Modelstat;
          status("solver",i) = UCM_SIMPLE.Solvestat;
-
-*if(UCM_SIMPLE.Modelstat <> 1 and UCM_SIMPLE.Modelstat <> 8 and not failed, CommittedInitial_dbg(au) = CommittedInitial(au); PowerInitial_dbg(u) = PowerInitial(u); StorageInitial_dbg(au) = StorageInitial(au);
-*                                                                           EXECUTE_UNLOAD "debug.gdx" day, status, CommittedInitial_dbg, PowerInitial_dbg, StorageInitial_dbg;
-*                                                                           failed=1;);
-         CommittedInitial_dbg(au) = CommittedInitial(au);
-         PowerInitial_dbg(u) = PowerInitial(u);
-         StorageInitial_dbg(au) = StorageInitial(au);
-         StorageFinalMin_dbg(au) = StorageFinalMin(au);
-*$If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital_dbg(n) = AccumulatedOverSupply_inital(n);
-*         EXECUTE_UNLOAD "debug.gdx" day, status, CommittedInitial_dbg, PowerInitial_dbg, StorageInitial_dbg, StorageFinalMin_dbg,
-*$If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital_dbg;
 
          CommittedInitial(au) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(au,i));
          PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
@@ -1802,12 +1660,10 @@ OptimizationError.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = Error.L - OptimalityG
 
 
 *Loop variables to display after solving:
-$If %Verbose% == 1 Display LastKeptHour,PowerInitial,StorageInitial;
+* Display LastKeptHour,PowerInitial,StorageInitial;
 );
 
-*CurtailedPower.L(n,z)=sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1) * Location(u,n)) + sum(s,spillage.L(s,z)* Location(s,n));
-
-$If %Verbose% == 1 Display PowerX.L,Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,CurtailmentReserve_2U.L, CurtailmentReserve_3U.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
+* Display PowerX.L,Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,CurtailmentReserve_2U.L, CurtailmentReserve_3U.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
 
 *===============================================================================
 *Result export
@@ -2042,8 +1898,6 @@ $If %MTS%==0 OutputPowerLoss(z) = PowerLoss.L(z);
 OutputTotalDemand_2U(z) = TotalDemand_2U.L(z);
 *OutputLoadRamp(n,z) = LoadRamp.L(n,z);
 
-*FIXME: what about other sectors
-*OutputEmissions(n,p,z) = sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n)) / sum(u,Power.L(u,z)*Location(u,n));
 OutputEmissions(n,p,z) = sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n));
                         
 
@@ -2181,41 +2035,9 @@ UnitHourlyProfit
 ;
 
 *display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L, power.L;
-$If %MTS%==1 display OutputPowerConsumption, heat.L, powerconsumption.L, power.L, EQ_Storage_Cyclic.L, EQ_Boundary_Sector_Storage_Cyclic.L;
-$If %MTS%==0 display OutputPowerConsumption, heat.L, powerconsumption.L, power.L;
+*$If %MTS%==1 display OutputPowerConsumption, heat.L, powerconsumption.L, power.L, EQ_Storage_Cyclic.L, EQ_Boundary_Sector_Storage_Cyclic.L;
 
 $onorder
 
 $exit
 
-$Label DebugSection
-
-$gdxin debug.gdx
-$LOAD day
-$LOAD PowerInitial_dbg
-$If %MTS% == 0 $LOAD CommittedInitial_dbg
-$LOAD StorageInitial_dbg
-$LOAD StorageFinalMin_dbg
-$If %ActivateFlexibleDemand% == 1 $LOAD AccumulatedOverSupply_inital_dbg
-;
-PowerInitial(u) = PowerInitial_dbg(u);
-$If %MTS%==0 CommittedInitial(au) = CommittedInitial_dbg(au);
-StorageInitial(au) = StorageInitial_dbg(au);
-$If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = AccumulatedOverSupply_inital_dbg(n);
-FirstHour = (day-1)*24/TimeStep+1;
-LastHour = min(card(h),FirstHour + (Config("RollingHorizon Length","day")+Config("RollingHorizon LookAhead","day")) * 24/TimeStep - 1);
-LastKeptHour = LastHour - Config("RollingHorizon LookAhead","day") * 24/TimeStep;
-i(h) = no;
-i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
-*StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
-StorageFinalMin(au) =  sum(i$(ord(i)=card(i)),StorageProfile(au,i)*StorageCapacity(au)*Nunits(au)*AvailabilityFactor(au,i));
-*StorageFinalMin(au) = StorageFinalMin_dbg(au);
-
-display day,FirstHour,LastHour,LastKeptHour;
-Display PowerInitial,CommittedInitial,StorageInitial,StorageFinalMin;
-$If %LPFormulation% == 1          SOLVE UCM_SIMPLE USING LP MINIMIZING SystemCostD;
-$If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCostD;
-$If %LPFormulation% == 1          Display EQ_Objective_function.M, EQ_CostRampUp.M, EQ_CostRampDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
-$If not %LPFormulation% == 1      Display EQ_Objective_function.M, EQ_CostStartUp.M, EQ_CostShutDown.M, EQ_Demand_balance_DA.M, EQ_Storage_minimum.M, EQ_Storage_level.M, EQ_Storage_input.M, EQ_Storage_balance.M, EQ_Storage_boundaries.M, EQ_Storage_MaxCharge.M, EQ_Storage_MaxDischarge.M, EQ_Flow_limits_lower.M ;
-
-Display Flow.L,Power.L,Committed.L,ShedLoad.L,StorageLevel.L,StorageInput.L,SystemCost.L,Spillage.L,StorageLevel.L,StorageInput.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L,WaterSlack.L ,StorageLevelViolation.L;
