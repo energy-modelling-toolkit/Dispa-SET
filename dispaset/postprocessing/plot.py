@@ -660,19 +660,19 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
         minlevel = None
 
     if 'OutputPowerConsumption' in results:
-        demand_p2h = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1000  # GW
-        demand_p2h = demand_p2h.sum(axis=1)
-        if demand_p2h.empty:
-            demand_p2h = pd.Series(0, index=results['OutputPower'].index)
+        demand_p2x = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1000  # GW
+        demand_p2x = demand_p2x.sum(axis=1)
+        if demand_p2x.empty:
+            demand_p2x = pd.Series(0, index=results['OutputPower'].index)
     else:
-        demand_p2h = pd.Series(0, index=results['OutputPower'].index)
+        demand_p2x = pd.Series(0, index=results['OutputPower'].index)
     if ('Flex', z) in inputs['param_df']['Demand']:
         demand_flex = inputs['param_df']['Demand'][('Flex', z)] / 1000
     else:
         demand_flex = pd.Series(0, index=results['OutputPower'].index)
 
     demand_da = inputs['param_df']['Demand'][('DA', z)] / 1000  # GW
-    demand = pd.DataFrame(demand_da + demand_p2h + demand_flex, columns=[('DA', z)])
+    demand = pd.DataFrame(demand_da + demand_p2x + demand_flex, columns=[('DA', z)])
     demand = demand[('DA', z)]
 
     sum_generation = plotdata.sum(axis=1)
@@ -944,17 +944,17 @@ def plot_H2_and_demand(inputs, results):
                 level = pd.Series(0, index=results['OutputPower'].index)
 
             if 'OutputPowerConsumption' in results:
-                demand_p2h = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1e6  # TWh
-                demand_p2h = demand_p2h.sum(axis=1)
+                demand_p2x = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1e6  # TWh
+                demand_p2x = demand_p2x.sum(axis=1)
             else:
-                demand_p2h = pd.Series(0, index=results['OutputPower'].index)
+                demand_p2x = pd.Series(0, index=results['OutputPower'].index)
             if ('Flex', z) in inputs['param_df']['Demand']:
                 demand_flex = inputs['param_df']['Demand'][('Flex', z)] / 1e6
             else:
                 demand_flex = pd.Series(0, index=results['OutputPower'].index)
 
             demand_da = inputs['param_df']['Demand'][('DA', z)] / 1e6  # TWh
-            demand = pd.DataFrame(demand_da + demand_p2h + demand_flex, columns=[('DA', z)])
+            demand = pd.DataFrame(demand_da + demand_p2x + demand_flex, columns=[('DA', z)])
             demand = demand[('DA', z)]
             Demand[z] = demand.sum()
             # Get elyser consumption
@@ -1084,42 +1084,6 @@ def plot_tech_cap(inputs, plot=True, figsize=(10, 7), alpha=0.8, width=0.5):
 
     return Cap
 
-
-# TODO Check if necessary
-def H2_demand_satisfaction(inputs, results):
-    H2Demand = [0]
-    OutputH2 = [0]
-    for i in range(len(inputs.keys()) - 1):
-        H2Demand.append(0)
-        OutputH2.append(0)
-    for i, s in enumerate(list(inputs.keys())):
-        for u in inputs[s]['param_df']['sets']['p2h2']:
-            H2Demand[i] += (inputs[s]['param_df']['H2Demand'].loc[:, u].sum()
-                            + inputs[s]['param_df']['PtLDemandInput'].loc[:, u].sum())
-            OutputH2[i] += results[s]['OutputH2Output'].loc[:, u].sum()
-
-    labels = list(inputs.keys())
-    x = [i for i in range(len(labels))]  # the label locations
-    width = 0.2  # the width of the bars
-    colors = ['#41afaaff']
-    fig, ax = plt.subplots(figsize=(3 * len(labels), 6))
-    for i, s in enumerate(list(inputs.keys())):
-        if i == 0:
-            ax.bar(x[i], H2Demand[i] / 1e6, width, color=colors, hatch='//', label='H2 slack')
-            ax.bar(x[i], OutputH2[i] / 1e6, width, color=colors, label='H2 produced by elysers')
-        else:
-            ax.bar(x[i], H2Demand[i] / 1e6, width, color=colors, hatch='//')
-            ax.bar(x[i], OutputH2[i] / 1e6, width, color=colors)
-
-    # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel('H2 demand [TWh]')
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.grid(axis='y', linestyle='--')
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1),
-              ncol=2)
-
-    return True
 
 
 def heatmap(data, row_labels, col_labels, ax=None, cbar_kw=None, cbarlabel="", **kwargs):

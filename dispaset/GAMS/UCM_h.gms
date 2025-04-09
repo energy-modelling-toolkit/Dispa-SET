@@ -400,7 +400,7 @@ CurtailmentReserve_3U(n,h)              [MW]    Curtailed power used for reserve
 $If %TransmissionGrid% == 0 Flow(l,h)   [MW]    Flow through lines
 FlowX(lx,h)                             [MW]    Flow through boundary sector lines
 Power(au,h)                             [MW]    Power output
-PowerConsumption(au,h)                  [MW]    Power consumption by P2X units
+PowerConsumption(p2x,h)                 [MW]    Power consumption by P2X units
 PowerMaximum(u,h)                       [MW]    Power output
 PowerMinimum(u,h)                       [MW]    Power output
 ShedLoad(n,h)                           [MW]    Shed load
@@ -778,7 +778,7 @@ EQ_Residual_Load(n,i)..
         Demand("DA",n,i)
         + Demand("Flex",n,i)
         - DemandModulation(n,i)
-        + sum(au, PowerConsumption(au,i) * Location(au,n))
+        + sum(p2x, PowerConsumption(p2x,i) * Location(p2x,n))
         - sum(u,Power(u,i)$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
         - sum(l,Flow(l,i)*LineNode(l,n))
 ;
@@ -1466,16 +1466,16 @@ EQ_Max_Flex_Supply_BS(nx,i)..
 ;
 
 * Add missing equation definitions
-EQ_P2X_Power_Balance(au,i)..
-         Power(au,i)
+EQ_P2X_Power_Balance(p2x,i)..
+         Power(p2x,i)
          =E=
-         PowerConsumption(au,i)
+         PowerConsumption(p2x,i)
 ;
 
-EQ_Max_Power_Consumption(au,i)..
-         PowerConsumption(au,i)
+EQ_Max_Power_Consumption(p2x,i)..
+         PowerConsumption(p2x,i)
          =L=
-         PowerCapacity(au) * Nunits(au)
+         PowerCapacity(p2x) * Nunits(p2x)
 ;
 
 *===============================================================================
@@ -1681,7 +1681,7 @@ $If %TransmissionGrid% == 1 OutputInjectedPower(n,h)
 OutputFlowX(lx,h)
 OutputPower(au,h)
 OutputPowerX(nx,au,h)
-OutputPowerConsumption(au,h)
+OutputPowerConsumption(p2x,h)
 OutputResidualLoad(n,h)
 OutputStorageInput(au,h)
 OutputStorageLevel(au,h)
@@ -1809,7 +1809,7 @@ $If %TransmissionGrid% == 1 OutputInjectedPower(n,z)=InjectedPower.L(z,n);
 OutputFlowX(lx,z)=FlowX.L(lx,z);
 OutputPower(au,z)=Power.L(au,z);
 OutputPowerX(nx,au,z)=PowerX.L(nx,au,z);
-OutputPowerConsumption(au,z)=PowerConsumption.L(au,z);
+OutputPowerConsumption(p2x,z)=PowerConsumption.L(p2x,z);
 OutputResidualLoad(n,z)=ResidualLoad.L(n,z);
 OutputHeat(au,z)=Heat.L(au,z);
 OutputXNotServed(nx,z) = XNotServed.L(nx,z);
