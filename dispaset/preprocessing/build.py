@@ -1714,17 +1714,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 fin.close()
                 fout.close()
                 
-                # additionally allso copy UCM_h_simple.gms
-                fin1 = open(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'))
-                fout1 = open(os.path.join(sim, 'UCM_h_simple.gms'), "wt")
-                logging.info('Simulation with DC-Power Flow')
-                for line in fin1:
-                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
-                    fout1.write(line)
-                fin1.close()
-                fout1.close()
-                # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-                #                 os.path.join(sim, 'UCM_h_simple.gms'))
             else:
                 fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
                 fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
@@ -1735,9 +1724,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     fout.write(line)
                 fin.close()
                 fout.close()
-                # additionally allso copy UCM_h_simple.gms
-                shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-                                os.path.join(sim, 'UCM_h_simple.gms'))
 
 
     elif LP:
@@ -1752,17 +1738,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 fin.close()
                 fout.close()
                 
-                # additionally allso copy UCM_h_simple.gms
-                fin1 = open(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'))
-                fout1 = open(os.path.join(sim, 'UCM_h_simple.gms'), "wt")
                 logging.info('Simulation with DC-Power Flow')
                 for line in fin1:
                     line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
                     fout1.write(line)
                 fin1.close()
                 fout1.close()
-                # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-                #                 os.path.join(sim, 'UCM_h_simple.gms'))
             else:
                 fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
                 fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
@@ -1772,9 +1753,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     fout.write(line)
                 fin.close()
                 fout.close()
-                # additionally allso copy UCM_h_simple.gms
-                shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-                                os.path.join(sim, 'UCM_h_simple.gms'))
 
 
     else:
@@ -1788,17 +1766,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 fin.close()
                 fout.close()
                 
-                # additionally allso copy UCM_h_simple.gms
-                fin1 = open(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'))
-                fout1 = open(os.path.join(sim, 'UCM_h_simple.gms'), "wt")
-                logging.info('Simulation with DC-Power Flow')
-                for line in fin1:
-                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
-                    fout1.write(line)
-                fin1.close()
-                fout1.close()
-                # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-                #                 os.path.join(sim, 'UCM_h_simple.gms'))
             else:
                 fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
                 fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
@@ -1808,23 +1775,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     fout.write(line)
                 fin.close()
                 fout.close()
-                # additionally allso copy UCM_h_simple.gms
-                shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-                                os.path.join(sim, 'UCM_h_simple.gms'))
-                
-                
-        # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h.gms'),
-        #                 os.path.join(sim, 'UCM_h.gms'))
-        # # additionally allso copy UCM_h_simple.gms
-        # shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-        #                 os.path.join(sim, 'UCM_h_simple.gms'))
     
     gmsfile = open(os.path.join(sim, 'UCM.gpr'), 'w')
     gmsfile.write(
         '[PROJECT] \n \n[RP:UCM_H] \n1= \n[OPENWINDOW_1] \nFILE0=UCM_h.gms \nFILE1=UCM_h.gms \nMAXIM=1 \nTOP=50 \nLEFT=50 \nHEIGHT=400 \nWIDTH=400')
     gmsfile.close()
-    shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
-                    os.path.join(sim, 'writeresults.gms'))
     # Create cplex option file
     if config['CplexSetting'] == '' and config['CplexAccuracy'] == '':
         cplex_options = {'epgap': 0.0005,
@@ -1912,9 +1867,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     if config['WriteGDX']:
         shutil.copy(gdx_out, sim + '/')
         os.remove(gdx_out)
-    # Copy bat file to generate gdx file directly from excel:
-    shutil.copy(os.path.join(GMS_FOLDER, 'makeGDX.bat'),
-                os.path.join(sim, 'makeGDX.bat'))
 
     if config['WritePickle']:
         try:
