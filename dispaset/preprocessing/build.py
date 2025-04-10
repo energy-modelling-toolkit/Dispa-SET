@@ -1738,12 +1738,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 fin.close()
                 fout.close()
                 
-                logging.info('Simulation with DC-Power Flow')
-                for line in fin1:
-                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
-                    fout1.write(line)
-                fin1.close()
-                fout1.close()
             else:
                 fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
                 fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
