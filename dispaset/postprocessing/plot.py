@@ -202,7 +202,6 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         labels.append(col2)
         patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
-    # TODO: Check plots backward compatibility
     # Plot curtailment:
     if isinstance(curtailment, pd.Series):
         if not curtailment.index.equals(demand.index):
@@ -1298,11 +1297,18 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
         wat_color = colors.get('WAT', '#9467bd')
         colors['Storage_Charging'] = wat_color
         colors['Storage_Discharging'] = wat_color
+        
+        # Add color for XNotServed (similar to ShedLoad in plot_dispatch)
+        colors['XNotServed'] = '#ff7f0e'  # Orange color for XNotServed
     else:
         # If custom colors are provided, still ensure storage has consistent colors
         wat_color = colors.get('WAT', '#9467bd')
         colors['Storage_Charging'] = wat_color
         colors['Storage_Discharging'] = wat_color
+        
+        # Ensure XNotServed color is defined
+        if 'XNotServed' not in colors:
+            colors['XNotServed'] = '#ff7f0e'  # Orange color for XNotServed
 
     # Select boundary sector if not specified
     if z == '':
@@ -1403,6 +1409,14 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
             plotdata = plotdata.drop('FlowOut', axis=1)
             
         logging.info(f'Flow data processed for sector {z}')
+    
+    # Process OutputXNotServed data if present
+    if 'OutputXNotServed' in results and z in results['OutputXNotServed'].columns:
+        x_not_served = results['OutputXNotServed'][z] / 1000  # Convert to GW
+        if x_not_served.sum() > 0:
+            logging.info(f'XNotServed data processed for sector {z}')
+        else:
+            x_not_served = None
     
     # Process storage input/output data
     if 'OutputSectorXStorageInput' in results:
@@ -1554,6 +1568,10 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
         logging.info('Demand curve plotted')
     else:
         demand_max = 0
+
+    if x_not_served is not None:
+        reduced_demand = demand - x_not_served
+        axes[0].plot(pdrng, reduced_demand[pdrng], color='k', alpha=alpha, linestyle='dashed')
     
     # Set y-axis limits for dispatch plot
     if dispatch_limits is None:
@@ -1609,6 +1627,9 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
     if demand.sum() > 0:
         line_demand = mlines.Line2D([], [], color='black', linewidth=1.5, label='Demand')
         patches.insert(0, line_demand)  # Add demand line at the beginning
+    if x_not_served is not None:
+        line_x_not_served = mlines.Line2D([], [], color='k', alpha=alpha, linestyle='dashed', label='Served demand')
+        patches.insert(1,line_x_not_served)
     
     # Position legend outside the plot like in plot_dispatch
     if patches:
