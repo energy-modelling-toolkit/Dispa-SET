@@ -1610,8 +1610,8 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
     
     # Position legend outside the plot like in plot_dispatch
     if patches:
-        plt.legend(handles=patches, loc=4, bbox_to_anchor=(1.2, 0.5))
-        plt.subplots_adjust(right=0.8)
+        axes[0].legend(handles=patches, loc='upper left', bbox_to_anchor=(1.01, 1))
+        plt.subplots_adjust(right=0.80)
     
     fig.align_ylabels()
     plt.show()
