@@ -1490,31 +1490,27 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
         neg_cols = cols[:idx_zero]
         neg_data = plotdata[neg_cols]
         
-        # Sum negative values and create cumulative sum for stacking
-        # Note: we need to make negative values positive for proper stacking
-        sumplot_neg = pd.DataFrame()
-        sumplot_neg['sum'] = neg_data.sum(axis=1)
+        # Sum of all negative values for y-axis limit calculation
+        sum_negative = neg_data.sum(axis=1)
+        max_negative_value = abs(sum_negative.min())  # For y-axis limits later
         
+        # Create proper stacking structure for negative values
+        # Important: For negative values, we start from 0 and go down
+        current_bottom = pd.Series(0, index=neg_data.index)
+        
+        # Process each negative column for stacking
         for col in neg_cols:
-            sumplot_neg[col] = -neg_data[col]  # Negate to make positive for stacking
-        
-        sumplot_neg = sumplot_neg.cumsum(axis=1)
-        
-        # Plot negative values
-        for j in range(len(sumplot_neg.columns) - 1):
-            col1 = sumplot_neg.columns[j]
-            col2 = sumplot_neg.columns[j + 1]
-            
-            # Determine color - always use WAT color for storage
-            if col2 == 'Storage_Charging':
-                color = colors.get('Storage_Charging', wat_color)
-            else:
-                color = colors.get(col2, '#808080')
-            
+            color = colors.get(col, '#808080')
+            # Current bottom is where we start, current_bottom + values goes down
+            # since the values are already negative
             axes[0].fill_between(pdrng, 
-                               sumplot_neg.loc[pdrng, col1],  
-                               sumplot_neg.loc[pdrng, col2],  
+                               current_bottom[pdrng], 
+                               current_bottom[pdrng] + neg_data[col][pdrng],
                                facecolor=color, alpha=alpha)
+            # Update the bottom for the next column
+            current_bottom = current_bottom + neg_data[col]
+    else:
+        max_negative_value = 0
     
     # Process positive values
     if idx_zero < len(cols):
@@ -1529,6 +1525,7 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
             sumplot_pos[col] = pos_data[col]
         
         sumplot_pos = sumplot_pos.cumsum(axis=1)
+        max_positive_value = sumplot_pos.iloc[:, -1].max() if not sumplot_pos.empty else 0
         
         # Plot positive values
         for j in range(len(sumplot_pos.columns) - 1):
@@ -1545,29 +1542,21 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
                                sumplot_pos.loc[pdrng, col1], 
                                sumplot_pos.loc[pdrng, col2], 
                                facecolor=color, alpha=alpha)
+    else:
+        max_positive_value = 0
     
     # Plot demand as a black line
     if demand.sum() > 0:
         axes[0].plot(pdrng, demand[pdrng], color='black', linewidth=1.5)
+        demand_max = demand[pdrng].max()
         logging.info('Demand curve plotted')
+    else:
+        demand_max = 0
     
     # Set y-axis limits for dispatch plot
     if dispatch_limits is None:
-        if idx_zero > 0:
-            min_val = -sumplot_neg['sum'].max() * 1.1  # Add 10% margin
-        else:
-            min_val = 0
-        
-        if idx_zero < len(cols):
-            if demand.sum() > 0:
-                max_val = max(sumplot_pos.iloc[:, -1].max() * 1.1, demand[pdrng].max() * 1.1)
-            else:
-                max_val = sumplot_pos.iloc[:, -1].max() * 1.1
-        else:
-            if demand.sum() > 0:
-                max_val = demand[pdrng].max() * 1.1
-            else:
-                max_val = 0.1  # Small default value if no positive data
+        min_val = -max_negative_value * 1.1 if max_negative_value > 0 else 0  # Add 10% margin
+        max_val = max(max_positive_value, demand_max) * 1.1 if max(max_positive_value, demand_max) > 0 else 0.1
         
         dispatch_limits = (min_val, max_val)
         logging.info(f'Automatically calculated dispatch limits: {dispatch_limits}')
