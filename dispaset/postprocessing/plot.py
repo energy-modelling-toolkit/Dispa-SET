@@ -1265,3 +1265,257 @@ def adjacent_values(vals, q1, q3):
     lower_adjacent_value = q1 - (q3 - q1) * 1.5
     lower_adjacent_value = np.clip(lower_adjacent_value, vals[0], q1)
     return lower_adjacent_value, upper_adjacent_value
+
+
+def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), units=['GW', 'GWh'], colors=None,
+                  dispatch_limits=None, storage_limits=None):
+    """
+    Function that plots the dispatch data for boundary sectors, including storage levels, power exchange, and flows between sectors.
+
+    :param inputs:          DispaSET inputs
+    :param results:         DispaSET results
+    :param z:              Zone to be considered (e.g. 'Z1_h2')
+    :param rng:            Indexes of the values to be plotted. If undefined, the first week is plotted
+    :param alpha:          Alpha value for colours
+    :param figsize:        Figure size in inch
+    :param units:          Units for power and energy [power_unit, energy_unit]
+    :param colors:         Dictionary with colors for each technology
+    :param dispatch_limits: Tuple with (min, max) values for dispatch plot y-axis. If None, calculated automatically.
+    :param storage_limits: Tuple with (min, max) values for storage plot y-axis. If None, calculated automatically.
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+    import pandas as pd
+    import numpy as np
+
+    if colors is None:
+        colors = commons['colors']
+
+    # Select boundary sector if not specified
+    if z == '':
+        if 'OutputSectorXStorageLevel' in results:
+            z = results['OutputSectorXStorageLevel'].columns[0]
+            logging.info('Selected boundary sector for the detailed analysis: ' + z)
+        else:
+            logging.error('No boundary sectors found in the results')
+            return False
+
+    # Get storage levels for the boundary sector
+    if 'OutputSectorXStorageLevel' in results and z in results['OutputSectorXStorageLevel'].columns:
+        storage_level = results['OutputSectorXStorageLevel'][z] / 1000  # Convert to GWh
+        logging.info(f'Storage level found for sector {z}')
+    else:
+        storage_level = None
+        logging.warning(f'No storage level found for sector {z}')
+
+    # Get PowerX data (power exchange with power sector)
+    if 'OutputPowerX' in results:
+        try:
+            # Handle MultiIndex case
+            if isinstance(results['OutputPowerX'].columns, pd.MultiIndex):
+                powerx_data = results['OutputPowerX'].xs(z, level='Zones', axis=1) / 1000  # Convert to GW
+            else:
+                powerx_data = results['OutputPowerX'].filter(like=z) / 1000  # Convert to GW
+
+            # Split into positive and negative flows
+            powerx_pos = powerx_data.clip(lower=0)
+            powerx_neg = powerx_data.clip(upper=0)
+
+            # Create a mapping of unit names to technologies
+            unit_tech_map = {}
+            for unit in inputs['units'].index:
+                # Handle different unit name formats
+                unit_variants = [
+                    unit,  # Original name
+                    unit.split(' - ')[-1].strip(']'),  # Name without prefix
+                    '[' + unit.split(' - ')[-1].strip(']') + ']',  # Name with brackets
+                    unit.split(' - ')[0].strip('['),  # Number only
+                ]
+                for variant in unit_variants:
+                    unit_tech_map[variant] = inputs['units'].loc[unit, 'Technology']
+
+            # Aggregate by technology
+            powerx_pos_by_tech = pd.DataFrame()
+            powerx_neg_by_tech = pd.DataFrame()
+            for col in powerx_pos.columns:
+                # Try different ways to extract the unit name
+                unit_found = False
+                # First try the full column name
+                if col in unit_tech_map:
+                    tech = unit_tech_map[col]
+                    unit_found = True
+                else:
+                    # Try extracting the unit name from the column name
+                    for part in col.replace('[', '').replace(']', '').split(' - '):
+                        part = part.strip()
+                        if part in unit_tech_map:
+                            tech = unit_tech_map[part]
+                            unit_found = True
+                            break
+
+                if unit_found:
+                    if tech not in powerx_pos_by_tech.columns:
+                        powerx_pos_by_tech[tech] = powerx_pos[col]
+                        powerx_neg_by_tech[tech] = powerx_neg[col]
+                    else:
+                        powerx_pos_by_tech[tech] += powerx_pos[col]
+                        powerx_neg_by_tech[tech] += powerx_neg[col]
+                else:
+                    # If no technology mapping found, use the column name as is
+                    tech = col.split(' - ')[-1].strip('[]')
+                    logging.warning(f'No technology mapping found for unit {col}, using {tech} as technology')
+                    powerx_pos_by_tech[tech] = powerx_pos[col]
+                    powerx_neg_by_tech[tech] = powerx_neg[col]
+
+            # Reorder technologies according to MeritOrder
+            ordered_techs = [tech for tech in commons['MeritOrder'] if tech in powerx_pos_by_tech.columns]
+            # Add any technologies not in MeritOrder at the end
+            remaining_techs = [tech for tech in powerx_pos_by_tech.columns if tech not in ordered_techs]
+            ordered_techs.extend(remaining_techs)
+            
+            powerx_pos_by_tech = powerx_pos_by_tech[ordered_techs]
+            powerx_neg_by_tech = powerx_neg_by_tech[ordered_techs]
+
+            logging.info(f'PowerX data processed for sector {z}')
+        except Exception as e:
+            logging.error(f'Error processing PowerX data: {str(e)}')
+            powerx_pos_by_tech = pd.DataFrame()
+            powerx_neg_by_tech = pd.DataFrame()
+    else:
+        powerx_pos_by_tech = pd.DataFrame()
+        powerx_neg_by_tech = pd.DataFrame()
+        logging.warning('No PowerX data found in results')
+
+    # Get flows between boundary sectors
+    if 'OutputSectorXFlow' in results:
+        try:
+            flows = pd.DataFrame()
+            flows['FlowIn'] = pd.Series(0, index=results['OutputSectorXFlow'].index)
+            flows['FlowOut'] = pd.Series(0, index=results['OutputSectorXFlow'].index)
+            flow_found = False
+            for col in results['OutputSectorXFlow'].columns:
+                from_sector, to_sector = col.split('->')
+                if to_sector.strip() == z:
+                    flows['FlowIn'] += results['OutputSectorXFlow'][col]
+                    flow_found = True
+                if from_sector.strip() == z:
+                    flows['FlowOut'] -= results['OutputSectorXFlow'][col]
+                    flow_found = True
+            flows = flows / 1000  # Convert to GW
+            if not flow_found:
+                flows = None
+                logging.info(f'No flows found for sector {z}')
+            else:
+                logging.info(f'Flows processed for sector {z}')
+        except Exception as e:
+            logging.error(f'Error processing flows: {str(e)}')
+            flows = None
+    else:
+        flows = None
+        logging.info('No flow data found in results')
+
+    # Set up the plot range
+    if rng is None:
+        if not powerx_pos_by_tech.empty:
+            pdrng = powerx_pos_by_tech.index[:min(len(powerx_pos_by_tech) - 1, 7 * 24)]
+        else:
+            pdrng = pd.date_range(start='2016-01-01', end='2016-12-31', freq='h')[:7*24]
+            logging.warning('Using default date range for plot')
+    else:
+        pdrng = rng
+
+    # Create the plot
+    if storage_level is not None:
+        n = 2
+        height_ratio = [2.7, .8]
+    else:
+        n = 1
+        height_ratio = [1]
+
+    fig, axes = plt.subplots(nrows=n, ncols=1, sharex=True, figsize=figsize, frameon=True,
+                            gridspec_kw={'height_ratios': height_ratio, 'hspace': 0.04})
+
+    if n == 1:
+        axes = [axes]
+
+    # Plot negative values (PowerX negative and FlowOut)
+    plotdata_neg = powerx_neg_by_tech.copy()
+    if flows is not None:
+        plotdata_neg['FlowOut'] = flows['FlowOut']
+    
+    if not plotdata_neg.empty:
+        sumplot_neg = plotdata_neg.cumsum(axis=1)
+        sumplot_neg['zero'] = 0
+        for j in range(len(sumplot_neg.columns) - 1):
+            col1 = sumplot_neg.columns[j]
+            col2 = sumplot_neg.columns[j + 1]
+            color = colors.get(col2, '#808080')  # Default to gray if color not found
+            axes[0].fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2],
+                               facecolor=color, alpha=alpha)
+
+    # Plot positive values (PowerX positive and FlowIn)
+    plotdata_pos = powerx_pos_by_tech.copy()
+    if flows is not None:
+        plotdata_pos['FlowIn'] = flows['FlowIn']
+    
+    if not plotdata_pos.empty:
+        sumplot_pos = plotdata_pos.cumsum(axis=1)
+        sumplot_pos['zero'] = 0
+        for j in range(len(sumplot_pos.columns) - 1):
+            col1 = sumplot_pos.columns[j]
+            col2 = sumplot_pos.columns[j + 1]
+            color = colors.get(col2, '#808080')  # Default to gray if color not found
+            axes[0].fill_between(pdrng, sumplot_pos.loc[pdrng, col1], sumplot_pos.loc[pdrng, col2],
+                               facecolor=color, alpha=alpha)
+
+    # Calculate dispatch plot limits if not provided
+    if dispatch_limits is None:
+        if not plotdata_neg.empty and not plotdata_pos.empty:
+            min_val = plotdata_neg.sum(axis=1).min() * 1.1  # Add 10% margin
+            max_val = plotdata_pos.sum(axis=1).max() * 1.1  # Add 10% margin
+            dispatch_limits = (min_val, max_val)
+            logging.info(f'Automatically calculated dispatch limits: {dispatch_limits}')
+
+    # Set dispatch plot limits
+    if dispatch_limits is not None:
+        axes[0].set_ylim(dispatch_limits[0], dispatch_limits[1])
+
+    # Plot storage level if available
+    if storage_level is not None:
+        axes[1].fill_between(pdrng, 0, storage_level[pdrng], facecolor=colors.get('WAT', '#1f77b4'), alpha=alpha)
+        axes[1].set_ylabel(f'Storage Level [{units[1]}]')
+
+        # Calculate storage plot limits if not provided
+        if storage_limits is None:
+            min_val = 0
+            max_val = storage_level[pdrng].max() * 1.1  # Add 10% margin
+            storage_limits = (min_val, max_val)
+            logging.info(f'Automatically calculated storage limits: {storage_limits}')
+
+        # Set storage plot limits
+        if storage_limits is not None:
+            axes[1].set_ylim(storage_limits[0], storage_limits[1])
+
+    # Set labels and title
+    axes[0].set_ylabel(f'Power [{units[0]}]')
+    fig.suptitle(f'Dispatch plot for boundary sector {z}')
+
+    # Create legend patches
+    patches = []
+    for col in plotdata_neg.columns:
+        color = colors.get(col, '#808080')
+        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, label=col))
+    for col in plotdata_pos.columns:
+        if col not in plotdata_neg.columns:  # Avoid duplicates
+            color = colors.get(col, '#808080')
+            patches.append(mpatches.Patch(facecolor=color, alpha=alpha, label=col))
+
+    # Add legend if there are patches
+    if patches:
+        plt.legend(handles=patches, loc=4, bbox_to_anchor=(1.2, 0.5))
+        plt.subplots_adjust(right=0.8)
+    
+    fig.align_ylabels()
+    plt.show()
+
+    return True
