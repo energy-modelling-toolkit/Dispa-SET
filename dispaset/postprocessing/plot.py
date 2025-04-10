@@ -1285,27 +1285,24 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
     """
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
+    import matplotlib.lines as mlines
     import pandas as pd
     import numpy as np
     from matplotlib import cm
 
     # Define a color map for technologies and flows
     if colors is None:
-        # Use a different color map for better distinction
-        color_map = cm.get_cmap('tab20')
-        num_colors = 20
-        colors = {}
+        colors = commons['colors'].copy()
         
-        # Assign colors to technologies in MeritOrder
-        for i, tech in enumerate(commons['MeritOrder']):
-            colors[tech] = color_map(i % num_colors)
-        
-        # Assign colors to special categories
-        colors['FlowIn'] = '#1f77b4'  # Blue
-        colors['FlowOut'] = '#ff7f0e'  # Orange
-        colors['Storage_Charging'] = '#2ca02c'  # Green
-        colors['Storage_Discharging'] = '#d62728'  # Red
-        colors['WAT'] = '#9467bd'  # Purple for storage level
+        # Ensure consistent colors for storage elements - all should use WAT color
+        wat_color = colors.get('WAT', '#9467bd')
+        colors['Storage_Charging'] = wat_color
+        colors['Storage_Discharging'] = wat_color
+    else:
+        # If custom colors are provided, still ensure storage has consistent colors
+        wat_color = colors.get('WAT', '#9467bd')
+        colors['Storage_Charging'] = wat_color
+        colors['Storage_Discharging'] = wat_color
 
     # Select boundary sector if not specified
     if z == '':
@@ -1316,154 +1313,142 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
             logging.error('No boundary sectors found in the results')
             return False
 
-    # Get storage levels for the boundary sector
+    # Create plotdata DataFrame to hold all time series data
+    # We'll use the OutputPowerX index as our base
+    if 'OutputPowerX' in results:
+        plotdata = pd.DataFrame(index=results['OutputPowerX'].index)
+    else:
+        logging.error('No OutputPowerX data found in results')
+        return False
+
+    # Get storage level for the lower subplot
+    storage_level = None
     if 'OutputSectorXStorageLevel' in results and z in results['OutputSectorXStorageLevel'].columns:
         storage_level = results['OutputSectorXStorageLevel'][z] / 1000  # Convert to GWh
-        logging.info(f'Storage level found for sector {z}')
-    else:
-        storage_level = None
-        logging.warning(f'No storage level found for sector {z}')
+        logging.info(f'Storage level data processed for sector {z}')
 
-    # Get storage input/output data
-    storage_input = None
-    if 'OutputSectorXStorageInput' in results:
-        try:
-            # Handle MultiIndex case
-            if isinstance(results['OutputSectorXStorageInput'].columns, pd.MultiIndex):
-                storage_input = results['OutputSectorXStorageInput'].xs(z, level='Zones', axis=1) / 1000  # Convert to GW
-            else:
-                storage_input = results['OutputSectorXStorageInput'].filter(like=z) / 1000  # Convert to GW
-            
-            # Split into charging (positive) and discharging (negative)
-            storage_charging = storage_input.clip(lower=0)  # Positive values = charging
-            storage_discharging = storage_input.clip(upper=0)  # Negative values = discharging
-            
-            logging.info(f'Storage input/output data processed for sector {z}')
-        except Exception as e:
-            logging.error(f'Error processing storage input/output data: {str(e)}')
-            storage_charging = pd.DataFrame()
-            storage_discharging = pd.DataFrame()
-    else:
-        storage_charging = pd.DataFrame()
-        storage_discharging = pd.DataFrame()
-        logging.warning('No storage input/output data found in results')
-
-    # Get PowerX data (power exchange with power sector)
+    # Process PowerX data
     if 'OutputPowerX' in results:
-        try:
-            # Handle MultiIndex case
-            if isinstance(results['OutputPowerX'].columns, pd.MultiIndex):
-                powerx_data = results['OutputPowerX'].xs(z, level='Zones', axis=1) / 1000  # Convert to GW
+        # Get PowerX data for this zone
+        if isinstance(results['OutputPowerX'].columns, pd.MultiIndex):
+            powerx_data = results['OutputPowerX'].xs(z, level='Zones', axis=1) / 1000  # Convert to GW
+        else:
+            powerx_data = results['OutputPowerX'].filter(like=z) / 1000  # Convert to GW
+        
+        # Map units to technologies
+        unit_tech_map = {}
+        for unit in inputs['units'].index:
+            unit_variants = [
+                unit,
+                unit.split(' - ')[-1].strip(']'),
+                '[' + unit.split(' - ')[-1].strip(']') + ']',
+                unit.split(' - ')[0].strip('['),
+            ]
+            for variant in unit_variants:
+                unit_tech_map[variant] = inputs['units'].loc[unit, 'Technology']
+        
+        # Process each column (unit) in PowerX data
+        for col in powerx_data.columns:
+            # Find the technology for this unit
+            tech_found = False
+            if col in unit_tech_map:
+                tech = unit_tech_map[col]
+                tech_found = True
             else:
-                powerx_data = results['OutputPowerX'].filter(like=z) / 1000  # Convert to GW
-
-            # Split into positive and negative flows
-            powerx_pos = powerx_data.clip(lower=0)
-            powerx_neg = powerx_data.clip(upper=0)
-
-            # Create a mapping of unit names to technologies
-            unit_tech_map = {}
-            for unit in inputs['units'].index:
-                # Handle different unit name formats
-                unit_variants = [
-                    unit,  # Original name
-                    unit.split(' - ')[-1].strip(']'),  # Name without prefix
-                    '[' + unit.split(' - ')[-1].strip(']') + ']',  # Name with brackets
-                    unit.split(' - ')[0].strip('['),  # Number only
-                ]
-                for variant in unit_variants:
-                    unit_tech_map[variant] = inputs['units'].loc[unit, 'Technology']
-
-            # Aggregate by technology
-            powerx_pos_by_tech = pd.DataFrame()
-            powerx_neg_by_tech = pd.DataFrame()
-            for col in powerx_pos.columns:
-                # Try different ways to extract the unit name
-                unit_found = False
-                # First try the full column name
-                if col in unit_tech_map:
-                    tech = unit_tech_map[col]
-                    unit_found = True
-                else:
-                    # Try extracting the unit name from the column name
-                    for part in col.replace('[', '').replace(']', '').split(' - '):
-                        part = part.strip()
-                        if part in unit_tech_map:
-                            tech = unit_tech_map[part]
-                            unit_found = True
-                            break
-
-                if unit_found:
-                    if tech not in powerx_pos_by_tech.columns:
-                        powerx_pos_by_tech[tech] = powerx_pos[col]
-                        powerx_neg_by_tech[tech] = powerx_neg[col]
-                    else:
-                        powerx_pos_by_tech[tech] += powerx_pos[col]
-                        powerx_neg_by_tech[tech] += powerx_neg[col]
-                else:
-                    # If no technology mapping found, use the column name as is
-                    tech = col.split(' - ')[-1].strip('[]')
-                    logging.warning(f'No technology mapping found for unit {col}, using {tech} as technology')
-                    powerx_pos_by_tech[tech] = powerx_pos[col]
-                    powerx_neg_by_tech[tech] = powerx_neg[col]
-
-            # Reorder technologies according to MeritOrder
-            ordered_techs = [tech for tech in commons['MeritOrder'] if tech in powerx_pos_by_tech.columns]
-            # Add any technologies not in MeritOrder at the end
-            remaining_techs = [tech for tech in powerx_pos_by_tech.columns if tech not in ordered_techs]
-            ordered_techs.extend(remaining_techs)
+                for part in col.replace('[', '').replace(']', '').split(' - '):
+                    part = part.strip()
+                    if part in unit_tech_map:
+                        tech = unit_tech_map[part]
+                        tech_found = True
+                        break
             
-            powerx_pos_by_tech = powerx_pos_by_tech[ordered_techs]
-            powerx_neg_by_tech = powerx_neg_by_tech[ordered_techs]
-
-            logging.info(f'PowerX data processed for sector {z}')
-        except Exception as e:
-            logging.error(f'Error processing PowerX data: {str(e)}')
-            powerx_pos_by_tech = pd.DataFrame()
-            powerx_neg_by_tech = pd.DataFrame()
-    else:
-        powerx_pos_by_tech = pd.DataFrame()
-        powerx_neg_by_tech = pd.DataFrame()
-        logging.warning('No PowerX data found in results')
-
-    # Get flows between boundary sectors
-    if 'OutputSectorXFlow' in results:
-        try:
-            flows = pd.DataFrame()
-            flows['FlowIn'] = pd.Series(0, index=results['OutputSectorXFlow'].index)
-            flows['FlowOut'] = pd.Series(0, index=results['OutputSectorXFlow'].index)
-            flow_found = False
-            for col in results['OutputSectorXFlow'].columns:
-                from_sector, to_sector = col.split('->')
-                if to_sector.strip() == z:
-                    flows['FlowIn'] += results['OutputSectorXFlow'][col]
-                    flow_found = True
-                if from_sector.strip() == z:
-                    flows['FlowOut'] -= results['OutputSectorXFlow'][col]
-                    flow_found = True
-            flows = flows / 1000  # Convert to GW
-            if not flow_found:
-                flows = None
-                logging.info(f'No flows found for sector {z}')
+            if not tech_found:
+                tech = col.split(' - ')[-1].strip('[]')
+                logging.warning(f'No technology mapping found for unit {col}, using {tech} as technology')
+            
+            # Add to plotdata, separating positive and negative values
+            if tech in plotdata.columns:
+                # If tech already exists, add values
+                positive_values = powerx_data[col].clip(lower=0)
+                negative_values = powerx_data[col].clip(upper=0)  # Already negative
+                plotdata[tech] += positive_values
+                plotdata[tech] += negative_values  # Add negative values directly
             else:
-                logging.info(f'Flows processed for sector {z}')
-        except Exception as e:
-            logging.error(f'Error processing flows: {str(e)}')
-            flows = None
-    else:
-        flows = None
-        logging.info('No flow data found in results')
-
-    # Set up the plot range
+                # Create new column
+                plotdata[tech] = powerx_data[col]  # Include both positive and negative values
+        
+        logging.info(f'PowerX data processed for sector {z}')
+    
+    # Process flow data
+    if 'OutputSectorXFlow' in results:
+        # Initialize FlowIn and FlowOut columns
+        plotdata['FlowIn'] = 0
+        plotdata['FlowOut'] = 0
+        
+        for col in results['OutputSectorXFlow'].columns:
+            from_sector, to_sector = col.split('->')
+            if to_sector.strip() == z:
+                # Flow into this sector (positive)
+                plotdata['FlowIn'] += results['OutputSectorXFlow'][col] / 1000  # Convert to GW
+            if from_sector.strip() == z:
+                # Flow out of this sector (negative)
+                plotdata['FlowOut'] -= results['OutputSectorXFlow'][col] / 1000  # Convert to GW, make negative
+        
+        # Remove empty columns
+        if plotdata['FlowIn'].sum() == 0:
+            plotdata = plotdata.drop('FlowIn', axis=1)
+        if plotdata['FlowOut'].sum() == 0:
+            plotdata = plotdata.drop('FlowOut', axis=1)
+            
+        logging.info(f'Flow data processed for sector {z}')
+    
+    # Process storage input/output data
+    if 'OutputSectorXStorageInput' in results:
+        if isinstance(results['OutputSectorXStorageInput'].columns, pd.MultiIndex):
+            storage_input = results['OutputSectorXStorageInput'].xs(z, level='Zones', axis=1) / 1000  # Convert to GW
+        else:
+            storage_input = results['OutputSectorXStorageInput'].filter(like=z) / 1000  # Convert to GW
+        
+        # Separate charging (positive) and discharging (negative)
+        storage_charging = storage_input.clip(lower=0).sum(axis=1)
+        storage_discharging = storage_input.clip(upper=0).sum(axis=1)  # Already negative
+        
+        # Add to plotdata
+        if storage_charging.sum() > 0:
+            plotdata['Storage_Charging'] = -storage_charging  # Make negative for the correct side of the plot
+            logging.info(f'Storage charging data processed for sector {z}')
+        
+        if storage_discharging.sum() < 0:  # Sum is negative
+            plotdata['Storage_Discharging'] = -storage_discharging  # Negate to make positive
+            logging.info(f'Storage discharging data processed for sector {z}')
+    
+    # Get demand data
+    demand = pd.Series(0, index=plotdata.index)
+    
+    # Add non-flexible demand
+    if 'SectorXDemand' in inputs['param_df']:
+        non_flex_demand_data = inputs['param_df']['SectorXDemand'].filter(like=z) / 1000  # Convert to GW
+        if not non_flex_demand_data.empty:
+            demand += non_flex_demand_data.sum(axis=1)
+            logging.info(f'Non-flexible demand data added for sector {z}')
+    
+    # Add flexible demand
+    if 'OutputBSFlexDemand' in results:
+        flex_demand_data = results['OutputBSFlexDemand'].filter(like=z) / 1000  # Convert to GW
+        if not flex_demand_data.empty:
+            demand += flex_demand_data.sum(axis=1)
+            logging.info(f'Flexible demand data added for sector {z}')
+    
+    # Prepare the plot range
     if rng is None:
-        if not powerx_pos_by_tech.empty:
-            pdrng = powerx_pos_by_tech.index[:min(len(powerx_pos_by_tech) - 1, 7 * 24)]
+        if not plotdata.empty:
+            pdrng = plotdata.index[:min(len(plotdata), 7 * 24)]
         else:
             pdrng = pd.date_range(start='2016-01-01', end='2016-12-31', freq='h')[:7*24]
             logging.warning('Using default date range for plot')
     else:
         pdrng = rng
-
+    
     # Create the plot
     if storage_level is not None:
         n = 2
@@ -1471,95 +1456,175 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
     else:
         n = 1
         height_ratio = [1]
-
+    
     fig, axes = plt.subplots(nrows=n, ncols=1, sharex=True, figsize=figsize, frameon=True,
-                            gridspec_kw={'height_ratios': height_ratio, 'hspace': 0.04})
-
+                             gridspec_kw={'height_ratios': height_ratio, 'hspace': 0.04})
+    
     if n == 1:
         axes = [axes]
-
-    # Plot negative values (PowerX negative, FlowOut, and storage charging)
-    plotdata_neg = powerx_neg_by_tech.copy()
-    if flows is not None:
-        plotdata_neg['FlowOut'] = flows['FlowOut']
-    if not storage_charging.empty:
-        plotdata_neg['Storage_Charging'] = storage_charging.sum(axis=1)
     
-    if not plotdata_neg.empty:
-        sumplot_neg = plotdata_neg.cumsum(axis=1)
-        sumplot_neg['zero'] = 0
+    # Reorder columns to have negative values first
+    cols = plotdata.columns.tolist()
+    idx_zero = 0
+    
+    # First, find the position where values switch from negative to positive
+    if not plotdata.empty:
+        # Check each column's mean to determine if it's primarily negative or positive
+        col_means = plotdata.mean()
+        negative_cols = []
+        positive_cols = []
+        
+        for col in cols:
+            if col_means[col] < 0 or col in ['Storage_Charging', 'FlowOut']:
+                negative_cols.append(col)
+            else:
+                positive_cols.append(col)
+        
+        # Reorder plotdata to have negative columns first
+        plotdata = plotdata[negative_cols + positive_cols]
+        cols = plotdata.columns.tolist()
+        idx_zero = len(negative_cols)
+    
+    # Process negative values (make them positive for stacking)
+    if idx_zero > 0:
+        neg_cols = cols[:idx_zero]
+        neg_data = plotdata[neg_cols]
+        
+        # Sum negative values and create cumulative sum for stacking
+        # Note: we need to make negative values positive for proper stacking
+        sumplot_neg = pd.DataFrame()
+        sumplot_neg['sum'] = neg_data.sum(axis=1)
+        
+        for col in neg_cols:
+            sumplot_neg[col] = -neg_data[col]  # Negate to make positive for stacking
+        
+        sumplot_neg = sumplot_neg.cumsum(axis=1)
+        
+        # Plot negative values
         for j in range(len(sumplot_neg.columns) - 1):
             col1 = sumplot_neg.columns[j]
             col2 = sumplot_neg.columns[j + 1]
-            color = colors.get(col2, '#808080')  # Default to gray if color not found
-            axes[0].fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2],
+            
+            # Determine color - always use WAT color for storage
+            if col2 == 'Storage_Charging':
+                color = colors.get('Storage_Charging', wat_color)
+            else:
+                color = colors.get(col2, '#808080')
+            
+            axes[0].fill_between(pdrng, 
+                               sumplot_neg.loc[pdrng, col1],  
+                               sumplot_neg.loc[pdrng, col2],  
                                facecolor=color, alpha=alpha)
-
-    # Plot positive values (PowerX positive, FlowIn, and storage discharging)
-    plotdata_pos = powerx_pos_by_tech.copy()
-    if flows is not None:
-        plotdata_pos['FlowIn'] = flows['FlowIn']
-    if not storage_discharging.empty:
-        plotdata_pos['Storage_Discharging'] = -storage_discharging.sum(axis=1)  # Make negative values positive for plotting
     
-    if not plotdata_pos.empty:
-        sumplot_pos = plotdata_pos.cumsum(axis=1)
+    # Process positive values
+    if idx_zero < len(cols):
+        pos_cols = cols[idx_zero:]
+        pos_data = plotdata[pos_cols]
+        
+        # Create cumulative sum for stacking
+        sumplot_pos = pd.DataFrame(index=pos_data.index)
         sumplot_pos['zero'] = 0
+        
+        for col in pos_cols:
+            sumplot_pos[col] = pos_data[col]
+        
+        sumplot_pos = sumplot_pos.cumsum(axis=1)
+        
+        # Plot positive values
         for j in range(len(sumplot_pos.columns) - 1):
             col1 = sumplot_pos.columns[j]
             col2 = sumplot_pos.columns[j + 1]
-            color = colors.get(col2, '#808080')  # Default to gray if color not found
-            axes[0].fill_between(pdrng, sumplot_pos.loc[pdrng, col1], sumplot_pos.loc[pdrng, col2],
+            
+            # Determine color - always use WAT color for storage
+            if col2 == 'Storage_Discharging':
+                color = colors.get('Storage_Discharging', wat_color)
+            else:
+                color = colors.get(col2, '#808080')
+            
+            axes[0].fill_between(pdrng, 
+                               sumplot_pos.loc[pdrng, col1], 
+                               sumplot_pos.loc[pdrng, col2], 
                                facecolor=color, alpha=alpha)
-
-    # Calculate dispatch plot limits if not provided
+    
+    # Plot demand as a black line
+    if demand.sum() > 0:
+        axes[0].plot(pdrng, demand[pdrng], color='black', linewidth=1.5)
+        logging.info('Demand curve plotted')
+    
+    # Set y-axis limits for dispatch plot
     if dispatch_limits is None:
-        if not plotdata_neg.empty and not plotdata_pos.empty:
-            min_val = plotdata_neg.sum(axis=1).min() * 1.1  # Add 10% margin
-            max_val = plotdata_pos.sum(axis=1).max() * 1.1  # Add 10% margin
-            dispatch_limits = (min_val, max_val)
-            logging.info(f'Automatically calculated dispatch limits: {dispatch_limits}')
-
-    # Set dispatch plot limits
-    if dispatch_limits is not None:
-        axes[0].set_ylim(dispatch_limits[0], dispatch_limits[1])
-
+        if idx_zero > 0:
+            min_val = -sumplot_neg['sum'].max() * 1.1  # Add 10% margin
+        else:
+            min_val = 0
+        
+        if idx_zero < len(cols):
+            if demand.sum() > 0:
+                max_val = max(sumplot_pos.iloc[:, -1].max() * 1.1, demand[pdrng].max() * 1.1)
+            else:
+                max_val = sumplot_pos.iloc[:, -1].max() * 1.1
+        else:
+            if demand.sum() > 0:
+                max_val = demand[pdrng].max() * 1.1
+            else:
+                max_val = 0.1  # Small default value if no positive data
+        
+        dispatch_limits = (min_val, max_val)
+        logging.info(f'Automatically calculated dispatch limits: {dispatch_limits}')
+    
+    axes[0].set_ylim(dispatch_limits)
+    
     # Plot storage level if available
     if storage_level is not None:
+        # Always use WAT color for storage level
         axes[1].fill_between(pdrng, 0, storage_level[pdrng], facecolor=colors.get('WAT', '#9467bd'), alpha=alpha)
         axes[1].set_ylabel(f'Storage Level [{units[1]}]')
-
-        # Calculate storage plot limits if not provided
+        
+        # Set y-axis limits for storage plot
         if storage_limits is None:
             min_val = 0
             max_val = storage_level[pdrng].max() * 1.1  # Add 10% margin
             storage_limits = (min_val, max_val)
             logging.info(f'Automatically calculated storage limits: {storage_limits}')
-
-        # Set storage plot limits
-        if storage_limits is not None:
-            axes[1].set_ylim(storage_limits[0], storage_limits[1])
-
+        
+        axes[1].set_ylim(storage_limits)
+    
     # Set labels and title
     axes[0].set_ylabel(f'Power [{units[0]}]')
     fig.suptitle(f'Dispatch plot for boundary sector {z}')
-
+    
     # Create legend patches
     patches = []
-    for col in plotdata_neg.columns:
-        color = colors.get(col, '#808080')
-        patches.append(mpatches.Patch(facecolor=color, alpha=alpha, label=col))
-    for col in plotdata_pos.columns:
-        if col not in plotdata_neg.columns:  # Avoid duplicates
-            color = colors.get(col, '#808080')
+    
+    # Add negative patches
+    if idx_zero > 0:
+        for col in neg_cols:
+            if col == 'Storage_Charging':
+                color = colors.get('Storage_Charging', wat_color)
+            else:
+                color = colors.get(col, '#808080')
             patches.append(mpatches.Patch(facecolor=color, alpha=alpha, label=col))
-
-    # Add legend if there are patches
+    
+    # Add positive patches
+    if idx_zero < len(cols):
+        for col in pos_cols:
+            if col == 'Storage_Discharging':
+                color = colors.get('Storage_Discharging', wat_color)
+            else:
+                color = colors.get(col, '#808080')
+            patches.append(mpatches.Patch(facecolor=color, alpha=alpha, label=col))
+    
+    # Add demand to legend
+    if demand.sum() > 0:
+        line_demand = mlines.Line2D([], [], color='black', linewidth=1.5, label='Demand')
+        patches.insert(0, line_demand)  # Add demand line at the beginning
+    
+    # Position legend outside the plot like in plot_dispatch
     if patches:
         plt.legend(handles=patches, loc=4, bbox_to_anchor=(1.2, 0.5))
         plt.subplots_adjust(right=0.8)
     
     fig.align_ylabels()
     plt.show()
-
+    
     return True
