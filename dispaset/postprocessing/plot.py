@@ -1287,9 +1287,25 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
     import matplotlib.patches as mpatches
     import pandas as pd
     import numpy as np
+    from matplotlib import cm
 
+    # Define a color map for technologies and flows
     if colors is None:
-        colors = commons['colors']
+        # Use a different color map for better distinction
+        color_map = cm.get_cmap('tab20')
+        num_colors = 20
+        colors = {}
+        
+        # Assign colors to technologies in MeritOrder
+        for i, tech in enumerate(commons['MeritOrder']):
+            colors[tech] = color_map(i % num_colors)
+        
+        # Assign colors to special categories
+        colors['FlowIn'] = '#1f77b4'  # Blue
+        colors['FlowOut'] = '#ff7f0e'  # Orange
+        colors['Storage_Charging'] = '#2ca02c'  # Green
+        colors['Storage_Discharging'] = '#d62728'  # Red
+        colors['WAT'] = '#9467bd'  # Purple for storage level
 
     # Select boundary sector if not specified
     if z == '':
@@ -1307,6 +1323,30 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
     else:
         storage_level = None
         logging.warning(f'No storage level found for sector {z}')
+
+    # Get storage input/output data
+    storage_input = None
+    if 'OutputSectorXStorageInput' in results:
+        try:
+            # Handle MultiIndex case
+            if isinstance(results['OutputSectorXStorageInput'].columns, pd.MultiIndex):
+                storage_input = results['OutputSectorXStorageInput'].xs(z, level='Zones', axis=1) / 1000  # Convert to GW
+            else:
+                storage_input = results['OutputSectorXStorageInput'].filter(like=z) / 1000  # Convert to GW
+            
+            # Split into charging (positive) and discharging (negative)
+            storage_charging = storage_input.clip(lower=0)  # Positive values = charging
+            storage_discharging = storage_input.clip(upper=0)  # Negative values = discharging
+            
+            logging.info(f'Storage input/output data processed for sector {z}')
+        except Exception as e:
+            logging.error(f'Error processing storage input/output data: {str(e)}')
+            storage_charging = pd.DataFrame()
+            storage_discharging = pd.DataFrame()
+    else:
+        storage_charging = pd.DataFrame()
+        storage_discharging = pd.DataFrame()
+        logging.warning('No storage input/output data found in results')
 
     # Get PowerX data (power exchange with power sector)
     if 'OutputPowerX' in results:
@@ -1438,10 +1478,12 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
     if n == 1:
         axes = [axes]
 
-    # Plot negative values (PowerX negative and FlowOut)
+    # Plot negative values (PowerX negative, FlowOut, and storage charging)
     plotdata_neg = powerx_neg_by_tech.copy()
     if flows is not None:
         plotdata_neg['FlowOut'] = flows['FlowOut']
+    if not storage_charging.empty:
+        plotdata_neg['Storage_Charging'] = storage_charging.sum(axis=1)
     
     if not plotdata_neg.empty:
         sumplot_neg = plotdata_neg.cumsum(axis=1)
@@ -1453,10 +1495,12 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
             axes[0].fill_between(pdrng, sumplot_neg.loc[pdrng, col1], sumplot_neg.loc[pdrng, col2],
                                facecolor=color, alpha=alpha)
 
-    # Plot positive values (PowerX positive and FlowIn)
+    # Plot positive values (PowerX positive, FlowIn, and storage discharging)
     plotdata_pos = powerx_pos_by_tech.copy()
     if flows is not None:
         plotdata_pos['FlowIn'] = flows['FlowIn']
+    if not storage_discharging.empty:
+        plotdata_pos['Storage_Discharging'] = -storage_discharging.sum(axis=1)  # Make negative values positive for plotting
     
     if not plotdata_pos.empty:
         sumplot_pos = plotdata_pos.cumsum(axis=1)
@@ -1482,7 +1526,7 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
 
     # Plot storage level if available
     if storage_level is not None:
-        axes[1].fill_between(pdrng, 0, storage_level[pdrng], facecolor=colors.get('WAT', '#1f77b4'), alpha=alpha)
+        axes[1].fill_between(pdrng, 0, storage_level[pdrng], facecolor=colors.get('WAT', '#9467bd'), alpha=alpha)
         axes[1].set_ylabel(f'Storage Level [{units[1]}]')
 
         # Calculate storage plot limits if not provided
