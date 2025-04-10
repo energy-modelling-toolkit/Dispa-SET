@@ -1328,7 +1328,7 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
         logging.info(f'Storage level data processed for sector {z}')
 
     # Process PowerX data
-    if 'OutputPowerX' in results:
+    if 'OutputPowerX' in results and z in results['OutputPowerX'].columns:
         # Get PowerX data for this zone
         if isinstance(results['OutputPowerX'].columns, pd.MultiIndex):
             powerx_data = results['OutputPowerX'].xs(z, level='Zones', axis=1) / 1000  # Convert to GW
@@ -1378,6 +1378,8 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
                 plotdata[tech] = powerx_data[col]  # Include both positive and negative values
         
         logging.info(f'PowerX data processed for sector {z}')
+    else:
+        logging.warning(f'No PowerX data found for sector {z}')
     
     # Process flow data
     if 'OutputSectorXFlow' in results:
