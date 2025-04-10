@@ -199,6 +199,7 @@ SectorXStorageCapacity(nx)                  [MWh]           Storage capacity of 
 SectorXStorageSelfDischarge(nx)             [%]             Boundary sector storage self discharge
 SectorXStorageHours(nx)                     [h]             Boundary sector storage hours
 SectorXStorageMinimum(nx)                   [MWh]           Boundary sector storage minimum
+SectorXStoragePowerMax(nx)                   [MW]            Maximum power capacity of the boundary sector storage
 $If %MTS% == 0 SectorXStorageInitial(nx)    [MWh]           Boundary sector storage initial state of charge
 SectorXStorageProfile(nx,h)                 [%]             Boundary sector storage level respected at the end of each horizon
 SectorXAlertLevel(nx,h)                     [MWh]           Storage alert of the boundary sector - Will only be violated to avoid power rationing
@@ -352,6 +353,7 @@ $LOAD SectorXFlexSupplyInput
 $LOAD SectorXFlexSupplyInputInitial
 $LOAD SectorXFlexMaxSupply
 $LOAD SectorXStorageCapacity
+$LOAD SectorXStoragePowerMax
 $LOAD SectorXStorageSelfDischarge
 $LOAD SectorXStorageHours
 $LOAD SectorXStorageMinimum
@@ -564,6 +566,8 @@ EQ_Storage_Cyclic
 EQ_Storage_boundaries
 EQ_Boundary_Sector_Storage_MaxDischarge
 EQ_Boundary_Sector_Storage_MaxCharge
+EQ_Boundary_Sector_Storage_PowerMax
+EQ_Boundary_Sector_Storage_PowerMin
 EQ_Boundary_Sector_Storage_minimum
 EQ_Boundary_Sector_Storage_alert
 EQ_Boundary_Sector_Flood_Control
@@ -1145,6 +1149,19 @@ EQ_Boundary_Sector_Storage_MaxCharge(nx,i)$(SectorXStorageCapacity(nx)>0)..
         + (SectorXStorageCapacity(nx) - SectorXStorageLevel(nx,i-1))$(ord(i) > 1)
 ;
 
+* Storage input is bounded by the maximum power
+EQ_Boundary_Sector_Storage_PowerMax(nx,i)..
+        SectorXStorageInput(nx,i)
+        =L=
+        SectorXStoragePowerMax(nx)
+;
+
+* Storage output (negative input) is bounded by the maximum power
+EQ_Boundary_Sector_Storage_PowerMin(nx,i)..
+        SectorXStorageInput(nx,i)
+        =G=
+        -SectorXStoragePowerMax(nx)
+;
 
 *Storage balance
 EQ_Boundary_Sector_Storage_balance(nx,i)..
@@ -1528,6 +1545,8 @@ EQ_Storage_boundaries,
 *EQ_H2_demand,
 EQ_Boundary_Sector_Storage_MaxDischarge,
 EQ_Boundary_Sector_Storage_MaxCharge,
+EQ_Boundary_Sector_Storage_PowerMax,
+EQ_Boundary_Sector_Storage_PowerMin,
 EQ_Boundary_Sector_Storage_minimum,
 EQ_Boundary_Sector_Storage_level,
 EQ_Boundary_Sector_Storage_alert,

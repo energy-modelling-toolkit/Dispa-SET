@@ -225,11 +225,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # else:
         #     for key in ['SectorXStorageCapacity', 'SectorXStorageSelfDischarge','SectorXStorageHours']:
         #         BoundarySector[key] = np.nan
-            for key in ['STOCapacity', 'STOSelfDischarge','STOMaxChargingPower', 'STOMinSOC', 'STOHours']:
+            for key in ['STOCapacity', 'STOSelfDischarge','STOMaxPower', 'STOMinSOC', 'STOHours']:
                 if key not in BoundarySector.columns:
-                    BoundarySector[key] = np.nan     
+                    BoundarySector[key] = np.nan    
+                    logging.warning(f'{key} is not defined in the boundary sector data table')
         else:
-            for key in ['STOCapacity', 'STOSelfDischarge','STOMaxChargingPower', 'STOMinSOC', 'STOHours']:
+            for key in ['STOCapacity', 'STOSelfDischarge','STOMaxPower', 'STOMinSOC', 'STOHours']:
                 BoundarySector[key] = np.nan
 
     # Power plants:
@@ -665,6 +666,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Renaming the columns to ease the production of parameters:
         BoundarySector.rename(columns={'STOCapacity': 'SectorXStorageCapacity',
                                        'STOSelfDischarge': 'SectorXStorageSelfDischarge',
+                                       'STOMaxPower': 'SectorXStoragePowerMax',
                                        # 'STOMaxChargingPower': 'BoundarySectorStorageChargingCapacity',
                                        'STOMinSOC': 'SectorXStorageMinimum','STOHours':'SectorXStorageHours'}, inplace=True)
 
@@ -1028,6 +1030,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXFlexSupplyInputInitial'] = ['nx']
     sets_param['SectorXFlexMaxSupply'] = ['nx']
     sets_param['SectorXStorageCapacity'] = ['nx']
+    sets_param['SectorXStoragePowerMax'] = ['nx']
     sets_param['SectorXStorageHours'] = ['nx']
     sets_param['SectorXStorageSelfDischarge'] = ['nx']
     sets_param['SectorXStorageMinimum'] = ['nx']
@@ -1067,7 +1070,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # %%
     if (SectorCoupling_flag == 'On'): 
         # List of parameters whose value is known and provided in the dataframe BoundarySector
-        for var in ['SectorXStorageCapacity', 'SectorXStorageSelfDischarge', 'SectorXStorageHours']:
+        for var in ['SectorXStorageCapacity', 'SectorXStorageSelfDischarge', 'SectorXStorageHours', 'SectorXStoragePowerMax']:
             parameters[var]['val'] = BoundarySector[var].values
 
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
