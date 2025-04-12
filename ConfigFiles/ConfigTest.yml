@@ -10,7 +10,6 @@ CostLoadShedding: ''
 CostNotServed: ''
 CostOfSpillage: tests/dummy_data/boundary_sector/BS_Spillage_cost.csv
 CostXNotServed: tests/dummy_data/boundary_sector/BS_NotServed_cost.csv
-CostXSpillage: tests/dummy_data/boundary_sector/BS_Spillage_cost.csv
 CplexAccuracy: 0.0006
 CplexSetting: ''
 DataTimeStep: 1.0

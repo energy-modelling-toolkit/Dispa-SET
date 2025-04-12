@@ -1093,7 +1093,7 @@ def load_config_yaml(filename, AbsPath=True):
               'PriceTransmission', 'Reserve2D', 'Reserve2U', 'GeoData', 'SectorXDemand', 'BoundarySectorData',
               'BoundarySectorNTC', 'BoundarySectorInterconnections', 'SectorXFlexibleDemand', 'SectorXFlexibleSupply',
               'BoundarySectorMaxSpillage', 'SectorXReservoirLevels', 'SectorXAlertLevel', 'SectorXFloodControl',
-              'CostXSpillage', 'CostXNotServed', 'CostCurtailment']
+              'CostOfSpillage', 'CostXNotServed', 'CostCurtailment']
     for param in PARAMS:
         if param not in config:
             config[param] = ''
