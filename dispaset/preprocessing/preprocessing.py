@@ -41,41 +41,28 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
     """
     # Check existance of hydro scheduling module in the config file
     hydro_flag = config.get('HydroScheduling', "")  # If key does not exist it returns ""
-        
-    # Boolean variable to check wether it is Standard or BS:
-    SectorCoupling_flag = config.get('SectorCoupling', '')  # If key does not exist it returns ""
+    
+    # SectorCoupling is always 'On' in this version
 
     if (hydro_flag == "") or (hydro_flag == "Off"):
         logging.info('Simulation without mid therm scheduling')
         SimData = build_single_run(config)
-    
-    elif (SectorCoupling_flag == "") or (SectorCoupling_flag == 'Off'):
-        if config['H2FlexibleDemand'] != '':
-            [new_profiles, new_PtLDemand] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
-            # Build simulation data with new profiles
-            logging.info('\n\nBuilding final simulation\n')
-            SimData = build_single_run(config, new_profiles, new_PtLDemand)
-        else:
-            new_profiles = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
-            # Build simulation data with new profiles
-            logging.info('\n\nBuilding final simulation\n')
-            SimData = build_single_run(config, new_profiles)
-
-    elif (SectorCoupling_flag == 'On'):
+    else:
+        # With mid-term scheduling
         if (config['SectorXFlexibleDemand'] != '') and (config['SectorXFlexibleSupply'] == ''):
             [new_profiles, new_SectorXFlexDemand, new_profilesSectorX] = mid_term_scheduling(config, mts_plot=mts_plot,
-                                                                                              TimeStep=MTSTimeStep)
+                                                                                            TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
             SimData = build_single_run(config, profiles=new_profiles, SectorXFlexDemand=new_SectorXFlexDemand,
-                                        profilesSectorX=new_profilesSectorX)
+                                    profilesSectorX=new_profilesSectorX)
         elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] == ''):
             [new_profiles, new_SectorXFlexSupply, new_profilesSectorX] = mid_term_scheduling(config, mts_plot=mts_plot,
-                                                                                              TimeStep=MTSTimeStep)
+                                                                                            TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
             SimData = build_single_run(config, profiles=new_profiles, SectorXFlexSupply=new_SectorXFlexSupply,
-                                        profilesSectorX=new_profilesSectorX)
+                                    profilesSectorX=new_profilesSectorX)
         elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] != ''):
             [new_profiles, new_SectorXFlexDemand, new_SectorXFlexSupply, new_profilesSectorX] = mid_term_scheduling(
                 config,
@@ -84,17 +71,12 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
             SimData = build_single_run(config, profiles=new_profiles, SectorXFlexDemand=new_SectorXFlexDemand,
-                                        SectorXFlexSupply=new_SectorXFlexSupply, profilesSectorX=new_profilesSectorX)
+                                    SectorXFlexSupply=new_SectorXFlexSupply, profilesSectorX=new_profilesSectorX)
         else:
             [new_profiles, new_profilesSectorX] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
             # Build simulation data with new profiles
             logging.info('\n\nBuilding final simulation\n')
             SimData = build_single_run(config, profiles=new_profiles, profilesSectorX=new_profilesSectorX)
-    else:
-        [new_profiles, new_profilesSectorX] = mid_term_scheduling(config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
-        # Build simulation data with new profiles
-        logging.info('\n\nBuilding final simulation\n')
-        SimData = build_single_run(config, profiles=new_profiles, profilesSectorX=new_profilesSectorX)
 
     # Copy the log to the simulation folder:
     if os.path.isfile(commons['logfile']):
@@ -295,25 +277,17 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             gdx_to_list(config['GAMS_folder'], config['SimulationDirectory'] + '/' + resultfile, varname='all',
                         verbose=True), fixindex=True, verbose=True)
         _check_results(temp_results)
-        if config['SectorCoupling']=="" or config['SectorCoupling'] == 'Off':
-            if 'OutputStorageLevel' not in temp_results:
-                logging.critical('Storage levels in the selected region were not computed, please check that storage units '
-                                 'are present in the power plant database! If not, unselect zones with no storage units '
-                                 'form the zones in the MTS module')
-                sys.exit(0)
-            if len(temp_results['OutputStorageLevel']) < len(idx):
-                profiles = temp_results['OutputStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
-            else:
-                profiles = temp_results['OutputStorageLevel'].set_index(idx)
+        if 'OutputStorageLevel' not in temp_results:
+            logging.critical('Storage levels in the selected region were not computed, please check that storage units '
+                             'are present in the power plant database! If not, unselect zones with no storage units '
+                             'form the zones in the MTS module')
+            sys.exit(0)
+        if len(temp_results['OutputStorageLevel']) < len(idx):
+            profiles = temp_results['OutputStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
+        else:
+            profiles = temp_results['OutputStorageLevel'].set_index(idx)
     
-            if config['H2FlexibleDemand'] != '':
-                if 'OutputPtLDemand' not in temp_results:
-                    logging.critical('PtL Demand in the selected region was not computed')
-                    sys.exit(0)
-                if len(temp_results['OutputPtLDemand']) < len(idx):
-                    PtLDemand = temp_results['OutputPtLDemand'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
-                else:
-                    PtLDemand = temp_results['OutputPtLDemand'].set_index(idx)
+
     
             # Updating the profiles table with the original unit names:
             for u in profiles:
@@ -324,107 +298,94 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                 for u_old in units.loc[u, 'FormerUnits']:
                     profiles[u_old] = profiles[u]
                 profiles.drop(u, axis=1, inplace=True)
-            # TODO: CHECK WHO COMMENTED THIS PART (MARCO)
-            # if config['H2FlexibleDemand'] != '':
-            #     for u in PtLDemand:
-            #         if u not in units.index:
-            #             logging.critical('Unit "' + u + '" is reported in the PtL demand of the result file but '
-            #                                             'does not appear in the units table')
-            #             sys.exit(1)
-            #         # TODO: check if else statement should be used here, if its not everything currently in the else
-            #         #  statement is never used
-            #         else:
-            #             for u_old in units.loc[u, 'FormerUnits']:
-            #                 PtLDemand[u_old] = PtLDemand[u]
-            #                 PtLDemand.drop(u, axis=1, inplace=True)
-                
-        elif config['SectorCoupling'] == 'On':
-            if 'OutputStorageLevel' in temp_results and 'OutputSectorXStorageLevel' not in temp_results:
-                if len(temp_results['OutputStorageLevel']) < len(idx):
-                    profiles = temp_results['OutputStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
-                else:
-                    profiles = temp_results['OutputStorageLevel'].set_index(idx)
-            elif 'OutputStorageLevel' not in temp_results and 'OutputSectorXStorageLevel' in temp_results:
-                if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
-                    profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
-                        0).set_index(idx)
-                else:
-                    profilesSectorX = temp_results['OutputSectorXStorageLevel'].set_index(idx)
-            elif 'OutputStorageLevel' in temp_results and 'OutputSectorXStorageLevel' in temp_results:
-                if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
-                    profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
-                        0).set_index(idx)
-                else:
-                    profilesSectorX = temp_results['OutputSectorXStorageLevel'].set_index(idx)
-    
-                if len(temp_results['OutputStorageLevel']) < len(idx):
-                    profiles = temp_results['OutputStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
-                else:
-                    profiles = temp_results['OutputStorageLevel'].set_index(idx)
+
+
+        if 'OutputStorageLevel' in temp_results and 'OutputSectorXStorageLevel' not in temp_results:
+            if len(temp_results['OutputStorageLevel']) < len(idx):
+                profiles = temp_results['OutputStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
             else:
-                logging.critical('Storage levels in the selected region were not computed, please check that storage units '
-                                 'are present in the power plant database! If not, unselect zones with no storage units '
-                                 'form the zones in the MTS module')
+                profiles = temp_results['OutputStorageLevel'].set_index(idx)
+        elif 'OutputStorageLevel' not in temp_results and 'OutputSectorXStorageLevel' in temp_results:
+            if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
+                profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
+                    0).set_index(idx)
+            else:
+                profilesSectorX = temp_results['OutputSectorXStorageLevel'].set_index(idx)
+        elif 'OutputStorageLevel' in temp_results and 'OutputSectorXStorageLevel' in temp_results:
+            if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
+                profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
+                    0).set_index(idx)
+            else:
+                profilesSectorX = temp_results['OutputSectorXStorageLevel'].set_index(idx)
+
+            if len(temp_results['OutputStorageLevel']) < len(idx):
+                profiles = temp_results['OutputStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx)
+            else:
+                profiles = temp_results['OutputStorageLevel'].set_index(idx)
+        else:
+            logging.critical('Storage levels in the selected region were not computed, please check that storage units '
+                                'are present in the power plant database! If not, unselect zones with no storage units '
+                                'form the zones in the MTS module')
+            sys.exit(0)
+        # TODO: CHECK WHO COMMENTED THIS PART (MARCO) 
+        # if 'SectorXReservoirLevels' in config and config['SectorXReservoirLevels'] != '':
+        #     if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
+        #         profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
+        #         0).set_index(idx)
+        #     else:
+        #         profilesSectorX = temp_results['OutputSectorXStorageLevel'].set_index(idx)
+        # else: 
+        #     logging.info('BS Storage Sectors were not computed')
+        #     profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
+        #     0).set_index(idx)
+
+        if 'SectorXFlexibleDemand' in config and config['SectorXFlexibleDemand'] != '':
+            if 'OutputSectorXFlexDemand' not in temp_results:
+                logging.critical('PtL Demand in the selected region was not computed')
                 sys.exit(0)
-            # TODO: CHECK WHO COMMENTED THIS PART (MARCO) 
-            # if 'SectorXReservoirLevels' in config and config['SectorXReservoirLevels'] != '':
-            #     if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
-            #         profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
-            #         0).set_index(idx)
-            #     else:
-            #         profilesSectorX = temp_results['OutputSectorXStorageLevel'].set_index(idx)
-            # else: 
-            #     logging.info('BS Storage Sectors were not computed')
-            #     profilesSectorX = temp_results['OutputSectorXStorageLevel'].reindex(range(1, len(idx) + 1)).fillna(
-            #     0).set_index(idx)
-    
-            if 'SectorXFlexibleDemand' in config and config['SectorXFlexibleDemand'] != '':
-                if 'OutputSectorXFlexDemand' not in temp_results:
-                    logging.critical('PtL Demand in the selected region was not computed')
-                    sys.exit(0)
-                
-                if len(temp_results['OutputSectorXFlexDemand']) < len(idx):
-                    SectorXFlexDemand = temp_results['OutputSectorXFlexDemand'].reindex(range(1, len(idx) + 1)).fillna(
-                        0).set_index(
-                        idx)
-                else:
-                    SectorXFlexDemand = temp_results['OutputSectorXFlexDemand'].set_index(idx)
+            
+            if len(temp_results['OutputSectorXFlexDemand']) < len(idx):
+                SectorXFlexDemand = temp_results['OutputSectorXFlexDemand'].reindex(range(1, len(idx) + 1)).fillna(
+                    0).set_index(
+                    idx)
             else:
-                logging.info('BS Flexible Demand Sectors were not computed')
-                SectorXFlexDemand = temp_results['OutputCommitted'].reindex(range(1, len(idx) + 1)).fillna(
-                0).set_index(idx)
-            # TODO: CHECK HOW TO CORRECT THIS PART DELETING THE COMMENT
-            # if 'SectorXFlexibleSupply' in config and config['SectorXFlexibleSupply'] != '':
-            #     if 'OutputSectorXFlexSupply' not in temp_results:
-            #         logging.critical('PtL Supply in the selected region was not computed')
-            #         sys.exit(0)
-                    
-            #     if len(temp_results['OutputSectorXFlexSupply']) < len(idx):
-            #         SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].reindex(range(1, len(idx) + 1)).fillna(
-            #             0).set_index(
-            #             idx)
-            #     else:
-            #         SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].set_index(idx)
-            # else:
-            #     logging.info('BS Flexible Supply Sectors were not computed')
-            #     SectorXFlexSupply = temp_results['OutputCommitted'].reindex(range(1, len(idx) + 1)).fillna(
-            #     0).set_index(idx)
-    
-            # Updating the profiles table with the original unit names:
-            if 'profiles' in locals():
-                for u in profiles:
-                    if u not in units.index:
-                        logging.critical('Unit "' + u + '" is reported in the reservoir levels of the result file but '
-                                                        'does not appear in the units table')
-                        sys.exit(1)
-                    for u_old in units.loc[u, 'FormerUnits']:
-                        profiles[u_old] = profiles[u]
-                    profiles.drop(u, axis=1, inplace=True)
+                SectorXFlexDemand = temp_results['OutputSectorXFlexDemand'].set_index(idx)
+        else:
+            logging.info('BS Flexible Demand Sectors were not computed')
+            SectorXFlexDemand = temp_results['OutputCommitted'].reindex(range(1, len(idx) + 1)).fillna(
+            0).set_index(idx)
+        # TODO: CHECK HOW TO CORRECT THIS PART DELETING THE COMMENT
+        # if 'SectorXFlexibleSupply' in config and config['SectorXFlexibleSupply'] != '':
+        #     if 'OutputSectorXFlexSupply' not in temp_results:
+        #         logging.critical('PtL Supply in the selected region was not computed')
+        #         sys.exit(0)
+                
+        #     if len(temp_results['OutputSectorXFlexSupply']) < len(idx):
+        #         SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].reindex(range(1, len(idx) + 1)).fillna(
+        #             0).set_index(
+        #             idx)
+        #     else:
+        #         SectorXFlexSupply = temp_results['OutputSectorXFlexSupply'].set_index(idx)
+        # else:
+        #     logging.info('BS Flexible Supply Sectors were not computed')
+        #     SectorXFlexSupply = temp_results['OutputCommitted'].reindex(range(1, len(idx) + 1)).fillna(
+        #     0).set_index(idx)
+
+        # Updating the profiles table with the original unit names:
+        if 'profiles' in locals():
+            for u in profiles:
+                if u not in units.index:
+                    logging.critical('Unit "' + u + '" is reported in the reservoir levels of the result file but '
+                                                    'does not appear in the units table')
+                    sys.exit(1)
+                for u_old in units.loc[u, 'FormerUnits']:
+                    profiles[u_old] = profiles[u]
+                profiles.drop(u, axis=1, inplace=True)
     else:
         logging.error('HydroScheduling parameter should be either "Regional" or "Zonal" (case sensitive). ')
         sys.exit()
 
-    if config['SectorCoupling']=="" or config['SectorCoupling'] == 'Off':
+    if config['HydroScheduling'] == 'Off':
         # replace all 1.000000e+300 values by nan since they correspond to undefined in GAMS:
         if 'profiles' in locals():
             profiles[profiles >= 1E300] = np.nan
@@ -433,8 +394,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                profiles[storagereservoir.split(' - ')[1].strip()] = 0
         if config['H2FlexibleDemand'] != '':
             PtLDemand[PtLDemand >= 1E300] = np.nan
-        
-    elif config['SectorCoupling'] == 'On':
+    else:
         if 'profilesSectorX' in locals():
             profilesSectorX[profilesSectorX >= 1E300] = np.nan
         #check storage hours less than 8
@@ -462,81 +422,22 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                     os.path.join(sim_folder, 'Inputs_MTS.gdx'))
 
     # Re-index to the main simulation time step:
-    if config['SectorCoupling']=="" or config['SectorCoupling'] == 'Off':
-        if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
-            profiles = profiles.reindex(idx_long, method='nearest')
+    if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
+        profiles = profiles.reindex(idx_long, method='nearest')
     
-            temp_config['StartDate'] = (y_start, 1, 1, 00, 00, 00)  # updating start date to the beginning of the year
-            temp_config['StopDate'] = (y_start + 1, 1, 2, 00, 59, 00)
-            idx_tmp = pd.date_range(start=dt.datetime(*temp_config['StartDate']),
-                                    end=dt.datetime(*temp_config['StopDate']),
-                                    freq=pd_timestep(TimeStep)).tz_localize(None)
+        temp_config['StartDate'] = (y_start, 1, 1, 00, 00, 00)  # updating start date to the beginning of the year
+        temp_config['StopDate'] = (y_start + 1, 1, 2, 00, 59, 00)
+        idx_tmp = pd.date_range(start=dt.datetime(*temp_config['StartDate']),
+                                end=dt.datetime(*temp_config['StopDate']),
+                                freq=pd_timestep(TimeStep)).tz_localize(None)
     
-            if config['H2FlexibleDemand'] != '':
-                PtLDemand = pd.DataFrame(PtLDemand, index=idx_tmp).fillna(0)
-                PtLDemand = PtLDemand.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
-                PtLDemand = PtLDemand.loc[idx_long, :]
+        if config['H2FlexibleDemand'] != '':
+            PtLDemand = pd.DataFrame(PtLDemand, index=idx_tmp).fillna(0)
+            PtLDemand = PtLDemand.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
+            PtLDemand = PtLDemand.loc[idx_long, :]
     
         pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'], "temp_profiles.p"), "wb"))
         if config['H2FlexibleDemand'] != '':
             return profiles, PtLDemand
         else:
-            return profiles
-        
-    if config['SectorCoupling'] == 'On':
-        if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
-            if 'profiles' in locals():
-                profiles = profiles.reindex(idx_long, method='nearest')
-            if 'profilesSectorX' in locals():
-                profilesSectorX = profilesSectorX.reindex(idx_long, method='nearest')
-    
-            temp_config['StartDate'] = (y_start, 1, 1, 00, 00, 00)  # updating start date to the beginning of the year
-            temp_config['StopDate'] = (y_start + 1, 1, 2, 00, 59, 00)
-            idx_tmp = pd.date_range(start=dt.datetime(*temp_config['StartDate']),
-                                    end=dt.datetime(*temp_config['StopDate']),
-                                    freq=pd_timestep(TimeStep)).tz_localize(None)
-    
-            if 'SectorXFlexibleDemand' in config and config['SectorXFlexibleDemand'] != '':
-                SectorXFlexDemand = pd.DataFrame(SectorXFlexDemand, index=idx_tmp).fillna(0)
-                SectorXFlexDemand = SectorXFlexDemand.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
-                SectorXFlexDemand = SectorXFlexDemand.loc[idx_long, :]
-    
-            if 'SectorXFlexibleSupply' in config and config['SectorXFlexibleSupply'] != '':
-                SectorXFlexSupply = pd.DataFrame(SectorXFlexSupply, index=idx_tmp).fillna(0)
-                SectorXFlexSupply = SectorXFlexSupply.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
-                SectorXFlexSupply = SectorXFlexSupply.loc[idx_long, :]
-            if 'profiles' in locals():
-                pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'], "temp_profiles.p"), "wb"))
-            if 'profilesSectorX' in locals():
-                pickle.dump(profilesSectorX, open(os.path.join(config['SimulationDirectory'], "temp_profilesSectorX.p"), "wb"))
-            if 'SectorXFlexibleDemand' and 'SectorXFlexibleSupply' in config:
-        	    if (config['SectorXFlexibleSupply'] == '') and (config['SectorXFlexibleDemand'] != ''):
-        	        if 'profilesSectorX' in locals() and 'profiles' in locals():
-        	            return profiles, SectorXFlexDemand, profilesSectorX
-        	        elif 'profiles' in locals():
-        	            return profiles, SectorXFlexDemand, None
-        	        elif 'profilesSectorX' in locals():
-        	            return None, SectorXFlexDemand, profilesSectorX
-        	    elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] == ''):
-        	        if 'profilesSectorX' in locals() and 'profiles' in locals():
-        	            return profiles, SectorXFlexSupply, profilesSectorX
-        	        elif 'profiles' in locals():
-        	            return profiles, SectorXFlexSupply, None
-        	        elif 'profilesSectorX' in locals():
-        	            return None, SectorXFlexSupply, profilesSectorX
-        	    elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] != ''):
-        	        if 'profilesSectorX' in locals() and 'profiles' in locals():
-        	            return profiles, SectorXFlexDemand, SectorXFlexSupply, profilesSectorX
-        	        elif 'profiles' in locals():
-        	            return profiles, SectorXFlexDemand, SectorXFlexSupply, None
-        	        elif 'profilesSectorX' in locals():
-        	            return None, SectorXFlexDemand, SectorXFlexSupply, profilesSectorX
-        	    else:
-        	        if 'profilesSectorX' in locals() and 'profiles' in locals():
-        	            return profiles, profilesSectorX
-        	        elif 'profiles' in locals():
-        	            return profiles, None
-        	        elif 'profilesSectorX' in locals():
-        	            return None, profilesSectorX
-            else:
-                return profiles, profilesSectorX
+            return profiles, SectorXFlexDemand, SectorXFlexSupply, profilesSectorX
