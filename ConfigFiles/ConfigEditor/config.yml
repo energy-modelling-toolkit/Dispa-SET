@@ -1,0 +1,17 @@
+# Default configuration file for Dispa-SET Config Editor
+# This is a placeholder file
+
+Description: Default configuration file for ConfigEditor
+SimulationType: MILP
+SimulationDirectory: Simulations/default
+StartDate: [2023, 1, 1, 0, 0, 0]
+StopDate: [2023, 1, 7, 0, 0, 0]
+SimulationTimeStep: 1.0
+DataTimeStep: 1.0
+LookAhead: 1
+HorizonLength: 3
+WriteGDX: 1
+WritePickle: 1
+zones:
+  - Z1
+  - Z2 

@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispa-SET Configuration Editor</title>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --primary-hover: #2980b9;
+            --text-color: #333333;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --border-color: #dddddd;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --muted-text: #777777;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 {
+            color: var(--text-color);
+            margin-top: 0;
+        }
+
+        h1 {
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .default-value {
+            font-size: 12px;
+            color: var(--muted-text);
+            margin-top: 4px;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-group {
+            margin-bottom: 20px;
+        }
+
+        .btn-group .btn {
+            margin-right: 10px;
+        }
+
+        /* Status message */
+        #statusMessage {
+            display: none;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+
+        .success {
+            display: block !important;
+            background-color: rgba(46, 204, 113, 0.2);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        .error {
+            display: block !important;
+            background-color: rgba(231, 76, 60, 0.2);
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        /* Grid system */
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-right: -10px;
+            margin-left: -10px;
+        }
+
+        .col {
+            flex: 1;
+            padding: 0 10px;
+        }
+
+        .col-2 {
+            flex: 2;
+            padding: 0 10px;
+        }
+
+        /* Country selection */
+        .country-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .country-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .country-item input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .country-item input[type="text"] {
+            width: 100px;
+            margin-left: 5px;
+        }
+
+        /* Tab system */
+        .tabs {
+            display: flex;
+            margin-bottom: 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            margin-right: 5px;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            background-color: #f9f9f9;
+        }
+
+        .tab.active {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--card-bg);
+            margin-bottom: -1px;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Radio and checkbox styling */
+        .radio-group,
+        .checkbox-group {
+            margin-bottom: 10px;
+        }
+
+        .radio-item,
+        .checkbox-item {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 15px;
+        }
+
+        .radio-item input,
+        .checkbox-item input {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Dispa-SET Configuration Editor</h1>
+            <div class="btn-group">
+                <input type="file" id="yamlFile" accept=".yaml,.yml" style="display: none;">
+                <button class="btn" onclick="document.getElementById('yamlFile').click();">Load YAML</button>
+                <button class="btn" id="saveYaml">Save YAML</button>
+                <span id="fileNameLabel" style="margin-left: 15px; color: var(--muted-text);"></span>
+            </div>
+            <div id="statusMessage"></div>
+        </header>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="general">General Settings</div>
+            <div class="tab" data-tab="zones">Zones Configuration</div>
+            <div class="tab" data-tab="data-paths">Data Paths</div>
+            <div class="tab" data-tab="parameters">Parameters</div>
+            <div class="tab" data-tab="advanced">Advanced Settings</div>
+        </div>
+
+        <form id="configForm">
+            <!-- General Settings Tab -->
+            <div id="general" class="tab-content card active">
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" rows="3"></textarea>
+                </div>
+                
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="simulationType">Simulation Type</label>
+                            <select id="simulationType">
+                                <option value="MILP">MILP</option>
+                                <option value="LP">LP</option>
+                                <option value="LP clustered">LP clustered</option>
+                                <option value="Integer clustering">Integer clustering</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="simulationDirectory">Simulation Directory</label>
+                            <input type="text" id="simulationDirectory">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="startDate">Start Date</label>
+                            <input type="text" id="startDate" placeholder="YYYY-MM-DD-HH-MM-SS">
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="stopDate">Stop Date</label>
+                            <input type="text" id="stopDate" placeholder="YYYY-MM-DD-HH-MM-SS">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="simulationTimeStep">Simulation Time Step</label>
+                            <input type="number" id="simulationTimeStep" min="0.1" step="0.1" value="1.0">
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="dataTimeStep">Data Time Step</label>
+                            <input type="number" id="dataTimeStep" min="0.1" step="0.1" value="1.0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="lookAhead">Look Ahead</label>
+                            <input type="number" id="lookAhead" min="0" step="1" value="1">
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="horizonLength">Horizon Length</label>
+                            <input type="number" id="horizonLength" min="1" step="1" value="3">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Output Options</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="writeGDX" checked>
+                            <label for="writeGDX">Write GDX</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="writePickle" checked>
+                            <label for="writePickle">Write Pickle</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zones Configuration Tab -->
+            <div id="zones" class="tab-content card">
+                <h3>Select and Configure Countries</h3>
+                <p>Select countries and optionally rename them. Up to 40 countries can be active.</p>
+                
+                <div class="country-grid" id="countriesContainer">
+                    <!-- Countries will be dynamically added here -->
+                </div>
+            </div>
+
+            <!-- Data Paths Tab -->
+            <div id="data-paths" class="tab-content card">
+                <h3>Data Input Paths</h3>
+                <p>Define paths to input data files. Leave empty to use default values where applicable.</p>
+                
+                <div class="form-group">
+                    <label for="powerPlantData">Power Plant Data</label>
+                    <input type="text" id="powerPlantData">
+                </div>
+                
+                <div class="form-group">
+                    <label for="demand">Demand</label>
+                    <input type="text" id="demand">
+                </div>
+                
+                <div class="form-group">
+                    <label for="renewablesAF">Renewables Availability Factors</label>
+                    <input type="text" id="renewablesAF">
+                </div>
+                
+                <div class="form-group">
+                    <label for="outages">Outages</label>
+                    <input type="text" id="outages">
+                </div>
+                
+                <div class="form-group">
+                    <label for="ntc">NTC</label>
+                    <input type="text" id="ntc">
+                </div>
+                
+                <h3>Hydro Data</h3>
+                
+                <div class="form-group">
+                    <label for="hydroScheduling">Hydro Scheduling</label>
+                    <select id="hydroScheduling">
+                        <option value="Regional">Regional</option>
+                        <option value="International">International</option>
+                        <option value="Global">Global</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="hydroSchedulingHorizon">Hydro Scheduling Horizon</label>
+                    <select id="hydroSchedulingHorizon">
+                        <option value="Annual">Annual</option>
+                        <option value="Weekly">Weekly</option>
+                        <option value="Daily">Daily</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="reservoirLevels">Reservoir Levels</label>
+                    <input type="text" id="reservoirLevels">
+                </div>
+                
+                <div class="form-group">
+                    <label for="reservoirScaledInflows">Reservoir Scaled Inflows</label>
+                    <input type="text" id="reservoirScaledInflows">
+                </div>
+            </div>
+
+            <!-- Parameters Tab -->
+            <div id="parameters" class="tab-content card">
+                <h3>Cost Parameters</h3>
+                
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="costLoadShedding">Cost of Load Shedding</label>
+                            <input type="text" id="costLoadShedding">
+                            <div class="default-value" data-default="1500.0">Default: 1500.0</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="costHeatSlack">Cost of Heat Slack</label>
+                            <input type="text" id="costHeatSlack">
+                            <div class="default-value" data-default="100.0">Default: 100.0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="costH2Slack">Cost of H2 Slack</label>
+                            <input type="text" id="costH2Slack">
+                            <div class="default-value" data-default="100.0">Default: 100.0</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="costCurtailment">Cost of Curtailment</label>
+                            <input type="text" id="costCurtailment">
+                            <div class="default-value" data-default="20.0">Default: 20.0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h3>Fuel Price Parameters</h3>
+                
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="priceOfGas">Price of Gas</label>
+                            <input type="text" id="priceOfGas">
+                            <div class="default-value" data-default="44.0">Default: 44.0</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="priceOfBlackCoal">Price of Black Coal</label>
+                            <input type="text" id="priceOfBlackCoal">
+                            <div class="default-value" data-default="18.0">Default: 18.0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="priceOfLignite">Price of Lignite</label>
+                            <input type="text" id="priceOfLignite">
+                            <div class="default-value" data-default="15.0">Default: 15.0</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="priceOfCO2">Price of CO2</label>
+                            <input type="text" id="priceOfCO2">
+                            <div class="default-value" data-default="90.0">Default: 90.0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="priceOfBiomass">Price of Biomass</label>
+                            <input type="text" id="priceOfBiomass">
+                            <div class="default-value" data-default="33.0">Default: 33.0</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="priceOfFuelOil">Price of Fuel Oil</label>
+                            <input type="text" id="priceOfFuelOil">
+                            <div class="default-value" data-default="60.0">Default: 60.0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Settings Tab -->
+            <div id="advanced" class="tab-content card">
+                <h3>Reserve Settings</h3>
+                
+                <div class="form-group">
+                    <label for="reserveCalculation">Reserve Calculation</label>
+                    <select id="reserveCalculation">
+                        <option value="Generic">Generic</option>
+                        <option value="Detailed">Detailed</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Reserve Participation</label>
+                    <div id="reserveParticipation" class="checkbox-group">
+                        <!-- Reserve participation options will be added here -->
+                    </div>
+                </div>
+                
+                <h3>Sector Coupling</h3>
+                <div class="form-group">
+                    <label for="sectorCoupling">Sector Coupling</label>
+                    <div class="radio-group">
+                        <div class="radio-item">
+                            <input type="radio" id="sectorCouplingOn" name="sectorCoupling" value="On">
+                            <label for="sectorCouplingOn">On</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" id="sectorCouplingOff" name="sectorCoupling" value="Off">
+                            <label for="sectorCouplingOff">Off</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <h3>Solver Settings</h3>
+                <div class="form-group">
+                    <label for="cplexAccuracy">CPLEX Accuracy</label>
+                    <input type="number" id="cplexAccuracy" min="0" step="0.0001" value="0.0006">
+                </div>
+                
+                <div class="form-group">
+                    <label for="cplexPath">CPLEX Path</label>
+                    <input type="text" id="cplexPath">
+                </div>
+                
+                <div class="form-group">
+                    <label for="cplexSetting">CPLEX Setting</label>
+                    <input type="text" id="cplexSetting">
+                </div>
+                
+                <div class="form-group">
+                    <label for="gamsFolder">GAMS Folder</label>
+                    <input type="text" id="gamsFolder">
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Function to safely parse YAML with Python constructs
+        function parseYaml(text) {
+            try {
+                // Preprocess YAML to handle Python-specific tags
+                // First, replace !!python/tuple with nothing to treat arrays as normal arrays
+                const processedText = text.replace(/!!python\/tuple/g, '');
+                return jsyaml.load(processedText);
+            } catch (error) {
+                console.error("Error parsing YAML:", error);
+                throw error;
+            }
+        }
+
+        // Function to safely dump YAML 
+        function dumpYaml(data) {
+            try {
+                // Just use standard dump without any custom schema
+                return jsyaml.dump(data);
+            } catch (error) {
+                console.error("Error dumping YAML:", error);
+                throw error;
+            }
+        }
+
+        // Country list (up to 40 countries)
+        const countries = [
+            'AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 
+            'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 
+            'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 
+            'SE', 'SI', 'SK', 'TR', 'UA', 'Z1', 'Z2', 'ZZ3', 'ZZ4', 'ZZ5'
+        ];
+
+        // Reserve participation options
+        const reserveOptions = [
+            'COMC', 'GTUR', 'HDAM', 'HPHS', 'ICEN', 'CAES', 'BATS', 'BEVS', 
+            'P2HT', 'ABHP', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE', 'STUR'
+        ];
+
+        // Current filename
+        let currentFilename = "ConfigTest.yml";
+        const API_URL = "http://localhost:8084";
+        
+        // Initialize tab functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    const tabContents = document.querySelectorAll('.tab-content');
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    document.getElementById(tab.dataset.tab).classList.add('active');
+                });
+            });
+            
+            // Initialize countries
+            initializeCountries();
+            
+            // Initialize reserve participation options
+            initializeReserveOptions();
+            
+            // Set up file input
+            document.getElementById('yamlFile').addEventListener('change', handleFileSelect);
+            
+            // Set up save button
+            document.getElementById('saveYaml').addEventListener('click', saveYamlFile);
+            
+            // Load default YAML on page load
+            loadDefaultYaml();
+        });
+        
+        // Initialize countries list
+        function initializeCountries() {
+            const container = document.getElementById('countriesContainer');
+            
+            countries.forEach(country => {
+                const countryItem = document.createElement('div');
+                countryItem.className = 'country-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = 'country_' + country;
+                checkbox.value = country;
+                
+                const label = document.createElement('label');
+                label.htmlFor = 'country_' + country;
+                label.textContent = country;
+                
+                const textInput = document.createElement('input');
+                textInput.type = 'text';
+                textInput.id = 'countryName_' + country;
+                textInput.value = country;
+                
+                countryItem.appendChild(checkbox);
+                countryItem.appendChild(label);
+                countryItem.appendChild(textInput);
+                
+                container.appendChild(countryItem);
+            });
+        }
+        
+        // Initialize reserve participation options
+        function initializeReserveOptions() {
+            const container = document.getElementById('reserveParticipation');
+            
+            reserveOptions.forEach(option => {
+                const checkboxItem = document.createElement('div');
+                checkboxItem.className = 'checkbox-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = 'reserve_' + option;
+                checkbox.value = option;
+                
+                const label = document.createElement('label');
+                label.htmlFor = 'reserve_' + option;
+                label.textContent = option;
+                
+                checkboxItem.appendChild(checkbox);
+                checkboxItem.appendChild(label);
+                
+                container.appendChild(checkboxItem);
+            });
+        }
+        
+        // Load the default YAML file (ConfigTest.yml)
+        function loadDefaultYaml() {
+            // Use the API to fetch the file
+            fetch(`${API_URL}/read-file?filename=../ConfigTest.yml`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Failed to load file: ${response.status} ${response.statusText}`);
+                    }
+                    return response.text();
+                })
+                .then(yamlText => {
+                    // Use our helper function to parse YAML with Python tags
+                    const yamlData = parseYaml(yamlText);
+                    populateForm(yamlData);
+                    updateFileNameLabel('ConfigTest.yml');
+                    showStatusMessage('Default configuration loaded successfully.', 'success');
+                })
+                .catch(error => {
+                    console.error('Error loading default YAML:', error);
+                    showStatusMessage('Error loading default configuration. Please check the console for details.', 'error');
+                    
+                    // Fallback to direct fetch if API fails
+                    fetch('../ConfigTest.yml')
+                        .then(response => response.text())
+                        .then(yamlText => {
+                            // Use our helper function here too
+                            const yamlData = parseYaml(yamlText);
+                            populateForm(yamlData);
+                            updateFileNameLabel('ConfigTest.yml');
+                            showStatusMessage('Default configuration loaded successfully using direct method.', 'success');
+                        })
+                        .catch(error => {
+                            console.error('Fallback loading also failed:', error);
+                            showStatusMessage('All attempts to load configuration failed.', 'error');
+                        });
+                });
+        }
+        
+        // Handle file selection
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    // Use our helper function here too
+                    const yamlData = parseYaml(e.target.result);
+                    populateForm(yamlData);
+                    currentFilename = file.name;
+                    updateFileNameLabel(file.name);
+                    showStatusMessage(`File '${file.name}' loaded successfully.`, 'success');
+                } catch (error) {
+                    console.error('Error parsing YAML:', error);
+                    showStatusMessage('Error parsing YAML file. Please check the console for details.', 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // Populate form with YAML data
+        function populateForm(yamlData) {
+            // Clear form first
+            document.getElementById('configForm').reset();
+            
+            // Populate text fields, numbers, and selects for simple values
+            for (const [key, value] of Object.entries(yamlData)) {
+                const element = document.getElementById(key.charAt(0).toLowerCase() + key.slice(1));
+                if (element && typeof value !== 'object') {
+                    if (element.type === 'checkbox') {
+                        element.checked = Boolean(value);
+                    } else {
+                        element.value = value;
+                    }
+                }
+            }
+            
+            // Handle description
+            if (yamlData.Description) {
+                document.getElementById('description').value = yamlData.Description;
+            }
+            
+            // Handle simulation type
+            if (yamlData.SimulationType) {
+                document.getElementById('simulationType').value = yamlData.SimulationType;
+            }
+            
+            // Handle dates (start and stop)
+            if (yamlData.StartDate && Array.isArray(yamlData.StartDate)) {
+                const date = yamlData.StartDate;
+                document.getElementById('startDate').value = `${date[0]}-${date[1]}-${date[2]}-${date[3]}-${date[4]}-${date[5]}`;
+            }
+            
+            if (yamlData.StopDate && Array.isArray(yamlData.StopDate)) {
+                const date = yamlData.StopDate;
+                document.getElementById('stopDate').value = `${date[0]}-${date[1]}-${date[2]}-${date[3]}-${date[4]}-${date[5]}`;
+            }
+            
+            // Handle zones
+            if (yamlData.zones && Array.isArray(yamlData.zones)) {
+                yamlData.zones.forEach(zone => {
+                    const checkbox = document.getElementById(`country_${zone}`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            }
+            
+            // Handle reserve participation
+            if (yamlData.ReserveParticipation && Array.isArray(yamlData.ReserveParticipation)) {
+                yamlData.ReserveParticipation.forEach(item => {
+                    const checkbox = document.getElementById(`reserve_${item}`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            }
+            
+            // Handle sector coupling
+            if (yamlData.SectorCoupling === 'On') {
+                document.getElementById('sectorCouplingOn').checked = true;
+            } else {
+                document.getElementById('sectorCouplingOff').checked = true;
+            }
+        }
+        
+        // Collect form data into YAML
+        function collectFormData() {
+            const formData = {};
+            
+            // Collect text inputs, numbers, selects
+            const inputs = document.querySelectorAll('input[type="text"], input[type="number"], select, textarea');
+            inputs.forEach(input => {
+                if (input.id && input.value !== '') {
+                    // Convert first letter to uppercase for consistency
+                    const key = input.id.charAt(0).toUpperCase() + input.id.slice(1);
+                    formData[key] = input.value;
+                }
+            });
+            
+            // Handle description
+            if (document.getElementById('description').value) {
+                formData.Description = document.getElementById('description').value;
+            }
+            
+            // Handle checkboxes
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                if (checkbox.id && !checkbox.id.startsWith('country_') && !checkbox.id.startsWith('reserve_')) {
+                    // Convert first letter to uppercase for consistency
+                    const key = checkbox.id.charAt(0).toUpperCase() + checkbox.id.slice(1);
+                    formData[key] = checkbox.checked ? 1 : 0;
+                }
+            });
+            
+            // Handle dates (convert from string to array)
+            const startDateStr = document.getElementById('startDate').value;
+            if (startDateStr) {
+                const parts = startDateStr.split('-').map(part => parseInt(part, 10));
+                // Store as regular array instead of trying to use Python tuple tag
+                formData.StartDate = parts;
+            }
+            
+            const stopDateStr = document.getElementById('stopDate').value;
+            if (stopDateStr) {
+                const parts = stopDateStr.split('-').map(part => parseInt(part, 10));
+                // Store as regular array instead of trying to use Python tuple tag
+                formData.StopDate = parts;
+            }
+            
+            // Collect zones
+            const selectedZones = [];
+            document.querySelectorAll('input[id^="country_"]:checked').forEach(checkbox => {
+                selectedZones.push(checkbox.value);
+            });
+            if (selectedZones.length > 0) {
+                formData.zones = selectedZones;
+            }
+            
+            // Collect reserve participation
+            const selectedReserves = [];
+            document.querySelectorAll('input[id^="reserve_"]:checked').forEach(checkbox => {
+                selectedReserves.push(checkbox.value);
+            });
+            if (selectedReserves.length > 0) {
+                formData.ReserveParticipation = selectedReserves;
+            }
+            
+            // Handle sector coupling
+            if (document.getElementById('sectorCouplingOn').checked) {
+                formData.SectorCoupling = 'On';
+            } else if (document.getElementById('sectorCouplingOff').checked) {
+                formData.SectorCoupling = 'Off';
+            }
+            
+            return formData;
+        }
+        
+        // Save YAML file
+        function saveYamlFile() {
+            const formData = collectFormData();
+            // Use our helper function for dumping
+            const yamlText = dumpYaml(formData);
+            
+            // Save via API
+            fetch(`${API_URL}/save-file`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    filename: '../' + currentFilename,
+                    content: yamlText
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatusMessage(`Saved ${currentFilename}`, 'success');
+                } else {
+                    throw new Error(data.error || 'Unknown error occurred');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving file:', error);
+                showStatusMessage(`Error saving file: ${error.message}`, 'error');
+                
+                // Fallback: Create a download if API fails
+                const blob = new Blob([yamlText], { type: 'text/yaml' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = currentFilename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                showStatusMessage(`API save failed. File downloaded to your browser's download folder.`, 'error');
+            });
+        }
+        
+        // Update the file name label
+        function updateFileNameLabel(filename) {
+            document.getElementById('fileNameLabel').textContent = filename;
+        }
+        
+        // Show status message
+        function showStatusMessage(message, type) {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.className = type;
+            statusElement.style.display = 'block';
+            
+            // Hide the message after 5 seconds
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html> 
