@@ -403,7 +403,6 @@
                         <div class="form-group">
                             <label for="simulationType">Simulation Type<span class="tooltiptext">Formulation of the optimization problem (Mixed Integer Linear Program, Linear Program, variations with clustering).</span></label>
                             <select id="simulationType">
-                                <option value="MILP">MILP</option>
                                 <option value="LP">LP</option>
                                 <option value="LP clustered">LP clustered</option>
                                 <option value="Integer clustering">Integer clustering</option>
@@ -476,12 +475,6 @@
                                 <option value="1">Yes (1)</option>
                                 <option value="0">No (0)</option>
                             </select>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="form-group">
-                            <label for="optimalityGap">Optimality Gap<span class="tooltiptext">Relative optimality gap for the MILP solver (e.g., 0.0006 for 0.06%).</span></label>
-                            <input type="number" id="optimalityGap" min="0" step="any" value="0.0006">
                         </div>
                     </div>
                  </div>
@@ -1005,7 +998,6 @@
                                 <option value="Percentage">Percentage</option>
                                 <option value="Probabilistic">Probabilistic</option>
                                 <option value="Exogenous">Exogenous</option>
-                                <option value="Detailed">Detailed</option>
                             </select>
                         </div>
                     </div>
@@ -1227,7 +1219,7 @@
                     </div>
                 </div>
                 <!-- Original Solver Settings from old Advanced Tab (Example) -->
-                <h3>Solver Settings (Legacy - Review)</h3>
+                <h3>Solver Settings</h3>
                  <div class="form-group">
                     <label for="optimalityGap">Optimality gap<span class="tooltiptext">Relative optimality gap for the MILP solver (e.g., 0.0006 for 0.06%). Note: Also present in General tab.</span></label>
                     <input type="number" id="optimalityGapAdvanced" name="optimalityGapAdvanced" min="0" step="any" value="0.0006">
@@ -1248,12 +1240,6 @@
                 // First, replace !!python/tuple with nothing to treat arrays as normal arrays
                 const processedText = text.replace(/!!python\/tuple/g, '');
                 const yamlData = jsyaml.load(processedText);
-                
-                // Remove WriteGDX and WritePickle properties if they exist (for backward compatibility)
-                if (yamlData) {
-                    delete yamlData.WriteGDX;
-                    delete yamlData.WritePickle;
-                }
                 
                 return yamlData;
             } catch (error) {
