@@ -4,8 +4,6 @@ BoundarySectorInterconnections: tests/dummy_data/boundary_sector/BS_NTCs.csv
 BoundarySectorMaxSpillage: tests/dummy_data/boundary_sector/BS_Spillage_Capacity.csv
 BoundarySectorNTC: tests/dummy_data/boundary_sector/BS_NTCs.csv
 CostCurtailment: ''
-CostH2Slack: ''
-CostHeatSlack: ''
 CostLoadShedding: ''
 CostNotServed: ''
 CostOfSpillage: tests/dummy_data/boundary_sector/BS_Spillage_cost.csv
@@ -23,10 +21,6 @@ FrequencyStability: ''
 GAMS_folder: ''
 GeoData: tests/dummy_data/Geo_Coordinates.csv
 GridData: ''
-H2FlexibleCapacity: tests/dummy_data/PtLCapacities.csv
-H2FlexibleDemand: ''
-H2RigidDemand: tests/dummy_data/H2Demand.csv
-HeatDemand: tests/dummy_data/HeatDemand.csv
 HorizonLength: 3
 HydroScheduling: Regional
 HydroSchedulingHorizon: Annual
@@ -106,8 +100,6 @@ TransmissionGridType: ''
 cplex_path: ''
 default:
   CostCurtailment: 20.0
-  CostH2Slack: 100.0
-  CostHeatSlack: 100.0
   CostLoadShedding: 1500.0
   CostNotServed: ''
   CostOfSpillage: 401.0

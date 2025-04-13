@@ -13,9 +13,9 @@ try:
 except ImportError:
     pass
 
-DEFAULTS = {'ReservoirLevelInitial': 0.5, 'ReservoirLevelFinal': 0.5, 'ValueOfLostLoad': 1E5, 'WaterValue': 100, 'ShareOfQuickStartUnits': 0.5, 'PriceOfAmmonia': 0,
-            'PriceOfNuclear': 0, 'PriceOfBlackCoal': 0, 'PriceOfGas': 0, 'PriceOfFuelOil': 0, 'PriceOfBiomass': 0,
-            'PriceOfCO2': 0, 'PriceOfLignite': 0, 'PriceOfPeat': 0, 'LoadShedding': 0, 'CostHeatSlack': 0,
+DEFAULTS = {'ReservoirLevelInitial': 0.5, 'ReservoirLevelFinal': 0.5, 'ValueOfLostLoad': 1E5, 'WaterValue': 100, 'ShareOfQuickStartUnits': 0.5, 'PriceOfAmmonia': 40,
+            'PriceOfNuclear': 10, 'PriceOfBlackCoal': 30, 'PriceOfGas': 50, 'PriceOfFuelOil': 70, 'PriceOfBiomass': 40,
+            'PriceOfCO2': 70, 'PriceOfLignite': 20, 'PriceOfPeat': 30, 'LoadShedding': 0, 'CostHeatSlack': 70,
             'CostLoadShedding': 100, 'ShareOfFlexibleDemand': 0, 'DemandFlexibility': 0, 'PriceTransmission': 0
             }
 
@@ -922,7 +922,7 @@ def load_config_yaml(filename, AbsPath=True):
               'ReservoirScaledInflows', 'ReservoirScaledOutflows','PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas',
               'PriceOfFuelOil', 'CostXSpillage',
               'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia',
-              'HeatDemand', 'CostHeatSlack', 'CostLoadShedding', 'ShareOfFlexibleDemand', 
+              'CostLoadShedding', 'ShareOfFlexibleDemand', 
               'PriceTransmission', 'Reserve2D', 'Reserve2U', 'GeoData', 'SectorXDemand', 'BoundarySectorData',
               'BoundarySectorNTC', 'BoundarySectorInterconnections', 'SectorXFlexibleDemand', 'SectorXFlexibleSupply',
               'BoundarySectorMaxSpillage', 'SectorXReservoirLevels', 'SectorXAlertLevel', 'SectorXFloodControl',

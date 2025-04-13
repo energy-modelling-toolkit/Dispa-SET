@@ -392,8 +392,6 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         for storagereservoir in SimData['sets']['au']:
             if SimData['parameters']['StorageHours']['val'][SimData['sets']['au'].index(storagereservoir)] <= 8:
                profiles[storagereservoir.split(' - ')[1].strip()] = 0
-        if config['H2FlexibleDemand'] != '':
-            PtLDemand[PtLDemand >= 1E300] = np.nan
     else:
         if 'profilesSectorX' in locals():
             profilesSectorX[profilesSectorX >= 1E300] = np.nan
@@ -427,17 +425,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     
         temp_config['StartDate'] = (y_start, 1, 1, 00, 00, 00)  # updating start date to the beginning of the year
         temp_config['StopDate'] = (y_start + 1, 1, 2, 00, 59, 00)
-        idx_tmp = pd.date_range(start=dt.datetime(*temp_config['StartDate']),
-                                end=dt.datetime(*temp_config['StopDate']),
-                                freq=pd_timestep(TimeStep)).tz_localize(None)
-    
-        if config['H2FlexibleDemand'] != '':
-            PtLDemand = pd.DataFrame(PtLDemand, index=idx_tmp).fillna(0)
-            PtLDemand = PtLDemand.resample(pd_timestep(config['SimulationTimeStep'])).ffill()
-            PtLDemand = PtLDemand.loc[idx_long, :]
+   
     
         pickle.dump(profiles, open(os.path.join(config['SimulationDirectory'], "temp_profiles.p"), "wb"))
-        if config['H2FlexibleDemand'] != '':
-            return profiles, PtLDemand
-        else:
-            return profiles, SectorXFlexDemand, SectorXFlexSupply, profilesSectorX
+        return profiles, SectorXFlexDemand, SectorXFlexSupply, profilesSectorX

@@ -64,16 +64,6 @@ The table below provides a comprehensive list of all configuration parameters av
      - Cost and Fuel Price
      - Yes
      - No
-   * - CostH2Slack
-     - File path
-     - Cost and Fuel Price
-     - Yes
-     - No
-   * - CostHeatSlack
-     - File path
-     - Cost and Fuel Price
-     - Yes
-     - No
    * - CostLoadShedding
      - File path
      - Cost and Fuel Price
@@ -94,16 +84,11 @@ The table below provides a comprehensive list of all configuration parameters av
      - Cost and Fuel Price
      - Yes
      - No
-   * - CplexAccuracy
+   * - OptimalityGap
      - Numerical
      - General
      - No
      - Yes
-   * - CplexSetting
-     - String
-     - General
-     - No
-     - No
    * - DataTimeStep
      - Numerical
      - General
@@ -131,7 +116,7 @@ The table below provides a comprehensive list of all configuration parameters av
      - No
    * - FrequencyStability
      - String
-     - General
+     - Reserve Parameters
      - No
      - No
    * - GAMS_folder
@@ -147,26 +132,6 @@ The table below provides a comprehensive list of all configuration parameters av
    * - GridData
      - File path
      - Spatial Data
-     - No
-     - No
-   * - H2FlexibleCapacity
-     - File path
-     - Sector Coupling
-     - No
-     - No
-   * - H2FlexibleDemand
-     - File path
-     - Sector Coupling
-     - No
-     - No
-   * - H2RigidDemand
-     - File path
-     - Sector Coupling
-     - No
-     - No
-   * - HeatDemand
-     - File path
-     - Sector Coupling
      - No
      - No
    * - HorizonLength
@@ -381,12 +346,12 @@ The table below provides a comprehensive list of all configuration parameters av
      - Yes
    * - StorageAlertLevels
      - File path
-     - Storage Parameters
+     - Hydro Parameters
      - No
      - No
    * - StorageFloodControl
      - File path
-     - Storage Parameters
+     - Hydro Parameters
      - No
      - No
    * - SystemGainLimit
@@ -394,31 +359,11 @@ The table below provides a comprehensive list of all configuration parameters av
      - Reserve Parameters
      - No
      - No
-   * - Temperatures
-     - File path
-     - Time Series Data
-     - No
-     - No
    * - TransmissionGridType
      - String
      - Spatial Data
      - No
      - No
-   * - cplex_path
-     - File path
-     - General
-     - No
-     - No
-   * - default
-     - Section
-     - Default Values
-     - -
-     - -
-   * - modifiers
-     - Section
-     - Modifiers
-     - -
-     - -
    * - mts_zones
      - String List
      - Zones
@@ -443,8 +388,7 @@ The configuration editor is organized into several tabs or sections to help you 
 6. **Cost and Fuel Price**: Economic parameters and fuel costs
 7. **Hydro Parameters**: Configuration for hydropower units
 8. **Reserve Parameters**: Settings for system reserves and unit participation
-9. **Storage Parameters**: Parameters for energy storage technologies
-10. **Sector Coupling**: Configuration for interactions between power and other energy sectors
+9. **Sector Coupling**: Configuration for interactions between power and other energy sectors
 
 Parameters marked as "Required" must have a value for the simulation to run properly. Parameters with default values will use the specified default if no explicit value is provided. File paths should be absolute paths or paths relative to the parent directory of the configuration file.
 

@@ -362,14 +362,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     if '' in zones_th:
         zones_th.remove('')
 
-    HeatDemand = GenericTable(zones_th, 'HeatDemand', config, default=0)
-    CostHeatSlack = GenericTable(zones_th, 'CostHeatSlack', config, default=config['default']['CostHeatSlack'])
-
     # addding the thermal zones to the boundary sectors
     for z in zones_th:
         if z not in BoundarySector.index:
             BoundarySector.loc[z, 'STOCapacity'] = 0
-            BoundarySector.loc[z, 'CostXNotServed'] = CostHeatSlack[z].mean()
+            BoundarySector.loc[z, 'CostXNotServed'] = config['default']['CostHeatSlack']
 
     # Detecting boundary zones:
     if len(BoundarySector.index) >0:
@@ -804,7 +801,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'LoadShedding': LoadShedding, 'CostLoadShedding': CostLoadShedding, 'CostCurtailment': CostCurtailment,
                'ScaledInflows': ReservoirScaledInflows, 'ScaledOutflows': ReservoirScaledOutflows,
                'ReservoirLevels': ReservoirLevels, 'Outages': Outages, 'AvailabilityFactors': AF,
-               'CostHeatSlack': CostHeatSlack, 'HeatDemand': HeatDemand,
                'StorageAlertLevels': StorageAlertLevels, 'StorageFloodControl': StorageFloodControl,
                'ShareOfFlexibleDemand': ShareOfFlexibleDemand,
                'SectorXDemand': SectorXDemand, 'CostXNotServed': CostXNotServed,
