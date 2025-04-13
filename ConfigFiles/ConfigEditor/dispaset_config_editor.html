@@ -95,6 +95,21 @@
             font-size: 12px;
             color: var(--muted-text);
             margin-top: 4px;
+            display: flex;
+            align-items: center;
+        }
+
+        .default-value span {
+            margin-right: 5px;
+        }
+
+        .default-value-input {
+            width: 70px;
+            padding: 2px 4px;
+            font-size: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            height: 20px;
         }
 
         .btn {
@@ -325,20 +340,6 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="form-group">
-                    <label>Output Options</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="writeGDX" checked>
-                            <label for="writeGDX">Write GDX</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="writePickle" checked>
-                            <label for="writePickle">Write Pickle</label>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- Zones Configuration Tab -->
@@ -421,14 +422,20 @@
                         <div class="form-group">
                             <label for="costLoadShedding">Cost of Load Shedding</label>
                             <input type="text" id="costLoadShedding">
-                            <div class="default-value" data-default="1500.0">Default: 1500.0</div>
+                            <div class="default-value" data-default="1500.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="1500.0" data-param="CostLoadShedding">
+                            </div>
                         </div>
                     </div>
                     <div class="col">
                         <div class="form-group">
                             <label for="costHeatSlack">Cost of Heat Slack</label>
                             <input type="text" id="costHeatSlack">
-                            <div class="default-value" data-default="100.0">Default: 100.0</div>
+                            <div class="default-value" data-default="100.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="100.0" data-param="CostHeatSlack">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -438,14 +445,20 @@
                         <div class="form-group">
                             <label for="costH2Slack">Cost of H2 Slack</label>
                             <input type="text" id="costH2Slack">
-                            <div class="default-value" data-default="100.0">Default: 100.0</div>
+                            <div class="default-value" data-default="100.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="100.0" data-param="CostH2Slack">
+                            </div>
                         </div>
                     </div>
                     <div class="col">
                         <div class="form-group">
                             <label for="costCurtailment">Cost of Curtailment</label>
                             <input type="text" id="costCurtailment">
-                            <div class="default-value" data-default="20.0">Default: 20.0</div>
+                            <div class="default-value" data-default="20.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="20.0" data-param="CostCurtailment">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -457,14 +470,20 @@
                         <div class="form-group">
                             <label for="priceOfGas">Price of Gas</label>
                             <input type="text" id="priceOfGas">
-                            <div class="default-value" data-default="44.0">Default: 44.0</div>
+                            <div class="default-value" data-default="44.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="44.0" data-param="PriceOfGas">
+                            </div>
                         </div>
                     </div>
                     <div class="col">
                         <div class="form-group">
                             <label for="priceOfBlackCoal">Price of Black Coal</label>
                             <input type="text" id="priceOfBlackCoal">
-                            <div class="default-value" data-default="18.0">Default: 18.0</div>
+                            <div class="default-value" data-default="18.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="18.0" data-param="PriceOfBlackCoal">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -474,14 +493,20 @@
                         <div class="form-group">
                             <label for="priceOfLignite">Price of Lignite</label>
                             <input type="text" id="priceOfLignite">
-                            <div class="default-value" data-default="15.0">Default: 15.0</div>
+                            <div class="default-value" data-default="15.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="15.0" data-param="PriceOfLignite">
+                            </div>
                         </div>
                     </div>
                     <div class="col">
                         <div class="form-group">
                             <label for="priceOfCO2">Price of CO2</label>
                             <input type="text" id="priceOfCO2">
-                            <div class="default-value" data-default="90.0">Default: 90.0</div>
+                            <div class="default-value" data-default="90.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="90.0" data-param="PriceOfCO2">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -491,14 +516,20 @@
                         <div class="form-group">
                             <label for="priceOfBiomass">Price of Biomass</label>
                             <input type="text" id="priceOfBiomass">
-                            <div class="default-value" data-default="33.0">Default: 33.0</div>
+                            <div class="default-value" data-default="33.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="33.0" data-param="PriceOfBiomass">
+                            </div>
                         </div>
                     </div>
                     <div class="col">
                         <div class="form-group">
                             <label for="priceOfFuelOil">Price of Fuel Oil</label>
                             <input type="text" id="priceOfFuelOil">
-                            <div class="default-value" data-default="60.0">Default: 60.0</div>
+                            <div class="default-value" data-default="60.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="60.0" data-param="PriceOfFuelOil">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -569,7 +600,15 @@
                 // Preprocess YAML to handle Python-specific tags
                 // First, replace !!python/tuple with nothing to treat arrays as normal arrays
                 const processedText = text.replace(/!!python\/tuple/g, '');
-                return jsyaml.load(processedText);
+                const yamlData = jsyaml.load(processedText);
+                
+                // Remove WriteGDX and WritePickle properties if they exist (for backward compatibility)
+                if (yamlData) {
+                    delete yamlData.WriteGDX;
+                    delete yamlData.WritePickle;
+                }
+                
+                return yamlData;
             } catch (error) {
                 console.error("Error parsing YAML:", error);
                 throw error;
@@ -815,6 +854,16 @@
             } else {
                 document.getElementById('sectorCouplingOff').checked = true;
             }
+            
+            // Handle default values
+            if (yamlData.default && typeof yamlData.default === 'object') {
+                for (const [key, value] of Object.entries(yamlData.default)) {
+                    const defaultInput = document.querySelector(`.default-value-input[data-param="${key}"]`);
+                    if (defaultInput) {
+                        defaultInput.value = value;
+                    }
+                }
+            }
         }
         
         // Collect form data into YAML
@@ -822,7 +871,7 @@
             const formData = {};
             
             // Collect text inputs, numbers, selects
-            const inputs = document.querySelectorAll('input[type="text"], input[type="number"], select, textarea');
+            const inputs = document.querySelectorAll('input[type="text"]:not(.default-value-input), input[type="number"], select, textarea');
             inputs.forEach(input => {
                 if (input.id && input.value !== '') {
                     // Convert first letter to uppercase for consistency
@@ -836,7 +885,7 @@
                 formData.Description = document.getElementById('description').value;
             }
             
-            // Handle checkboxes
+            // Handle checkboxes - WriteGDX and WritePickle have been removed
             const checkboxes = document.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(checkbox => {
                 if (checkbox.id && !checkbox.id.startsWith('country_') && !checkbox.id.startsWith('reserve_')) {
@@ -884,6 +933,22 @@
                 formData.SectorCoupling = 'On';
             } else if (document.getElementById('sectorCouplingOff').checked) {
                 formData.SectorCoupling = 'Off';
+            }
+            
+            // Collect default values
+            const defaultValues = {};
+            document.querySelectorAll('.default-value-input').forEach(input => {
+                if (input.value !== '') {
+                    const paramName = input.dataset.param;
+                    // Try to convert numeric values
+                    const numValue = parseFloat(input.value);
+                    defaultValues[paramName] = isNaN(numValue) ? input.value : numValue;
+                }
+            });
+            
+            // Add default values to the form data if any were collected
+            if (Object.keys(defaultValues).length > 0) {
+                formData.default = defaultValues;
             }
             
             return formData;

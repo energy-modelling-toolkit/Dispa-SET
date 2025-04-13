@@ -105,8 +105,6 @@ StorageFloodControl: ''
 SystemGainLimit: ''
 Temperatures: tests/dummy_data/Temperatures.csv
 TransmissionGridType: ''
-WriteGDX: 1
-WritePickle: 1
 cplex_path: ''
 default:
   CostCurtailment: 20.0

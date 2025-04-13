@@ -10,8 +10,6 @@ SimulationTimeStep: 1.0
 DataTimeStep: 1.0
 LookAhead: 1
 HorizonLength: 3
-WriteGDX: 1
-WritePickle: 1
 zones:
   - Z1
   - Z2 
