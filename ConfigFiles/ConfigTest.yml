@@ -10,7 +10,7 @@ CostLoadShedding: ''
 CostNotServed: ''
 CostOfSpillage: tests/dummy_data/boundary_sector/BS_Spillage_cost.csv
 CostXNotServed: tests/dummy_data/boundary_sector/BS_NotServed_cost.csv
-CplexAccuracy: 0.0006
+OptimalityGap: 0.0006
 CplexSetting: ''
 DataTimeStep: 1.0
 Demand: tests/dummy_data/Load_RealTime/##/2015.csv
@@ -76,7 +76,6 @@ ReserveParticipation_CHP:
 - STUR
 ReservoirLevels: tests/dummy_data/ReservoirLevels.csv
 ReservoirScaledInflows: tests/dummy_data/ScaledInflows.csv
-SectorCoupling: 'On'
 SectorXDemand: tests/dummy_data/boundary_sector/BS_Demand.csv
 SectorXFlexibleDemand: tests/dummy_data/boundary_sector/BS_FlexibleDemand.csv
 SectorXFlexibleSupply: tests/dummy_data/boundary_sector/BS_FlexibleSupply.csv
@@ -103,7 +102,6 @@ StopDate: !!python/tuple
 StorageAlertLevels: ''
 StorageFloodControl: ''
 SystemGainLimit: ''
-Temperatures: tests/dummy_data/Temperatures.csv
 TransmissionGridType: ''
 cplex_path: ''
 default:

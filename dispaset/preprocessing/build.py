@@ -357,8 +357,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         logging.warning('No CostOfSpillage will be considered (no valid file provided)')
         CostOfSpillage = pd.DataFrame(index=config['idx_long'])
 
-    Temperatures = NodeBasedTable('Temperatures', config)
-
     # Detecting thermal zones:
     zones_th = plants_chp['Zone_th'].unique().tolist()
     if '' in zones_th:
@@ -764,7 +762,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     Plants_wat = Plants_merged[(Plants_merged['Fuel'] == 'WAT') & (Plants_merged['Technology'] != 'HROR')].copy()
 
     # Calculating the efficiency time series for each unit:
-    Efficiencies = EfficiencyTimeSeries(config, Plants_merged, Temperatures)
+    Efficiencies = EfficiencyTimeSeries(config, Plants_merged)
 
     # Calculating boundary sector efficiencies
     BoundarySectorEfficiencies = BoundarySectorEfficiencyTimeSeries(config, Plants_merged, zones_bs)
@@ -1709,7 +1707,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         '[PROJECT] \n \n[RP:UCM_H] \n1= \n[OPENWINDOW_1] \nFILE0=UCM_h.gms \nFILE1=UCM_h.gms \nMAXIM=1 \nTOP=50 \nLEFT=50 \nHEIGHT=400 \nWIDTH=400')
     gmsfile.close()
     # Create cplex option file
-    if config['CplexSetting'] == '' and config['CplexAccuracy'] == '':
+    if config['OptimalityGap'] == '':
         cplex_options = {'epgap': 0.0005,
                          # TODO: For the moment hardcoded, it has to be moved to a config file
                          'numericalemphasis': 0,
@@ -1725,66 +1723,20 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                          'lbheur': 1,
                          }
         logging.info('Default Cplex setting used')
-    elif config['CplexSetting'] == '' and config['CplexAccuracy'] != '':
-        cplex_options = {'epgap': float(config['CplexAccuracy']),  # TODO: For the moment hardcoded, it has to be moved to a config file
-                         'numericalemphasis': 0,
-                         'mipdisplay': 4,
-                         'scaind': 1,
-                         'lpmethod': 0,
-                         'relaxfixedinfeas': 0,
-                         'mipstart': 1,
-                         'mircuts': 1,
-                         'quality': True,
-                         'bardisplay': 2,
-                         'epint': 0,
-                         'lbheur': 1,
-                         }
-    elif config['CplexSetting'] == 'Default':
-        cplex_options = {'epgap': float(config['CplexAccuracy']),  # TODO: For the moment hardcoded, it has to be moved to a config file
-                         'numericalemphasis': 0,
-                         'mipdisplay': 4,
-                         'scaind': 1,
-                         'lpmethod': 0,
-                         'relaxfixedinfeas': 0,
-                         'mipstart': 1,
-                         'mircuts': 1,
-                         'quality': True,
-                         'bardisplay': 2,
-                         'epint': 0,
-                         'lbheur': 1,
-                         }
-        logging.info('Default Cplex setting used')
-    elif config['CplexSetting'] == 'Agressive':
-        cplex_options = {'epgap': config['CplexAccuracy'],  # TODO: For the moment hardcoded, it has to be moved to a config file
-                         'numericalemphasis': 0,
-                         'mipdisplay': 4,
-                         'scaind': 1,
-                         'lpmethod': 0,
-                         'relaxfixedinfeas': 0,
-                         'mipstart': 1,
-                         'mircuts': 1,
-                         'quality': True,
-                         'bardisplay': 2,
-                         'epint': 0,
-                         'heuristiceffort': 2,
-                         'lbheur': 1,
-                         # Probing parameters
-                         'probe': 1,
-                         # Cut parameters
-                         'cuts': 5,
-                         'covers': 3,
-                         'cliques': 3,
-                         'disjcuts': 3,
-                         'liftprojcuts': 3,
-                         'localimplied': 3,
-                         'flowcovers': 2,
-                         'flowpaths': 2,
-                         'fraccuts': 2,
-                         }
-        logging.info('Agressive Cplex setting used')
     else:
-        logging.critical('Cplex setting must be specified Default or Agressive')
-        sys.exit(1)
+        cplex_options = {'epgap': float(config['OptimalityGap']),  # TODO: For the moment hardcoded, it has to be moved to a config file
+                         'numericalemphasis': 0,
+                         'mipdisplay': 4,
+                         'scaind': 1,
+                         'lpmethod': 0,
+                         'relaxfixedinfeas': 0,
+                         'mipstart': 1,
+                         'mircuts': 1,
+                         'quality': True,
+                         'bardisplay': 2,
+                         'epint': 0,
+                         'lbheur': 1,
+                         }
 
     lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
     with open(os.path.join(sim, 'cplex.opt'), 'w') as f:

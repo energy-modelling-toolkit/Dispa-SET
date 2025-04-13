@@ -621,7 +621,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
         config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(57, 2), wb.datemode)
         config['HorizonLength'] = int(sheet.cell_value(58, 2))
         config['LookAhead'] = int(sheet.cell_value(59, 2))
-        config['CplexAccuracy'] = sheet.cell_value(38, 2)
+        config['OptimalityGap'] = sheet.cell_value(38, 2)
         config['CplexSetting'] = sheet.cell_value(39, 2)
         # Defining the input locations in the config file:
         StdParameters = commons['StdParameters']
@@ -699,7 +699,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
         config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(57, 2), wb.datemode)
         config['HorizonLength'] = int(sheet.cell_value(58, 2))
         config['LookAhead'] = int(sheet.cell_value(59, 2))
-        config['CplexAccuracy'] = sheet.cell_value(38, 2)
+        config['OptimalityGap'] = sheet.cell_value(38, 2)
         config['CplexSetting'] = sheet.cell_value(39, 2)
 
         # Defning the input locations in the config file:
@@ -903,9 +903,9 @@ def load_config_yaml(filename, AbsPath=True):
 
     # List of parameters to be added with a default value if not present (for backward compatibility):
 
-    params_to_be_added = {'Temperatures': '', 'DataTimeStep': 1, 'SimulationTimeStep': 1, 'HydroScheduling': 'Off',
+    params_to_be_added = {'DataTimeStep': 1, 'SimulationTimeStep': 1, 'HydroScheduling': 'Off',
                           'HydroSchedulingHorizon': 'Annual', 'InitialFinalReservoirLevel': True,
-                          'ReserveParticipation_CHP': [], 'CplexAccuracy': 0.005, 'CplexSetting': 'Default'}
+                          'ReserveParticipation_CHP': [], 'OptimalityGap': 0.005, 'CplexSetting': 'Default'}
     for param in params_to_be_added:
         if param not in config:
             config[param] = params_to_be_added[param]
@@ -922,7 +922,7 @@ def load_config_yaml(filename, AbsPath=True):
               'ReservoirScaledInflows', 'ReservoirScaledOutflows','PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas',
               'PriceOfFuelOil', 'CostXSpillage',
               'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia',
-              'HeatDemand', 'CostHeatSlack', 'CostLoadShedding', 'ShareOfFlexibleDemand', 'Temperatures',
+              'HeatDemand', 'CostHeatSlack', 'CostLoadShedding', 'ShareOfFlexibleDemand', 
               'PriceTransmission', 'Reserve2D', 'Reserve2U', 'GeoData', 'SectorXDemand', 'BoundarySectorData',
               'BoundarySectorNTC', 'BoundarySectorInterconnections', 'SectorXFlexibleDemand', 'SectorXFlexibleSupply',
               'BoundarySectorMaxSpillage', 'SectorXReservoirLevels', 'SectorXAlertLevel', 'SectorXFloodControl',

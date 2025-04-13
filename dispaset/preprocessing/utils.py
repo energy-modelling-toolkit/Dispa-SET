@@ -36,18 +36,13 @@ def pd_timestep(hours):
         return ''
 
 
-def EfficiencyTimeSeries(config, plants, Temperatures):
+def EfficiencyTimeSeries(config, plants):
     """
     Function that calculates an efficiency time series for each unit
     In case of generation unit, the efficiency is constant in time (for now)
-    In case of of p2h units, the efficicncy is defined as the COP, which can be
-    temperature-dependent or not
-    If it is temperature-dependent, the formula is:
-        COP = COP_nom + coef_a * (T-T_nom) + coef_b * (T-T_nom)^2
 
     :param config:          Dispa-SET config file
     :param plants:          Pandas dataframe with the original list of units
-    :param Temperatures:    Dataframe with the temperature for all relevant units
 
     :returns:               Dataframe with a time series of the efficiency for each unit
     """
