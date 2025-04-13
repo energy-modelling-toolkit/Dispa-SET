@@ -19,7 +19,7 @@ To launch the configuration editor, use the following command in your terminal:
 
 .. code-block:: bash
 
-   python -m dispaset.preprocessing.config_editor
+   python run_dispaset_config.py
 
 This will start a local web server and open the configuration editor in your default browser. The editor organizes parameters into logical sections for easier navigation and editing.
 
@@ -37,7 +37,8 @@ The table below provides a comprehensive list of all configuration parameters av
      - Required?
    * - AllowCurtailment
      - Boolean
-     - Authorize renewable technologies to operate below their Availability Factor (AF).
+     - Authorize renewable technologies to operate below their 
+       Availability Factor (AF).
      - General
      - No
      - Yes
@@ -55,7 +56,8 @@ The table below provides a comprehensive list of all configuration parameters av
      - No
    * - BoundarySectorMaxSpillage
      - File path
-     - Maximum spillage in a boundary sector (in the units of the boundary sector).
+     - Maximum spillage in a boundary sector (in the units of 
+       the boundary sector).
      - Sector Coupling
      - No
      - No
@@ -91,25 +93,30 @@ The table below provides a comprehensive list of all configuration parameters av
      - No
    * - OptimalityGap
      - Numerical
-     - Relative optimality gap for the MILP solver (e.g., 0.0006 for 0.06%).
+     - Relative optimality gap for the MILP solver 
+       (e.g., 0.0006 for 0.06%).
      - General
      - No
      - Yes
    * - DataTimeStep
      - Numerical
-     - Time step resolution of the input time series data, in hours (e.g., 1.0, 0.5).
+     - Time step resolution of the input time series data, 
+       in hours (e.g., 1.0, 0.5).
      - General
      - No
      - Yes
    * - Demand
      - File path
-     - Demand data file with each zone as column headers. Path relative to Database directory or absolute. Use '##' for zone placeholder.
+     - Demand data file with each zone as column headers. Path 
+       relative to Database directory or absolute. Use '##' for 
+       zone placeholder.
      - Time Series Data
      - No
      - Yes
    * - DemandFlexibility
      - Numerical
-     - Number of hours of equivalent demand shifting storage capacity (used with ShareOfFlexibleDemand).
+     - Number of hours of equivalent demand shifting storage 
+       capacity (used with ShareOfFlexibleDemand).
      - Time Series Data
      - Yes
      - No
@@ -133,25 +140,31 @@ The table below provides a comprehensive list of all configuration parameters av
      - No
    * - FrequencyStability
      - String
-     - Method or parameters for frequency stability constraints (currently placeholder).
+     - Method or parameters for frequency stability constraints 
+       (currently placeholder).
      - Reserve Parameters
      - No
      - No
    * - GAMS_folder
      - File path
-     - Path to the GAMS installation folder, if not set in the system's GAMSPATH environment variable.
+     - Path to the GAMS installation folder, if not set in 
+       the system's GAMSPATH environment variable.
      - General
      - No
      - No
    * - GeoData
      - File path
-     - Geographical coordinates or data for zones/units (e.g., for plotting). Path relative to Database directory or absolute.
+     - Geographical coordinates or data for zones/units 
+       (e.g., for plotting). Path relative to Database 
+       directory or absolute.
      - Spatial Data
      - No
      - No
    * - GridData
      - File path
-     - Path the csv table containing the Power Transfer Distribution Factor (PTDF) matrix for DC-Power Flow simulations.
+     - Path the csv table containing the Power Transfer 
+       Distribution Factor (PTDF) matrix for DC-Power 
+       Flow simulations.
      - Spatial Data
      - No
      - No
@@ -163,13 +176,15 @@ The table below provides a comprehensive list of all configuration parameters av
      - Yes
    * - HydroScheduling
      - Off/Zonal/Regional
-     - Type of mid-term hydro scheduling optimization (Off=none, Zonal=per zone, Regional=per defined region).
+     - Type of mid-term hydro scheduling optimization 
+       (Off=none, Zonal=per zone, Regional=per defined region).
      - Hydro Parameters
      - No
      - Yes
    * - HydroSchedulingHorizon
      - Annual/Stop-date driven
-     - Optimization horizon for the mid-term hydro scheduling (determines target reservoir levels).
+     - Optimization horizon for the mid-term hydro scheduling 
+       (determines target reservoir levels).
      - Hydro Parameters
      - No
      - Yes
@@ -181,49 +196,62 @@ The table below provides a comprehensive list of all configuration parameters av
      - No
    * - InitialFinalReservoirLevel
      - Boolean
-     - If 1 (True), enforces initial and final reservoir levels based on ReservoirLevelInitial/Final defaults or historical ReservoirLevels file. If 0 (False), these constraints are relaxed.
+     - If 1 (True), enforces initial and final reservoir levels based 
+       on ReservoirLevelInitial/Final defaults or historical 
+       ReservoirLevels file. If 0 (False), these constraints are relaxed.
      - Hydro Parameters
      - No
      - Yes
    * - Interconnections
      - File path
-     - Table with the historical physical flows between zones (positive flow from first zone to second). Used for flows to/from non-simulated zones (Rest of World). Path relative to Database directory or absolute.
+     - Table with the historical physical flows between zones (positive 
+       flow from first zone to second). Used for flows to/from 
+       non-simulated zones (Rest of World). Path relative to Database 
+       directory or absolute.
      - Spatial Data
      - No
      - Yes
    * - LoadShedding
      - File path
-     - Time series with the fraction of allowed load shedding for each zone
+     - Time series with the fraction of allowed load shedding 
+       for each zone
      - Time Series Data
      - Yes
      - No
    * - LookAhead
      - Numerical (integer)
-     - Length of the perfect foresight period within the rolling horizon, in days (must be <= HorizonLength).
+     - Length of the perfect foresight period within the rolling 
+       horizon, in days (must be <= HorizonLength).
      - General
      - No
      - Yes
    * - NTC
      - File path
-     - Table with the Net Transfer Capacities (NTCs) between simulated zones (e.g., 'Z1 -> Z2'). Path relative to Database directory or absolute.
+     - Table with the Net Transfer Capacities (NTCs) between 
+       simulated zones (e.g., 'Z1 -> Z2'). Path relative to 
+       Database directory or absolute.
      - Spatial Data
      - No
      - Yes
    * - Outages
      - File path
-     - Table with the outage time series for each unit (0=available, 1=full outage, 0.5=half outage). Path relative to Database directory or absolute. Use '##' for unit name placeholder.
+     - Table with the outage time series for each unit (0=available, 
+       1=full outage, 0.5=half outage). Path relative to Database 
+       directory or absolute. Use '##' for unit name placeholder.
      - Time Series Data
      - No
      - Yes
    * - PowerPlantData
      - File path
-     - Main table defining power plant units and their technical/economic parameters. Path relative to Database directory or absolute.
+     - Main table defining power plant units and their technical/economic 
+       parameters. Path relative to Database directory or absolute.
      - Unit Data
      - No
      - Yes
    * - PriceOfAmmonia
      - File path
-     - Price of Ammonia fuel in EUR/MWh. Can be a file path (time series per zone) or a single value if default is used.
+     - Price of Ammonia fuel in EUR/MWh. Can be a file path (time series 
+       per zone) or a single value if default is used.
      - Cost and Fuel Price
      - Yes
      - No
@@ -271,49 +299,61 @@ The table below provides a comprehensive list of all configuration parameters av
      - No
    * - PriceOfPeat
      - File path
-     - Price of Peat fuel in EUR/MWh. Can be a file path (time series per zone) or a single value if default is used.
+     - Price of Peat fuel in EUR/MWh. Can be a file path (time series 
+       per zone) or a single value if default is used.
      - Cost and Fuel Price
      - Yes
      - No
    * - PriceTransmission
      - File path
-     - Cost associated with power transmission (e.g., losses, fees). Can be a file path or a single value if default is used.
+     - Cost associated with power transmission (e.g., losses, fees). 
+       Can be a file path or a single value if default is used.
      - Cost and Fuel Price
      - Yes
      - No
    * - PrimaryReserveLimit
      - File path
-     - Primary reserve requirement (e.g., FCR). Can be a file path (time series per zone) or a single value if default is used.
+     - Primary reserve requirement (e.g., FCR). Can be a file path 
+       (time series per zone) or a single value if default is used.
      - Reserve Parameters
      - No
      - No
    * - RenewablesAF
      - File path
-     - Table with the availability factors (AF) of all renewable units (value between 0 and 1). Path relative to Database directory or absolute. Use '##' for zone/unit placeholder.
+     - Table with the availability factors (AF) of all renewable units 
+       (value between 0 and 1). Path relative to Database directory 
+       or absolute. Use '##' for zone/unit placeholder.
      - Time Series Data
      - No
      - Yes
    * - Reserve2D
      - File path
-     - Table with the downwards secondary reserve requirements (e.g., aFRR down) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute.
+     - Table with the downwards secondary reserve requirements 
+       (e.g., aFRR down) for each zone. Used if ReserveCalculation=Exogenous. 
+       Path relative to Database directory or absolute.
      - Reserve Parameters
      - No
      - No
    * - Reserve2U
      - File path
-     - Table with the upwards secondary reserve requirements (e.g., aFRR up) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute.
+     - Table with the upwards secondary reserve requirements 
+       (e.g., aFRR up) for each zone. Used if ReserveCalculation=Exogenous. 
+       Path relative to Database directory or absolute.
      - Reserve Parameters
      - No
      - No
    * - ReserveCalculation
-     - Generic/Percentage/Probabilistic/Exogenous
-     - Method for the reserve calculation (exogenous requires Reserve2D and Reserve2U to be provided)
+     - Generic/Percentage/
+     Probabilistic/Exogenous
+     - Method for the reserve calculation (exogenous requires 
+       Reserve2D and Reserve2U to be provided)
      - Reserve Parameters
      - No
      - Yes
    * - ReserveParticipation
      - String List
-     - List of conventional/storage unit technologies participating in secondary reserves.
+     - List of conventional/storage unit technologies participating 
+       in secondary reserves.
      - Reserve Parameters
      - No
      - Yes
@@ -325,139 +365,175 @@ The table below provides a comprehensive list of all configuration parameters av
      - No
    * - ReservoirLevelFinal
      - Numerical
-     - Target final reservoir level as a fraction of capacity (0 to 1). Used if InitialFinalReservoirLevel=1 and ReservoirLevels file is not provided.
+     - Target final reservoir level as a fraction of capacity (0 to 1). 
+       Used if InitialFinalReservoirLevel=1 and ReservoirLevels 
+       file is not provided.
      - Hydro Parameters
      - Yes
      - No
    * - ReservoirLevelInitial
      - Numerical
-     - Target initial reservoir level as a fraction of capacity (0 to 1). Used if InitialFinalReservoirLevel=1 and ReservoirLevels file is not provided.
+     - Target initial reservoir level as a fraction of capacity (0 to 1). 
+       Used if InitialFinalReservoirLevel=1 and ReservoirLevels 
+       file is not provided.
      - Hydro Parameters
      - Yes
      - No
    * - ReservoirLevels
      - File path
-     - Time series of target reservoir levels (fraction of capacity). Used as minimum target at the end of each rolling horizon optimization if InitialFinalReservoirLevel=1. Path relative to Database directory or absolute.
+     - Time series of target reservoir levels (fraction of capacity). 
+       Used as minimum target at the end of each rolling horizon 
+       optimization if InitialFinalReservoirLevel=1. Path relative 
+       to Database directory or absolute.
      - Hydro Parameters
      - No
      - No
    * - ReservoirScaledInflows
      - File path
-     - Natural inflows to hydro reservoirs, scaled by turbine capacity (MWh of inflow per hour / MW of turbine capacity). Path relative to Database directory or absolute. Use '##' for unit placeholder.
+     - Natural inflows to hydro reservoirs, scaled by turbine capacity 
+       (MWh of inflow per hour / MW of turbine capacity). Path relative 
+       to Database directory or absolute. Use '##' for unit placeholder.
      - Hydro Parameters
      - No
      - No
    * - SectorXDemand
      - File path
-     - Demand time series for each boundary sector. Path relative to Database directory or absolute.
+     - Demand time series for each boundary sector. Path relative 
+       to Database directory or absolute.
      - Sector Coupling
      - No
      - No
    * - SectorXFlexibleDemand
      - File path
-     - Flexible demand time series for each boundary sector. Path relative to Database directory or absolute.
+     - Flexible demand time series for each boundary sector. 
+       Path relative to Database directory or absolute.
      - Sector Coupling
      - No
      - No
    * - SectorXFlexibleSupply
      - File path
-     - Flexible (or volume-based) supply to a boundary sector. Path relative to Database directory or absolute.
+     - Flexible (or volume-based) supply to a boundary sector. 
+       Path relative to Database directory or absolute.
      - Sector Coupling
      - No
      - No
    * - SectorXFloodControl
      - File path
-     - Level of the storage in the boundary sector before flood control is activated. Path relative to Database directory or absolute.
+     - Level of the storage in the boundary sector before flood 
+       control is activated. Path relative to Database directory 
+       or absolute.
      - Sector Coupling
      - No
      - No
    * - SectorXReservoirLevels
      - File path
-     - Time series with the state of charge of the storage for each boundary sector. Path relative to Database directory or absolute.
+     - Time series with the state of charge of the storage for 
+       each boundary sector. Path relative to Database directory 
+       or absolute.
      - Sector Coupling
      - No
      - No
    * - ShareOfFlexibleDemand
      - File path
-     - Fraction of the demand that can be time-shifted (used with DemandFlexibility). Can be a file path (time series per zone) or a single value if default is used.
+     - Fraction of the demand that can be time-shifted (used with 
+       DemandFlexibility). Can be a file path (time series per zone) 
+       or a single value if default is used.
      - Time Series Data
      - Yes
      - No
    * - ShareOfQuickStartUnits
      - Numerical
-     - Share of units considered "quick start" for reserve calculations or other rules.
+     - Share of units considered "quick start" for reserve 
+       calculations or other rules.
      - Reserve Parameters
      - Yes
      - No
    * - SimulationDirectory
      - File path
-     - Folder where the temporary simulation data and model files are copied before solving. Path relative to project root or absolute.
+     - Folder where the temporary simulation data and model files 
+       are copied before solving. Path relative to project root 
+       or absolute.
      - General
      - No
      - Yes
    * - SimulationTimeStep
      - Numerical
-     - Time step resolution of the optimization model, in hours (e.g., 1.0). Should be >= DataTimeStep.
+     - Time step resolution of the optimization model, in hours 
+       (e.g., 1.0). Should be >= DataTimeStep.
      - General
      - No
      - Yes
    * - SimulationType
      - LP/LP clustered/Integer clustering/Standard/No clustering
-     - Formulation of the optimization problem (Mixed Integer Linear Program, Linear Program, variations with clustering).
+     - Formulation of the optimization problem (Mixed Integer 
+       Linear Program, Linear Program, variations with clustering).
      - General
      - No
      - Yes
    * - StartDate
      - Date tuple (YYYY, M, D, H, MIN, S)
-     - Starting date and time of the simulation period. Must match the start of the input time series data.
+     - Starting date and time of the simulation period. Must match 
+       the start of the input time series data.
      - General
      - No
      - Yes
    * - StopDate
      - Date tuple (YYYY, M, D, H, MIN, S)
-     - Stopping date and time of the simulation period. Must match the end of the input time series data.
+     - Stopping date and time of the simulation period. Must match 
+       the end of the input time series data.
      - General
      - No
      - Yes
    * - StorageAlertLevels
      - File path
-     - Time series with the alert levels (e.g., minimum operational level as fraction of capacity) for each storage unit. Path relative to Database directory or absolute.
+     - Time series with the alert levels (e.g., minimum operational 
+       level as fraction of capacity) for each storage unit. Path 
+       relative to Database directory or absolute.
      - Hydro Parameters
      - No
      - No
    * - StorageFloodControl
      - File path
-     - Time series with the flood control levels (e.g., maximum operational level as fraction of capacity) for each storage unit. Path relative to Database directory or absolute.
+     - Time series with the flood control levels (e.g., maximum 
+       operational level as fraction of capacity) for each storage 
+       unit. Path relative to Database directory or absolute.
      - Hydro Parameters
      - No
      - No
    * - SystemGainLimit
      - File path
-     - Limit on system gain (related to frequency control/reserves). Can be a file path or a single value if default is used.
+     - Limit on system gain (related to frequency control/reserves). 
+       Can be a file path or a single value if default is used.
      - Reserve Parameters
      - Yes
      - No
    * - TransmissionGridType
      - NTC/DC-Power Flow
-     - Method for modeling the transmission grid constraints (Net Transfer Capacity or DC Power Flow approximation using PTDF matrix).
+     - Method for modeling the transmission grid constraints 
+       (Net Transfer Capacity or DC Power Flow approximation 
+       using PTDF matrix).
      - Spatial Data
      - No
      - No
    * - ValueOfLostLoad
      - Numerical
-     - Value of Lost Load (VOLL) in EUR/MWh, used for economic calculations or potentially as an alternative to CostLoadShedding.
+     - Value of Lost Load (VOLL) in EUR/MWh, used for economic 
+       calculations or potentially as an alternative to 
+       CostLoadShedding.
      - Cost and Fuel Price
      - Yes
      - No
    * - WaterValue
      - Numerical
-     - Shadow price or value of water stored in reservoirs (EUR/MWh), used in hydro scheduling or as an opportunity cost.
+     - Shadow price or value of water stored in reservoirs (EUR/MWh), 
+       used in hydro scheduling or as an opportunity cost.
      - Hydro Parameters
      - Yes
      - No
    * - modifiers.Demand
      - Numerical
-     - Multiplier applied to the demand time series (e.g., 1.1 for +10%).
+     - Multiplier applied to the demand time series 
+       (e.g., 1.1 for +10%).
      - Data Adjustment
      - No
      - No
@@ -481,7 +557,8 @@ The table below provides a comprehensive list of all configuration parameters av
      - No
    * - mts_zones
      - String List
-     - List of zones included in the mid-term hydro scheduling optimization. Must be a subset of 'zones'.
+     - List of zones included in the mid-term hydro scheduling 
+       optimization. Must be a subset of 'zones'.
      - Zones
      - No
      - Yes
