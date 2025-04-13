@@ -1637,6 +1637,23 @@
                     }
                 }
             }
+
+            // *** CORRECTED: Handle nested modifiers with backticks ***
+            if (yamlData.modifiers && typeof yamlData.modifiers === 'object') {
+                console.log('Processing modifiers:', yamlData.modifiers); // Debug log
+                for (const modifierKey in yamlData.modifiers) {
+                    // Use backticks ` ` for template literal
+                    const modifierInput = document.getElementById(`modifiers.${modifierKey}`);
+                    if (modifierInput) {
+                        modifierInput.value = yamlData.modifiers[modifierKey];
+                        // Use backticks ` ` for template literal
+                        console.log(`Set ${modifierInput.id} to ${modifierInput.value}`); // Debug log
+                    } else {
+                        // Use backticks ` ` for template literal
+                        console.log(`Modifier input not found for: modifiers.${modifierKey}`); // Debug log
+                    }
+                }
+            }
         }
         
         // Collect form data into YAML
