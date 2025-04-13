@@ -612,8 +612,6 @@
                                 <option value="Off">Off</option>
                                 <option value="Zonal">Zonal</option>
                                 <option value="Regional">Regional</option>
-                                <option value="International">International</option>
-                                <option value="Global">Global</option>
                             </select>
                         </div>
                     </div>
@@ -622,8 +620,6 @@
                             <label for="hydroSchedulingHorizon">Hydro Scheduling Horizon<span class="tooltiptext">Optimization horizon for the mid-term hydro scheduling (determines target reservoir levels).</span></label>
                             <select id="hydroSchedulingHorizon">
                                 <option value="Annual">Annual</option>
-                                <option value="Weekly">Weekly</option>
-                                <option value="Daily">Daily</option>
                                 <option value="Stop-date driven">Stop-date driven</option>
                             </select>
                         </div>
@@ -887,106 +883,7 @@
                  </div>
             </div>
 
-            <!-- Hydro Tab -->
-            <div id="hydro" data-tab="hydro" class="tab-content card">
-                 <h3>Hydro Scheduling</h3>
-                 <div class="row">
-                    <div class="col">
-                        <div class="form-group">
-                            <label for="hydroScheduling">Hydro Scheduling Method<span class="tooltiptext">Type of mid-term hydro scheduling optimization (Off=none, Zonal=per zone, Regional=per defined region, International/Global=wider scope).</span></label>
-                            <select id="hydroScheduling">
-                                <option value="Off">Off</option>
-                                <option value="Zonal">Zonal</option>
-                                <option value="Regional">Regional</option>
-                                <option value="International">International</option>
-                                <option value="Global">Global</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="form-group">
-                            <label for="hydroSchedulingHorizon">Hydro Scheduling Horizon<span class="tooltiptext">Optimization horizon for the mid-term hydro scheduling (determines target reservoir levels).</span></label>
-                            <select id="hydroSchedulingHorizon">
-                                <option value="Annual">Annual</option>
-                                <option value="Weekly">Weekly</option>
-                                <option value="Daily">Daily</option>
-                                <option value="Stop-date driven">Stop-date driven</option>
-                            </select>
-                        </div>
-                    </div>
-                 </div>
-
-                 <h3>Reservoir Levels & Inflows</h3>
-                 <div class="row">
-                    <div class="col">
-                        <div class="form-group">
-                            <label for="initialFinalReservoirLevel">Enforce Initial/Final Reservoir Level<span class="tooltiptext">If 1 (True), enforces initial and final reservoir levels based on ReservoirLevelInitial/Final defaults or historical ReservoirLevels file. If 0 (False), these constraints are relaxed.</span></label>
-                             <select id="initialFinalReservoirLevel">
-                                <option value="1">Yes (1)</option>
-                                <option value="0">No (0)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="form-group">
-                            <label for="reservoirLevels">Target Reservoir Levels File<span class="tooltiptext">Time series of target reservoir levels (fraction of capacity). Used as minimum target at the end of each rolling horizon optimization if InitialFinalReservoirLevel=1. Path relative to Database directory or absolute.</span></label>
-                            <input type="text" id="reservoirLevels" placeholder="e.g., ReservoirLevels.csv">
-                        </div>
-                    </div>
-                 </div>
-                 <div class="row">
-                    <div class="col">
-                         <div class="form-group">
-                            <label for="reservoirLevelInitial">Default Initial Reservoir Level<span class="tooltiptext">Target initial reservoir level as a fraction of capacity (0 to 1). Used if InitialFinalReservoirLevel=1 and ReservoirLevels file is not provided.</span></label>
-                            <input type="number" id="reservoirLevelInitial" min="0" max="1" step="any">
-                             <div class="default-value" data-default="0.5">
-                                <span>Default:</span>
-                                <input type="text" class="default-value-input" value="0.5" data-param="ReservoirLevelInitial">
-                            </div>
-                        </div>
-                    </div>
-                     <div class="col">
-                        <div class="form-group">
-                            <label for="reservoirLevelFinal">Default Final Reservoir Level<span class="tooltiptext">Target final reservoir level as a fraction of capacity (0 to 1). Used if InitialFinalReservoirLevel=1 and ReservoirLevels file is not provided.</span></label>
-                            <input type="number" id="reservoirLevelFinal" min="0" max="1" step="any">
-                             <div class="default-value" data-default="0.5">
-                                <span>Default:</span>
-                                <input type="text" class="default-value-input" value="0.5" data-param="ReservoirLevelFinal">
-                            </div>
-                        </div>
-                    </div>
-                 </div>
-                <div class="form-group">
-                    <label for="reservoirScaledInflows">Scaled Inflows File<span class="tooltiptext">Natural inflows to hydro reservoirs, scaled by turbine capacity (MWh of inflow per hour / MW of turbine capacity). Path relative to Database directory or absolute. Use '##' for unit placeholder.</span></label>
-                    <input type="text" id="reservoirScaledInflows" placeholder="e.g., ScaledInflows.csv">
-                </div>
-
-                <h3>Operational Levels</h3>
-                 <div class="row">
-                    <div class="col">
-                        <div class="form-group">
-                            <label for="storageAlertLevels">Storage Alert Levels File<span class="tooltiptext">Time series with the alert levels (e.g., minimum operational level as fraction of capacity) for each storage unit. Path relative to Database directory or absolute.</span></label>
-                            <input type="text" id="storageAlertLevels" placeholder="e.g., StorageAlertLevels.csv">
-                        </div>
-                    </div>
-                    <div class="col">
-                         <div class="form-group">
-                            <label for="storageFloodControl">Storage Flood Control File<span class="tooltiptext">Time series with the flood control levels (e.g., maximum operational level as fraction of capacity) for each storage unit. Path relative to Database directory or absolute.</span></label>
-                            <input type="text" id="storageFloodControl" placeholder="e.g., StorageFloodControl.csv">
-                        </div>
-                    </div>
-                 </div>
-                 <div class="form-group">
-                    <label for="waterValue">Water Value (EUR/MWh)<span class="tooltiptext">Shadow price or value of water stored in reservoirs (EUR/MWh), used in hydro scheduling or as an opportunity cost.</span></label>
-                    <input type="number" id="waterValue" min="0" step="any">
-                    <div class="default-value" data-default="400.0">
-                        <span>Default:</span>
-                        <input type="text" class="default-value-input" value="400.0" data-param="WaterValue">
-                    </div>
-                </div>
-            </div>
-
-             <!-- Reserves Tab -->
+            <!-- Reserves Tab -->
             <div id="reserves" data-tab="reserves" class="tab-content card">
                 <h3>Reserve Requirements & Calculation</h3>
                  <div class="row">
@@ -1221,13 +1118,10 @@
                 <!-- Original Solver Settings from old Advanced Tab (Example) -->
                 <h3>Solver Settings</h3>
                  <div class="form-group">
-                    <label for="optimalityGap">Optimality gap<span class="tooltiptext">Relative optimality gap for the MILP solver (e.g., 0.0006 for 0.06%). Note: Also present in General tab.</span></label>
-                    <input type="number" id="optimalityGapAdvanced" name="optimalityGapAdvanced" min="0" step="any" value="0.0006">
+                    <label for="optimalityGap">Optimality gap<span class="tooltiptext">Relative optimality gap for the MILP solver (e.g., 0.0006 for 0.06%).</span></label>
+                    <input type="number" id="optimalityGap" min="0" step="any" value="0.0006">
                 </div>
-                <div class="form-group">
-                    <label for="gams_folder">GAMS Folder<span class="tooltiptext">Path to the GAMS installation folder, if not set in the system's GAMSPATH environment variable. Note: Also present in General tab.</span></label>
-                    <input type="text" id="gams_folderAdvanced" name="gams_folderAdvanced">
-                </div>
+                <!-- Removing duplicate GAMS folder field -->
             </div>
         </form>
     </div>
@@ -1582,6 +1476,26 @@
             // Handle simulation type
             if (yamlData.SimulationType) {
                 document.getElementById('simulationType').value = yamlData.SimulationType;
+            }
+
+            // *** ADDED: Explicit handling for Hydro selects ***
+            if (yamlData.HydroScheduling) {
+                const hydroSchedSelect = document.getElementById('hydroScheduling');
+                if (hydroSchedSelect) {
+                    hydroSchedSelect.value = yamlData.HydroScheduling;
+                    console.log(`Populated hydroScheduling with: ${yamlData.HydroScheduling}`); // Debug log
+                } else {
+                    console.error('Element with ID hydroScheduling not found');
+                }
+            }
+            if (yamlData.HydroSchedulingHorizon) {
+                const hydroHorizonSelect = document.getElementById('hydroSchedulingHorizon');
+                if (hydroHorizonSelect) {
+                    hydroHorizonSelect.value = yamlData.HydroSchedulingHorizon;
+                     console.log(`Populated hydroSchedulingHorizon with: ${yamlData.HydroSchedulingHorizon}`); // Debug log
+                 } else {
+                    console.error('Element with ID hydroSchedulingHorizon not found');
+                }
             }
             
             // Handle dates (start and stop)
