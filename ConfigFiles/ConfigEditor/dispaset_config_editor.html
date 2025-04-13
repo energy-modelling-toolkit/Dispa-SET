@@ -1578,11 +1578,42 @@
             const inputs = document.querySelectorAll('input[type="text"]:not(.default-value-input):not(.zone-code), input[type="number"], select, textarea');
             inputs.forEach(input => {
                 if (input.id && input.value !== '') {
+                    // Special handling for modifiers - skip here as we'll handle them separately
+                    if (input.id.startsWith('modifiers.')) {
+                        return;
+                    }
+                    
                     // Convert first letter to uppercase for consistency
                     const key = input.id.charAt(0).toUpperCase() + input.id.slice(1);
-                    formData[key] = input.value;
+                    
+                    // Convert numerical values to actual numbers
+                    if (input.type === 'number' || 
+                        ['dataTimeStep', 'simulationTimeStep', 'horizonLength', 'lookAhead', 
+                         'initialFinalReservoirLevel', 'allowCurtailment', 'optimalityGap'].includes(input.id)) {
+                        const numValue = parseFloat(input.value);
+                        formData[key] = isNaN(numValue) ? input.value : numValue;
+                    } else {
+                        formData[key] = input.value;
+                    }
                 }
             });
+            
+            // Handle modifiers as nested object (similar to defaults)
+            const modifiersValues = {};
+            document.querySelectorAll('input[id^="modifiers."]').forEach(input => {
+                if (input.value !== '') {
+                    // Extract the key part after "modifiers."
+                    const paramName = input.id.split('.')[1];
+                    // Try to convert numeric values
+                    const numValue = parseFloat(input.value);
+                    modifiersValues[paramName] = isNaN(numValue) ? input.value : numValue;
+                }
+            });
+            
+            // Add modifiers to form data if any were collected
+            if (Object.keys(modifiersValues).length > 0) {
+                formData.modifiers = modifiersValues;
+            }
             
             // Handle description
             if (document.getElementById('description').value) {
