@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dispa-SET Configuration Editor</title>
     <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
         :root {
             --primary-color: #3498db;
@@ -196,6 +197,69 @@
             margin-left: 5px;
         }
 
+        /* Zone configuration */
+        .zone-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .zone-entry {
+            display: flex;
+            align-items: center;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .zone-entry input[type="text"] {
+            width: 80px;
+            margin-right: 15px;
+        }
+
+        .radio-group {
+            display: flex;
+            align-items: center;
+            margin-right: 25px;
+        }
+
+        .radio-group label {
+            margin-bottom: 0;
+            margin-right: 10px;
+            font-weight: 400;
+        }
+
+        .zone-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+
+        .zone-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--muted-text);
+            font-size: 16px;
+            padding: 2px 8px;
+            border-radius: 3px;
+        }
+
+        .zone-btn:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .zone-btn.remove-btn:hover {
+            color: var(--danger-color);
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
         /* Tab system */
         .tabs {
             display: flex;
@@ -344,12 +408,23 @@
 
             <!-- Zones Configuration Tab -->
             <div id="zones" class="tab-content card">
-                <h3>Select and Configure Countries</h3>
-                <p>Select countries and optionally rename them. Up to 40 countries can be active.</p>
+                <h3>Configure Zones/Countries</h3>
+                <p>Configure the zones/countries to be included in the simulation:</p>
+                <ul>
+                    <li>Enter a unique code for each zone/country (e.g., BE, FR, DE)</li>
+                    <li>Set each zone as Active (included in simulation) or Inactive</li>
+                    <li>For active zones only, set MTS status (included in mid-term scheduling)</li>
+                    <li>Use the + button to add more zones, or the trash icon to remove a zone</li>
+                </ul>
+                <p>Active zones will be included in the "zones" list. Active zones with MTS status will also be included in the "mts_zones" list.</p>
                 
-                <div class="country-grid" id="countriesContainer">
-                    <!-- Countries will be dynamically added here -->
+                <div class="zone-container" id="zonesContainer">
+                    <!-- Zone entries will be added here dynamically -->
                 </div>
+                
+                <button type="button" class="btn btn-sm" id="addZoneBtn">
+                    <i class="fas fa-plus"></i> Add Zone
+                </button>
             </div>
 
             <!-- Data Paths Tab -->
@@ -626,14 +701,6 @@
             }
         }
 
-        // Country list (up to 40 countries)
-        const countries = [
-            'AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 
-            'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 
-            'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 
-            'SE', 'SI', 'SK', 'TR', 'UA', 'Z1', 'Z2', 'ZZ3', 'ZZ4', 'ZZ5'
-        ];
-
         // Reserve participation options
         const reserveOptions = [
             'COMC', 'GTUR', 'HDAM', 'HPHS', 'ICEN', 'CAES', 'BATS', 'BEVS', 
@@ -659,8 +726,8 @@
                 });
             });
             
-            // Initialize countries
-            initializeCountries();
+            // Initialize zones
+            initializeZones();
             
             // Initialize reserve participation options
             initializeReserveOptions();
@@ -671,38 +738,178 @@
             // Set up save button
             document.getElementById('saveYaml').addEventListener('click', saveYamlFile);
             
+            // Set up add zone button
+            document.getElementById('addZoneBtn').addEventListener('click', addZone);
+            
             // Load default YAML on page load
             loadDefaultYaml();
         });
         
-        // Initialize countries list
-        function initializeCountries() {
-            const container = document.getElementById('countriesContainer');
+        // Default country codes to start with
+        const defaultZones = ['BE', 'DE', 'FR', 'NL'];
+        
+        // Initialize zones interface
+        function initializeZones() {
+            const container = document.getElementById('zonesContainer');
+            container.innerHTML = ''; // Clear container
             
-            countries.forEach(country => {
-                const countryItem = document.createElement('div');
-                countryItem.className = 'country-item';
-                
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = 'country_' + country;
-                checkbox.value = country;
-                
-                const label = document.createElement('label');
-                label.htmlFor = 'country_' + country;
-                label.textContent = country;
-                
-                const textInput = document.createElement('input');
-                textInput.type = 'text';
-                textInput.id = 'countryName_' + country;
-                textInput.value = country;
-                
-                countryItem.appendChild(checkbox);
-                countryItem.appendChild(label);
-                countryItem.appendChild(textInput);
-                
-                container.appendChild(countryItem);
+            // Add default zones
+            defaultZones.forEach(zone => {
+                addZoneEntry(container, zone, true, false);
             });
+        }
+        
+        // Add a new zone entry
+        function addZone() {
+            const container = document.getElementById('zonesContainer');
+            addZoneEntry(container, '', true, false);
+        }
+        
+        // Create a zone entry element
+        function addZoneEntry(container, zoneCode, isActive, isMTS) {
+            const zoneId = 'zone_' + Date.now() + Math.floor(Math.random() * 1000);
+            
+            const entry = document.createElement('div');
+            entry.className = 'zone-entry';
+            entry.dataset.id = zoneId;
+            
+            // Zone code input
+            const codeInput = document.createElement('input');
+            codeInput.type = 'text';
+            codeInput.className = 'zone-code';
+            codeInput.value = zoneCode;
+            codeInput.placeholder = 'Code';
+            
+            // Active status radio group
+            const activeGroup = document.createElement('div');
+            activeGroup.className = 'radio-group';
+            
+            const activeLabel = document.createElement('label');
+            activeLabel.textContent = 'Status:';
+            
+            const activeRadio = document.createElement('div');
+            activeRadio.className = 'radio-item';
+            const activeInput = document.createElement('input');
+            activeInput.type = 'radio';
+            activeInput.name = `active_${zoneId}`;
+            activeInput.id = `active_${zoneId}`;
+            activeInput.className = 'zone-active';
+            activeInput.checked = isActive;
+            activeInput.addEventListener('change', updateMTSStatus);
+            
+            const activeText = document.createElement('label');
+            activeText.htmlFor = `active_${zoneId}`;
+            activeText.textContent = 'Active';
+            
+            activeRadio.appendChild(activeInput);
+            activeRadio.appendChild(activeText);
+            
+            const inactiveRadio = document.createElement('div');
+            inactiveRadio.className = 'radio-item';
+            const inactiveInput = document.createElement('input');
+            inactiveInput.type = 'radio';
+            inactiveInput.name = `active_${zoneId}`;
+            inactiveInput.id = `inactive_${zoneId}`;
+            inactiveInput.className = 'zone-inactive';
+            inactiveInput.checked = !isActive;
+            inactiveInput.addEventListener('change', updateMTSStatus);
+            
+            const inactiveText = document.createElement('label');
+            inactiveText.htmlFor = `inactive_${zoneId}`;
+            inactiveText.textContent = 'Inactive';
+            
+            inactiveRadio.appendChild(inactiveInput);
+            inactiveRadio.appendChild(inactiveText);
+            
+            activeGroup.appendChild(activeLabel);
+            activeGroup.appendChild(activeRadio);
+            activeGroup.appendChild(inactiveRadio);
+            
+            // MTS status radio group
+            const mtsGroup = document.createElement('div');
+            mtsGroup.className = 'radio-group';
+            
+            const mtsLabel = document.createElement('label');
+            mtsLabel.textContent = 'MTS:';
+            
+            const mtsRadio = document.createElement('div');
+            mtsRadio.className = 'radio-item';
+            const mtsInput = document.createElement('input');
+            mtsInput.type = 'radio';
+            mtsInput.name = `mts_${zoneId}`;
+            mtsInput.id = `mts_${zoneId}`;
+            mtsInput.className = 'zone-mts';
+            mtsInput.checked = isMTS;
+            mtsInput.disabled = !isActive;
+            
+            const mtsText = document.createElement('label');
+            mtsText.htmlFor = `mts_${zoneId}`;
+            mtsText.textContent = 'Yes';
+            
+            mtsRadio.appendChild(mtsInput);
+            mtsRadio.appendChild(mtsText);
+            
+            const noMtsRadio = document.createElement('div');
+            noMtsRadio.className = 'radio-item';
+            const noMtsInput = document.createElement('input');
+            noMtsInput.type = 'radio';
+            noMtsInput.name = `mts_${zoneId}`;
+            noMtsInput.id = `nomts_${zoneId}`;
+            noMtsInput.className = 'zone-nomts';
+            noMtsInput.checked = !isMTS;
+            noMtsInput.disabled = !isActive;
+            
+            const noMtsText = document.createElement('label');
+            noMtsText.htmlFor = `nomts_${zoneId}`;
+            noMtsText.textContent = 'No';
+            
+            noMtsRadio.appendChild(noMtsInput);
+            noMtsRadio.appendChild(noMtsText);
+            
+            mtsGroup.appendChild(mtsLabel);
+            mtsGroup.appendChild(mtsRadio);
+            mtsGroup.appendChild(noMtsRadio);
+            
+            // Actions
+            const actions = document.createElement('div');
+            actions.className = 'zone-actions';
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'zone-btn remove-btn';
+            removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+            removeBtn.addEventListener('click', () => removeZone(entry));
+            
+            actions.appendChild(removeBtn);
+            
+            // Add all elements to entry
+            entry.appendChild(codeInput);
+            entry.appendChild(activeGroup);
+            entry.appendChild(mtsGroup);
+            entry.appendChild(actions);
+            
+            container.appendChild(entry);
+        }
+        
+        // Remove a zone entry
+        function removeZone(entry) {
+            entry.remove();
+        }
+        
+        // Update MTS radio status based on active/inactive selection
+        function updateMTSStatus(event) {
+            const zoneEntry = event.target.closest('.zone-entry');
+            const isActive = zoneEntry.querySelector('.zone-active').checked;
+            const mtsInputs = zoneEntry.querySelectorAll('.zone-mts, .zone-nomts');
+            
+            mtsInputs.forEach(input => {
+                input.disabled = !isActive;
+            });
+            
+            // If inactive, uncheck MTS
+            if (!isActive) {
+                zoneEntry.querySelector('.zone-nomts').checked = true;
+            }
         }
         
         // Initialize reserve participation options
@@ -829,14 +1036,27 @@
             }
             
             // Handle zones
-            if (yamlData.zones && Array.isArray(yamlData.zones)) {
-                yamlData.zones.forEach(zone => {
-                    const checkbox = document.getElementById(`country_${zone}`);
-                    if (checkbox) {
-                        checkbox.checked = true;
-                    }
-                });
+            const zonesContainer = document.getElementById('zonesContainer');
+            zonesContainer.innerHTML = ''; // Clear the container
+            
+            // Use all_zones as the source of zones to display if it exists
+            let allZones = [];
+            if (yamlData.all_zones && Array.isArray(yamlData.all_zones)) {
+                allZones = yamlData.all_zones;
+            } else if (yamlData.zones && Array.isArray(yamlData.zones)) {
+                // Fallback to zones list if all_zones doesn't exist
+                allZones = [...yamlData.zones];
+            } else {
+                // Use default zones if nothing is provided
+                allZones = [...defaultZones];
             }
+            
+            // Create zone entries
+            allZones.forEach(zone => {
+                const isActive = yamlData.zones && Array.isArray(yamlData.zones) && yamlData.zones.includes(zone);
+                const isMTS = yamlData.mts_zones && Array.isArray(yamlData.mts_zones) && yamlData.mts_zones.includes(zone);
+                addZoneEntry(zonesContainer, zone, isActive, isMTS);
+            });
             
             // Handle reserve participation
             if (yamlData.ReserveParticipation && Array.isArray(yamlData.ReserveParticipation)) {
@@ -871,7 +1091,7 @@
             const formData = {};
             
             // Collect text inputs, numbers, selects
-            const inputs = document.querySelectorAll('input[type="text"]:not(.default-value-input), input[type="number"], select, textarea');
+            const inputs = document.querySelectorAll('input[type="text"]:not(.default-value-input):not(.zone-code), input[type="number"], select, textarea');
             inputs.forEach(input => {
                 if (input.id && input.value !== '') {
                     // Convert first letter to uppercase for consistency
@@ -888,7 +1108,7 @@
             // Handle checkboxes - WriteGDX and WritePickle have been removed
             const checkboxes = document.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(checkbox => {
-                if (checkbox.id && !checkbox.id.startsWith('country_') && !checkbox.id.startsWith('reserve_')) {
+                if (checkbox.id && !checkbox.id.startsWith('reserve_')) {
                     // Convert first letter to uppercase for consistency
                     const key = checkbox.id.charAt(0).toUpperCase() + checkbox.id.slice(1);
                     formData[key] = checkbox.checked ? 1 : 0;
@@ -910,13 +1130,39 @@
                 formData.StopDate = parts;
             }
             
-            // Collect zones
-            const selectedZones = [];
-            document.querySelectorAll('input[id^="country_"]:checked').forEach(checkbox => {
-                selectedZones.push(checkbox.value);
+            // Collect zones information
+            const zones = [];
+            const mtsZones = [];
+            const allZones = [];
+            
+            document.querySelectorAll('.zone-entry').forEach(entry => {
+                const codeInput = entry.querySelector('.zone-code');
+                const isActive = entry.querySelector('.zone-active').checked;
+                const isMTS = entry.querySelector('.zone-mts').checked;
+                
+                if (codeInput.value.trim()) {
+                    const zoneCode = codeInput.value.trim();
+                    allZones.push(zoneCode);
+                    
+                    if (isActive) {
+                        zones.push(zoneCode);
+                        if (isMTS) {
+                            mtsZones.push(zoneCode);
+                        }
+                    }
+                }
             });
-            if (selectedZones.length > 0) {
-                formData.zones = selectedZones;
+            
+            if (zones.length > 0) {
+                formData.zones = zones;
+            }
+            
+            if (mtsZones.length > 0) {
+                formData.mts_zones = mtsZones;
+            }
+            
+            if (allZones.length > 0) {
+                formData.all_zones = allZones;
             }
             
             // Collect reserve participation
