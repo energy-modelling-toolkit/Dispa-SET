@@ -1,52 +1,54 @@
-AllowCurtailment: 1
-BoundarySectorData: tests/dummy_data/boundary_sector/BS_Inputs.csv
-BoundarySectorInterconnections: tests/dummy_data/boundary_sector/BS_NTCs.csv
-BoundarySectorMaxSpillage: tests/dummy_data/boundary_sector/BS_Spillage_Capacity.csv
-BoundarySectorNTC: tests/dummy_data/boundary_sector/BS_NTCs.csv
-CostCurtailment: ''
-CostLoadShedding: ''
-CostNotServed: ''
-CostOfSpillage: tests/dummy_data/boundary_sector/BS_Spillage_cost.csv
-CostXNotServed: tests/dummy_data/boundary_sector/BS_NotServed_cost.csv
-OptimalityGap: 0.0006
-CplexSetting: ''
-DataTimeStep: 1.0
-Demand: tests/dummy_data/Load_RealTime/##/2015.csv
 Description: Dummy configuration file for testing purposes. Two fictitious zones (Z1
   and Z2) are simulated. The simulated period is only 7 days. There is a CHP unit
   in zone 1
-FFRGainLimit: ''
-FFRLimit: ''
-FrequencyStability: ''
-GAMS_folder: ''
-GeoData: tests/dummy_data/Geo_Coordinates.csv
-GridData: ''
-HorizonLength: 3
+SimulationType: Integer clustering
+SimulationDirectory: Simulations/simulation_test
+StartDate: !!python/tuple
+- 2015
+- 1
+- 1
+- 0
+- 0
+- 0
+StopDate: !!python/tuple
+- 2015
+- 1
+- 7
+- 0
+- 0
+- 0
+DataTimeStep: '1'
+SimulationTimeStep: '1'
+HorizonLength: '3'
+LookAhead: '1'
+AllowCurtailment: '1'
+OptimalityGap: '0.0006'
+Demand: tests/dummy_data/Load_RealTime/##/2015.csv
+RenewablesAF: tests/dummy_data/AvailabilityFactors/##/2015.csv
+Outages: tests/dummy_data/Outages.csv
+ShareOfFlexibleDemand: tests/dummy_data/ShareFlex.csv
+PowerPlantData: tests/dummy_data/Units_testcase.csv
 HydroScheduling: Regional
 HydroSchedulingHorizon: Annual
-InertiaLimit: ''
-InitialFinalReservoirLevel: 1
-Interconnections: tests/dummy_data/CrossBorderFlows.csv
-LoadShedding: ''
-LookAhead: 1
-NTC: tests/dummy_data/NTCs.csv
-Outages: tests/dummy_data/Outages.csv
-PowerPlantData: tests/dummy_data/Units_testcase.csv
-PriceOfAmmonia: ''
-PriceOfBiomass: Database/FuelPrices/Biomass/2015.csv
-PriceOfBlackCoal: Database/FuelPrices/Coal/2015.csv
-PriceOfCO2: ''
-PriceOfFuelOil: Database/FuelPrices/Oil/2015.csv
+ReservoirLevels: tests/dummy_data/ReservoirLevels.csv
+ReservoirScaledInflows: tests/dummy_data/ScaledInflows.csv
 PriceOfGas: Database/FuelPrices/Gas/2015.csv
-PriceOfLignite: ''
-PriceOfNuclear: ''
-PriceOfPeat: tests/dummy_data/PriceOfPeat.csv
-PriceTransmission: ''
-PrimaryReserveLimit: ''
-RenewablesAF: tests/dummy_data/AvailabilityFactors/##/2015.csv
-Reserve2D: ''
-Reserve2U: ''
+PriceOfBlackCoal: Database/FuelPrices/Coal/2015.csv
+PriceOfBiomass: Database/FuelPrices/Biomass/2015.csv
+PriceOfFuelOil: Database/FuelPrices/Oil/2015.csv
 ReserveCalculation: Generic
+zones:
+- Z1
+- Z2
+- ZZ3
+mts_zones:
+- Z1
+- Z2
+- ZZ3
+all_zones:
+- Z1
+- Z2
+- ZZ3
 ReserveParticipation:
 - COMC
 - GTUR
@@ -63,80 +65,15 @@ ReserveParticipation:
 - HYHP
 - WSHP
 - REHE
-ReserveParticipation_CHP:
-- COMC
-- GTUR
-- ICEN
-- STUR
-ReservoirLevels: tests/dummy_data/ReservoirLevels.csv
-ReservoirScaledInflows: tests/dummy_data/ScaledInflows.csv
-SectorXDemand: tests/dummy_data/boundary_sector/BS_Demand.csv
-SectorXFlexibleDemand: tests/dummy_data/boundary_sector/BS_FlexibleDemand.csv
-SectorXFlexibleSupply: tests/dummy_data/boundary_sector/BS_FlexibleSupply.csv
-SectorXFloodControl: tests/dummy_data/boundary_sector/BS_Flood_control.csv
-SectorXReservoirLevels: tests/dummy_data/boundary_sector/BS_ReservoirLevels.csv
-ShareOfFlexibleDemand: tests/dummy_data/ShareFlex.csv
-SimulationDirectory: Simulations/simulation_test
-SimulationTimeStep: 1.0
-SimulationType: Integer clustering
-StartDate: !!python/tuple
-- 2015
-- 1
-- 1
-- 0
-- 0
-- 0
-StopDate: !!python/tuple
-- 2015
-- 1
-- 7
-- 0
-- 0
-- 0
-StorageAlertLevels: ''
-StorageFloodControl: ''
-SystemGainLimit: ''
-TransmissionGridType: ''
-cplex_path: ''
 default:
-  CostCurtailment: 20.0
-  CostLoadShedding: 1500.0
-  CostNotServed: ''
-  CostOfSpillage: 401.0
-  CostXNotServed: 0
-  DemandFlexibility: 4.0
-  FFRGainLimit: ''
-  FFRLimit: ''
-  InertiaLimit: ''
-  LoadShedding: 0.05
-  PriceOfAmmonia: 76.0
-  PriceOfBiomass: 33.0
-  PriceOfBlackCoal: 18.0
-  PriceOfCO2: 90.0
-  PriceOfFuelOil: 60.0
-  PriceOfGas: 44.0
-  PriceOfLignite: 15.0
-  PriceOfNuclear: 4.0
-  PriceOfPeat: 33.0
-  PriceTransmission: 0.0
-  PrimaryReserveLimit: ''
-  ReservoirLevelFinal: 0.5
-  ReservoirLevelInitial: 0.5
   ShareOfFlexibleDemand: 0.03
-  ShareOfQuickStartUnits: 0.5
-  SystemGainLimit: ''
-  ValueOfLostLoad: 100000.0
-  WaterValue: 400.0
-modifiers:
-  Demand: 0.17
-  Solar: 5.0
-  Storage: 1.0
-  Wind: 5.0
-mts_zones:
-- Z1
-- Z2
-- ZZ3
-zones:
-- Z1
-- Z2
-- ZZ3
+  DemandFlexibility: 4
+  LoadShedding: 0.05
+  CostLoadShedding: 1500
+  CostCurtailment: 20
+  PriceOfGas: 44
+  PriceOfBlackCoal: 18
+  PriceOfLignite: 15
+  PriceOfCO2: 90
+  PriceOfBiomass: 33
+  PriceOfFuelOil: 60

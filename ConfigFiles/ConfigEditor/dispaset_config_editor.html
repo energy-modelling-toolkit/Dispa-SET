@@ -63,12 +63,14 @@
 
         .form-group {
             margin-bottom: 15px;
+            position: relative; /* Needed for tooltip */
         }
 
         label {
             display: block;
             margin-bottom: 5px;
             font-weight: 600;
+            cursor: help; /* Indicate hover */
         }
 
         input[type="text"],
@@ -111,6 +113,7 @@
             border: 1px solid var(--border-color);
             border-radius: 3px;
             height: 20px;
+            margin-left: auto; /* Push to the right */
         }
 
         .btn {
@@ -134,6 +137,31 @@
 
         .btn-group .btn {
             margin-right: 10px;
+        }
+
+        /* Tooltip */
+        label .tooltiptext {
+            visibility: hidden;
+            width: 300px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Position above the label */
+            left: 50%;
+            margin-left: -150px; /* Center the tooltip */
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+            font-weight: normal;
+        }
+
+        label:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
         }
 
         /* Status message */
@@ -169,6 +197,7 @@
         .col {
             flex: 1;
             padding: 0 10px;
+            min-width: 0; /* Prevent flex items from overflowing */
         }
 
         .col-2 {
@@ -229,7 +258,9 @@
             margin-bottom: 0;
             margin-right: 10px;
             font-weight: 400;
+            cursor: default; /* Override help cursor */
         }
+        .radio-group label .tooltiptext { display: none; } /* Hide tooltip for radio group labels */
 
         .zone-actions {
             margin-left: auto;
@@ -263,6 +294,7 @@
         /* Tab system */
         .tabs {
             display: flex;
+            flex-wrap: wrap; /* Allow tabs to wrap on smaller screens */
             margin-bottom: 0;
             border-bottom: 1px solid var(--border-color);
         }
@@ -271,21 +303,25 @@
             padding: 10px 15px;
             cursor: pointer;
             margin-right: 5px;
+            margin-bottom: -1px; /* Overlap border */
             border: 1px solid var(--border-color);
             border-bottom: none;
             border-radius: 4px 4px 0 0;
             background-color: #f9f9f9;
+            white-space: nowrap; /* Prevent wrapping within a tab */
         }
 
         .tab.active {
             background-color: var(--card-bg);
             border-bottom: 1px solid var(--card-bg);
-            margin-bottom: -1px;
             font-weight: 600;
         }
 
         .tab-content {
             display: none;
+            border: 1px solid var(--border-color);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
         }
 
         .tab-content.active {
@@ -298,16 +334,35 @@
             margin-bottom: 10px;
         }
 
+        .checkbox-group label {
+            font-weight: 400; /* Normal weight for checkbox labels */
+            cursor: default; /* Override help cursor */
+        }
+        .checkbox-group label .tooltiptext { display: none; } /* Hide tooltip */
+
         .radio-item,
         .checkbox-item {
             display: inline-flex;
             align-items: center;
             margin-right: 15px;
+            margin-bottom: 5px; /* Space out items if they wrap */
         }
 
         .radio-item input,
         .checkbox-item input {
             margin-right: 5px;
+        }
+
+        /* Section headers */
+        h3 {
+            margin-top: 20px;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 1.1em;
+        }
+        h3:first-child {
+            margin-top: 0;
         }
     </style>
 </head>
@@ -325,51 +380,57 @@
         </header>
 
         <div class="tabs">
-            <div class="tab active" data-tab="general">General Settings</div>
-            <div class="tab" data-tab="zones">Zones Configuration</div>
-            <div class="tab" data-tab="data-paths">Data Paths</div>
-            <div class="tab" data-tab="parameters">Parameters</div>
-            <div class="tab" data-tab="advanced">Advanced Settings</div>
+            <div class="tab active" data-tab="general">General</div>
+            <div class="tab" data-tab="zones">Zones</div>
+            <div class="tab" data-tab="main-inputs">Main inputs</div>
+            <div class="tab" data-tab="costs-prices">Costs & Prices</div>
+            <div class="tab" data-tab="reserves">Reserves</div>
+            <div class="tab" data-tab="sector-coupling">Sector Coupling</div>
+            <div class="tab" data-tab="advanced">Advanced</div>
         </div>
 
         <form id="configForm">
             <!-- General Settings Tab -->
-            <div id="general" class="tab-content card active">
+            <div id="general" data-tab="general" class="tab-content card active">
+                <h3>Simulation Setup</h3>
                 <div class="form-group">
-                    <label for="description">Description</label>
+                    <label for="description">Description<span class="tooltiptext">A brief description of the simulation case.</span></label>
                     <textarea id="description" rows="3"></textarea>
                 </div>
-                
+
                 <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="simulationType">Simulation Type</label>
+                            <label for="simulationType">Simulation Type<span class="tooltiptext">Formulation of the optimization problem (Mixed Integer Linear Program, Linear Program, variations with clustering).</span></label>
                             <select id="simulationType">
                                 <option value="MILP">MILP</option>
                                 <option value="LP">LP</option>
                                 <option value="LP clustered">LP clustered</option>
                                 <option value="Integer clustering">Integer clustering</option>
+                                <option value="Standard">Standard</option>
+                                <option value="No clustering">No clustering</option>
                             </select>
                         </div>
                     </div>
                     <div class="col">
                         <div class="form-group">
-                            <label for="simulationDirectory">Simulation Directory</label>
+                            <label for="simulationDirectory">Simulation Directory<span class="tooltiptext">Folder where the temporary simulation data and model files are copied before solving. Path relative to project root or absolute.</span></label>
                             <input type="text" id="simulationDirectory">
                         </div>
                     </div>
                 </div>
 
+                <h3>Time Settings</h3>
                 <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="startDate">Start Date</label>
+                            <label for="startDate">Start Date<span class="tooltiptext">Starting date and time of the simulation period (YYYY-MM-DD-HH-MM-SS). Must match the start of the input time series data.</span></label>
                             <input type="text" id="startDate" placeholder="YYYY-MM-DD-HH-MM-SS">
                         </div>
                     </div>
                     <div class="col">
                         <div class="form-group">
-                            <label for="stopDate">Stop Date</label>
+                            <label for="stopDate">Stop Date<span class="tooltiptext">Stopping date and time of the simulation period (YYYY-MM-DD-HH-MM-SS). Must match the end of the input time series data.</span></label>
                             <input type="text" id="stopDate" placeholder="YYYY-MM-DD-HH-MM-SS">
                         </div>
                     </div>
@@ -378,125 +439,281 @@
                 <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="simulationTimeStep">Simulation Time Step</label>
-                            <input type="number" id="simulationTimeStep" min="0.1" step="0.1" value="1.0">
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="form-group">
-                            <label for="dataTimeStep">Data Time Step</label>
+                            <label for="dataTimeStep">Data Time Step (h)<span class="tooltiptext">Time step resolution of the input time series data, in hours (e.g., 1.0, 0.5).</span></label>
                             <input type="number" id="dataTimeStep" min="0.1" step="0.1" value="1.0">
                         </div>
                     </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="simulationTimeStep">Simulation Time Step (h)<span class="tooltiptext">Time step resolution of the optimization model, in hours (e.g., 1.0). Should be >= DataTimeStep.</span></label>
+                            <input type="number" id="simulationTimeStep" min="0.1" step="0.1" value="1.0">
+                        </div>
+                    </div>
                 </div>
 
+                <h3>Horizon Settings</h3>
                 <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="lookAhead">Look Ahead</label>
-                            <input type="number" id="lookAhead" min="0" step="1" value="1">
+                            <label for="horizonLength">Horizon Length (days)<span class="tooltiptext">Length of the optimization horizon for each rolling window, in days.</span></label>
+                            <input type="number" id="horizonLength" min="1" step="1" value="3">
                         </div>
                     </div>
                     <div class="col">
                         <div class="form-group">
-                            <label for="horizonLength">Horizon Length</label>
-                            <input type="number" id="horizonLength" min="1" step="1" value="3">
+                            <label for="lookAhead">Look Ahead (days)<span class="tooltiptext">Length of the perfect foresight period within the rolling horizon, in days (must be <= HorizonLength).</span></label>
+                            <input type="number" id="lookAhead" min="0" step="1" value="1">
                         </div>
                     </div>
                 </div>
+
+                <h3>Other General Settings</h3>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="allowCurtailment">Allow Curtailment<span class="tooltiptext">Authorize renewable technologies to operate below their Availability Factor (AF).</span></label>
+                             <select id="allowCurtailment">
+                                <option value="1">Yes (1)</option>
+                                <option value="0">No (0)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="optimalityGap">Optimality Gap<span class="tooltiptext">Relative optimality gap for the MILP solver (e.g., 0.0006 for 0.06%).</span></label>
+                            <input type="number" id="optimalityGap" min="0" step="any" value="0.0006">
+                        </div>
+                    </div>
+                 </div>
+                 <div class="form-group">
+                    <label for="gams_folder">GAMS Folder<span class="tooltiptext">Path to the GAMS installation folder, if not set in the system's GAMSPATH environment variable.</span></label>
+                    <input type="text" id="gams_folder">
+                </div>
+
             </div>
 
             <!-- Zones Configuration Tab -->
-            <div id="zones" class="tab-content card">
+            <div id="zones" data-tab="zones" class="tab-content card">
                 <h3>Configure Zones/Countries</h3>
-                <p>Configure the zones/countries to be included in the simulation:</p>
+                <p>Define the geographical zones or countries included in the simulation and specify if they participate in mid-term scheduling (MTS). The list of all defined zones will be saved under `all_zones`.</p>
                 <ul>
                     <li>Enter a unique code for each zone/country (e.g., BE, FR, DE)</li>
-                    <li>Set each zone as Active (included in simulation) or Inactive</li>
-                    <li>For active zones only, set MTS status (included in mid-term scheduling)</li>
+                    <li>Set each zone as Active (included in simulation under `zones`) or Inactive</li>
+                    <li>For active zones only, set MTS status (included in `mts_zones`)</li>
                     <li>Use the + button to add more zones, or the trash icon to remove a zone</li>
                 </ul>
-                <p>Active zones will be included in the "zones" list. Active zones with MTS status will also be included in the "mts_zones" list.</p>
-                
+
                 <div class="zone-container" id="zonesContainer">
                     <!-- Zone entries will be added here dynamically -->
                 </div>
-                
+
                 <button type="button" class="btn btn-sm" id="addZoneBtn">
                     <i class="fas fa-plus"></i> Add Zone
                 </button>
             </div>
 
-            <!-- Data Paths Tab -->
-            <div id="data-paths" class="tab-content card">
-                <h3>Data Input Paths</h3>
-                <p>Define paths to input data files. Leave empty to use default values where applicable.</p>
-                
+            <!-- Main Inputs Tab -->
+            <div id="main-inputs" data-tab="main-inputs" class="tab-content card">
+                 <!-- Content from Data Inputs -->
+                 <h3>Time Series Data Paths</h3>
+                 <p>Define paths to input data files. Use '##' as a placeholder for zone/unit names where applicable (e.g., Demand/##/2015.csv). Paths are typically relative to the Dispa-SET Database directory or can be absolute.</p>
                 <div class="form-group">
-                    <label for="powerPlantData">Power Plant Data</label>
-                    <input type="text" id="powerPlantData">
+                    <label for="demand">Demand<span class="tooltiptext">Demand data file with each zone as column headers. Path relative to Database directory or absolute. Use '##' for zone placeholder.</span></label>
+                    <input type="text" id="demand" placeholder="e.g., Demand/##/2015.csv">
                 </div>
-                
-                <div class="form-group">
-                    <label for="demand">Demand</label>
-                    <input type="text" id="demand">
+                 <div class="form-group">
+                    <label for="renewablesAF">Renewables Availability Factors<span class="tooltiptext">Table with the availability factors (AF) of all renewable units (value between 0 and 1). Path relative to Database directory or absolute. Use '##' for zone/unit placeholder.</span></label>
+                    <input type="text" id="renewablesAF" placeholder="e.g., AvailabilityFactors/##/2015.csv">
                 </div>
-                
-                <div class="form-group">
-                    <label for="renewablesAF">Renewables Availability Factors</label>
-                    <input type="text" id="renewablesAF">
+                 <div class="form-group">
+                    <label for="outages">Outages<span class="tooltiptext">Table with the outage time series for each unit (0=available, 1=full outage, 0.5=half outage). Path relative to Database directory or absolute. Use '##' for unit name placeholder.</span></label>
+                    <input type="text" id="outages" placeholder="e.g., Outages.csv">
                 </div>
-                
+                 <h3>Demand Flexibility</h3>
+                 <div class="row">
+                     <div class="col">
+                        <div class="form-group">
+                            <label for="shareOfFlexibleDemand">Share Of Flexible Demand<span class="tooltiptext">Fraction of the demand that can be time-shifted (used with DemandFlexibility). Can be a file path (time series per zone) or a single value if default is used.</span></label>
+                            <input type="text" id="shareOfFlexibleDemand" placeholder="e.g., ShareFlex.csv or 0.03">
+                            <div class="default-value" data-default="0.03">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="0.03" data-param="ShareOfFlexibleDemand">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="demandFlexibility">Demand Flexibility (h)<span class="tooltiptext">Number of hours of equivalent demand shifting storage capacity (used with ShareOfFlexibleDemand).</span></label>
+                            <input type="number" id="demandFlexibility" min="0" step="any">
+                            <div class="default-value" data-default="4.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="4.0" data-param="DemandFlexibility">
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+                 <h3>Load Shedding</h3>
                 <div class="form-group">
-                    <label for="outages">Outages</label>
-                    <input type="text" id="outages">
+                    <label for="loadShedding">Load Shedding<span class="tooltiptext">Maximum allowed load shedding as a fraction of demand per zone. Can be a file path (time series) or a single value if default is used.</span></label>
+                    <input type="text" id="loadShedding" placeholder="e.g., LoadShedding.csv or 0.05">
+                    <div class="default-value" data-default="0.05">
+                        <span>Default:</span>
+                        <input type="text" class="default-value-input" value="0.05" data-param="LoadShedding">
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="ntc">NTC</label>
-                    <input type="text" id="ntc">
+
+                 <!-- Content from Unit Data -->
+                 <h3>Unit Definitions</h3>
+                 <div class="form-group">
+                    <label for="powerPlantData">Power Plant Data<span class="tooltiptext">Main table defining power plant units and their technical/economic parameters. Path relative to Database directory or absolute.</span></label>
+                    <input type="text" id="powerPlantData" placeholder="e.g., Units_master.csv">
                 </div>
-                
-                <h3>Hydro Data</h3>
-                
+
+                <!-- Content from Spatial Data -->
+                <h3>Interconnections & Grid</h3>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="ntc">NTC (Net Transfer Capacities)<span class="tooltiptext">Table with the Net Transfer Capacities (NTCs) between simulated zones (e.g., 'Z1 -> Z2'). Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="ntc" placeholder="e.g., NTCs.csv">
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                             <label for="interconnections">Interconnections (Historical Flows)<span class="tooltiptext">Table with the historical physical flows between zones (positive flow from first zone to second). Used for flows to/from non-simulated zones (Rest of World). Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="interconnections" placeholder="e.g., CrossBorderFlows.csv">
+                        </div>
+                    </div>
+                 </div>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="transmissionGridType">Transmission Grid Type<span class="tooltiptext">Method for modeling the transmission grid constraints (Net Transfer Capacity or DC Power Flow approximation using PTDF matrix).</span></label>
+                             <select id="transmissionGridType">
+                                <option value="">NTC (Default)</option>
+                                <option value="NTC">NTC</option>
+                                <option value="DC-Power Flow">DC-Power Flow</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="gridData">Grid Data (PTDF)<span class="tooltiptext">Path the csv table containing the Power Transfer Distribution Factor (PTDF) matrix for DC-Power Flow simulations.</span></label>
+                            <input type="text" id="gridData" placeholder="e.g., PTDF_matrix.csv">
+                        </div>
+                    </div>
+                 </div>
+                <h3>Geographical Data</h3>
                 <div class="form-group">
-                    <label for="hydroScheduling">Hydro Scheduling</label>
-                    <select id="hydroScheduling">
-                        <option value="Regional">Regional</option>
-                        <option value="International">International</option>
-                        <option value="Global">Global</option>
-                    </select>
+                    <label for="geoData">Geographical Data<span class="tooltiptext">Geographical coordinates or data for zones/units (e.g., for plotting). Path relative to Database directory or absolute.</span></label>
+                    <input type="text" id="geoData" placeholder="e.g., Geo_Coordinates.csv">
                 </div>
-                
+
+                 <!-- Content from Hydro -->
+                 <h3>Hydro Scheduling</h3>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="hydroScheduling">Hydro Scheduling Method<span class="tooltiptext">Type of mid-term hydro scheduling optimization (Off=none, Zonal=per zone, Regional=per defined region, International/Global=wider scope).</span></label>
+                            <select id="hydroScheduling">
+                                <option value="Off">Off</option>
+                                <option value="Zonal">Zonal</option>
+                                <option value="Regional">Regional</option>
+                                <option value="International">International</option>
+                                <option value="Global">Global</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="hydroSchedulingHorizon">Hydro Scheduling Horizon<span class="tooltiptext">Optimization horizon for the mid-term hydro scheduling (determines target reservoir levels).</span></label>
+                            <select id="hydroSchedulingHorizon">
+                                <option value="Annual">Annual</option>
+                                <option value="Weekly">Weekly</option>
+                                <option value="Daily">Daily</option>
+                                <option value="Stop-date driven">Stop-date driven</option>
+                            </select>
+                        </div>
+                    </div>
+                 </div>
+                 <h3>Reservoir Levels & Inflows</h3>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="initialFinalReservoirLevel">Enforce Initial/Final Reservoir Level<span class="tooltiptext">If 1 (True), enforces initial and final reservoir levels based on ReservoirLevelInitial/Final defaults or historical ReservoirLevels file. If 0 (False), these constraints are relaxed.</span></label>
+                             <select id="initialFinalReservoirLevel">
+                                <option value="1">Yes (1)</option>
+                                <option value="0">No (0)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="reservoirLevels">Target Reservoir Levels File<span class="tooltiptext">Time series of target reservoir levels (fraction of capacity). Used as minimum target at the end of each rolling horizon optimization if InitialFinalReservoirLevel=1. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="reservoirLevels" placeholder="e.g., ReservoirLevels.csv">
+                        </div>
+                    </div>
+                 </div>
+                 <div class="row">
+                    <div class="col">
+                         <div class="form-group">
+                            <label for="reservoirLevelInitial">Default Initial Reservoir Level<span class="tooltiptext">Target initial reservoir level as a fraction of capacity (0 to 1). Used if InitialFinalReservoirLevel=1 and ReservoirLevels file is not provided.</span></label>
+                            <input type="number" id="reservoirLevelInitial" min="0" max="1" step="any">
+                             <div class="default-value" data-default="0.5">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="0.5" data-param="ReservoirLevelInitial">
+                            </div>
+                        </div>
+                    </div>
+                     <div class="col">
+                        <div class="form-group">
+                            <label for="reservoirLevelFinal">Default Final Reservoir Level<span class="tooltiptext">Target final reservoir level as a fraction of capacity (0 to 1). Used if InitialFinalReservoirLevel=1 and ReservoirLevels file is not provided.</span></label>
+                            <input type="number" id="reservoirLevelFinal" min="0" max="1" step="any">
+                             <div class="default-value" data-default="0.5">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="0.5" data-param="ReservoirLevelFinal">
+                            </div>
+                        </div>
+                    </div>
+                 </div>
                 <div class="form-group">
-                    <label for="hydroSchedulingHorizon">Hydro Scheduling Horizon</label>
-                    <select id="hydroSchedulingHorizon">
-                        <option value="Annual">Annual</option>
-                        <option value="Weekly">Weekly</option>
-                        <option value="Daily">Daily</option>
-                    </select>
+                    <label for="reservoirScaledInflows">Scaled Inflows File<span class="tooltiptext">Natural inflows to hydro reservoirs, scaled by turbine capacity (MWh of inflow per hour / MW of turbine capacity). Path relative to Database directory or absolute. Use '##' for unit placeholder.</span></label>
+                    <input type="text" id="reservoirScaledInflows" placeholder="e.g., ScaledInflows.csv">
                 </div>
-                
-                <div class="form-group">
-                    <label for="reservoirLevels">Reservoir Levels</label>
-                    <input type="text" id="reservoirLevels">
-                </div>
-                
-                <div class="form-group">
-                    <label for="reservoirScaledInflows">Reservoir Scaled Inflows</label>
-                    <input type="text" id="reservoirScaledInflows">
+                 <h3>Operational Levels</h3>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="storageAlertLevels">Storage Alert Levels File<span class="tooltiptext">Time series with the alert levels (e.g., minimum operational level as fraction of capacity) for each storage unit. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="storageAlertLevels" placeholder="e.g., StorageAlertLevels.csv">
+                        </div>
+                    </div>
+                    <div class="col">
+                         <div class="form-group">
+                            <label for="storageFloodControl">Storage Flood Control File<span class="tooltiptext">Time series with the flood control levels (e.g., maximum operational level as fraction of capacity) for each storage unit. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="storageFloodControl" placeholder="e.g., StorageFloodControl.csv">
+                        </div>
+                    </div>
+                 </div>
+                 <div class="form-group">
+                    <label for="waterValue">Water Value (EUR/MWh)<span class="tooltiptext">Shadow price or value of water stored in reservoirs (EUR/MWh), used in hydro scheduling or as an opportunity cost.</span></label>
+                    <input type="number" id="waterValue" min="0" step="any">
+                    <div class="default-value" data-default="400.0">
+                        <span>Default:</span>
+                        <input type="text" class="default-value-input" value="400.0" data-param="WaterValue">
+                    </div>
                 </div>
             </div>
 
-            <!-- Parameters Tab -->
-            <div id="parameters" class="tab-content card">
+            <!-- Costs & Prices Tab -->
+            <div id="costs-prices" data-tab="costs-prices" class="tab-content card">
                 <h3>Cost Parameters</h3>
-                
+                 <p>Costs can be specified as a single numerical value (using the default below) or as a path to a time series file (leave the main input field blank to use the default value). Units: EUR/MWh unless otherwise stated.</p>
                 <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="costLoadShedding">Cost of Load Shedding</label>
-                            <input type="text" id="costLoadShedding">
+                            <label for="costLoadShedding">Cost of Load Shedding<span class="tooltiptext">Cost of Load shedding in EUR/MWh. Can be a file path or a single value if default is used.</span></label>
+                            <input type="text" id="costLoadShedding" placeholder="e.g., CostLoadShedding.csv">
                             <div class="default-value" data-default="1500.0">
                                 <span>Default:</span>
                                 <input type="text" class="default-value-input" value="1500.0" data-param="CostLoadShedding">
@@ -505,8 +722,8 @@
                     </div>
                     <div class="col">
                         <div class="form-group">
-                            <label for="costCurtailment">Cost of Curtailment</label>
-                            <input type="text" id="costCurtailment">
+                            <label for="costCurtailment">Cost of Curtailment<span class="tooltiptext">Cost of curtailment in EUR/MWh. Can be a file path or a single value if default is used.</span></label>
+                            <input type="text" id="costCurtailment" placeholder="e.g., CostCurtailment.csv">
                             <div class="default-value" data-default="20.0">
                                 <span>Default:</span>
                                 <input type="text" class="default-value-input" value="20.0" data-param="CostCurtailment">
@@ -514,14 +731,71 @@
                         </div>
                     </div>
                 </div>
-                
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="costOfSpillage">Cost Of Spillage<span class="tooltiptext">Cost of spillage in Eur/MWh (e.g., for hydro). Can be a file path or a single value if default is used.</span></label>
+                            <input type="text" id="costOfSpillage" placeholder="e.g., CostSpillage.csv">
+                            <div class="default-value" data-default="401.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="401.0" data-param="CostOfSpillage">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                         <div class="form-group">
+                            <label for="costNotServed">Cost Not Served<span class="tooltiptext">Cost of not served energy (specific use case, often left empty). Can be a file path or a single value if default is used.</span></label>
+                            <input type="text" id="costNotServed" placeholder="e.g., CostNotServed.csv">
+                            <div class="default-value" data-default="">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="" data-param="CostNotServed">
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+                 <div class="row">
+                    <div class="col">
+                         <div class="form-group">
+                            <label for="costXNotServed">Boundary Sector Cost Not Served<span class="tooltiptext">Cost of Unserved Energy in each boundary Sector. Can be a file path or a single value if default is used.</span></label>
+                            <input type="text" id="costXNotServed" placeholder="e.g., BSCostNotServed.csv">
+                            <div class="default-value" data-default="0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="0" data-param="CostXNotServed">
+                            </div>
+                        </div>
+                    </div>
+                     <div class="col">
+                         <div class="form-group">
+                            <label for="valueOfLostLoad">Value Of Lost Load (VOLL)<span class="tooltiptext">Value of Lost Load (VOLL) in EUR/MWh, used for economic calculations or potentially as an alternative to CostLoadShedding.</span></label>
+                            <input type="number" id="valueOfLostLoad" min="0" step="any">
+                             <div class="default-value" data-default="100000.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="100000.0" data-param="ValueOfLostLoad">
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+                 <div class="row">
+                     <div class="col">
+                        <div class="form-group">
+                            <label for="priceTransmission">Price Transmission<span class="tooltiptext">Cost associated with power transmission (e.g., losses, fees). Can be a file path or a single value if default is used.</span></label>
+                            <input type="text" id="priceTransmission" placeholder="e.g., PriceTransmission.csv">
+                             <div class="default-value" data-default="0.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="0.0" data-param="PriceTransmission">
+                            </div>
+                        </div>
+                    </div>
+                     <div class="col"></div>
+                 </div>
+
                 <h3>Fuel Price Parameters</h3>
-                
+                 <p>Fuel prices can be specified as a single numerical value (using the default below) or as a path to a time series file per zone (leave the main input field blank to use the default value). Units: EUR/MWh or EUR/ton for CO2.</p>
                 <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="priceOfGas">Price of Gas</label>
-                            <input type="text" id="priceOfGas">
+                            <label for="priceOfGas">Price of Gas<span class="tooltiptext">Price of Natural Gas fuel in EUR/MWh. Can be a file path (time series per zone) or a single value if default is used.</span></label>
+                            <input type="text" id="priceOfGas" placeholder="e.g., FuelPrices/Gas/2015.csv">
                             <div class="default-value" data-default="44.0">
                                 <span>Default:</span>
                                 <input type="text" class="default-value-input" value="44.0" data-param="PriceOfGas">
@@ -530,8 +804,8 @@
                     </div>
                     <div class="col">
                         <div class="form-group">
-                            <label for="priceOfBlackCoal">Price of Black Coal</label>
-                            <input type="text" id="priceOfBlackCoal">
+                            <label for="priceOfBlackCoal">Price of Black Coal<span class="tooltiptext">Price of Black Coal fuel in EUR/MWh. Can be a file path (time series per zone) or a single value if default is used.</span></label>
+                            <input type="text" id="priceOfBlackCoal" placeholder="e.g., FuelPrices/Coal/2015.csv">
                             <div class="default-value" data-default="18.0">
                                 <span>Default:</span>
                                 <input type="text" class="default-value-input" value="18.0" data-param="PriceOfBlackCoal">
@@ -539,12 +813,11 @@
                         </div>
                     </div>
                 </div>
-                
                 <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="priceOfLignite">Price of Lignite</label>
-                            <input type="text" id="priceOfLignite">
+                            <label for="priceOfLignite">Price of Lignite<span class="tooltiptext">Price of Lignite fuel in EUR/MWh. Can be a file path (time series per zone) or a single value if default is used.</span></label>
+                            <input type="text" id="priceOfLignite" placeholder="e.g., FuelPrices/Lignite/2015.csv">
                             <div class="default-value" data-default="15.0">
                                 <span>Default:</span>
                                 <input type="text" class="default-value-input" value="15.0" data-param="PriceOfLignite">
@@ -553,8 +826,8 @@
                     </div>
                     <div class="col">
                         <div class="form-group">
-                            <label for="priceOfCO2">Price of CO2</label>
-                            <input type="text" id="priceOfCO2">
+                            <label for="priceOfCO2">Price of CO2 (EUR/ton)<span class="tooltiptext">Price of CO2 emissions in EUR/ton. Can be a file path (time series per zone) or a single value if default is used.</span></label>
+                            <input type="text" id="priceOfCO2" placeholder="e.g., FuelPrices/CO2/2015.csv">
                             <div class="default-value" data-default="90.0">
                                 <span>Default:</span>
                                 <input type="text" class="default-value-input" value="90.0" data-param="PriceOfCO2">
@@ -562,12 +835,11 @@
                         </div>
                     </div>
                 </div>
-                
                 <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="priceOfBiomass">Price of Biomass</label>
-                            <input type="text" id="priceOfBiomass">
+                            <label for="priceOfBiomass">Price of Biomass<span class="tooltiptext">Price of Biomass fuel in EUR/MWh. Can be a file path (time series per zone) or a single value if default is used.</span></label>
+                            <input type="text" id="priceOfBiomass" placeholder="e.g., FuelPrices/Biomass/2015.csv">
                             <div class="default-value" data-default="33.0">
                                 <span>Default:</span>
                                 <input type="text" class="default-value-input" value="33.0" data-param="PriceOfBiomass">
@@ -576,8 +848,8 @@
                     </div>
                     <div class="col">
                         <div class="form-group">
-                            <label for="priceOfFuelOil">Price of Fuel Oil</label>
-                            <input type="text" id="priceOfFuelOil">
+                            <label for="priceOfFuelOil">Price of Fuel Oil<span class="tooltiptext">Price of Fuel Oil in EUR/MWh. Can be a file path (time series per zone) or a single value if default is used.</span></label>
+                            <input type="text" id="priceOfFuelOil" placeholder="e.g., FuelPrices/Oil/2015.csv">
                             <div class="default-value" data-default="60.0">
                                 <span>Default:</span>
                                 <input type="text" class="default-value-input" value="60.0" data-param="PriceOfFuelOil">
@@ -585,37 +857,384 @@
                         </div>
                     </div>
                 </div>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="priceOfNuclear">Price of Nuclear<span class="tooltiptext">Price of Nuclear fuel in EUR/MWh. Can be a file path (time series per zone) or a single value if default is used.</span></label>
+                            <input type="text" id="priceOfNuclear" placeholder="e.g., FuelPrices/Nuclear/2015.csv">
+                            <div class="default-value" data-default="4.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="4.0" data-param="PriceOfNuclear">
+                            </div>
+                        </div>
+                    </div>
+                     <div class="col">
+                        <div class="form-group">
+                            <label for="priceOfPeat">Price of Peat<span class="tooltiptext">Price of Peat fuel in EUR/MWh. Can be a file path (time series per zone) or a single value if default is used.</span></label>
+                            <input type="text" id="priceOfPeat" placeholder="e.g., FuelPrices/Peat/2015.csv">
+                            <div class="default-value" data-default="33.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="33.0" data-param="PriceOfPeat">
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="priceOfAmmonia">Price of Ammonia<span class="tooltiptext">Price of Ammonia fuel in EUR/MWh. Can be a file path (time series per zone) or a single value if default is used.</span></label>
+                            <input type="text" id="priceOfAmmonia" placeholder="e.g., FuelPrices/Ammonia/2015.csv">
+                            <div class="default-value" data-default="76.0">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="76.0" data-param="PriceOfAmmonia">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col"></div>
+                 </div>
             </div>
 
+            <!-- Hydro Tab -->
+            <div id="hydro" data-tab="hydro" class="tab-content card">
+                 <h3>Hydro Scheduling</h3>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="hydroScheduling">Hydro Scheduling Method<span class="tooltiptext">Type of mid-term hydro scheduling optimization (Off=none, Zonal=per zone, Regional=per defined region, International/Global=wider scope).</span></label>
+                            <select id="hydroScheduling">
+                                <option value="Off">Off</option>
+                                <option value="Zonal">Zonal</option>
+                                <option value="Regional">Regional</option>
+                                <option value="International">International</option>
+                                <option value="Global">Global</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="hydroSchedulingHorizon">Hydro Scheduling Horizon<span class="tooltiptext">Optimization horizon for the mid-term hydro scheduling (determines target reservoir levels).</span></label>
+                            <select id="hydroSchedulingHorizon">
+                                <option value="Annual">Annual</option>
+                                <option value="Weekly">Weekly</option>
+                                <option value="Daily">Daily</option>
+                                <option value="Stop-date driven">Stop-date driven</option>
+                            </select>
+                        </div>
+                    </div>
+                 </div>
 
-            <!-- Advanced Settings Tab -->
-            <div id="advanced" class="tab-content card">
-                <h3>Reserve Settings</h3>
-                
+                 <h3>Reservoir Levels & Inflows</h3>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="initialFinalReservoirLevel">Enforce Initial/Final Reservoir Level<span class="tooltiptext">If 1 (True), enforces initial and final reservoir levels based on ReservoirLevelInitial/Final defaults or historical ReservoirLevels file. If 0 (False), these constraints are relaxed.</span></label>
+                             <select id="initialFinalReservoirLevel">
+                                <option value="1">Yes (1)</option>
+                                <option value="0">No (0)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="reservoirLevels">Target Reservoir Levels File<span class="tooltiptext">Time series of target reservoir levels (fraction of capacity). Used as minimum target at the end of each rolling horizon optimization if InitialFinalReservoirLevel=1. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="reservoirLevels" placeholder="e.g., ReservoirLevels.csv">
+                        </div>
+                    </div>
+                 </div>
+                 <div class="row">
+                    <div class="col">
+                         <div class="form-group">
+                            <label for="reservoirLevelInitial">Default Initial Reservoir Level<span class="tooltiptext">Target initial reservoir level as a fraction of capacity (0 to 1). Used if InitialFinalReservoirLevel=1 and ReservoirLevels file is not provided.</span></label>
+                            <input type="number" id="reservoirLevelInitial" min="0" max="1" step="any">
+                             <div class="default-value" data-default="0.5">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="0.5" data-param="ReservoirLevelInitial">
+                            </div>
+                        </div>
+                    </div>
+                     <div class="col">
+                        <div class="form-group">
+                            <label for="reservoirLevelFinal">Default Final Reservoir Level<span class="tooltiptext">Target final reservoir level as a fraction of capacity (0 to 1). Used if InitialFinalReservoirLevel=1 and ReservoirLevels file is not provided.</span></label>
+                            <input type="number" id="reservoirLevelFinal" min="0" max="1" step="any">
+                             <div class="default-value" data-default="0.5">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="0.5" data-param="ReservoirLevelFinal">
+                            </div>
+                        </div>
+                    </div>
+                 </div>
                 <div class="form-group">
-                    <label for="reserveCalculation">Reserve Calculation</label>
-                    <select id="reserveCalculation">
-                        <option value="Generic">Generic</option>
-                        <option value="Detailed">Detailed</option>
-                    </select>
+                    <label for="reservoirScaledInflows">Scaled Inflows File<span class="tooltiptext">Natural inflows to hydro reservoirs, scaled by turbine capacity (MWh of inflow per hour / MW of turbine capacity). Path relative to Database directory or absolute. Use '##' for unit placeholder.</span></label>
+                    <input type="text" id="reservoirScaledInflows" placeholder="e.g., ScaledInflows.csv">
                 </div>
-                
-                <div class="form-group">
-                    <label>Reserve Participation</label>
-                    <div id="reserveParticipation" class="checkbox-group">
-                        <!-- Reserve participation options will be added here -->
+
+                <h3>Operational Levels</h3>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="storageAlertLevels">Storage Alert Levels File<span class="tooltiptext">Time series with the alert levels (e.g., minimum operational level as fraction of capacity) for each storage unit. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="storageAlertLevels" placeholder="e.g., StorageAlertLevels.csv">
+                        </div>
+                    </div>
+                    <div class="col">
+                         <div class="form-group">
+                            <label for="storageFloodControl">Storage Flood Control File<span class="tooltiptext">Time series with the flood control levels (e.g., maximum operational level as fraction of capacity) for each storage unit. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="storageFloodControl" placeholder="e.g., StorageFloodControl.csv">
+                        </div>
+                    </div>
+                 </div>
+                 <div class="form-group">
+                    <label for="waterValue">Water Value (EUR/MWh)<span class="tooltiptext">Shadow price or value of water stored in reservoirs (EUR/MWh), used in hydro scheduling or as an opportunity cost.</span></label>
+                    <input type="number" id="waterValue" min="0" step="any">
+                    <div class="default-value" data-default="400.0">
+                        <span>Default:</span>
+                        <input type="text" class="default-value-input" value="400.0" data-param="WaterValue">
                     </div>
                 </div>
-                
-                <h3>Solver Settings</h3>
-                <div class="form-group">
-                    <label for="OptimalityGap">Optimality gap</label>
-                    <input type="number" id="OptimalityGap" min="0" step="0.0001" value="0.0006">
+            </div>
+
+             <!-- Reserves Tab -->
+            <div id="reserves" data-tab="reserves" class="tab-content card">
+                <h3>Reserve Requirements & Calculation</h3>
+                 <div class="row">
+                    <div class="col">
+                         <div class="form-group">
+                            <label for="reserveCalculation">Reserve Calculation Method<span class="tooltiptext">Method for calculating secondary reserve requirements. 'Detailed' might involve more complex rules.</span></label>
+                            <select id="reserveCalculation">
+                                <option value="Generic">Generic</option>
+                                <option value="Percentage">Percentage</option>
+                                <option value="Probabilistic">Probabilistic</option>
+                                <option value="Exogenous">Exogenous</option>
+                                <option value="Detailed">Detailed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="shareOfQuickStartUnits">Share Of Quick Start Units<span class="tooltiptext">Share of units considered \"quick start\" for reserve calculations or other rules.</span></label>
+                            <input type="number" id="shareOfQuickStartUnits" min="0" max="1" step="any">
+                            <div class="default-value" data-default="0.5">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="0.5" data-param="ShareOfQuickStartUnits">
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="reserve2U">Upwards Secondary Reserve (aFRR Up)<span class="tooltiptext">Table with the upwards secondary reserve requirements (e.g., aFRR up) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="reserve2U" placeholder="e.g., ReserveUp.csv">
+                        </div>
+                    </div>
+                    <div class="col">
+                         <div class="form-group">
+                            <label for="reserve2D">Downwards Secondary Reserve (aFRR Down)<span class="tooltiptext">Table with the downwards secondary reserve requirements (e.g., aFRR down) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="reserve2D" placeholder="e.g., ReserveDown.csv">
+                        </div>
+                    </div>
+                 </div>
+                <div class="row">
+                    <div class="col">
+                         <div class="form-group">
+                            <label for="primaryReserveLimit">Primary Reserve (FCR)<span class="tooltiptext">Primary reserve requirement (e.g., FCR). Can be a file path (time series per zone) or a single value if default is used.</span></label>
+                            <input type="text" id="primaryReserveLimit" placeholder="e.g., FCR_req.csv">
+                            <div class="default-value" data-default="">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="" data-param="PrimaryReserveLimit">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                         <div class="form-group">
+                            <label for="inertiaLimit">Inertia Limit<span class="tooltiptext">Minimum system inertia requirement. Can be a file path (time series) or a single value if default is used.</span></label>
+                            <input type="text" id="inertiaLimit" placeholder="e.g., Inertia_req.csv">
+                            <div class="default-value" data-default="">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="" data-param="InertiaLimit">
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+                <h3>Fast Frequency Response (FFR)</h3>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="ffrLimit">FFR Limit<span class="tooltiptext">Limit for Fast Frequency Response (aFFR). Can be a file path or a single value if default is used.</span></label>
+                            <input type="text" id="ffrLimit" placeholder="e.g., FFR_limit.csv">
+                             <div class="default-value" data-default="">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="" data-param="FFRLimit">
+                            </div>
+                        </div>
+                    </div>
+                     <div class="col">
+                        <div class="form-group">
+                            <label for="ffrGainLimit">FFR Gain Limit<span class="tooltiptext">Maximum gain for Fast Frequency Response (aFFR). Can be a file path or a single value if default is used.</span></label>
+                            <input type="text" id="ffrGainLimit" placeholder="e.g., FFR_gain.csv">
+                             <div class="default-value" data-default="">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="" data-param="FFRGainLimit">
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+                 <h3>System Stability</h3>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="frequencyStability">Frequency Stability<span class="tooltiptext">Method or parameters for frequency stability constraints (currently placeholder).</span></label>
+                            <input type="text" id="frequencyStability">
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="systemGainLimit">System Gain Limit<span class="tooltiptext">Limit on system gain (related to frequency control/reserves). Can be a file path or a single value if default is used.</span></label>
+                            <input type="text" id="systemGainLimit">
+                            <div class="default-value" data-default="">
+                                <span>Default:</span>
+                                <input type="text" class="default-value-input" value="" data-param="SystemGainLimit">
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+                <h3>Reserve Participation</h3>
+                 <div class="row">
+                     <div class="col">
+                        <div class="form-group">
+                            <label>Conventional/Storage Unit Participation<span class="tooltiptext">List of conventional/storage unit technologies participating in secondary reserves.</span></label>
+                            <div id="reserveParticipation" class="checkbox-group">
+                                <!-- Reserve participation options will be added here -->
+                            </div>
+                        </div>
+                    </div>
+                     <div class="col">
+                         <div class="form-group">
+                            <label>CHP Unit Participation<span class="tooltiptext">List of CHP unit technologies participating in secondary reserves.</span></label>
+                            <div id="reserveParticipation_CHP" class="checkbox-group">
+                                <!-- CHP Reserve participation options will be added here -->
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+            </div>
+
+            <!-- Sector Coupling Tab -->
+            <div id="sector-coupling" data-tab="sector-coupling" class="tab-content card">
+                 <h3>Boundary Sector Definitions</h3>
+                 <p>Define paths for data related to boundary sectors interacting with the power system.</p>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="boundarySectorData">Boundary Sector Data<span class="tooltiptext">Table with the list of boundary sectors and their data.</span></label>
+                            <input type="text" id="boundarySectorData" placeholder="e.g., BS_Inputs.csv">
+                        </div>
+                    </div>
+                     <div class="col">
+                        <div class="form-group">
+                            <label for="boundarySectorNTC">Boundary Sector NTCs<span class="tooltiptext">Table with the interconnection capacities between boundary sectors.</span></label>
+                            <input type="text" id="boundarySectorNTC" placeholder="e.g., BS_NTCs.csv">
+                        </div>
+                    </div>
+                 </div>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                             <label for="boundarySectorInterconnections">Boundary Sector Interconnections<span class="tooltiptext">Historical flows between the boundary sectors.</span></label>
+                            <input type="text" id="boundarySectorInterconnections" placeholder="e.g., BS_Flows.csv">
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="sectorXDemand">Boundary Sector Demand<span class="tooltiptext">Demand time series for each boundary sector. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="sectorXDemand" placeholder="e.g., BS_Demand.csv">
+                        </div>
+                    </div>
+                 </div>
+                 <div class="row">
+                    <div class="col">
+                         <div class="form-group">
+                            <label for="sectorXFlexibleDemand">Boundary Sector Flexible Demand<span class="tooltiptext">Flexible demand time series for each boundary sector. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="sectorXFlexibleDemand" placeholder="e.g., BS_FlexibleDemand.csv">
+                        </div>
+                    </div>
+                    <div class="col">
+                         <div class="form-group">
+                            <label for="sectorXFlexibleSupply">Boundary Sector Flexible Supply<span class="tooltiptext">Flexible (or volume-based) supply to a boundary sector. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="sectorXFlexibleSupply" placeholder="e.g., BS_FlexibleSupply.csv">
+                        </div>
+                    </div>
+                 </div>
+                <h3>Boundary Sector Storage & Spillage</h3>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="sectorXReservoirLevels">Boundary Sector Reservoir Levels<span class="tooltiptext">Time series with the state of charge of the storage for each boundary sector. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="sectorXReservoirLevels" placeholder="e.g., BS_ReservoirLevels.csv">
+                        </div>
+                    </div>
+                     <div class="col">
+                        <div class="form-group">
+                            <label for="sectorXFloodControl">Boundary Sector Flood Control<span class="tooltiptext">Level of the storage in the boundary sector before flood control is activated. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="sectorXFloodControl" placeholder="e.g., BS_Flood_control.csv">
+                        </div>
+                    </div>
+                 </div>
+                 <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="boundarySectorMaxSpillage">Boundary Sector Max Spillage<span class="tooltiptext">Maximum spillage in a boundary sector (in the units of the boundary sector).</span></label>
+                            <input type="text" id="boundarySectorMaxSpillage" placeholder="e.g., BS_Spillage_Capacity.csv">
+                        </div>
+                    </div>
+                    <div class="col">
+                        <!-- Placeholder for potential future cost parameters specific to sector coupling -->
+                    </div>
+                 </div>
+                 <!-- CostXNotServed and CostOfSpillage are currently in Costs&Prices, could be moved here if needed -->
+            </div>
+
+            <!-- Advanced Settings Tab -->
+            <div id="advanced" data-tab="advanced" class="tab-content card">
+                <h3>Data Adjustment Modifiers</h3>
+                <p>Apply multiplicative factors to specific input data series globally.</p>
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="modifiers.Demand">Demand Modifier<span class="tooltiptext">Multiplier applied to the demand time series (e.g., 1.1 for +10%).</span></label>
+                            <input type="number" id="modifiers.Demand" min="0" step="any" placeholder="1.0">
+                        </div>
+                    </div>
+                     <div class="col">
+                        <div class="form-group">
+                            <label for="modifiers.Solar">Solar Modifier<span class="tooltiptext">Multiplier applied to the solar availability factors.</span></label>
+                            <input type="number" id="modifiers.Solar" min="0" step="any" placeholder="1.0">
+                        </div>
+                    </div>
                 </div>
-                
+                 <div class="row">
+                     <div class="col">
+                        <div class="form-group">
+                            <label for="modifiers.Wind">Wind Modifier<span class="tooltiptext">Multiplier applied to the wind availability factors.</span></label>
+                            <input type="number" id="modifiers.Wind" min="0" step="any" placeholder="1.0">
+                        </div>
+                    </div>
+                     <div class="col">
+                        <div class="form-group">
+                            <label for="modifiers.Storage">Storage Modifier<span class="tooltiptext">Multiplier applied to storage capacities.</span></label>
+                            <input type="number" id="modifiers.Storage" min="0" step="any" placeholder="1.0">
+                        </div>
+                    </div>
+                </div>
+                <!-- Original Solver Settings from old Advanced Tab (Example) -->
+                <h3>Solver Settings (Legacy - Review)</h3>
+                 <div class="form-group">
+                    <label for="optimalityGap">Optimality gap<span class="tooltiptext">Relative optimality gap for the MILP solver (e.g., 0.0006 for 0.06%). Note: Also present in General tab.</span></label>
+                    <input type="number" id="optimalityGapAdvanced" name="optimalityGapAdvanced" min="0" step="any" value="0.0006">
+                </div>
                 <div class="form-group">
-                    <label for="gamsFolder">GAMS Folder</label>
-                    <input type="text" id="gamsFolder">
+                    <label for="gams_folder">GAMS Folder<span class="tooltiptext">Path to the GAMS installation folder, if not set in the system's GAMSPATH environment variable. Note: Also present in General tab.</span></label>
+                    <input type="text" id="gams_folderAdvanced" name="gams_folderAdvanced">
                 </div>
             </div>
         </form>
@@ -659,43 +1278,45 @@
             'COMC', 'GTUR', 'HDAM', 'HPHS', 'ICEN', 'CAES', 'BATS', 'BEVS', 
             'P2HT', 'ABHP', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE', 'STUR'
         ];
+        const reserveOptionsCHP = [
+            'COMC', 'GTUR', 'ICEN', 'STUR'
+        ];
 
-        // Current filename
         let currentFilename = "ConfigTest.yml";
         const API_URL = "http://localhost:8084";
-        
+        const tabContentMap = new Map();
+
         // Initialize tab functionality
         document.addEventListener('DOMContentLoaded', function() {
-            // Set up tabs
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    
-                    const tabContents = document.querySelectorAll('.tab-content');
-                    tabContents.forEach(content => content.classList.remove('active'));
-                    document.getElementById(tab.dataset.tab).classList.add('active');
-                });
+            // Pre-map tab content panes
+            const tabContents = document.querySelectorAll('.tab-content');
+            console.log(`Found ${tabContents.length} tab content elements.`);
+            tabContents.forEach(content => {
+                const key = content.dataset.tab || content.id;
+                if (key) {
+                    console.log(`Mapping key '${key}' to element:`, content);
+                    tabContentMap.set(key, content);
+                } else {
+                    console.warn('Found tab content element with no id or data-tab:', content);
+                }
             });
-            
-            // Initialize zones
-            initializeZones();
-            
-            // Initialize reserve participation options
-            initializeReserveOptions();
-            
-            // Set up file input
+
+            setupTabs();
+            initializeReserveOptions('reserveParticipation', reserveOptions);
+            initializeReserveOptions('reserveParticipation_CHP', reserveOptionsCHP);
+            initializeZones(); // Initialize with defaults before loading
+
+            // Event Listeners
             document.getElementById('yamlFile').addEventListener('change', handleFileSelect);
-            
-            // Set up save button
             document.getElementById('saveYaml').addEventListener('click', saveYamlFile);
-            
-            // Set up add zone button
             document.getElementById('addZoneBtn').addEventListener('click', addZone);
-            
-            // Load default YAML on page load
-            loadDefaultYaml();
+
+            // Default value input listeners
+            document.querySelectorAll('.default-value-input').forEach(input => {
+                input.addEventListener('input', handleDefaultValueInput);
+            });
+
+            loadDefaultYaml(); // Load ConfigTest.yml by default
         });
         
         // Default country codes to start with
@@ -866,10 +1487,10 @@
         }
         
         // Initialize reserve participation options
-        function initializeReserveOptions() {
-            const container = document.getElementById('reserveParticipation');
+        function initializeReserveOptions(containerId, options) {
+            const container = document.getElementById(containerId);
             
-            reserveOptions.forEach(option => {
+            options.forEach(option => {
                 const checkboxItem = document.createElement('div');
                 checkboxItem.className = 'checkbox-item';
                 
@@ -1198,6 +1819,56 @@
                 statusElement.style.display = 'none';
             }, 5000);
         }
+
+        function setupTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Deactivate other tabs and content panes
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContentMap.forEach(content => content.classList.remove('active'));
+
+                    // Activate clicked tab
+                    tab.classList.add('active');
+
+                    // Find and activate corresponding content pane using the pre-built map
+                    const tabData = tab.dataset.tab;
+                    const targetContent = tabContentMap.get(tabData);
+
+                    if (targetContent) {
+                        targetContent.classList.add('active');
+                    } else {
+                        // Log error if content pane not found in the map
+                        console.error(`Tab content for key '${tabData}' not found in map.`);
+                    }
+                });
+            });
+            // Note: Initial active state is handled by HTML classes, map should find it
+        }
+
+        // --- Default Value Handling ---
+        function handleDefaultValueInput(event) {
+            const defaultInput = event.target;
+            const paramName = defaultInput.dataset.param;
+            const mainInputId = paramName.charAt(0).toLowerCase() + paramName.slice(1);
+            const mainInput = document.getElementById(mainInputId);
+
+            if (mainInput) {
+                // If default value is being set (input is not empty), clear the main input
+                // to indicate that the default will be used.
+                // If default value is cleared, maybe restore placeholder? (Could be complex)
+                if (defaultInput.value.trim() !== '') {
+                    // Optionally clear the main input field - might be confusing for users
+                    // mainInput.value = '';
+                    // mainInput.placeholder = `Using default: ${defaultInput.value}`;
+                } else {
+                    // Default value cleared, remove placeholder indication if it was set
+                    // mainInput.placeholder = ''; // Reset placeholder
+                }
+            }
+        }
+
+        // --- Utility Functions ---
     </script>
 </body>
 </html> 
