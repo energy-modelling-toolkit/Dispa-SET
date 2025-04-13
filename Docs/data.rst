@@ -343,8 +343,7 @@ The table below provides a comprehensive list of all configuration parameters av
      - No
      - No
    * - ReserveCalculation
-     - Generic/Percentage/
-     Probabilistic/Exogenous
+     - Generic/Percentage/Probabilistic/Exogenous
      - Method for the reserve calculation (exogenous requires 
        Reserve2D and Reserve2U to be provided)
      - Reserve Parameters
