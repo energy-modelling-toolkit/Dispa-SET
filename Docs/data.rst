@@ -10,40 +10,443 @@ Two important preliminary comments should be formulated:
 * All the time series should be registered with their timestamps (e.g. '2013-02-20 02:00:00') or with a numerical index. Dispa-SET will issue an error if the day is located before the month. It is also advised to remove all time zone information from the time stamps. If the index is an integer, Dispa-SET will only recognize it if contains 8760 elements (one full year) or if it has exactly the same length as the simulation horizon.
 * Although the optimisation model is designed to run with any technology or fuel name, the pre-processing and the post-processing tools of Dispa-SET use some hard-coded values. The Dispa-SET database should also comply with this convention (described in the next sections). Any non-recognized technology or fuel will be discarded in the pre-processing.
 
-General simulation parameters
------------------------------
-A number of simulation options and parameters need to be defined in the configuration file. In order to obtain default values and a complete description of the options, it is commended to open the ConfigTest.xlsx configuration file, which is always kept up-to-date.
+Dispa-SET configuration
+-----------------------
 
-The options to be filled are summarized  hereunder.
+The Dispa-SET model uses YAML configuration files to define simulation parameters. You can create and edit these configuration files using the built-in configuration editor, which provides a user-friendly interface for managing all simulation parameters.
 
-.. table:: Dispa-SET Simulation Options
+To launch the configuration editor, use the following command in your terminal:
 
-	=============================== ================================================== 
-	General Options			Description				
-	=============================== ================================================== 
-	SimulationDirectory		Folder with all simulation files and input data
-	WriteGDX			Write the inputs in a GDX file (required for gams)
-	WritePickle			Write the inputs to a pickle file
-	GAMS_folder			Path the GAMS installation folder
-	cplex_path			Path to the cplex folder
-	**Horizon Settings**	
-	StartDate			Start date of the simulation 
-	StopDate			End data of the simulation
-	HorizonLength			Simulation horizon length in days
-	Look ahead			Overlap period in days
-	DataTimeStep			Time step of the date in the csv files
-	SimulationTimeStep		Time step for the simulation
-	**Simulation Options**
-	SimulationType			Stanard/LP/LP clustered/Integer clustering
-	ReserveCalculation		Generic (only available option for now)
-	AllowCurtailment		True/False
-	**Mid-term scheduling**
-	HydroScheduling			Off/Zonal/Regional
-	HydroSchedulingHorizon		"Annual"/"Stop-date driven"
-	InitialFinalReservoirLevel	True/False (if False, use StorageProfile)
-	ReservoirLevelInitial		Initial res. level if the above option is true
-	ReservoirLevelFinal		Fainl reservoir level if the above option is true
-	=============================== ================================================== 
+.. code-block:: bash
+
+   python -m dispaset.preprocessing.config_editor
+
+This will start a local web server and open the configuration editor in your default browser. The editor organizes parameters into logical sections for easier navigation and editing.
+
+The table below provides a comprehensive list of all configuration parameters available in Dispa-SET, organized by their type, section in the configuration editor, whether they have default values, and if they're required.
+
+.. list-table:: Dispa-SET Configuration Parameters
+   :header-rows: 1
+   :widths: 25 15 20 15 15
+
+   * - Parameter
+     - Type
+     - Section
+     - Default value?
+     - Required?
+   * - AllowCurtailment
+     - Numerical
+     - General
+     - No
+     - Yes
+   * - BoundarySectorData
+     - File path
+     - Sector Coupling
+     - No
+     - No
+   * - BoundarySectorInterconnections
+     - File path
+     - Sector Coupling
+     - No
+     - No
+   * - BoundarySectorMaxSpillage
+     - File path
+     - Sector Coupling
+     - No
+     - No
+   * - BoundarySectorNTC
+     - File path
+     - Sector Coupling
+     - No
+     - No
+   * - CostCurtailment
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - CostH2Slack
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - CostHeatSlack
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - CostLoadShedding
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - CostNotServed
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - CostOfSpillage
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - CostXNotServed
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - CplexAccuracy
+     - Numerical
+     - General
+     - No
+     - Yes
+   * - CplexSetting
+     - String
+     - General
+     - No
+     - No
+   * - DataTimeStep
+     - Numerical
+     - General
+     - No
+     - Yes
+   * - Demand
+     - File path
+     - Time Series Data
+     - No
+     - Yes
+   * - Description
+     - String
+     - General
+     - No
+     - Yes
+   * - FFRGainLimit
+     - File path
+     - Reserve Parameters
+     - No
+     - No
+   * - FFRLimit
+     - File path
+     - Reserve Parameters
+     - No
+     - No
+   * - FrequencyStability
+     - String
+     - General
+     - No
+     - No
+   * - GAMS_folder
+     - File path
+     - General
+     - No
+     - No
+   * - GeoData
+     - File path
+     - Spatial Data
+     - No
+     - No
+   * - GridData
+     - File path
+     - Spatial Data
+     - No
+     - No
+   * - H2FlexibleCapacity
+     - File path
+     - Sector Coupling
+     - No
+     - No
+   * - H2FlexibleDemand
+     - File path
+     - Sector Coupling
+     - No
+     - No
+   * - H2RigidDemand
+     - File path
+     - Sector Coupling
+     - No
+     - No
+   * - HeatDemand
+     - File path
+     - Sector Coupling
+     - No
+     - No
+   * - HorizonLength
+     - Numerical
+     - General
+     - No
+     - Yes
+   * - HydroScheduling
+     - String
+     - Hydro Parameters
+     - No
+     - Yes
+   * - HydroSchedulingHorizon
+     - String
+     - Hydro Parameters
+     - No
+     - Yes
+   * - InertiaLimit
+     - String
+     - Reserve Parameters
+     - No
+     - No
+   * - InitialFinalReservoirLevel
+     - Numerical
+     - Hydro Parameters
+     - No
+     - Yes
+   * - Interconnections
+     - File path
+     - Spatial Data
+     - No
+     - Yes
+   * - LoadShedding
+     - File path
+     - Time Series Data
+     - Yes
+     - No
+   * - LookAhead
+     - Numerical
+     - General
+     - No
+     - Yes
+   * - NTC
+     - File path
+     - Spatial Data
+     - No
+     - Yes
+   * - Outages
+     - File path
+     - Time Series Data
+     - No
+     - Yes
+   * - PowerPlantData
+     - File path
+     - Unit Data
+     - No
+     - Yes
+   * - PriceOfAmmonia
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - PriceOfBiomass
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - PriceOfBlackCoal
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - PriceOfCO2
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - PriceOfFuelOil
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - PriceOfGas
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - PriceOfLignite
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - PriceOfNuclear
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - PriceOfPeat
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - PriceTransmission
+     - File path
+     - Cost and Fuel Price
+     - Yes
+     - No
+   * - PrimaryReserveLimit
+     - String
+     - Reserve Parameters
+     - No
+     - No
+   * - RenewablesAF
+     - File path
+     - Time Series Data
+     - No
+     - Yes
+   * - Reserve2D
+     - File path
+     - Reserve Parameters
+     - No
+     - No
+   * - Reserve2U
+     - File path
+     - Reserve Parameters
+     - No
+     - No
+   * - ReserveCalculation
+     - String
+     - Reserve Parameters
+     - No
+     - Yes
+   * - ReserveParticipation
+     - String List
+     - Reserve Parameters
+     - No
+     - Yes
+   * - ReserveParticipation_CHP
+     - String List
+     - Reserve Parameters
+     - No
+     - No
+   * - ReservoirLevels
+     - File path
+     - Hydro Parameters
+     - No
+     - No
+   * - ReservoirScaledInflows
+     - File path
+     - Hydro Parameters
+     - No
+     - No
+   * - SectorCoupling
+     - String
+     - Sector Coupling
+     - No
+     - No
+   * - SectorXDemand
+     - File path
+     - Sector Coupling
+     - No
+     - No
+   * - SectorXFlexibleDemand
+     - File path
+     - Sector Coupling
+     - No
+     - No
+   * - SectorXFlexibleSupply
+     - File path
+     - Sector Coupling
+     - No
+     - No
+   * - SectorXFloodControl
+     - File path
+     - Sector Coupling
+     - No
+     - No
+   * - SectorXReservoirLevels
+     - File path
+     - Sector Coupling
+     - No
+     - No
+   * - ShareOfFlexibleDemand
+     - File path
+     - Time Series Data
+     - Yes
+     - No
+   * - SimulationDirectory
+     - File path
+     - General
+     - No
+     - Yes
+   * - SimulationTimeStep
+     - Numerical
+     - General
+     - No
+     - Yes
+   * - SimulationType
+     - String
+     - General
+     - No
+     - Yes
+   * - StartDate
+     - Date tuple
+     - General
+     - No
+     - Yes
+   * - StopDate
+     - Date tuple
+     - General
+     - No
+     - Yes
+   * - StorageAlertLevels
+     - File path
+     - Storage Parameters
+     - No
+     - No
+   * - StorageFloodControl
+     - File path
+     - Storage Parameters
+     - No
+     - No
+   * - SystemGainLimit
+     - String
+     - Reserve Parameters
+     - No
+     - No
+   * - Temperatures
+     - File path
+     - Time Series Data
+     - No
+     - No
+   * - TransmissionGridType
+     - String
+     - Spatial Data
+     - No
+     - No
+   * - cplex_path
+     - File path
+     - General
+     - No
+     - No
+   * - default
+     - Section
+     - Default Values
+     - -
+     - -
+   * - modifiers
+     - Section
+     - Modifiers
+     - -
+     - -
+   * - mts_zones
+     - String List
+     - Zones
+     - No
+     - Yes
+   * - zones
+     - String List
+     - Zones
+     - No
+     - Yes
+
+Understanding the Configuration Editor
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The configuration editor is organized into several tabs or sections to help you manage different aspects of your simulation:
+
+1. **General**: Basic simulation parameters including time horizon, description, and solver settings
+2. **Zones**: Definition of geographical zones included in the simulation
+3. **Time Series Data**: Paths to CSV files containing time-dependent data
+4. **Unit Data**: Power plant and generation unit specifications
+5. **Spatial Data**: Geographical information, interconnections, and network constraints
+6. **Cost and Fuel Price**: Economic parameters and fuel costs
+7. **Hydro Parameters**: Configuration for hydropower units
+8. **Reserve Parameters**: Settings for system reserves and unit participation
+9. **Storage Parameters**: Parameters for energy storage technologies
+10. **Sector Coupling**: Configuration for interactions between power and other energy sectors
+
+Parameters marked as "Required" must have a value for the simulation to run properly. Parameters with default values will use the specified default if no explicit value is provided. File paths should be absolute paths or paths relative to the parent directory of the configuration file.
 
 
 Technologies
