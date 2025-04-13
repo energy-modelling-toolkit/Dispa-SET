@@ -27,7 +27,7 @@ The table below provides a comprehensive list of all configuration parameters av
 
 .. list-table:: Dispa-SET Configuration Parameters
    :header-rows: 1
-   :widths: 25 15 20 15 15
+   :widths: 20 10 30 15 10 10
 
    * - Parameter
      - Type
