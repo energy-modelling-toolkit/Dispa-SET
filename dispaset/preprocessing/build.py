@@ -1622,8 +1622,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # list_vars = []
     gdx_out = "Inputs.gdx"
-    if config['WriteGDX']:
-        write_variables(config, gdx_out, [sets, parameters])
+    write_variables(config, gdx_out, [sets, parameters])
 
     # if the sim variable was not defined:
     if 'sim' not in locals():
@@ -1793,21 +1792,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             f.write(line + '\n')
 
     logging.debug('Using gams file from ' + GMS_FOLDER)
-    if config['WriteGDX']:
-        shutil.copy(gdx_out, sim + '/')
-        os.remove(gdx_out)
+    shutil.copy(gdx_out, sim + '/')
+    os.remove(gdx_out)
 
-    if config['WritePickle']:
-        try:
-            import cPickle as pickle
-        except ImportError:
-            import pickle
-        if MTS:
-            with open(os.path.join(sim, 'Inputs_MTS.p'), 'wb') as pfile:
-                pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
-        else:
-            with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
-                pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
+    try:
+        import cPickle as pickle
+    except ImportError:
+        import pickle
+    if MTS:
+        with open(os.path.join(sim, 'Inputs_MTS.p'), 'wb') as pfile:
+            pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+        with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
+            pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
     logging.info('Build finished')
 
     # Remove previously-created debug files:
