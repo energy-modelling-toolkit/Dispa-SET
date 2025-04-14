@@ -1710,24 +1710,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         logging.error(f"Error processing GAMS file: {e}")
         sys.exit(1)
 
-    # Create GAMS project file (.gpr)
-    gmsfile = open(os.path.join(sim, 'UCM.gpr'), 'w')
-    gpr_content = f'''\
-[PROJECT]
-
-[RP:UCM_H] 
-1=
-[OPENWINDOW_1]
-FILE0={target_gms_filename}
-FILE1={target_gms_filename}
-MAXIM=1
-TOP=50
-LEFT=50
-HEIGHT=400
-WIDTH=400'''
-    gmsfile.write(gpr_content)
-    gmsfile.close()
-    
     # Create cplex option file
     if config['OptimalityGap'] == '':
         cplex_options = {'epgap': 0.0005,
