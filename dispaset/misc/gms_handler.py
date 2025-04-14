@@ -7,7 +7,10 @@ import shutil
 from .str_handler import force_str
 
 def solve_high_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file='Results.gdx', output_lst=False):
-    """Use higher level apis to run GAMS"""
+    """Use higher level apis to run GAMS
+
+    :param gams_file: Name of the GAMS file to run (e.g., UCM_h.gms or UCM_MTS.gms)
+    """
     # create GAMS workspace:
     gams_folder = force_str(gams_folder)
     from gams import GamsWorkspace

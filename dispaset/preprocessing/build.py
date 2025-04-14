@@ -1631,10 +1631,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             logging.error('Simulation in MTS must be LP')
             sys.exit(1)
         else:
-
+            # Define the target GAMS filename for MTS
+            target_gms_filename = 'UCM_MTS.gms'
             if (grid_flag == 'DC-Power Flow'):
-                fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
-                fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
+                # Read from the renamed source file
+                fin = open(os.path.join(GMS_FOLDER, 'UCM.gms'))
+                # Write to the target MTS filename
+                fout = open(os.path.join(sim, target_gms_filename), "wt")
                 logging.info('Simulation with DC-Power Flow')
                 for line in fin:
                     line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
@@ -1645,8 +1648,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 fout.close()
 
             else:
-                fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
-                fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
+                # Read from the renamed source file
+                fin = open(os.path.join(GMS_FOLDER, 'UCM.gms'))
+                # Write to the target MTS filename
+                fout = open(os.path.join(sim, target_gms_filename), "wt")
                 logging.info('Simulation with NTC')
                 for line in fin:
                     line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
@@ -1655,53 +1660,80 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 fin.close()
                 fout.close()
 
-    elif LP:
-        if (grid_flag == 'DC-Power Flow'):
-            fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
-            fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
-            logging.info('Simulation with DC-Power Flow')
-            for line in fin:
-                line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
-                line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
-                fout.write(line)
-            fin.close()
-            fout.close()
-
-        else:
-            fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
-            fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
-            logging.info('Simulation with NTC')
-            for line in fin:
-                line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
-                fout.write(line)
-            fin.close()
-            fout.close()
-
+    # If not MTS, it's the detailed dispatch run
     else:
-        if (grid_flag == 'DC-Power Flow'):
-            fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
-            fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
-            logging.info('Simulation with DC-Power Flow')
-            for line in fin:
-                line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
-                fout.write(line)
-            fin.close()
-            fout.close()
+        # Define the target GAMS filename for detailed dispatch
+        target_gms_filename = 'UCM_h.gms'
+        if LP:
+            if (grid_flag == 'DC-Power Flow'):
+                 # Read from the renamed source file
+                fin = open(os.path.join(GMS_FOLDER, 'UCM.gms'))
+                 # Write to the target dispatch filename
+                fout = open(os.path.join(sim, target_gms_filename), "wt")
+                logging.info('Simulation with DC-Power Flow')
+                for line in fin:
+                    line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
+                    fout.write(line)
+                fin.close()
+                fout.close()
 
+            else:
+                 # Read from the renamed source file
+                fin = open(os.path.join(GMS_FOLDER, 'UCM.gms'))
+                 # Write to the target dispatch filename
+                fout = open(os.path.join(sim, target_gms_filename), "wt")
+                logging.info('Simulation with NTC')
+                for line in fin:
+                    line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+                    fout.write(line)
+                fin.close()
+                fout.close()
+
+        # Original MILP case
         else:
-            fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
-            fout = open(os.path.join(sim, 'UCM_h.gms'), "wt")
-            logging.info('Simulation with NTC')
-            for line in fin:
-                # line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
-                fout.write(line)
-            fin.close()
-            fout.close()
+            if (grid_flag == 'DC-Power Flow'):
+                 # Read from the renamed source file
+                fin = open(os.path.join(GMS_FOLDER, 'UCM.gms'))
+                 # Write to the target dispatch filename
+                fout = open(os.path.join(sim, target_gms_filename), "wt")
+                logging.info('Simulation with DC-Power Flow')
+                for line in fin:
+                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
+                    fout.write(line)
+                fin.close()
+                fout.close()
+
+            else:
+                 # Read from the renamed source file
+                fin = open(os.path.join(GMS_FOLDER, 'UCM.gms'))
+                 # Write to the target dispatch filename
+                fout = open(os.path.join(sim, target_gms_filename), "wt")
+                logging.info('Simulation with NTC')
+                for line in fin:
+                    # line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
+                    fout.write(line)
+                fin.close()
+                fout.close()
 
     gmsfile = open(os.path.join(sim, 'UCM.gpr'), 'w')
-    gmsfile.write(
-        '[PROJECT] \n \n[RP:UCM_H] \n1= \n[OPENWINDOW_1] \nFILE0=UCM_h.gms \nFILE1=UCM_h.gms \nMAXIM=1 \nTOP=50 \nLEFT=50 \nHEIGHT=400 \nWIDTH=400')
+    # Use the determined target filename in the .gpr file
+    gpr_content = f'''\
+[PROJECT]
+
+[RP:UCM_H]
+1=
+[OPENWINDOW_1]
+FILE0={target_gms_filename}
+FILE1={target_gms_filename}
+MAXIM=1
+TOP=50
+LEFT=50
+HEIGHT=400
+WIDTH=400'''
+    gmsfile.write(gpr_content)
     gmsfile.close()
+    # Re-insert the cplex.opt creation logic here
     # Create cplex option file
     if config['OptimalityGap'] == '':
         cplex_options = {'epgap': 0.0005,

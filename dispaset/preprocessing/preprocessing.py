@@ -170,7 +170,8 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                             end=dt.datetime(*temp_config['StopDate']),
                             freq=pd_timestep(TimeStep)).tz_localize(None)
         temp_config['SimulationTimeStep'] = TimeStep
-        gams_file = 'UCM_h.gms'
+        # Use the newly defined MTS GAMS filename
+        gams_file = 'UCM_MTS.gms'
         temp_config['HorizonLength'] = (idx[-1] - idx[0]).days + 1
         resultfile = 'Results.gdx'
     else:

@@ -53,9 +53,11 @@ def is_sim_folder_ok(sim_folder):
             'There is no Inputs.gdx file within the specified DispaSET simulation environment folder (' + sim_folder + '). Check that the GDX output is activated in the option file and that no error stated during the pre-processing')
         return False
 
-    if not os.path.exists(os.path.join(sim_folder, u'UCM_h.gms')):
+    # Check for either the dispatch GAMS file or the MTS GAMS file
+    if not os.path.exists(os.path.join(sim_folder, u'UCM_h.gms')) and \
+       not os.path.exists(os.path.join(sim_folder, u'UCM_MTS.gms')):
         logging.error(
-            'There is no UCM_h.gms file within the specified DispaSET simulation environment folder (' + sim_folder + ')')
+            'Neither UCM_h.gms nor UCM_MTS.gms file found within the specified DispaSET simulation environment folder (' + sim_folder + ')')
         return False
     return True
 
@@ -66,7 +68,7 @@ def solve_GAMS(sim_folder, gams_folder=None, gams_file='UCM_h.gms', result_file=
 
     :param sim_folder: path to a valid Dispa-SET simulation folder
     :param gams_folder: optional path to the GAMS installation. If not provided, will try to detect automatically
-    :param gams_file: name of the GAMS file to run (default: UCM_h.gms)
+    :param gams_file: name of the GAMS file to run (default: UCM_h.gms for dispatch, specify UCM_MTS.gms for MTS)
     :param result_file: name of the result file (default: Results.gdx)
     :param output_lst: Set to True to conserve a copy of the GAMS lst file in the simulation folder
     :return: True if simulation was successful, False otherwise
