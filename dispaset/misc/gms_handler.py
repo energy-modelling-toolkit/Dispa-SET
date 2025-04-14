@@ -6,10 +6,15 @@ import shutil
 
 from .str_handler import force_str
 
-def solve_high_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file='Results.gdx', output_lst=False):
+def solve_high_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file='Results.gdx', input_gdx_file='Inputs.gdx', output_lst=False):
     """Use higher level apis to run GAMS
 
+    :param gams_folder: Path to GAMS installation
+    :param sim_folder: Path to simulation folder
     :param gams_file: Name of the GAMS file to run (e.g., UCM_h.gms or UCM_MTS.gms)
+    :param result_file: Name of the GAMS result GDX file (e.g., Results.gdx or Results_MTS.gdx)
+    :param input_gdx_file: Name of the GAMS input GDX file (e.g., Inputs.gdx or Inputs_MTS.gdx)
+    :param output_lst: Whether to keep the GAMS .lst file
     """
     # create GAMS workspace:
     gams_folder = force_str(gams_folder)
@@ -24,7 +29,7 @@ def solve_high_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file
             logging.warning(f'Could not delete debug.gdx: {str(e)}')
     
     shutil.copy(os.path.join(sim_folder, gams_file), ws.working_directory)
-    shutil.copy(os.path.join(sim_folder, 'Inputs.gdx'), ws.working_directory)
+    shutil.copy(os.path.join(sim_folder, input_gdx_file), ws.working_directory)
     shutil.copy(os.path.join(sim_folder, 'cplex.opt'), ws.working_directory)
     t1 = ws.add_job_from_file(gams_file)
     opt = ws.add_options()

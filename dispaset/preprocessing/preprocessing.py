@@ -170,16 +170,16 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                             end=dt.datetime(*temp_config['StopDate']),
                             freq=pd_timestep(TimeStep)).tz_localize(None)
         temp_config['SimulationTimeStep'] = TimeStep
-        # Use the newly defined MTS GAMS filename
-        gams_file = 'UCM_MTS.gms'
+        # Set GAMS and result filenames specifically for MTS
+        gams_file_mts = 'UCM_MTS.gms'
+        result_file_mts = 'Results_MTS.gdx'
         temp_config['HorizonLength'] = (idx[-1] - idx[0]).days + 1
-        resultfile = 'Results.gdx'
     else:
         idx = pd.date_range(start=dt.datetime(*temp_config['StartDate']),
                             end=dt.datetime(*temp_config['StopDate']),
                             freq=pd_timestep(temp_config['SimulationTimeStep'])).tz_localize(None)
-        gams_file = 'UCM_h_simple.gms'
-        resultfile = 'Results_simple.gdx'
+        gams_file_mts = 'UCM_MTS.gms'
+        result_file_mts = 'Results_MTS.gdx'
 
     # Checking which type of hydro scheduling simulation is specified in the config file:
     if config['HydroScheduling'] == 'Zonal':
@@ -198,10 +198,11 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             units = SimData['units']
             r = solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
                            gams_folder=temp_config['GAMS_folder'],
-                           gams_file=gams_file,
-                           result_file=resultfile)
+                           gams_file=gams_file_mts,  # Use MTS-specific GAMS file
+                           result_file=result_file_mts) # Expect MTS-specific result file
             temp_results[c] = gdx_to_dataframe(
-                gdx_to_list(config['GAMS_folder'], config['SimulationDirectory'] + '/' + resultfile, varname='all',
+                gdx_to_list(config['GAMS_folder'], os.path.join(config['SimulationDirectory'], result_file_mts), # Read MTS-specific result file
+                            varname='all',
                             verbose=True), fixindex=True, verbose=True)
             _check_results(temp_results[c])
             if 'OutputStorageLevel' not in temp_results[c]:
@@ -272,10 +273,11 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         units = SimData['units']
         r = solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
                        gams_folder=temp_config['GAMS_folder'],
-                       gams_file=gams_file,
-                       result_file=resultfile)
+                       gams_file=gams_file_mts, # Use MTS-specific GAMS file
+                       result_file=result_file_mts) # Expect MTS-specific result file
         temp_results = gdx_to_dataframe(
-            gdx_to_list(config['GAMS_folder'], config['SimulationDirectory'] + '/' + resultfile, varname='all',
+            gdx_to_list(config['GAMS_folder'], os.path.join(config['SimulationDirectory'], result_file_mts), # Read MTS-specific result file
+                        varname='all',
                         verbose=True), fixindex=True, verbose=True)
         _check_results(temp_results)
         if 'OutputStorageLevel' not in temp_results:
@@ -412,13 +414,6 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             profiles.plot()
         if 'profilesSectorX' in locals():
             profilesSectorX.plot()
-
-    # Copy results from pre-processing
-    sim_folder = config['SimulationDirectory']
-    shutil.copyfile(os.path.join(sim_folder, 'Results.gdx'),
-                    os.path.join(sim_folder, 'Results_MTS.gdx'))
-    shutil.copyfile(os.path.join(sim_folder, 'Inputs.gdx'),
-                    os.path.join(sim_folder, 'Inputs_MTS.gdx'))
 
     # Re-index to the main simulation time step:
     if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:

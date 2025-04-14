@@ -646,7 +646,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     BoundarySector.rename(columns={'STOCapacity': 'SectorXStorageCapacity',
                                    'STOSelfDischarge': 'SectorXStorageSelfDischarge',
                                    'STOMaxPower': 'SectorXStoragePowerMax',
-                                   # 'STOMaxChargingPower': 'BoundarySectorStorageChargingCapacity',
+                                   'STOMaxChargingPower': 'BoundarySectorStorageChargingCapacity',
                                    'STOMinSOC': 'SectorXStorageMinimum', 'STOHours': 'SectorXStorageHours'}, inplace=True)
 
     Plants_merged.rename(columns={'StartUpCost': 'CostStartUp',
@@ -1614,9 +1614,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'units': Plants_merged,
                'geo': geo, 'version': dispa_version}
 
-    # list_vars = []
-    gdx_out = "Inputs.gdx"
-    write_variables(config, gdx_out, [sets, parameters])
+    # Determine GDX and Pickle filenames based on MTS flag
+    if MTS:
+        gdx_in_filename = "Inputs_MTS.gdx" # Use capitalized 'I'
+        gdx_out_filename = "Results_MTS.gdx"
+        pickle_filename = "Inputs_MTS.p"
+    else:
+        gdx_in_filename = "Inputs.gdx"
+        gdx_out_filename = "Results.gdx"
+        pickle_filename = "Inputs.p"
+
+    # Write GDX file with the determined input name
+    write_variables(config, gdx_in_filename, [sets, parameters]) # Use gdx_in_filename
 
     # if the sim variable was not defined:
     if 'sim' not in locals():
@@ -1626,102 +1635,87 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     if not os.path.exists(sim):
         os.makedirs(sim)
 
+    # Determine target GAMS filename
     if MTS:
+        target_gms_filename = 'UCM_MTS.gms'
+    else:
+        target_gms_filename = 'UCM_h.gms'
+        
+    # Prepare GAMS script modifications dictionary
+    gms_modifications = {}
+    set_input_prefix = '$set InputFileName'  # Use prefix for robustness
+    exec_unload_line = 'EXECUTE_UNLOAD "Results.gdx"' # Use exact match
+
+    # Add base modifications for input/output files (using the now potentially capitalized gdx_in_filename)
+    gms_modifications[set_input_prefix] = f'{set_input_prefix} {gdx_in_filename}'
+    gms_modifications[exec_unload_line] = f'EXECUTE_UNLOAD "{gdx_out_filename}"'
+    
+    # Add specific modifications based on MTS, LP, and grid_flag
+    if MTS:
+        # MTS requires LP
         if not LP:
             logging.error('Simulation in MTS must be LP')
             sys.exit(1)
-        else:
-            # Define the target GAMS filename for MTS
-            target_gms_filename = 'UCM_MTS.gms'
-            if (grid_flag == 'DC-Power Flow'):
-                # Read from the renamed source file
-                fin = open(os.path.join(GMS_FOLDER, 'UCM.gms'))
-                # Write to the target MTS filename
-                fout = open(os.path.join(sim, target_gms_filename), "wt")
-                logging.info('Simulation with DC-Power Flow')
-                for line in fin:
-                    line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
-                    line = line.replace('$setglobal MTS 0', '$setglobal MTS 1')
-                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
-                    fout.write(line)
-                fin.close()
-                fout.close()
-
-            else:
-                # Read from the renamed source file
-                fin = open(os.path.join(GMS_FOLDER, 'UCM.gms'))
-                # Write to the target MTS filename
-                fout = open(os.path.join(sim, target_gms_filename), "wt")
-                logging.info('Simulation with NTC')
-                for line in fin:
-                    line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
-                    line = line.replace('$setglobal MTS 0', '$setglobal MTS 1')
-                    fout.write(line)
-                fin.close()
-                fout.close()
-
-    # If not MTS, it's the detailed dispatch run
-    else:
-        # Define the target GAMS filename for detailed dispatch
-        target_gms_filename = 'UCM_h.gms'
+        gms_modifications['$setglobal LPFormulation 0'] = '$setglobal LPFormulation 1'
+        gms_modifications['$setglobal MTS 0'] = '$setglobal MTS 1'
+        if grid_flag == 'DC-Power Flow':
+            gms_modifications['$setglobal TransmissionGrid 0'] = '$setglobal TransmissionGrid 1'
+    else: # Detailed dispatch run (not MTS)
         if LP:
-            if (grid_flag == 'DC-Power Flow'):
-                 # Read from the renamed source file
-                fin = open(os.path.join(GMS_FOLDER, 'UCM.gms'))
-                 # Write to the target dispatch filename
-                fout = open(os.path.join(sim, target_gms_filename), "wt")
-                logging.info('Simulation with DC-Power Flow')
-                for line in fin:
-                    line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
-                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
+            gms_modifications['$setglobal LPFormulation 0'] = '$setglobal LPFormulation 1'
+        # For MILP (not LP), ensure MTS flag is off (it should be by default, but explicit)
+        elif '$setglobal MTS 0' not in gms_modifications: # Avoid overriding if somehow set
+             gms_modifications['$setglobal MTS 0'] = '$setglobal MTS 0' # Explicitly keep default
+        # Handle Transmission Grid for non-MTS runs
+        if grid_flag == 'DC-Power Flow':
+            gms_modifications['$setglobal TransmissionGrid 0'] = '$setglobal TransmissionGrid 1'
+        elif '$setglobal TransmissionGrid 0' not in gms_modifications: # Avoid overriding
+             gms_modifications['$setglobal TransmissionGrid 0'] = '$setglobal TransmissionGrid 0' # Explicitly keep default
+             
+    # Process and write the target GAMS file
+    try:
+        source_gms_path = os.path.join(GMS_FOLDER, 'UCM.gms')
+        target_gms_path = os.path.join(sim, target_gms_filename)
+        with open(source_gms_path, 'r') as fin, open(target_gms_path, 'wt') as fout:
+            logging.info(f'Processing {source_gms_path} into {target_gms_path}')
+            for line in fin:
+                stripped_line = line.strip()
+                modified = False
+                
+                # Handle '$set InputFileName' using startswith for robustness
+                if stripped_line.startswith(set_input_prefix):
+                    fout.write(gms_modifications[set_input_prefix] + '\n')
+                    modified = True
+                # Handle 'EXECUTE_UNLOAD' using exact match
+                elif stripped_line == exec_unload_line:
+                    fout.write(gms_modifications[exec_unload_line] + '\n')
+                    modified = True
+                else:
+                    # Handle other modifications (like $setglobal) using exact match
+                    for key, value in gms_modifications.items():
+                        # Avoid reapplying the ones handled above
+                        if key not in [set_input_prefix, exec_unload_line]:
+                            if stripped_line == key:
+                                fout.write(value + '\n')
+                                modified = True
+                                break # Apply only the first matching modification
+                
+                # If no modification was applied, write the original line
+                if not modified:
                     fout.write(line)
-                fin.close()
-                fout.close()
+    except FileNotFoundError:
+        logging.error(f"Source GAMS file not found at {source_gms_path}")
+        sys.exit(1)
+    except Exception as e:
+        logging.error(f"Error processing GAMS file: {e}")
+        sys.exit(1)
 
-            else:
-                 # Read from the renamed source file
-                fin = open(os.path.join(GMS_FOLDER, 'UCM.gms'))
-                 # Write to the target dispatch filename
-                fout = open(os.path.join(sim, target_gms_filename), "wt")
-                logging.info('Simulation with NTC')
-                for line in fin:
-                    line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
-                    fout.write(line)
-                fin.close()
-                fout.close()
-
-        # Original MILP case
-        else:
-            if (grid_flag == 'DC-Power Flow'):
-                 # Read from the renamed source file
-                fin = open(os.path.join(GMS_FOLDER, 'UCM.gms'))
-                 # Write to the target dispatch filename
-                fout = open(os.path.join(sim, target_gms_filename), "wt")
-                logging.info('Simulation with DC-Power Flow')
-                for line in fin:
-                    line = line.replace('$setglobal TransmissionGrid 0', '$setglobal TransmissionGrid 1')
-                    fout.write(line)
-                fin.close()
-                fout.close()
-
-            else:
-                 # Read from the renamed source file
-                fin = open(os.path.join(GMS_FOLDER, 'UCM.gms'))
-                 # Write to the target dispatch filename
-                fout = open(os.path.join(sim, target_gms_filename), "wt")
-                logging.info('Simulation with NTC')
-                for line in fin:
-                    # line = line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1')
-                    fout.write(line)
-                fin.close()
-                fout.close()
-
+    # Create GAMS project file (.gpr)
     gmsfile = open(os.path.join(sim, 'UCM.gpr'), 'w')
-    # Use the determined target filename in the .gpr file
     gpr_content = f'''\
 [PROJECT]
 
-[RP:UCM_H]
+[RP:UCM_H] 
 1=
 [OPENWINDOW_1]
 FILE0={target_gms_filename}
@@ -1733,7 +1727,7 @@ HEIGHT=400
 WIDTH=400'''
     gmsfile.write(gpr_content)
     gmsfile.close()
-    # Re-insert the cplex.opt creation logic here
+    
     # Create cplex option file
     if config['OptimalityGap'] == '':
         cplex_options = {'epgap': 0.0005,
@@ -1772,19 +1766,17 @@ WIDTH=400'''
             f.write(line + '\n')
 
     logging.debug('Using gams file from ' + GMS_FOLDER)
-    shutil.copy(gdx_out, sim + '/')
-    os.remove(gdx_out)
+    # Copy the correct input GDX file and remove the temporary one created by write_variables
+    shutil.copy(gdx_in_filename, os.path.join(sim, gdx_in_filename)) # Use gdx_in_filename for copy destination
+    os.remove(gdx_in_filename) # Use gdx_in_filename for removal
 
     try:
         import cPickle as pickle
     except ImportError:
         import pickle
-    if MTS:
-        with open(os.path.join(sim, 'Inputs_MTS.p'), 'wb') as pfile:
-            pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
-    else:
-        with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
-            pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
+    # Save pickle file with the correct name
+    with open(os.path.join(sim, pickle_filename), 'wb') as pfile: # Use conditional pickle_filename
+        pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
     logging.info('Build finished')
 
     # Remove previously-created debug files:

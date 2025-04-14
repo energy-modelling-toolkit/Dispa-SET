@@ -24,7 +24,7 @@ Installation:
 #######################################################################################################################
 
 
-import os
+import os, sys
 import shutil
 import logging
 import time
@@ -48,17 +48,30 @@ def is_sim_folder_ok(sim_folder):
         logging.error('The provided DispaSET simulation environment folder (' + sim_folder + ') does not exist')
         return False
 
-    if not os.path.exists(os.path.join(sim_folder, u'Inputs.gdx')):
-        logging.error(
-            'There is no Inputs.gdx file within the specified DispaSET simulation environment folder (' + sim_folder + '). Check that the GDX output is activated in the option file and that no error stated during the pre-processing')
-        return False
+    # Check for GAMS file and corresponding input GDX file
+    ucm_h_path = os.path.join(sim_folder, u'UCM_h.gms')
+    ucm_mts_path = os.path.join(sim_folder, u'UCM_MTS.gms')
+    inputs_gdx_path = os.path.join(sim_folder, u'Inputs.gdx')
+    inputs_mts_gdx_path = os.path.join(sim_folder, u'Inputs_MTS.gdx') # Use capitalized 'I'
 
-    # Check for either the dispatch GAMS file or the MTS GAMS file
-    if not os.path.exists(os.path.join(sim_folder, u'UCM_h.gms')) and \
-       not os.path.exists(os.path.join(sim_folder, u'UCM_MTS.gms')):
+    if os.path.exists(ucm_h_path):
+        # Found detailed UC GAMS file, check for standard Inputs.gdx
+        if not os.path.exists(inputs_gdx_path):
+            logging.error(
+                f'Found {os.path.basename(ucm_h_path)} but missing {os.path.basename(inputs_gdx_path)} in {sim_folder}')
+            return False
+    elif os.path.exists(ucm_mts_path):
+        # Found MTS GAMS file, check for MTS-specific Inputs_MTS.gdx
+        if not os.path.exists(inputs_mts_gdx_path):
+             logging.error(
+                f'Found {os.path.basename(ucm_mts_path)} but missing {os.path.basename(inputs_mts_gdx_path)} in {sim_folder}')
+             return False
+    else:
+        # Neither GAMS file found
         logging.error(
-            'Neither UCM_h.gms nor UCM_MTS.gms file found within the specified DispaSET simulation environment folder (' + sim_folder + ')')
-        return False
+            f'Neither {os.path.basename(ucm_h_path)} nor {os.path.basename(ucm_mts_path)} found in {sim_folder}')
+        sys.exit(1)
+
     return True
 
 
@@ -87,10 +100,13 @@ def solve_GAMS(sim_folder, gams_folder=None, gams_file='UCM_h.gms', result_file=
     gams_folder = os.path.abspath(gams_folder)
 
     if is_sim_folder_ok(sim_folder):
-        #Temporary warning for Spyder users:
-        if any(['SPY_' in name for name in os.environ]): # check if spyder
-            logging.info("\nIf the script seems stuck at this place \n(gams is optimizing but not output is displayed), \nit is preferable to run Dispa-SET in a \nseparate terminal (in Spyder: Preferences - Run - \nExecute in an external system terminal)")
-        ret = solve_high_level(gams_folder, sim_folder, gams_file, result_file, output_lst=output_lst)
+        # Determine the input GDX filename based on the GAMS file being run
+        if gams_file == 'UCM_MTS.gms':
+            input_gdx_file = 'Inputs_MTS.gdx' # Corresponds to UCM_MTS.gms (capitalized 'I')
+        else:
+            input_gdx_file = 'Inputs.gdx' # Default/fallback for UCM_h.gms or others
+        
+        ret = solve_high_level(gams_folder, sim_folder, gams_file, result_file, input_gdx_file=input_gdx_file, output_lst=output_lst)
         if os.path.isfile(os.path.join(sim_folder, 'debug.gdx')):
             logging.warning('A debug file was created. There has probably been an optimization error')
         if os.path.isfile(commons['logfile']):
