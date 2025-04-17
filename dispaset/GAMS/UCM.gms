@@ -90,6 +90,8 @@ n                Nodes
 nx               Boundary sector nodes
 *Lines
 l                Lines
+l_int(l)         Lines between internal zones
+l_RoW(l)         Lines to the rest of the world
 lx               Boundary sector lines
 slx              Boundary sector spillage lines
 *Simulations options
@@ -144,7 +146,7 @@ Power2XConversionMultiplier(nx,au,h)        [%]             Charging Efficiency 
 EmissionMaximum(n,p)                        [tP]            Emission limit
 EmissionRate(au,p)                          [tP\MWh]        P emission rate
 FlowMaximum(l,h)                            [MW]            Line limits
-$If %TransmissionGrid% == 0 FlowMinimum(l,h)                            [MW]            Minimum flow
+FlowMinimum(l,h)                            [MW]            Minimum flow
 FlowXMaximum(lx,h)                          [MW]            Boundary sector line limits
 FlowXMinimum(lx,h)                          [MW]            Boundary sector line minimum flow
 Fuel(au,f)                                  [n.a.]          Fuel type {1 0}
@@ -258,6 +260,8 @@ $LOAD mk
 $LOAD n
 $LOAD nx
 $LOAD l
+$LOAD l_RoW
+$LOAD l_int
 $LOAD lx
 $LOAD slx
 $LOAD au
@@ -307,7 +311,7 @@ $LOAD Power2XConversionMultiplier
 $LOAD EmissionMaximum
 $LOAD EmissionRate
 $LOAD FlowMaximum
-$If %TransmissionGrid% == 0 $LOAD FlowMinimum
+$LOAD FlowMinimum
 $LOAD FlowXMaximum
 $LOAD FlowXMinimum
 $LOAD Fuel
@@ -1291,22 +1295,21 @@ EQ_Flow_limits_upper(l,i)..
 ;
 $else
 *DC Power Flow in Unit Commitment
-EQ_DC_Power_Flow(l,i)..
-         Flow(l,i)
+EQ_DC_Power_Flow(l_int,i)..
+         Flow(l_int,i)
          =E=
-         sum(n,PTDF(l,n)*InjectedPower(i,n))
+         sum(n,PTDF(l_int,n)*InjectedPower(i,n))
 ;
 *Total Injected Power in all Nodes of the Power System
 EQ_Total_Injected_Power(i)..
-         sum(n,InjectedPower(i,n))
+         sum(l_int,sum(n,PTDF(l_int,n)*InjectedPower(i,n)))
          =E=
-         0
+         sum(l_RoW,sum(n,PTDF(l_RoW,n)*FlowMaximum(l_RoW,i)))
 ;
 
 *Flows are above minimum values
 EQ_Flow_limits_lower(l,i)..
-*MARCO         FlowMaximum(l,i)
-         -FlowMaximum(l,i)
+         FlowMinimum(l,i)
          =L=
          Flow(l,i)
 ;

@@ -11,12 +11,13 @@ import pandas as pd
 from .data_check import check_units, check_sto, check_AvailabilityFactors, \
     check_clustering, isStorage, check_chp, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves, check_p2bs, check_boundary_sector, \
-    check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_FFRLimit, check_PrimaryReserveLimit, check_CostXNotServed
+    check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_FFRLimit, check_PrimaryReserveLimit, check_CostXNotServed,\
+    check_grid_data
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, \
-    BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep, PTDF_matrix
+    BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep, PTDF_matrix, merge_lines
 from .. import __version__
 from ..common import commons
 from ..misc.gdx_handler import write_variables
@@ -128,10 +129,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     if (grid_flag == 'DC-Power Flow'):
         if os.path.isfile(config['GridData']):
             GridData = pd.read_csv(config['GridData'],
-                                   # if os.path.isfile(config['PTDFMatrix']):
-                                   #     PTDF = pd.read_csv(config['PTDFMatrix'],
                                    na_values=commons['na_values'],
-                                   keep_default_na=False)
+                                   keep_default_na=False,
+                                   index_col=0)
             PTDF = PTDF_matrix(config, GridData).fillna(0)
         else:
             logging.error('No valid grid data file provided')
@@ -213,14 +213,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         BoundarySector = pd.read_csv(config['BoundarySectorData'],
                                      na_values=commons['na_values'],
                                      keep_default_na=False, index_col='Sector')
-    # MARCO CHANGE: they are with another names ('STOCapacity': 'SectorXStorageCapacity',
-    # 'STOSelfDischarge': 'SectorXStorageSelfDischarge',
-    # 'STOMaxChargingPower': 'BoundarySectorStorageChargingCapacity',
-    # 'STOMinSOC': 'SectorXStorageMinimum','STOHours':'SectorXStorageHours'}, inplace=True)
-
-    # else:
-    #     for key in ['SectorXStorageCapacity', 'SectorXStorageSelfDischarge','SectorXStorageHours']:
-    #         BoundarySector[key] = np.nan
         for key in ['STOCapacity', 'STOSelfDischarge', 'STOMaxPower', 'STOMinSOC', 'STOHours']:
             if key not in BoundarySector.columns:
                 BoundarySector[key] = np.nan
@@ -246,7 +238,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # remove invalid power plants:
     plants = select_units(plants, config)
 
-    # DELETE! (TODO: CHECK NO BS INFO SHOULD BE IN THE DF PLANTS AND PROBABLY DELETE THIS SECTION)
     filter_col = [col for col in plants if col.startswith('Sector') and not col.startswith('SectorX')]
     plants[filter_col] = plants[filter_col].astype(str)
 
@@ -557,66 +548,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         missing_columns = list(set(plants['Unit']) - set(price.columns))
         price[missing_columns] = 0
 
-    # Bidirectional Interconnections:
-    if (grid_flag == 'DC-Power Flow'):
 
-        # PTDF = PTDF_matrix(config,GridData)
-
-        bidirectional_connections = NTC
-        data_dict = {'connection1': [], 'connection2': [], 'ratio': []}
-        aux = bidirectional_connections
-        for i in bidirectional_connections:
-            aux = aux.drop([i], axis=1)
-            for j in aux:
-                ratio = SequenceMatcher(None, j, i).quick_ratio()
-                data_dict['connection1'].append(i)
-                data_dict['connection2'].append(j)
-                data_dict['ratio'].append(ratio)
-        df_ratio = pd.DataFrame(data_dict)
-        eqratio = df_ratio['ratio'] == 1
-        reptd_con = df_ratio[eqratio]
-        reptd_con.reset_index(level=0, inplace=True)
-        reptd_con = reptd_con.drop(['index', 'ratio'], axis=1)
-        NTC_new = pd.DataFrame()
-        for i in range(len(reptd_con)):
-            ope = reptd_con.iloc[i]
-            max_val = (NTC[ope].max()).max()
-            NTC_aux = NTC[reptd_con.loc[i, 'connection1']]
-            NTC_aux.values[:] = max_val
-            NTC_new = pd.concat([NTC_new, NTC_aux], axis=1)
-            for j in ope:
-                NTC = NTC.drop([j], axis=1)
-            NTC = pd.concat([NTC, NTC_new], axis=1)
-        NTC.index = NTC.index.astype('datetime64[ns]')
-
-        # Check the Gridata Matrix (TODO: check the order or sequence):
-        for key in NTC.columns:
-            # if key not in GridData.index:
-            if key not in PTDF.index:
-                logging.warning('The transmission line' + str(key) + ' is not in the provided GridData')
-                logging.error('The GridData Matrix provided is not valid')
-                sys.exit(1)
-        for key in config['zones']:
-            if key not in PTDF.columns:
-                logging.warning('The node' + str(key) + ' is not in the provided zones')
-                logging.error('The PTDF Matrix provided is not valid')
-                sys.exit(1)
 
     # Interconnections:
-    [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], NTC, flows)
-
-    # Boundary Sector Interconnections:
-    [BSInterconnections_sim, BSInterconnections_RoW, BSInterconnections] = interconnections(zones_bs, BS_NTC, BS_flows)
-    # Boundary Sector Spillage:
-    [BSSpillage_sim, BSSpillage_RoW, BSSpillage] = interconnections(zones_bs, BS_spillage, BS_forced_spillage)
-
-    if len(Interconnections_sim.columns) > 0:
-        NTCs = Interconnections_sim.reindex(config['idx_long'])
-    else:
-        NTCs = pd.DataFrame(index=config['idx_long'])
-    Inter_RoW = Interconnections_RoW.reindex(config['idx_long'])
-    PriceTransmission = pd.DataFrame(index=NTCs.index, columns=NTCs.columns)
-    for l in (NTCs.columns.tolist() + Inter_RoW.columns.tolist()):
+    NTC.index = NTC.index.astype('datetime64[ns]')
+    [Interconnections_sim, Interconnections_RoW, _ ] = interconnections(config['zones'], NTC, flows)
+    PriceTransmission = pd.DataFrame(index=Interconnections_sim.index, columns=Interconnections_sim.columns)
+    for l in (Interconnections_sim.columns.tolist() + flows.columns.tolist()):
         if l in PriceTransmission_raw:
             PriceTransmission[l] = PriceTransmission_raw[l].reindex(PriceTransmission.index)
         else:
@@ -624,6 +562,57 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             if config['default']['PriceTransmission'] > 0:
                 logging.warning('No detailed values were found the transmission prices of line ' + l +
                                 '. Using default value ' + str(config['default']['PriceTransmission']))
+    # Merge the symetrical lines between two zones
+    [Interconnections_sim, Interconnections_RoW, PriceTransmission] = merge_lines(Interconnections_sim, Interconnections_RoW, PriceTransmission_raw)
+
+    # Bidirectional Net transfer capacities:
+    if (grid_flag == 'DC-Power Flow'):
+        NTCs = pd.DataFrame(index=config['idx_long'])
+        for l in GridData['Code_Line']:
+            NTCs[l] = GridData.loc[l, 'Fmax']
+        # Check the Gridata Matrix consistency
+        check_grid_data(NTCs.columns, PTDF, config)
+        # Formatting PTDF matrix according to sets['l'] and sets['n'] order or sequence
+        # Reindex to ensure rows and columns are in the right order
+        PTDF = PTDF.reindex(index=NTCs.columns, columns=config['zones'])
+    elif len(Interconnections_sim.columns) > 0:
+        NTCs = Interconnections_sim.reindex(config['idx_long'])
+        # In case of NTC-based simulation, the PTDF matrix actually becomes the incidence matrix:
+        PTDF = pd.DataFrame(index=NTCs.columns, columns=config['zones'])
+        for l in NTCs.columns:
+            PTDF.loc[l, l.split(' -> ')[0]] = 1
+            PTDF.loc[l, l.split(' -> ')[1]] = -1    
+    else:
+        NTCs = pd.DataFrame(index=config['idx_long'])
+        # if there are not lines, the PTDF matrix is empty:
+        PTDF = pd.DataFrame(columns=config['zones'])
+    # Historical flows with the rest of the world:
+    Inter_RoW = Interconnections_RoW.reindex(config['idx_long'])
+
+    # Extending PTDF to include the lines connecting to RoW:
+    PTDF_extended = PTDF.copy()
+    for l_RoW in Inter_RoW.columns:
+        #find the node to which the line connects
+        node_1 = l_RoW.split(' -> ')[0]
+        node_2 = l_RoW.split(' -> ')[1]
+        if node_1 in PTDF.columns:
+            PTDF_extended.loc[l_RoW, node_1] = 1
+        elif node_2 in PTDF.columns:
+            PTDF_extended.loc[l_RoW, node_2] = -1
+        else:
+            logging.error('Line ' + l_RoW + ' does not correspond to any node in PTDF')
+            sys.exit(1)
+    # Filling na values with 0
+    PTDF_extended.fillna(0, inplace=True)
+    all_lines = list(NTCs.columns) + list(Inter_RoW.columns)
+    # check and reindex again:
+    check_grid_data(all_lines, PTDF_extended, config)
+    PTDF_extended = PTDF_extended.reindex(index=all_lines, columns=config['zones'])
+
+    # Boundary Sector Interconnections:
+    [BSInterconnections_sim, BSInterconnections_RoW, BSInterconnections] = interconnections(zones_bs, BS_NTC, BS_flows)
+    # Boundary Sector Spillage:
+    [BSSpillage_sim, BSSpillage_RoW, BSSpillage] = interconnections(zones_bs, BS_spillage, BS_forced_spillage)
 
     if len(BSInterconnections_sim.columns) > 0:
         BS_NTCs = BSInterconnections_sim.reindex(config['idx_long'])
@@ -795,7 +784,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Formatting all time series (merging, resempling) and store in the FinalTS dict
     finalTS = {'Load': Load, 'Reserve2D': reserve_2D_tot, 'Reserve2U': reserve_2U_tot,
                'Efficiencies': Efficiencies,
-               'NTCs': NTCs, 'Inter_RoW': Inter_RoW,
+               'NTCs': NTCs, 'Inter_RoW': Inter_RoW,'PriceTransmission': PriceTransmission,
                'BS_NTCs': BS_NTCs, 'BS_Inter_RoW': BS_Inter_RoW,
                'EfficienciesBoundarySector': BoundarySectorEfficiencies['Efficiency'],
                'LoadShedding': LoadShedding, 'CostLoadShedding': CostLoadShedding, 'CostCurtailment': CostCurtailment,
@@ -846,17 +835,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 if len(finalTS[key].columns) > 0:
                     finalTS[key] = finalTS[key].resample(pd_timestep(config['SimulationTimeStep'])).mean()
 
-    # Formatting PTDF matrix according to sets['l'] and sets['n'] order or sequence
-    if (grid_flag == 'DC-Power Flow'):
-        PTDF = PTDF.T
-        PTDF_l = pd.DataFrame()
-        for i in Interconnections:
-            PTDF_l = pd.concat([PTDF_l, PTDF[i]], axis=1)
-        PTDF = PTDF_l.T
-        PTDF_n = pd.DataFrame()
-        for j in config['zones']:
-            PTDF_n = pd.concat([PTDF_n, PTDF[j]], axis=1)
-        PTDF = PTDF_n
+
 
     # %%###############################################################################################################
     ############################################   Sets    ############################################################
@@ -871,7 +850,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets['nx'] = zones_bs
     sets['nx_CC'] = pd.Series(zones_bs)[pd.Series(zones_bs) != 'S_EC'].tolist()
     sets['au'] = Plants_merged.index.tolist()
-    sets['l'] = Interconnections
+    sets['l'] = all_lines 
+    sets['l_int'] = list(NTCs.columns)          #lines between zones
+    sets['l_RoW'] = list(Inter_RoW.columns)  #lines between zones and RoW
     sets['lx'] = BSInterconnections
 
     # TODO: CHECK THIS SECTION OF CODE IT WAS AN ADAPTATION
@@ -999,8 +980,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['PrimaryReserveLimit'] = ['h']
     sets_param['FFRGainLimit'] = ['h']
     sets_param['FFRLimit'] = ['h']
-    if (grid_flag == 'DC-Power Flow'):
-        sets_param['PTDF'] = ['l', 'n']
+    sets_param['PTDF'] = ['l', 'n']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -1403,34 +1383,25 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         parameters['PrimaryReserveLimit']['val'] = finalTS['PrimaryReserveLimit'].iloc[:, 0].values
 
     # Maximum Line Capacity
-    if (grid_flag == 'DC-Power Flow'):
-        for i, l in enumerate(sets['l']):
-            if l in NTCs.columns:
-                parameters['FlowMaximum']['val'][i, :] = finalTS['NTCs'][l]
-                parameters['FlowMinimum']['val'][i, :] = (finalTS['NTCs'][l]) *-1
-                if l in Inter_RoW.columns:
-                    parameters['FlowMaximum']['val'][i, :] = finalTS['Inter_RoW'][l]
-                    parameters['FlowMinimum']['val'][i, :] = finalTS['Inter_RoW'][l]
-                    parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
+    for i, l in enumerate(sets['l_int']):
+        parameters['FlowMaximum']['val'][i, :] = finalTS['NTCs'][l]
+        parameters['FlowMinimum']['val'][i, :] = -(finalTS['NTCs'][l])
+        if l in finalTS['PriceTransmission'].columns:
+            parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
+    N = len(sets['l_int'])
+    for i,l in enumerate(sets['l_RoW']):
+        parameters['FlowMaximum']['val'][N+i, :] = finalTS['Inter_RoW'][l]  
+        parameters['FlowMinimum']['val'][N+i, :] = finalTS['Inter_RoW'][l]
+        if l in finalTS['PriceTransmission'].columns:
+            parameters['PriceTransmission']['val'][N+i, :] = finalTS['PriceTransmission'][l]
 
-        # Check values:
-        check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
+    # Check values:
+    check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
 
-        parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
+    parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
 
-    else:
-        for i, l in enumerate(sets['l']):
-            if l in NTCs.columns:
-                parameters['FlowMaximum']['val'][i, :] = finalTS['NTCs'][l]
-                if l in Inter_RoW.columns:
-                    parameters['FlowMaximum']['val'][i, :] = finalTS['Inter_RoW'][l]
-                    parameters['FlowMinimum']['val'][i, :] = finalTS['Inter_RoW'][l]
-                    parameters['PriceTransmission']['val'][i, :] = finalTS['PriceTransmission'][l]
-
-            # Check values:
-            check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
-
-            parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
+    # the extended PTDF matrix has dimensions l x n, where l is the number of lines between nodes and with RoW.
+    parameters['PTDF']['val'] = PTDF_extended.values
 
     # Cost Spillage without BS
     if 'CostOfSpillage' in config and os.path.isfile(config['CostOfSpillage']):
@@ -1459,13 +1430,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     if 'BoundarySectorMaxSpillage' in config and os.path.isfile(config['BoundarySectorMaxSpillage']):
         parameters['SectorXSpillageNode'] = incidence_matrix(sets, 'slx', parameters, 'SectorXSpillageNode', nodes='nx')  # ALIZON: CON BS
-
-    # PTDF MATRIX
-    if (grid_flag == 'DC-Power Flow'):
-        if len(PTDF.columns) != 0:
-            for i, u in enumerate(sets['n']):
-                if u in PTDF.columns:
-                    parameters['PTDF']['val'][:, i] = PTDF[u].values
 
     # Outage Factors
     if len(finalTS['Outages'].columns) != 0:

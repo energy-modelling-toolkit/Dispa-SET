@@ -118,14 +118,8 @@ def check_MinMaxFlows(df_min, df_max):
     """
     if (df_min > df_max).any():
         pos = np.where(df_min > df_max)
-        logging.critical('At least one minimum flow is higher than the maximum flow, for example in line number ' +
+        logging.error('At least one minimum flow is higher than the maximum flow, for example in line number ' +
                          str(pos[0][0]) + ' and time step ' + str(pos[1][0]))
-        sys.exit(1)
-
-    if (df_max < 0).any():
-        pos = np.where(df_max < 0)
-        logging.critical('At least one maximum flow is negative, for example in line number ' + str(pos[0][0]) +
-                         ' and time step ' + str(pos[1][0]))
         sys.exit(1)
 
     return True
@@ -804,3 +798,33 @@ def check_CostXNotServed(config, CostXNotServed, zones_bs):
             sys.exit(1)
         if (CostXNotServed[zone] == 0).all():
             logging.warning('CostXNotServed is zero for boundary sector ' + zone + '. This may lead to unrealistic results.')
+
+def check_grid_data(lines, PTDF, config):
+    """
+    Checks the consistency between NTC data, PTDF matrix, and configured zones.
+
+    Ensures that all transmission lines in the NTC dataframe are present as rows
+    in the PTDF matrix, and all configured zones are present as columns in the
+    PTDF matrix.
+
+    :param lines: DataFrame containing Net Transfer Capacities.
+    :param PTDF: DataFrame containing the Power Transfer Distribution Factor matrix.
+    :param config: Dictionary containing the simulation configuration, including zones.
+    :return: True if checks pass, otherwise logs errors and exits.
+    """
+    # Check that all NTC lines exist in PTDF index
+    for key in lines:
+        if key not in PTDF.index:
+            logging.warning(f'The transmission line {key} defined in the data is not in the provided PTDF matrix index.')
+            logging.error('The PTDF Matrix provided is not valid or inconsistent with NTC data.')
+            sys.exit(1)
+
+    # Check that all configured zones exist in PTDF columns
+    for key in config['zones']:
+        if key not in PTDF.columns:
+            logging.warning(f'The configured zone {key} is not in the provided PTDF matrix columns.')
+            logging.error('The PTDF Matrix provided is not valid or inconsistent with configured zones.')
+            sys.exit(1)
+
+    logging.debug("Grid data consistency check passed (NTC lines vs PTDF rows, Config zones vs PTDF columns).")
+    return True

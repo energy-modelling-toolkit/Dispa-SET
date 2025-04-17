@@ -164,11 +164,6 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
         pos = np.where(NTC_inter.values < 0)
         logging.warning('At least one NTC value is negative, for example in line ' + str(NTC_inter.columns[pos[1][0]]) +
                         ' and time step ' + str(NTC_inter.index[pos[0][0]]))
-    if (Historical_flows.values < 0).any():
-        pos = np.where(Historical_flows.values < 0)
-        logging.warning('At least one historical flow is negative, for example in line ' +
-                        str(Historical_flows.columns[pos[1][0]]) + ' and time step ' +
-                        str(Historical_flows.index[pos[0][0]]))
     all_connections = []
     simulation_connections = []
     # List all connections from the dataframe headers:
@@ -183,10 +178,14 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
         if len(z) == 2:
             connection = z[0].strip() + ' -> ' + z[1].strip()
             z = [z[0].strip(), z[1].strip()]  # Update z with stripped values
-        if z[0] in Simulation_list:
+        
+        # Check if this connection is between simulated zones
+        if z[0] in Simulation_list and z[1] in Simulation_list:
+            # Internal connection between simulated zones
             all_connections.append(connection)
             simulation_connections.append(connection)
-        elif z[1] in Simulation_list:
+        elif z[0] in Simulation_list or z[1] in Simulation_list:
+            # External connection with at least one simulated zone
             all_connections.append(connection)
 
     df_zones_simulated = pd.DataFrame(index=index)
@@ -195,14 +194,14 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
         if interconnection in NTC_inter.columns:
             df_zones_simulated[interconnection] = NTC_inter[interconnection]
             logging.info('Detected interconnection ' + interconnection +
-                         '. The historical NTCs will be imposed as maximum flow value')
+                         '. The historical NTCs will be imposed as maximum flow value if the NTC method is used')
         else:
             # Try without spaces around arrow
             no_spaces = interconnection.replace(' -> ', '->')
             if no_spaces in NTC_inter.columns:
                 df_zones_simulated[interconnection] = NTC_inter[no_spaces]
                 logging.info('Detected interconnection ' + interconnection +
-                            '. The historical NTCs will be imposed as maximum flow value')
+                            '. The historical NTCs will be imposed as maximum flow value if the NTC method is used')
     interconnections1 = df_zones_simulated.columns
 
     # Display a warning if a zone is isolated:
@@ -226,36 +225,58 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
                 df_RoW_temp[interconnection] = Historical_flows[no_spaces]
                 connNames.append(interconnection)
 
-    compare_set = set()
-    for k in connNames:
-        if not k[0:2] in compare_set and k[0:2] in Simulation_list:
-            compare_set.add(k[0:2])
-
+    # Process flows between simulated zones and RoW
     df_zones_RoW = pd.DataFrame(index=index)
-    while compare_set:
-        nameToCompare = compare_set.pop()
-        exports = []
-        imports = []
-        for name in connNames:
-            if nameToCompare[0:2] in name[0:2]:
-                exports.append(connNames.index(name))
-                logging.info('Detected interconnection ' + name + ', happening between a simulated zone '
-                             'and the rest of the world. The historical flows will be imposed to the model')
-            elif nameToCompare[0:2] in name[6:8]:
-                imports.append(connNames.index(name))
-                logging.info('Detected interconnection ' + name + ', happening between the rest of the world '
-                             'and a simulated zone. The historical flows will be imposed to the model')
-
-        if len(exports) > 0:
-            flows_out = pd.concat(df_RoW_temp[connNames[exports[i]]] for i in range(len(exports)))
-            flows_out = flows_out.groupby(flows_out.index).sum()
-            flows_out.name = nameToCompare + ' -> RoW'
-            df_zones_RoW[nameToCompare + ' -> RoW'] = flows_out
-        if len(imports) > 0:
-            flows_in = pd.concat(df_RoW_temp[connNames[imports[j]]] for j in range(len(imports)))
-            flows_in = flows_in.groupby(flows_in.index).sum()
-            flows_in.name = 'RoW -> ' + nameToCompare
-            df_zones_RoW['RoW -> ' + nameToCompare] = flows_in
+    
+    # First collect all the simulated zones involved in external flows
+    simulated_zones_in_external_flows = set()
+    for connection in connNames:
+        if ' -> ' in connection:
+            z = connection.split(' -> ')
+        else:
+            z = connection.split('->')
+        
+        zone_from = z[0].strip()
+        zone_to = z[1].strip()
+        
+        if zone_from in Simulation_list:
+            simulated_zones_in_external_flows.add(zone_from)
+        if zone_to in Simulation_list:
+            simulated_zones_in_external_flows.add(zone_to)
+    
+    # Process each simulated zone with external connections
+    # In the new approach, all flows for a zone with RoW will be merged into a single entry
+    # where positive flow means export from zone to RoW, negative flow means import to zone from RoW
+    for zone in simulated_zones_in_external_flows:
+        net_flows = pd.Series(0, index=index)  # Initialize a series of zeros with the right index
+        
+        for connection in connNames:
+            if ' -> ' in connection:
+                z = connection.split(' -> ')
+            else:
+                z = connection.split('->')
+            
+            zone_from = z[0].strip()
+            zone_to = z[1].strip()
+            
+            # Zone -> External: Add as positive flow (export)
+            if zone_from == zone and zone_to not in Simulation_list:
+                net_flows += df_RoW_temp[connection]
+                logging.info(f'Detected interconnection {connection}, happening between simulated zone {zone} '
+                             f'and the rest of the world. Adding as positive flow to {zone} -> RoW')
+            
+            # External -> Zone: Add as negative flow (import)
+            elif zone_to == zone and zone_from not in Simulation_list:
+                net_flows -= df_RoW_temp[connection]  # Subtract for imports
+                logging.info(f'Detected interconnection {connection}, happening between the rest of the world '
+                             f'and simulated zone {zone}. Adding as negative flow to {zone} -> RoW')
+        
+        # Store the net flow for this zone
+        if not net_flows.equals(pd.Series(0, index=index)):  # Only add if there are non-zero flows
+            flow_name = f'{zone} -> RoW'
+            df_zones_RoW[flow_name] = net_flows
+            logging.info(f'Created merged bidirectional flow {flow_name} (positive=export, negative=import)')
+            
     interconnections2 = df_zones_RoW.columns
     inter = list(interconnections1) + list(interconnections2)
     return df_zones_simulated, df_zones_RoW, inter
@@ -778,30 +799,48 @@ def PTDF_matrix(config, feeder):
     '''
     Function that calculate the ptdf matrix from the grid data table
     '''
-    #preprocesing the griddata dataframe
-    
     zones = config['zones']
 
-    feeder['aux'] = np.arange(feeder.shape[0])
-    feeder['Line'] = feeder['aux'] + 1
-    feeder = feeder.drop(['aux'], axis=1)
-    feeder['Code_Node_i'], feeder['Code_Node_j'] = feeder['Code_Line'].str.split('->', 1).str
-    feeder['Code_Node_i'] = feeder['Code_Node_i'].str.strip()
-    feeder['Code_Node_j'] = feeder['Code_Node_j'].str.strip()
+    # Add Line number (1-based)
+    feeder['Line'] = np.arange(len(feeder)) + 1
 
-    feeder['Node_i'] = ""
-    feeder['Node_j'] = ""
+    # Split Code_Line into Code_Node_i and Code_Node_j
+    feeder['Code_Line'] = feeder.index
+    split_nodes = feeder['Code_Line'].str.split('->', n=1, expand=True)
+    if split_nodes.shape[1] < 2:
+        raise ValueError(f"Error splitting 'Code_Line'. Ensure all lines use '->' separator. Problematic lines:\n{feeder[split_nodes[1].isna()]}")
+    feeder['Code_Node_i'] = split_nodes[0].str.strip()
+    feeder['Code_Node_j'] = split_nodes[1].str.strip()
 
-    for zone, option in zip(zones, range(1, len(zones) + 1)):
+    # Initialize Node ID columns
+    feeder['Node_i'] = pd.NA
+    feeder['Node_j'] = pd.NA
+
+    # Assign Node IDs based on zone list order (1-based index)
+    for zone_id, zone in enumerate(zones, 1):
         conditions_i = (feeder['Code_Node_i'] == zone)
         conditions_j = (feeder['Code_Node_j'] == zone)
-        
-        feeder.loc[conditions_i, 'Node_i'] = option
-        feeder.loc[conditions_j, 'Node_j'] = option
 
+        feeder.loc[conditions_i, 'Node_i'] = zone_id
+        feeder.loc[conditions_j, 'Node_j'] = zone_id
+
+    # Check for nodes that were not mapped
+    unmapped_i = feeder['Node_i'].isna()
+    unmapped_j = feeder['Node_j'].isna()
+    if unmapped_i.any() or unmapped_j.any():
+        missing_i_codes = feeder.loc[unmapped_i, 'Code_Node_i'].unique()
+        missing_j_codes = feeder.loc[unmapped_j, 'Code_Node_j'].unique()
+        all_missing = set(missing_i_codes) | set(missing_j_codes)
+        logging.error(f"Could not map the following nodes found in GridData Code_Line to integer IDs "
+                      f"based on config zones {zones}: {all_missing}. Please check GridData and config.")
+        # Raise an error to prevent proceeding with invalid data
+        raise ValueError(f"Unmapped nodes found in GridData: {all_missing}")
+
+    # Convert node IDs to integer type
+    # Use Int64 to potentially handle NA if error wasn't raised, but the check above should prevent NAs.
     feeder['Node_i'] = feeder['Node_i'].astype(int)
     feeder['Node_j'] = feeder['Node_j'].astype(int)
-    
+
     #ptdf calculation
     
     HM=feeder[feeder['HM']!=0].index.tolist() #Lines for maintenance 
@@ -856,27 +895,37 @@ def PTDF_matrix(config, feeder):
         Bbus=A@Bp@A.T
         
         #--Building the X matrix selecting the slack node from the variable "Slack"--
+        # Find slack bus automatically: node with the most connections (common heuristic)
+        max_connections = 0
+        slack_bus = -1 # Initialize with invalid value
+        for node in range(1, nodes + 1):
+            # Count lines connected to this node
+            num_connections = feeder[(feeder['Node_i'] == node) | (feeder['Node_j'] == node)].shape[0]
+            if num_connections > max_connections:
+                max_connections = num_connections
+                slack_bus = node
+
+        if slack_bus == -1:
+             # This should theoretically not happen if nodes > 0
+             logging.error("Could not automatically determine slack bus.")
+             raise ValueError("Slack bus determination failed.")
+        else:
+             logging.info(f"Automatically selected Node {slack_bus} as slack bus (most connections: {max_connections})")
+
+        # Convert 1-based slack_bus to 0-based index for matrix operations
+        slack_idx = slack_bus - 1
+
+        # Modify Bbus using the 0-based slack index
         # Sets up to "0" the columns of the slack node
-        slack_bus = 3    # !!!!!!!!!!!!!!!
-        
-        #   # Find slack bus
-        # max_connections = 0
-        # slack_bus = None
-        # for node in range(1, nodes+1):
-        #     num_connections = sum((feeder['Node_i'] == node) | (feeder['Node_j'] == node))
-        #     if num_connections > max_connections:
-        #         max_connections = num_connections
-        #         slack_bus = node      
-        
-        Bbus[:,slack_bus]=0
+        Bbus[:, slack_idx] = 0
         # Sets up to "0" the rows of the slack node
-        Bbus[slack_bus,:]=0
-        # Sets up to "1" the resistive value of the row and column of the slack node
-        Bbus[slack_bus,slack_bus]=1
-        
+        Bbus[slack_idx, :] = 0
+        # Sets up to "1" the diagonal element of the slack node
+        Bbus[slack_idx, slack_idx] = 1
+
         X=np.linalg.inv(Bbus)
         X=abs(X)
-        X[slack_bus,slack_bus]=0
+        X[slack_idx,slack_idx]=0
         
         Al=A.T #Incidence Matrix Line-Node
         Bd=abs(Bp)
@@ -1210,3 +1259,178 @@ def adjust_ntc(inputs, value=None, write_gdx=False, dest_path=''):
             shutil.copy('Inputs.gdx', dest_path + '/')
             os.remove('Inputs.gdx')
     return SimData
+
+
+def merge_lines(interconnections_sim, interconnections_row, price_transmission_raw):
+    """
+    Merges bidirectional interconnections (e.g., 'A -> B' and 'B -> A') into a single representation 'A -> B'.
+
+    - For NTCs (`interconnections_sim`), it averages the values. If the average difference between
+      the two directions exceeds 20% at any point, a critical warning is logged.
+    - For fixed flows (`interconnections_row`), it calculates the net flow: Flow(A->B) = Flow(A->B)_original - Flow(B->A)_original.
+    - For prices (`price_transmission_raw`), it averages the values. If the average difference between
+      the two directions exceeds 20% at any point, a critical warning is logged.
+
+    :param interconnections_sim: DataFrame with NTCs for simulated interconnections.
+    :param interconnections_row: DataFrame with historical/fixed flows for RoW interconnections.
+    :param price_transmission_raw: DataFrame with raw transmission prices.
+    :return: Tuple containing the modified (interconnections_sim, interconnections_row, price_transmission_raw).
+    """
+    # Work on copies to avoid modifying original inputs unexpectedly
+    sim_df = interconnections_sim.copy()
+    row_df = interconnections_row.copy()
+    price_df = price_transmission_raw.copy()
+
+    # Get the list of all unique interconnection lines
+    all_connections = list(set(sim_df.columns.tolist() + row_df.columns.tolist()))
+    processed_lines = set()
+    final_interconnections_list = []
+
+    for line in all_connections:
+        if line in processed_lines:
+            continue
+
+        # Extract nodes, handling potential whitespace variations
+        if ' -> ' in line:
+            nodes = line.split(' -> ')
+        else:
+            nodes = line.split('->')
+
+        if len(nodes) != 2:
+            logging.warning(f"Skipping improperly formatted line: {line}")
+            final_interconnections_list.append(line)
+            processed_lines.add(line)
+            continue
+
+        node1 = nodes[0].strip()
+        node2 = nodes[1].strip()
+        # Define the canonical direction (lexicographically first node first)
+        canonical_line = f"{min(node1, node2)} -> {max(node1, node2)}"
+        original_line = line # Keep track of the line name we encountered first
+        opposite_line = f"{node2} -> {node1}"
+
+        # Determine which line name to keep (the canonical one)
+        line_to_keep = canonical_line
+        line_to_drop = opposite_line if original_line == line_to_keep else original_line
+
+        # Check if the opposite line exists in the original list (and hasn't been processed)
+        opposite_exists = opposite_line in all_connections and opposite_line not in processed_lines
+
+        if opposite_exists:
+            logging.warning(f"Merging symmetrical lines: {original_line} and {opposite_line} into {line_to_keep}")
+
+            # --- Process interconnections_sim (NTC) ---
+            df_name = "interconnections_sim"
+            line_keep_exists_sim = line_to_keep in sim_df.columns
+            line_drop_exists_sim = line_to_drop in sim_df.columns
+
+            if line_keep_exists_sim and line_drop_exists_sim:
+                try:
+                    val_keep = sim_df[line_to_keep]
+                    val_drop = sim_df[line_to_drop]
+                    # Check for significant difference
+                    with np.errstate(divide='ignore', invalid='ignore'): # Ignore division by zero or NaN issues for the check
+                        mean_val = (val_keep + val_drop) / 2
+                        diff_percent = np.abs(val_keep - val_drop) / mean_val * 100
+                        diff_percent = diff_percent.fillna(0) # Treat NaN percentages (e.g., from 0/0) as no difference
+                        max_diff = diff_percent.max() if isinstance(diff_percent, pd.Series) else diff_percent
+
+                    if max_diff > 20:
+                         logging.warning(f"CRITICAL WARNING: NTC values for {line_to_keep} and {line_to_drop} differ by more than 20% (max diff: {max_diff:.2f}%). Averaging them.", )
+
+                    # Average the values
+                    avg_col = mean_val # Use the already calculated mean
+                    sim_df[line_to_keep] = avg_col
+                    sim_df.drop(columns=[line_to_drop], inplace=True)
+
+                except TypeError:
+                     logging.warning(f"Columns {line_to_keep}, {line_to_drop} in {df_name} are not numeric. Keeping values from {line_to_keep} if available.")
+                     if line_to_drop in sim_df.columns:
+                          sim_df.drop(columns=[line_to_drop], inplace=True) # Drop the non-numeric opposite anyway
+
+            elif line_keep_exists_sim:
+                logging.debug(f"Symmetrical line {line_to_drop} not found in {df_name} for {line_to_keep}. Keeping {line_to_keep}.")
+                # Value already exists under the canonical name
+            elif line_drop_exists_sim:
+                logging.warning(f"NTC data only found for {line_to_drop} in {df_name}. Renaming to {line_to_keep}.")
+                sim_df.rename(columns={line_to_drop: line_to_keep}, inplace=True)
+            # If neither exists, do nothing for sim_df
+
+            # --- Process interconnections_row (Fixed Flows) ---
+            # Calculate net flow: flow(A->B) = flow(A->B)_orig - flow(B->A)_orig
+            df_name = "interconnections_row"
+            line_keep_exists_row = line_to_keep in row_df.columns
+            line_drop_exists_row = line_to_drop in row_df.columns
+            
+            # Only process if at least one of the lines exists in row_df
+            if line_keep_exists_row or line_drop_exists_row:
+                flow_keep_dir = row_df.get(line_to_keep, 0) # Default to 0 if column missing
+                flow_drop_dir = row_df.get(line_to_drop, 0) # Default to 0 if column missing
+
+                # Ensure Series alignment if flow_keep_dir/flow_drop_dir are Series
+                if isinstance(flow_keep_dir, pd.Series) or isinstance(flow_drop_dir, pd.Series):
+                     common_index = row_df.index # Use a common index
+                     if not isinstance(flow_keep_dir, pd.Series):
+                         flow_keep_dir = pd.Series(flow_keep_dir, index=common_index)
+                     if not isinstance(flow_drop_dir, pd.Series):
+                         flow_drop_dir = pd.Series(flow_drop_dir, index=common_index)
+                     # Reindex to ensure alignment before subtraction
+                     flow_keep_dir = flow_keep_dir.reindex(common_index, fill_value=0)
+                     flow_drop_dir = flow_drop_dir.reindex(common_index, fill_value=0)
+
+                net_flow = flow_keep_dir - flow_drop_dir
+                row_df[line_to_keep] = net_flow # Assign calculated net flow
+                if line_drop_exists_row:
+                    row_df.drop(columns=[line_to_drop], inplace=True)
+
+
+            # --- Process price_transmission_raw (Price) ---
+            df_name = "price_transmission_raw"
+            line_keep_exists_price = line_to_keep in price_df.columns
+            line_drop_exists_price = line_to_drop in price_df.columns
+
+            if line_keep_exists_price and line_drop_exists_price:
+                try:
+                    val_keep = price_df[line_to_keep]
+                    val_drop = price_df[line_to_drop]
+
+                    # Check for significant difference
+                    with np.errstate(divide='ignore', invalid='ignore'):
+                        mean_val = (val_keep + val_drop) / 2
+                        diff_percent = np.abs(val_keep - val_drop) / mean_val * 100
+                        diff_percent = diff_percent.fillna(0)
+                        max_diff = diff_percent.max() if isinstance(diff_percent, pd.Series) else diff_percent
+
+                    if max_diff > 20:
+                        logging.warning(f"CRITICAL WARNING: Transmission prices for {line_to_keep} and {line_to_drop} differ by more than 20% (max diff: {max_diff:.2f}%). Averaging them.")
+
+                    # Average the values
+                    avg_col = mean_val
+                    price_df[line_to_keep] = avg_col
+                    price_df.drop(columns=[line_to_drop], inplace=True)
+
+                except TypeError:
+                     logging.warning(f"Columns {line_to_keep}, {line_to_drop} in {df_name} are not numeric. Keeping values from {line_to_keep} if available.")
+                     if line_to_drop in price_df.columns:
+                          price_df.drop(columns=[line_to_drop], inplace=True) # Drop the non-numeric opposite anyway
+
+            elif line_keep_exists_price:
+                 logging.debug(f"Symmetrical line {line_to_drop} not found in {df_name} for {line_to_keep}. Keeping {line_to_keep}.")
+                 # Value already exists under the canonical name
+            elif line_drop_exists_price:
+                logging.warning(f"Price data only found for {line_to_drop} in {df_name}. Renaming to {line_to_keep}.")
+                price_df.rename(columns={line_to_drop: line_to_keep}, inplace=True)
+             # If neither exists, do nothing for price_df
+
+
+            # Mark both lines as processed and add the canonical line to the final list
+            final_interconnections_list.append(line_to_keep)
+            processed_lines.add(original_line)
+            processed_lines.add(opposite_line)
+
+        elif line not in processed_lines: # Process lines without a symmetrical counterpart found in the list
+             final_interconnections_list.append(line)
+             processed_lines.add(line)
+
+
+    return sim_df, row_df, price_df
