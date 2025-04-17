@@ -1153,6 +1153,91 @@
             }
         }
 
+        // Special capitalization mapping for acronyms and special terms
+        const specialCapitalization = {
+            // Basic acronyms
+            'ntc': 'NTC',
+            'ptdf': 'PTDF',
+            'gams_folder': 'GAMS_folder',
+            'chp': 'CHP',
+            'mts': 'MTS',
+            // Parameters with CO2
+            'priceofco2': 'PriceOfCO2',
+            // FFR related
+            'ffrlimit': 'FFRLimit',
+            'ffrgainlimit': 'FFRGainLimit',
+            // Reserve parameters
+            'reserve2u': 'Reserve2U',  // aFRR Up
+            'reserve2d': 'Reserve2D',  // aFRR Down
+            'primaryreservelimit': 'PrimaryReserveLimit',  // FCR
+            // Boundary Sector
+            'costxnotserved': 'CostXNotServed',
+            'boundarysectordata': 'BoundarySectorData',
+            'boundarysectorntc': 'BoundarySectorNTC',
+            'boundarysectorinterconnections': 'BoundarySectorInterconnections',
+            'boundarysectormaxspillage': 'BoundarySectorMaxSpillage',
+            'sectorxdemand': 'SectorXDemand',
+            'sectorxflexibledemand': 'SectorXFlexibleDemand',
+            'sectorxflexiblesupply': 'SectorXFlexibleSupply',
+            'sectorxreservoirlevels': 'SectorXReservoirLevels',
+            'sectorxfloodcontrol': 'SectorXFloodControl',
+            // Value of Lost Load
+            'valueoflostload': 'ValueOfLostLoad',
+            // Grid related
+            'griddata': 'GridData',
+            'transmissiongridtype': 'TransmissionGridType',
+            // Hydro related
+            'reservoirscaledinflows': 'ReservoirScaledInflows',
+            'hydroscheduling': 'HydroScheduling',
+            'hydroschedulinghorizon': 'HydroSchedulingHorizon',
+            // Technology types
+            'renewablesaf': 'RenewablesAF',
+            // Power plants
+            'powerplantdata': 'PowerPlantData',
+            // Geographical data
+            'geodata': 'GeoData',
+            // Other acronyms in IDs
+            'systemgainlimit': 'SystemGainLimit',
+            'inertialimit': 'InertiaLimit',
+            'frequencystability': 'FrequencyStability',
+            'initialfinalreservoirlevel': 'InitialFinalReservoirLevel',
+            'shareofquickstartunits': 'ShareOfQuickStartUnits',
+            'shareofflexibledemand': 'ShareOfFlexibleDemand',
+            // Simulation settings
+            'optimalitygap': 'OptimalityGap',
+            'simulationtype': 'SimulationType',
+            'simulationdirectory': 'SimulationDirectory',
+            'simulationtimestep': 'SimulationTimeStep',
+            'datatimestep': 'DataTimeStep',
+            'allowcurtailment': 'AllowCurtailment',
+            // Storage parameters
+            'storagealertlevels': 'StorageAlertLevels', 
+            'storagefloodcontrol': 'StorageFloodControl',
+            // Cost parameters 
+            'costloadshedding': 'CostLoadShedding',
+            'costcurtailment': 'CostCurtailment',
+            'costofspillage': 'CostOfSpillage',
+            'costnotserved': 'CostNotServed',
+            'pricetransmission': 'PriceTransmission',
+            // Fuel prices
+            'priceofgas': 'PriceOfGas',
+            'priceofblackcoal': 'PriceOfBlackCoal',
+            'priceoflignite': 'PriceOfLignite',
+            'priceofbiomass': 'PriceOfBiomass',
+            'priceoffueloil': 'PriceOfFuelOil',
+            'priceofnuclear': 'PriceOfNuclear',
+            'priceofpeat': 'PriceOfPeat',
+            'priceofammonia': 'PriceOfAmmonia',
+            // Reservoir parameters
+            'watervalue': 'WaterValue',
+            'reservoirlevels': 'ReservoirLevels',
+            'reservoirlevelinitial': 'ReservoirLevelInitial', 
+            'reservoirlevelfinal': 'ReservoirLevelFinal',
+            // Demand related
+            'demandflexibility': 'DemandFlexibility',
+            'loadshedding': 'LoadShedding'
+        };
+
         // Reserve participation options
         const reserveOptions = [
             'COMC', 'GTUR', 'HDAM', 'HPHS', 'ICEN', 'CAES', 'BATS', 'BEVS', 
@@ -1583,8 +1668,17 @@
                         return;
                     }
                     
-                    // Convert first letter to uppercase for consistency
-                    const key = input.id.charAt(0).toUpperCase() + input.id.slice(1);
+                    // Get the key with proper capitalization
+                    let key;
+                    // Case-insensitive lookup in the specialCapitalization mapping
+                    const lowercaseId = input.id.toLowerCase();
+                    if (specialCapitalization[lowercaseId] || specialCapitalization[input.id]) {
+                        // Use special capitalization for acronyms and specific terms
+                        key = specialCapitalization[lowercaseId] || specialCapitalization[input.id];
+                    } else {
+                        // Default: Convert first letter to uppercase for consistency
+                        key = input.id.charAt(0).toUpperCase() + input.id.slice(1);
+                    }
                     
                     // Convert numerical values to actual numbers
                     if (input.type === 'number' || 
@@ -1624,8 +1718,17 @@
             const checkboxes = document.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(checkbox => {
                 if (checkbox.id && !checkbox.id.startsWith('reserve_')) {
-                    // Convert first letter to uppercase for consistency
-                    const key = checkbox.id.charAt(0).toUpperCase() + checkbox.id.slice(1);
+                    // Get the key with proper capitalization
+                    let key;
+                    // Case-insensitive lookup in the specialCapitalization mapping
+                    const lowercaseId = checkbox.id.toLowerCase();
+                    if (specialCapitalization[lowercaseId] || specialCapitalization[checkbox.id]) {
+                        // Use special capitalization for acronyms and specific terms
+                        key = specialCapitalization[lowercaseId] || specialCapitalization[checkbox.id];
+                    } else {
+                        // Default: Convert first letter to uppercase for consistency
+                        key = checkbox.id.charAt(0).toUpperCase() + checkbox.id.slice(1);
+                    }
                     formData[key] = checkbox.checked ? 1 : 0;
                 }
             });
