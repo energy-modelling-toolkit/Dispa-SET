@@ -39,10 +39,6 @@ $set InputFileName Inputs.gdx
 $setglobal LPFormulation 0
 $setglobal MTS 0
 
-* Flag to transmission grid model option
-* (1 for DC-PowerFlow 0 for NTC)
-$setglobal TransmissionGrid 0
-
 * Flag to retrieve status or not
 * (1 to retrieve 0 to not)
 $setglobal RetrieveStatus 0
@@ -206,7 +202,7 @@ $If %MTS% == 0 SectorXStorageInitial(nx)    [MWh]           Boundary sector stor
 SectorXStorageProfile(nx,h)                 [%]             Boundary sector storage level respected at the end of each horizon
 SectorXAlertLevel(nx,h)                     [MWh]           Storage alert of the boundary sector - Will only be violated to avoid power rationing
 SectorXFloodControl(nx,h)                   [MWh]           Storage flood control of the boundary sector
-$If %TransmissionGrid% == 1 PTDF(l,n)       [p.u.]          Power Transfer Distribution Factor Matrix
+PTDF(l_int,n)                               [p.u.]          Power Transfer Distribution Factor Matrix
 
 * New
 $If %MTS% == 0 InertiaConstant(au)          [s]             Inertia Constant
@@ -366,7 +362,7 @@ $LOAD SectorXFloodControl
 $If %MTS% == 0 $LOAD SectorXStorageInitial
 $LOAD SectorXStorageProfile
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
-$If %TransmissionGrid% == 1 $LOAD PTDF
+$LOAD PTDF
 
 * New
 $If %MTS% == 0 $LOAD InertiaConstant
@@ -403,7 +399,6 @@ CostRampDownH(au,h)                     [EUR]   Ramping cost
 CurtailedPower(n,h)                     [MW]    Curtailed power at node n
 CurtailmentReserve_2U(n,h)              [MW]    Curtailed power used for reserves at node n
 CurtailmentReserve_3U(n,h)              [MW]    Curtailed power used for reserves at node n
-$If %TransmissionGrid% == 0 Flow(l,h)   [MW]    Flow through lines
 FlowX(lx,h)                             [MW]    Flow through boundary sector lines
 Power(au,h)                             [MW]    Power output
 PowerConsumption(p2x,h)                 [MW]    Power consumption by P2X units
@@ -470,8 +465,8 @@ ObjectiveFunction(h)
 OptimalityGap(h)
 OptimizationError
 Error
-$If %TransmissionGrid% == 1 InjectedPower(h,n) [p.u]   Power injected to each node of the system
-$If %TransmissionGrid% == 1 Flow(l,h)          [MW]    Flow through lines
+InjectedPower(h,n)                  [p.u]   Power injected to each node of the system
+Flow(l,h)                           [MW]    Flow through lines
 
 *New
 *LoadRamp(n,h)                           [MW]    Load ramp
@@ -605,8 +600,8 @@ EQ_Curtailed_Power
 EQ_Residual_Load
 EQ_BS_Spillage_limits_upper
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
-$If %TransmissionGrid% == 1 EQ_DC_Power_Flow
-$If %TransmissionGrid% == 1 EQ_Total_Injected_Power
+EQ_DC_Power_Flow
+EQ_Total_Injected_Power
 
 *New
 $If %MTS% == 0 EQ_SysInertia
@@ -786,9 +781,10 @@ EQ_Residual_Load(n,i)..
         Demand("DA",n,i)
         + Demand("Flex",n,i)
         - DemandModulation(n,i)
+        - InjectedPower(i,n)
         + sum(p2x, PowerConsumption(p2x,i) * Location(p2x,n))
         - sum(u,Power(u,i)$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
-        - sum(l,Flow(l,i)*LineNode(l,n))
+        - sum(l_RoW,Flow(l_RoW,i)*LineNode(l_RoW,n))
 ;
 
 *Hourly demand balance in the day-ahead market for each node
@@ -796,8 +792,8 @@ EQ_Residual_Load(n,i)..
 EQ_Demand_balance_DA(n,i)..
          sum(u,Power(u,i)*Location(u,n))
          +sum(x2p,Power(x2p,i)*Location(x2p,n))
-$If %TransmissionGrid% == 0         +sum(l,Flow(l,i)*LineNode(l,n))
-$If %TransmissionGrid% == 1         -InjectedPower(i,n)
+         -InjectedPower(i,n)
+         +sum(l_RoW,Flow(l_RoW,i)*LineNode(l_RoW,n))     
          +ShedLoad(n,i)
          +LL_MaxPower(n,i)
          =E=
@@ -1279,22 +1275,7 @@ EQ_Emission_limits(i,p,n)..
          EmissionMaximum(n,p)*TimeStep
 ;
 
-$ifthen %TransmissionGrid% == 0
-*Flows are above minimum values
-EQ_Flow_limits_lower(l,i)..
-         FlowMinimum(l,i)
-         =L=
-         Flow(l,i)
-;
-
-*Flows are below maximum values
-EQ_Flow_limits_upper(l,i)..
-         Flow(l,i)
-         =L=
-         FlowMaximum(l,i)
-;
-$else
-*DC Power Flow in Unit Commitment
+*DC Power Flow
 EQ_DC_Power_Flow(l_int,i)..
          Flow(l_int,i)
          =E=
@@ -1302,9 +1283,9 @@ EQ_DC_Power_Flow(l_int,i)..
 ;
 *Total Injected Power in all Nodes of the Power System
 EQ_Total_Injected_Power(i)..
-         sum(l_int,sum(n,PTDF(l_int,n)*InjectedPower(i,n)))
+         sum(n,InjectedPower(i,n))
          =E=
-         sum(l_RoW,sum(n,PTDF(l_RoW,n)*FlowMaximum(l_RoW,i)))
+         0
 ;
 
 *Flows are above minimum values
@@ -1320,8 +1301,6 @@ EQ_Flow_limits_upper(l,i)..
          =L=
          FlowMaximum(l,i)
 ;
-
-$endIf
 
 *Boundary Sector Flows are above minimum values
 EQ_BS_Flow_limits_lower(lx,i)..
@@ -1581,8 +1560,8 @@ EQ_Tot_Flex_Supply_BS,
 EQ_Max_Flex_Supply_BS,
 EQ_BS_Spillage_limits_upper,
 $If %RetrieveStatus% == 1 EQ_CommittedCalc,
-$If %TransmissionGrid% == 1 EQ_DC_Power_Flow,
-$If %TransmissionGrid% == 1 EQ_Total_Injected_Power,
+EQ_DC_Power_Flow,
+EQ_Total_Injected_Power,
 
 *new
 $If %MTS% == 0 EQ_SysInertia,
@@ -1699,7 +1678,7 @@ OutputMaxOutageUp(n,h)
 OutputMaxOutageDown(n,h)
 OutputCommitted(au,h)
 OutputFlow(l,h)
-$If %TransmissionGrid% == 1 OutputInjectedPower(n,h)
+OutputInjectedPower(n,h)
 OutputFlowX(lx,h)
 OutputPower(au,h)
 OutputPowerX(nx,au,h)
@@ -1827,7 +1806,7 @@ $If %ActivateAdvancedReserves% == 0 OutputDemand_2D(n,z)=Demand("2D",n,z);
 
 OutputCommitted(au,z)=Committed.L(au,z);
 OutputFlow(l,z)=Flow.L(l,z);
-$If %TransmissionGrid% == 1 OutputInjectedPower(n,z)=InjectedPower.L(z,n);
+OutputInjectedPower(n,z)=InjectedPower.L(z,n);
 OutputFlowX(lx,z)=FlowX.L(lx,z);
 OutputPower(au,z)=Power.L(au,z);
 OutputPowerX(nx,au,z)=PowerX.L(nx,au,z);
@@ -1945,7 +1924,7 @@ UnitHourlyProfit(au,z) = UnitHourlyRevenue(au,z) - UnitHourlyProductionCost(au,z
 EXECUTE_UNLOAD "Results.gdx"
 OutputCommitted,
 OutputFlow,
-$If %TransmissionGrid% == 1 OutputInjectedPower,
+OutputInjectedPower,
 OutputFlowX,
 OutputPower,
 OutputPowerX,
