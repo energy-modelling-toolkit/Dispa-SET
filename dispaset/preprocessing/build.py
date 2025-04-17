@@ -580,34 +580,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # In case of NTC-based simulation, the PTDF matrix actually becomes the incidence matrix:
         PTDF = pd.DataFrame(index=NTCs.columns, columns=config['zones'])
         for l in NTCs.columns:
-            PTDF.loc[l, l.split(' -> ')[0]] = 1
-            PTDF.loc[l, l.split(' -> ')[1]] = -1    
+            PTDF.loc[l, l.split(' -> ')[0]] = -1
+            PTDF.loc[l, l.split(' -> ')[1]] = 1    
     else:
         NTCs = pd.DataFrame(index=config['idx_long'])
         # if there are not lines, the PTDF matrix is empty:
         PTDF = pd.DataFrame(columns=config['zones'])
     # Historical flows with the rest of the world:
     Inter_RoW = Interconnections_RoW.reindex(config['idx_long'])
-
-    # Extending PTDF to include the lines connecting to RoW:
-    PTDF_extended = PTDF.copy()
-    for l_RoW in Inter_RoW.columns:
-        #find the node to which the line connects
-        node_1 = l_RoW.split(' -> ')[0]
-        node_2 = l_RoW.split(' -> ')[1]
-        if node_1 in PTDF.columns:
-            PTDF_extended.loc[l_RoW, node_1] = 1
-        elif node_2 in PTDF.columns:
-            PTDF_extended.loc[l_RoW, node_2] = -1
-        else:
-            logging.error('Line ' + l_RoW + ' does not correspond to any node in PTDF')
-            sys.exit(1)
-    # Filling na values with 0
-    PTDF_extended.fillna(0, inplace=True)
     all_lines = list(NTCs.columns) + list(Inter_RoW.columns)
-    # check and reindex again:
-    check_grid_data(all_lines, PTDF_extended, config)
-    PTDF_extended = PTDF_extended.reindex(index=all_lines, columns=config['zones'])
 
     # Boundary Sector Interconnections:
     [BSInterconnections_sim, BSInterconnections_RoW, BSInterconnections] = interconnections(zones_bs, BS_NTC, BS_flows)
@@ -980,7 +961,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['PrimaryReserveLimit'] = ['h']
     sets_param['FFRGainLimit'] = ['h']
     sets_param['FFRLimit'] = ['h']
-    sets_param['PTDF'] = ['l', 'n']
+    sets_param['PTDF'] = ['l_int', 'n']
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -1398,10 +1379,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Check values:
     check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
 
+    # Incidence matrix:
     parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
 
-    # the extended PTDF matrix has dimensions l x n, where l is the number of lines between nodes and with RoW.
-    parameters['PTDF']['val'] = PTDF_extended.values
+    # the PTDF matrix has dimensions l_int x n, where l_int is the number of lines between nodes and with RoW.
+    parameters['PTDF']['val'] = PTDF.values
 
     # Cost Spillage without BS
     if 'CostOfSpillage' in config and os.path.isfile(config['CostOfSpillage']):
