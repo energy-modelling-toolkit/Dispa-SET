@@ -26,28 +26,26 @@ class YAMLHandler(BaseHTTPRequestHandler):
         self._set_response_headers()
         
     def do_GET(self):
-        # Handle requests to list available YAML files
-        if self.path == '/list-files':
+        # Handle requests to list YAML files in the ConfigFiles directory
+        if self.path == '/list-yaml-files':
             try:
-                # List YAML files in current directory
-                current_dir_files = [f for f in os.listdir('.') if f.endswith(('.yml', '.yaml'))]
-                
                 # List YAML files in parent directory (ConfigFiles)
-                parent_dir = os.path.join('..') 
+                yaml_files = []
+                parent_dir = '..' 
                 if os.path.exists(parent_dir):
-                    parent_dir_files = [f"../{f}" for f in os.listdir(parent_dir) 
-                                     if f.endswith(('.yml', '.yaml'))]
+                    # List only base filenames ending with .yml or .yaml
+                    yaml_files = [f for f in os.listdir(parent_dir) 
+                                     if os.path.isfile(os.path.join(parent_dir, f)) and f.endswith(('.yml', '.yaml'))]
                 else:
-                    parent_dir_files = []
-                
-                # Combine both lists
-                yaml_files = current_dir_files + parent_dir_files
+                     # Handle case where parent dir might not be accessible (less likely here)
+                    print(f"Warning: Could not access parent directory '{parent_dir}'")
                 
                 self._set_response_headers()
                 self.wfile.write(json.dumps({'files': yaml_files}).encode())
             except Exception as e:
+                print(f"Error listing YAML files: {e}") # Log error server-side
                 self._set_response_headers(status_code=500)
-                self.wfile.write(json.dumps({'error': str(e)}).encode())
+                self.wfile.write(json.dumps({'error': 'Error listing configuration files'}).encode())
                 
         # Handle requests to read a specific YAML file
         elif self.path.startswith('/read-file?'):

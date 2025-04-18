@@ -13,7 +13,7 @@ import importlib.util
 PORT = 8083
 API_PORT = 8084
 HTML_FILE = "dispaset_config_editor.html"
-CONFIG_DIR = "ConfigFiles/ConfigEditor"  # Updated path to the ConfigEditor subdirectory
+CONFIG_DIR = "ConfigEditor"  # Corrected path: relative to this script
 
 def get_script_directory():
     """Gets the directory where the script is running."""

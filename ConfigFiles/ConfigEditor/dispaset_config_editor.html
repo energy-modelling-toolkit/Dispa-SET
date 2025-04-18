@@ -364,6 +364,79 @@
         h3:first-child {
             margin-top: 0;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            width: 80%; /* Could be more or less, depending on screen size */
+            max-width: 500px; /* Maximum width */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+
+        .close-btn {
+            color: var(--muted-text);
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        .close-btn:hover,
+        .close-btn:focus {
+            color: var(--danger-color);
+            text-decoration: none;
+        }
+
+        #yamlFileList {
+            list-style: none;
+            padding: 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        #yamlFileList li {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #yamlFileList li:hover {
+            background-color: var(--bg-color);
+        }
     </style>
 </head>
 <body>
@@ -371,8 +444,10 @@
         <header>
             <h1>Dispa-SET Configuration Editor</h1>
             <div class="btn-group">
-                <input type="file" id="yamlFile" accept=".yaml,.yml" style="display: none;">
-                <button class="btn" onclick="document.getElementById('yamlFile').click();">Load YAML</button>
+                <!-- Removed file input -->
+                <!-- <input type="file" id="yamlFile" accept=".yaml,.yml" style="display: none;"> -->
+                <!-- Changed onclick -->
+                <button class="btn" id="loadYamlBtn">Load YAML</button>
                 <button class="btn" id="saveYaml">Save YAML</button>
                 <span id="fileNameLabel" style="margin-left: 15px; color: var(--muted-text);"></span>
             </div>
@@ -1125,6 +1200,23 @@
         </form>
     </div>
 
+    <!-- Modal Structure -->
+    <div id="loadYamlModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Select Configuration File</h2>
+                <button type="button" class="close-btn" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Select a YAML file from the configuration directory:</p>
+                <ul id="yamlFileList">
+                    <!-- File list will be populated here -->
+                </ul>
+                 <p id="modalStatus" style="color: var(--danger-color); font-size: 0.9em; margin-top: 10px;"></p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Function to safely parse YAML with Python constructs
         function parseYaml(text) {
@@ -1273,9 +1365,18 @@
             initializeZones(); // Initialize with defaults before loading
 
             // Event Listeners
-            document.getElementById('yamlFile').addEventListener('change', handleFileSelect);
+            document.getElementById('loadYamlBtn').addEventListener('click', openLoadModal); // Changed target button
             document.getElementById('saveYaml').addEventListener('click', saveYamlFile);
             document.getElementById('addZoneBtn').addEventListener('click', addZone);
+            document.getElementById('closeModalBtn').addEventListener('click', closeLoadModal);
+
+            // Close modal if clicked outside content
+            window.onclick = function(event) {
+                const modal = document.getElementById('loadYamlModal');
+                if (event.target == modal) {
+                    closeLoadModal();
+                }
+            }
 
             // Default value input listeners
             document.querySelectorAll('.default-value-input').forEach(input => {
@@ -1514,7 +1615,8 @@
                 });
         }
         
-        // Handle file selection
+        // Handle file selection (REMOVED - Handled by loadSelectedYaml)
+        /*
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1536,6 +1638,7 @@
             
             reader.readAsText(file);
         }
+        */
         
         // Populate form with YAML data
         function populateForm(yamlData) {
@@ -1980,6 +2083,77 @@
         }
 
         // --- Utility Functions ---
+        function openLoadModal() {
+            const modal = document.getElementById('loadYamlModal');
+            const fileList = document.getElementById('yamlFileList');
+            const modalStatus = document.getElementById('modalStatus');
+            fileList.innerHTML = '<li>Loading...</li>'; // Show loading indicator
+            modalStatus.textContent = ''; // Clear previous errors
+            modal.style.display = 'block';
+
+            // Fetch the list of YAML files from the API
+            fetch(`${API_URL}/list-yaml-files`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    fileList.innerHTML = ''; // Clear loading/previous list
+                    if (data.files && data.files.length > 0) {
+                        data.files.forEach(filename => {
+                            const li = document.createElement('li');
+                            li.textContent = filename;
+                            li.onclick = () => loadSelectedYaml(filename);
+                            fileList.appendChild(li);
+                        });
+                    } else {
+                        fileList.innerHTML = '<li>No YAML files found in the configuration directory.</li>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching YAML file list:', error);
+                    fileList.innerHTML = ''; // Clear loading message
+                    modalStatus.textContent = 'Error fetching file list. Is the API server running?';
+                });
+        }
+
+        function closeLoadModal() {
+            const modal = document.getElementById('loadYamlModal');
+            modal.style.display = 'none';
+        }
+
+        function loadSelectedYaml(filename) {
+            console.log(`Attempting to load: ${filename}`);
+            // Use API to fetch the selected file's content (path relative to ConfigEditor)
+            fetch(`${API_URL}/read-file?filename=../${filename}`) // Assuming API handles ../
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Failed to load file '${filename}': ${response.status} ${response.statusText}`);
+                    }
+                    return response.text();
+                })
+                .then(yamlText => {
+                    try {
+                        const yamlData = parseYaml(yamlText); // Use existing parser
+                        populateForm(yamlData);
+                        currentFilename = filename; // Update the current filename
+                        updateFileNameLabel(filename);
+                        closeLoadModal();
+                        showStatusMessage(`File '${filename}' loaded successfully.`, 'success');
+                    } catch (parseError) {
+                        console.error('Error parsing YAML:', parseError);
+                        showStatusMessage(`Error parsing YAML file '${filename}'. Check console.`, 'error');
+                        closeLoadModal(); // Close modal even on error
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading selected YAML:', error);
+                    showStatusMessage(`Error loading file '${filename}': ${error.message}`, 'error');
+                    closeLoadModal(); // Close modal even on error
+                });
+        }
     </script>
 </body>
 </html> 

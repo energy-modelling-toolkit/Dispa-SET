@@ -19,7 +19,7 @@ To launch the configuration editor, use the following command in your terminal:
 
 .. code-block:: bash
 
-   python run_dispaset_config.py
+   python ../ConfigFiles/dispaset_config.py
 
 This will start a local web server and open the configuration editor in your default browser. The editor organizes parameters into logical sections for easier navigation and editing.
 
