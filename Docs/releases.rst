@@ -45,9 +45,8 @@ Version 3.0
     - Primary Frequency Response (PFR) constraints
 
 * New Units and Technologies
-    - Added electrolyser model
-    - Added x2p (X-to-Power) units
-    - Added boundary sector unit to the base case
+    - Added x2p (X-to-Power) and p2x (Power-to-X) units
+    - Added boundary sector units to the test case
     - Improved cycling storage conditions for medium-term storage
     - Fuel prices can now be defined per unit
 
@@ -73,7 +72,6 @@ Version 3.0
 
 * Fixes and Enhancements
     - Better handling of demand balancing to prevent charging reservoirs with slack
-    - Improved representation of heating technologies
     - Fixed various issues with boundary sector formulation
     - Updated startup and shutdown costs implementation to display properly
     - Improved water-energy nexus representation
