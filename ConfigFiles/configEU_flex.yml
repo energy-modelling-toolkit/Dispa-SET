@@ -1,64 +1,135 @@
-#---------------- Simulation optinos (Input/output)
-SimulationDirectory:  'Simulations/simulationEU'
-WriteExcel: 0.0
-WriteGDX: 1.0
-WritePickle: 1.0
-
-GAMS_folder:  ' '
-cplex_path:  ''
-
-#----------------- Time range and horizon
-StartDate: !!python/tuple [2016, 1, 1, 0, 0, 0]
-StopDate: !!python/tuple [2016, 12, 31, 0, 0, 0]
+Description: 4 EU countries with exogenous flexible demands
+SimulationType: Integer clustering
+SimulationDirectory: Simulations/simulationEU
+StartDate: !!python/tuple
+- 2016
+- 1
+- 1
+- 0
+- 0
+- 0
+StopDate: !!python/tuple
+- 2016
+- 12
+- 31
+- 0
+- 0
+- 0
+DataTimeStep: 1
+SimulationTimeStep: 1
 HorizonLength: 2
 LookAhead: 1
-
-#------------------ Model options
-Clustering: 1.0
-SimulationType:  'Integer clustering'  #LP, LP clustered
-ReserveCalculation:  'Generic'
-AllowCurtailment: 1.0
-
-#------------------- Timeseries
-Demand:  'Database/TotalLoadValue/##/1h/2016.csv'
-HeatDemand:  'Database/Heat_demand/2016.csv'
-LoadShedding:  ''
-
-Interconnections:  'Database/CrossBorderFlows/1h/2016.csv'
-NTC:  'Database/DayAheadNTC/1h/2016.csv'
-PowerPlantData:  'Database/PowerPlants/##/clustered.csv'
-Outages:  'Database/OutageFactors/##/2016.csv'
-
-RenewablesAF:  'Database/AvailabilityFactors/##/1h/2016.csv'
-
-ReservoirLevels:  'Database/HydroData/ScaledLevels/##/1h/2016.csv'
-ReservoirScaledInflows:  'Database/HydroData/ScaledInflows/##/1h/2016_profile_from_2012.csv'
-ShareOfFlexibleDemand: 'Database/TotalLoadValue/ShareFlexibleDemandEU.csv'
-
-#---------------- Prices
-PriceOfBiomass:  ''
-PriceOfBlackCoal:  ''
-PriceOfCO2:  ''
-PriceOfFuelOil:  ''
-PriceOfGas:  ''
-PriceOfLignite:  ''
-PriceOfNuclear:  ''
-PriceOfPeat:  ''
-CostHeatSlack:  ''
-CostLoadShedding:  ''
-
-#---------------- Countries
-countries: ['AT', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES',
-   'FI', 'FR', 'HR','HU', 'IE', 'IT', 'LT', 'LV', 'NL', 'NO', 'PL',
-   'PT', 'RO', 'SE', 'SI', 'SK', 'UK']
-
-#---------------- Reserves
-ReserveParticipation: ['COMC', 'GTUR', 'HDAM', 'HPHS', 'ICEN', 'CAES', 'BATS', 'BEVS']
-
-#---------------- Default prices
-default: {CostHeatSlack: 50.0, CostLoadShedding: 400.0, LoadShedding: 0.05, PriceOfBiomass: 13.0,
-  PriceOfBlackCoal: 11.0, PriceOfCO2: 7.0, PriceOfFuelOil: 35.0, PriceOfGas: 20.0,
-  PriceOfLignite: 8.0, PriceOfNuclear: 3.0, PriceOfPeat: 8.0}
-
-#---------------- Multipliers
-modifiers: {Demand: 1.0, Solar: 1.0, Storage: 1.0, Wind: 1.0}
+AllowCurtailment: 1
+GAMS_folder: ''
+Demand: Database/TotalLoadValue/##/1h/2016.csv
+RenewablesAF: Database/AvailabilityFactors/##/1h/2016.csv
+Outages: Database/OutageFactors/##/2016.csv
+ShareOfFlexibleDemand: Database/TotalLoadValue/ShareFlexibleDemandEU.csv
+DemandFlexibility: ''
+LoadShedding: ''
+PowerPlantData: Database/PowerPlants/##/clustered.csv
+NTC: ''
+Interconnections: Database/CrossBorderFlows/1h/2016.csv
+TransmissionGridType: NTC
+GridData: ''
+GeoData: ''
+HydroScheduling: 'Off'
+HydroSchedulingHorizon: Annual
+InitialFinalReservoirLevel: 1
+ReservoirLevels: Database/HydroData/ScaledLevels/##/1h/2016.csv
+ReservoirLevelInitial: ''
+ReservoirLevelFinal: ''
+ReservoirScaledInflows: Database/HydroData/ScaledInflows/##/1h/2016_profile_from_2012.csv
+StorageAlertLevels: ''
+StorageFloodControl: ''
+WaterValue: ''
+CostLoadShedding: ''
+CostCurtailment: ''
+CostOfSpillage: ''
+CostNotServed: ''
+CostXNotServed: ''
+ValueOfLostLoad: ''
+PriceTransmission: ''
+PriceOfGas: ''
+PriceOfBlackCoal: ''
+PriceOfLignite: ''
+PriceOfCO2: ''
+PriceOfBiomass: ''
+PriceOfFuelOil: ''
+PriceOfNuclear: ''
+PriceOfPeat: ''
+PriceOfAmmonia: ''
+ReserveCalculation: Generic
+ShareOfQuickStartUnits: ''
+Reserve2U: ''
+Reserve2D: ''
+PrimaryReserveLimit: ''
+InertiaLimit: ''
+FFRLimit: ''
+FFRGainLimit: ''
+FrequencyStability: ''
+SystemGainLimit: ''
+BoundarySectorData: ''
+BoundarySectorNTC: ''
+BoundarySectorInterconnections: ''
+SectorXDemand: ''
+SectorXFlexibleDemand: ''
+SectorXFlexibleSupply: ''
+SectorXReservoirLevels: ''
+SectorXFloodControl: ''
+BoundarySectorMaxSpillage: ''
+OptimalityGap: 0.0006
+modifiers:
+  Demand: 1
+  Solar: 1
+  Wind: 1
+  Storage: 1
+zones:
+- BE
+- DE
+- FR
+- NL
+all_zones:
+- BE
+- DE
+- FR
+- NL
+ReserveParticipation:
+- COMC
+- GTUR
+- HDAM
+- HPHS
+- ICEN
+- CAES
+- BATS
+- BEVS
+ReserveParticipation_CHP: []
+default:
+  ShareOfFlexibleDemand: 0.03
+  DemandFlexibility: 4
+  LoadShedding: 0.05
+  ReservoirLevelInitial: 0.5
+  ReservoirLevelFinal: 0.5
+  WaterValue: 400
+  CostLoadShedding: 400
+  CostCurtailment: 20
+  CostOfSpillage: 1
+  CostNotServed: ''
+  CostXNotServed: 0
+  ValueOfLostLoad: 100000
+  PriceTransmission: 0
+  PriceOfGas: 20
+  PriceOfBlackCoal: 11
+  PriceOfLignite: 8
+  PriceOfCO2: 7
+  PriceOfBiomass: 13
+  PriceOfFuelOil: 35
+  PriceOfNuclear: 3
+  PriceOfPeat: 8
+  PriceOfAmmonia: 76
+  ShareOfQuickStartUnits: 0.5
+  PrimaryReserveLimit: ''
+  InertiaLimit: ''
+  FFRLimit: ''
+  FFRGainLimit: ''
+  SystemGainLimit: ''

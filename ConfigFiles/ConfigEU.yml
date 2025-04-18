@@ -1,7 +1,6 @@
-Description: Three countries with a lot of hydro. Mid-term scheduling activated for
-  two of them.
+Description: Clustered simulation for EU28 + Switzerland and Norway using 2016 data.
 SimulationType: Integer clustering
-SimulationDirectory: Simulations/simulation_MTS
+SimulationDirectory: Simulations/simulationEU
 StartDate: !!python/tuple
 - 2016
 - 1
@@ -11,7 +10,7 @@ StartDate: !!python/tuple
 - 0
 StopDate: !!python/tuple
 - 2016
-- 1
+- 12
 - 31
 - 0
 - 0
@@ -34,10 +33,10 @@ Interconnections: Database/CrossBorderFlows/1h/2016.csv
 TransmissionGridType: NTC
 GridData: ''
 GeoData: ''
-HydroScheduling: Regional
+HydroScheduling: 'Off'
 HydroSchedulingHorizon: Annual
-InitialFinalReservoirLevel: 1
-ReservoirLevels: Database/HydroData/ScaledLevels/##/1h/2016.csv
+InitialFinalReservoirLevel: ''
+ReservoirLevels: ''
 ReservoirLevelInitial: ''
 ReservoirLevelFinal: ''
 ReservoirScaledInflows: Database/HydroData/ScaledInflows/##/1h/2016_profile_from_2012.csv
@@ -58,7 +57,7 @@ PriceOfCO2: ''
 PriceOfBiomass: ''
 PriceOfFuelOil: ''
 PriceOfNuclear: ''
-PriceOfPeat: ''
+PriceOfPeat: Database/Heat_demand/2016.csv
 PriceOfAmmonia: ''
 ReserveCalculation: Generic
 ShareOfQuickStartUnits: ''
@@ -87,15 +86,62 @@ modifiers:
   Storage: 1
 zones:
 - AT
+- BE
+- BG
+- CH
+- CZ
 - DE
+- DK
+- EE
+- EL
+- ES
+- FI
 - FR
-mts_zones:
-- AT
-- DE
+- HR
+- HU
+- IE
+- IT
+- LT
+- LU
+- LV
+- NL
+- 'NO'
+- PL
+- PT
+- RO
+- SE
+- SI
+- SK
+- UK
 all_zones:
 - AT
+- BE
+- BG
+- CH
+- CZ
 - DE
+- DK
+- EE
+- EL
+- ES
+- FI
 - FR
+- HR
+- HU
+- IE
+- IT
+- LT
+- LU
+- LV
+- NL
+- 'NO'
+- PL
+- PT
+- RO
+- SE
+- SI
+- SK
+- UK
 ReserveParticipation:
 - COMC
 - GTUR
@@ -107,15 +153,15 @@ ReserveParticipation:
 - BEVS
 ReserveParticipation_CHP: []
 default:
-  ShareOfFlexibleDemand: 0.03
-  DemandFlexibility: 4
+  ShareOfFlexibleDemand: 0
+  DemandFlexibility: 0
   LoadShedding: 0.05
   ReservoirLevelInitial: 0.5
   ReservoirLevelFinal: 0.5
   WaterValue: 100
   CostLoadShedding: 400
   CostCurtailment: 20
-  CostOfSpillage: 2
+  CostOfSpillage: 5
   CostNotServed: ''
   CostXNotServed: 0
   ValueOfLostLoad: 100000
@@ -123,12 +169,12 @@ default:
   PriceOfGas: 20
   PriceOfBlackCoal: 11
   PriceOfLignite: 8
-  PriceOfCO2: 7
+  PriceOfCO2: 70
   PriceOfBiomass: 13
   PriceOfFuelOil: 35
   PriceOfNuclear: 3
   PriceOfPeat: 8
-  PriceOfAmmonia: 76
+  PriceOfAmmonia: 40
   ShareOfQuickStartUnits: 0.5
   PrimaryReserveLimit: ''
   InertiaLimit: ''

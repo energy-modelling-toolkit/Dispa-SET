@@ -1,46 +1,46 @@
-Description: Three countries with a lot of hydro. Mid-term scheduling activated for
-  two of them.
+Description: Simulation of a simplified power fleet (adapted from the Belgian power
+  system) with one typical power plant per technology.
 SimulationType: Integer clustering
-SimulationDirectory: Simulations/simulation_MTS
+SimulationDirectory: Simulations/simulationBE
 StartDate: !!python/tuple
-- 2016
+- 2015
 - 1
 - 1
 - 0
 - 0
 - 0
 StopDate: !!python/tuple
-- 2016
-- 1
+- 2015
+- 12
 - 31
 - 0
 - 0
 - 0
 DataTimeStep: 1
 SimulationTimeStep: 1
-HorizonLength: 3
+HorizonLength: 5
 LookAhead: 1
 AllowCurtailment: 1
 GAMS_folder: ''
-Demand: Database/TotalLoadValue/##/1h/2016.csv
-RenewablesAF: Database/AvailabilityFactors/##/1h/2016.csv
-Outages: Database/OutageFactors/##/2016.csv
+Demand: Database/Load_RealTime/##/1h/2015.csv
+RenewablesAF: Database/AvailabilityFactors/##/1h/2015.csv
+Outages: ''
 ShareOfFlexibleDemand: ''
 DemandFlexibility: ''
 LoadShedding: ''
-PowerPlantData: Database/PowerPlants/##/clustered.csv
+PowerPlantData: Database/PowerPlants/BE/simplified.csv
 NTC: ''
-Interconnections: Database/CrossBorderFlows/1h/2016.csv
+Interconnections: ''
 TransmissionGridType: NTC
 GridData: ''
 GeoData: ''
-HydroScheduling: Regional
+HydroScheduling: 'Off'
 HydroSchedulingHorizon: Annual
-InitialFinalReservoirLevel: 1
-ReservoirLevels: Database/HydroData/ScaledLevels/##/1h/2016.csv
+InitialFinalReservoirLevel: ''
+ReservoirLevels: ''
 ReservoirLevelInitial: ''
 ReservoirLevelFinal: ''
-ReservoirScaledInflows: Database/HydroData/ScaledInflows/##/1h/2016_profile_from_2012.csv
+ReservoirScaledInflows: Database/HydroData/ScaledInflows/##/1h/2015.csv
 StorageAlertLevels: ''
 StorageFloodControl: ''
 WaterValue: ''
@@ -51,12 +51,12 @@ CostNotServed: ''
 CostXNotServed: ''
 ValueOfLostLoad: ''
 PriceTransmission: ''
-PriceOfGas: ''
-PriceOfBlackCoal: ''
+PriceOfGas: Database/FuelPrices/Gas/2015.csv
+PriceOfBlackCoal: Database/FuelPrices/Coal/2015.csv
 PriceOfLignite: ''
-PriceOfCO2: ''
+PriceOfCO2: Database/HydroData/ReservoirLevel/##/1h/2015.csv
 PriceOfBiomass: ''
-PriceOfFuelOil: ''
+PriceOfFuelOil: Database/FuelPrices/Oil/2015.csv
 PriceOfNuclear: ''
 PriceOfPeat: ''
 PriceOfAmmonia: ''
@@ -86,16 +86,9 @@ modifiers:
   Wind: 1
   Storage: 1
 zones:
-- AT
-- DE
-- FR
-mts_zones:
-- AT
-- DE
+- BE
 all_zones:
-- AT
-- DE
-- FR
+- BE
 ReserveParticipation:
 - COMC
 - GTUR
@@ -107,15 +100,15 @@ ReserveParticipation:
 - BEVS
 ReserveParticipation_CHP: []
 default:
-  ShareOfFlexibleDemand: 0.03
-  DemandFlexibility: 4
+  ShareOfFlexibleDemand: 0
+  DemandFlexibility: 0
   LoadShedding: 0.05
   ReservoirLevelInitial: 0.5
   ReservoirLevelFinal: 0.5
   WaterValue: 100
-  CostLoadShedding: 400
+  CostLoadShedding: 100
   CostCurtailment: 20
-  CostOfSpillage: 2
+  CostOfSpillage: 401
   CostNotServed: ''
   CostXNotServed: 0
   ValueOfLostLoad: 100000
@@ -124,11 +117,11 @@ default:
   PriceOfBlackCoal: 11
   PriceOfLignite: 8
   PriceOfCO2: 7
-  PriceOfBiomass: 13
+  PriceOfBiomass: 37
   PriceOfFuelOil: 35
   PriceOfNuclear: 3
-  PriceOfPeat: 8
-  PriceOfAmmonia: 76
+  PriceOfPeat: 0
+  PriceOfAmmonia: 40
   ShareOfQuickStartUnits: 0.5
   PrimaryReserveLimit: ''
   InertiaLimit: ''
