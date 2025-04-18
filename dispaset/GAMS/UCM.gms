@@ -1276,16 +1276,16 @@ EQ_Emission_limits(i,p,n)..
 ;
 
 *DC Power Flow
-EQ_DC_Power_Flow(l_int,i)..
+EQ_DC_Power_Flow(l_int,i)$(sum(n,abs(PTDF(l_int,n)<>0)))..
          Flow(l_int,i)
          =E=
-         sum(n,PTDF(l_int,n)*InjectedPower(i,n))
+         sum(n,-PTDF(l_int,n)*InjectedPower(i,n))
 ;
-*Total Injected Power in all Nodes of the Power System
-EQ_Total_Injected_Power(i)..
-         sum(n,InjectedPower(i,n))
+
+EQ_Total_Injected_Power(i,n)..
+        InjectedPower(i,n)
          =E=
-         0
+         sum(l_int,Flow(l_int,i)*LineNode(l_int,n))
 ;
 
 *Flows are above minimum values

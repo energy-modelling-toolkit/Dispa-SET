@@ -577,11 +577,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         PTDF = PTDF.reindex(index=NTCs.columns, columns=config['zones'])
     elif len(Interconnections_sim.columns) > 0:
         NTCs = Interconnections_sim.reindex(config['idx_long'])
-        # In case of NTC-based simulation, the PTDF matrix actually becomes the incidence matrix:
-        PTDF = pd.DataFrame(index=NTCs.columns, columns=config['zones'])
-        for l in NTCs.columns:
-            PTDF.loc[l, l.split(' -> ')[0]] = -1
-            PTDF.loc[l, l.split(' -> ')[1]] = 1    
+        # In case of NTC-based simulation, the PTDF matrix remains blank:
+        PTDF = pd.DataFrame(index=NTCs.columns, columns=config['zones'])  
     else:
         NTCs = pd.DataFrame(index=config['idx_long'])
         # if there are not lines, the PTDF matrix is empty:
@@ -1604,19 +1601,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             sys.exit(1)
         gms_modifications['$setglobal LPFormulation 0'] = '$setglobal LPFormulation 1'
         gms_modifications['$setglobal MTS 0'] = '$setglobal MTS 1'
-        if grid_flag == 'DC-Power Flow':
-            gms_modifications['$setglobal TransmissionGrid 0'] = '$setglobal TransmissionGrid 1'
     else: # Detailed dispatch run (not MTS)
         if LP:
             gms_modifications['$setglobal LPFormulation 0'] = '$setglobal LPFormulation 1'
         # For MILP (not LP), ensure MTS flag is off (it should be by default, but explicit)
         elif '$setglobal MTS 0' not in gms_modifications: # Avoid overriding if somehow set
              gms_modifications['$setglobal MTS 0'] = '$setglobal MTS 0' # Explicitly keep default
-        # Handle Transmission Grid for non-MTS runs
-        if grid_flag == 'DC-Power Flow':
-            gms_modifications['$setglobal TransmissionGrid 0'] = '$setglobal TransmissionGrid 1'
-        elif '$setglobal TransmissionGrid 0' not in gms_modifications: # Avoid overriding
-             gms_modifications['$setglobal TransmissionGrid 0'] = '$setglobal TransmissionGrid 0' # Explicitly keep default
              
     # Process and write the target GAMS file
     try:
