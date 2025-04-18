@@ -827,13 +827,6 @@ The following figure shows an example of such approach, in which the optimizatio
 The optimization horizon and overlap period can be adjusted by the user in the Dispa-SET configuration file. As a rule of thumb, the optimization horizon plus the overlap period should at least be twice the maximum duration of the time-dependent constraints (e.g. the minimum up and down times). In terms of computational efficiency, small power systems can be simulated with longer optimization horizons, while larger systems should reduce this horizon, the minimum being one day.
 
 
-References
-^^^^^^^^^^
-
-.. [1] Quoilin, S., Hidalgo Gonzalez, I., & Zucker, A. (2017). Modelling Future EU Power Systems Under High Shares of Renewables: The Dispa-SET 2.1 open-source model. Publications Office of the European Union. 
-.. [2] Quoilin, S., Nijs, W., Hidalgo, I., & Thiel, C. (2015). Evaluation of simplified flexibility evaluation tools using a unit commitment model. IEEE Digital Library. 
-.. [3] Quoilin, S., Gonzalez Vazquez, I., Zucker, A., & Thiel, C. (2014). Available technical flexibility for balancing variable renewable energy sources: case study in Belgium. Proceedings of the 9th Conference on Sustainable Development of Energy, Water and Environment Systems. 
-
 
 In Dispa-SET, the network can be modeled using two different approaches:
 
@@ -889,6 +882,11 @@ where :math:`\mathbf{B_d} = |\mathbf{B_p}|` is the absolute value of the primiti
 
 The resulting PTDF matrix represents how power injections at each node affect flows on each transmission line. When using the DC-Power Flow model, the power flow limits are applied based on these calculated physical flows instead of the simple NTC-based approach.
 
-^^^^^^^^^^^^^^^^^^^^^^^^^
-Linear Program (LP) optimization
+
+References
+^^^^^^^^^^
+.. [1] Quoilin, S., Hidalgo Gonzalez, I., & Zucker, A. (2017). Modelling Future EU Power Systems Under High Shares of Renewables: The Dispa-SET 2.1 open-source model. Publications Office of the European Union. 
+.. [2] Quoilin, S., Nijs, W., Hidalgo, I., & Thiel, C. (2015). Evaluation of simplified flexibility evaluation tools using a unit commitment model. IEEE Digital Library. 
+.. [3] Quoilin, S., Gonzalez Vazquez, I., Zucker, A., & Thiel, C. (2014). Available technical flexibility for balancing variable renewable energy sources: case study in Belgium. Proceedings of the 9th Conference on Sustainable Development of Energy, Water and Environment Systems. 
+
 
