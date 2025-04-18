@@ -34,7 +34,7 @@ share_pv = [0,0.3]         # Yearly PV generation divided by yearly power consum
 sim_folder = '../Simulations/batch/'
 
 # Load the configuration file
-config = ds.load_config_excel('../ConfigFiles/ConfigBE.xlsx')
+config = ds.load_config_excel('../ConfigFiles/ConfigBE.yml')
 
 config['SimulationType'] = 'Integer clustering'
                          # 'Integer clustering'
