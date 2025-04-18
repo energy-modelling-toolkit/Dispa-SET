@@ -128,7 +128,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
             axes[n - 1].set_ylim(ntc_limits[0], ntc_limits[1])
     else:
         fig, axes = plt.subplots(nrows=n, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
-                                 gridspec_kw={'height_ratios': [2.7, .8], 'hspace': 0.04})
+                                 gridspec_kw={'height_ratios': height_ratio, 'hspace': 0.04})
 
     # Create left axis:
     if plot_lines:
