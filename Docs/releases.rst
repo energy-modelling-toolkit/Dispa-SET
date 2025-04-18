@@ -58,6 +58,11 @@ Version 3.0
     - Added dispatch plot for boundary sectors
     - Added hide_storage feature in the plot_zone function
 
+* User Interface
+    - Replaced Excel configuration files with an HTML configuration editor
+    - Improved user experience with a more intuitive interface
+    - Better visualization of configuration parameters
+
 **Improvements**
 
 * Code Quality
