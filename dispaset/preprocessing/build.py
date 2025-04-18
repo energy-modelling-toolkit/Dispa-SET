@@ -512,15 +512,21 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Interconnections:
     NTC.index = NTC.index.astype('datetime64[ns]')
     [Interconnections_sim, Interconnections_RoW, _ ] = interconnections(config['zones'], NTC, flows)
-    PriceTransmission = pd.DataFrame(index=Interconnections_sim.index, columns=Interconnections_sim.columns)
+    
+    # Create a dictionary to hold all price transmission data
+    price_transmission_data = {}
     for l in (Interconnections_sim.columns.tolist() + flows.columns.tolist()):
         if l in PriceTransmission_raw:
-            PriceTransmission[l] = PriceTransmission_raw[l].reindex(PriceTransmission.index)
+            price_transmission_data[l] = PriceTransmission_raw[l].reindex(Interconnections_sim.index)
         else:
-            PriceTransmission[l] = config['default']['PriceTransmission']
+            price_transmission_data[l] = pd.Series(config['default']['PriceTransmission'], index=Interconnections_sim.index)
             if config['default']['PriceTransmission'] > 0:
                 logging.warning('No detailed values were found the transmission prices of line ' + l +
                                 '. Using default value ' + str(config['default']['PriceTransmission']))
+    
+    # Create DataFrame all at once to avoid fragmentation
+    PriceTransmission = pd.DataFrame(price_transmission_data, index=Interconnections_sim.index)
+    
     # Merge the symetrical lines between two zones
     [Interconnections_sim, Interconnections_RoW, PriceTransmission] = merge_lines(Interconnections_sim, Interconnections_RoW, PriceTransmission_raw)
 
