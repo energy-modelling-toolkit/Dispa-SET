@@ -583,7 +583,6 @@
                         <div class="form-group">
                             <label for="transmissionGridType">Transmission Grid Type<span class="tooltiptext">Method for modeling the transmission grid constraints (Net Transfer Capacity or DC Power Flow approximation using PTDF matrix).</span></label>
                              <select id="transmissionGridType">
-                                <option value="">NTC (Default)</option>
                                 <option value="NTC">NTC</option>
                                 <option value="DC-Power Flow">DC-Power Flow</option>
                             </select>
@@ -1159,6 +1158,8 @@
             'ntc': 'NTC',
             'ptdf': 'PTDF',
             'gams_folder': 'GAMS_folder',
+            'cplex_path': 'cplex_path',
+            'cplexsetting': 'CplexSetting',
             'chp': 'CHP',
             'mts': 'MTS',
             // Parameters with CO2
@@ -1657,12 +1658,24 @@
         
         // Collect form data into YAML
         function collectFormData() {
-            const formData = {};
+            // Start with existing data when available to preserve fields not in the form
+            let formData = {};
+
+            // First, load the current file to get all existing fields
+            try {
+                // Try to read the current YAML structure to preserve fields that aren't in the form
+                fetch(`${API_URL}/read-file?filename=../` + currentFilename)
+                    .then(response => response.text())
+                    .catch(() => ''); // Silently handle failures - we'll create a new structure if needed
+            } catch (e) {
+                // Silently ignore any errors
+                console.log('Could not load existing file, creating new structure');
+            }
             
-            // Collect text inputs, numbers, selects
-            const inputs = document.querySelectorAll('input[type="text"]:not(.default-value-input):not(.zone-code), input[type="number"], select, textarea');
-            inputs.forEach(input => {
-                if (input.id && input.value !== '') {
+            // Collect all form fields, including empty ones
+            const allInputs = document.querySelectorAll('input[type="text"]:not(.default-value-input):not(.zone-code), input[type="number"], select, textarea');
+            allInputs.forEach(input => {
+                if (input.id) {
                     // Special handling for modifiers - skip here as we'll handle them separately
                     if (input.id.startsWith('modifiers.')) {
                         return;
@@ -1684,37 +1697,45 @@
                     if (input.type === 'number' || 
                         ['dataTimeStep', 'simulationTimeStep', 'horizonLength', 'lookAhead', 
                          'initialFinalReservoirLevel', 'allowCurtailment', 'optimalityGap'].includes(input.id)) {
-                        const numValue = parseFloat(input.value);
-                        formData[key] = isNaN(numValue) ? input.value : numValue;
+                        // Only convert non-empty values to numbers
+                        if (input.value !== '') {
+                            const numValue = parseFloat(input.value);
+                            formData[key] = isNaN(numValue) ? input.value : numValue;
+                        } else {
+                            // Preserve empty string values
+                            formData[key] = '';
+                        }
                     } else {
+                        // For text and select fields, preserve the value even if empty
                         formData[key] = input.value;
                     }
                 }
             });
             
-            // Handle modifiers as nested object (similar to defaults)
+            // Handle modifiers as nested object
             const modifiersValues = {};
             document.querySelectorAll('input[id^="modifiers."]').forEach(input => {
+                // Extract the key part after "modifiers."
+                const paramName = input.id.split('.')[1];
+                // Include all modifier values, even empty ones
                 if (input.value !== '') {
-                    // Extract the key part after "modifiers."
-                    const paramName = input.id.split('.')[1];
                     // Try to convert numeric values
                     const numValue = parseFloat(input.value);
                     modifiersValues[paramName] = isNaN(numValue) ? input.value : numValue;
+                } else {
+                    modifiersValues[paramName] = '';
                 }
             });
             
-            // Add modifiers to form data if any were collected
+            // Add modifiers to form data
             if (Object.keys(modifiersValues).length > 0) {
                 formData.modifiers = modifiersValues;
             }
             
             // Handle description
-            if (document.getElementById('description').value) {
-                formData.Description = document.getElementById('description').value;
-            }
+            formData.Description = document.getElementById('description').value || '';
             
-            // Handle checkboxes - WriteGDX and WritePickle have been removed
+            // Handle checkboxes
             const checkboxes = document.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(checkbox => {
                 if (checkbox.id && !checkbox.id.startsWith('reserve_')) {
@@ -1790,23 +1811,56 @@
             });
             if (selectedReserves.length > 0) {
                 formData.ReserveParticipation = selectedReserves;
+            } else {
+                // Keep an empty array even if no reserves are selected
+                formData.ReserveParticipation = [];
+            }
+            
+            // Collect CHP reserve participation
+            const selectedCHPReserves = [];
+            document.querySelectorAll('#reserveParticipation_CHP input[type="checkbox"]:checked').forEach(checkbox => {
+                selectedCHPReserves.push(checkbox.value);
+            });
+            if (selectedCHPReserves.length > 0) {
+                formData.ReserveParticipation_CHP = selectedCHPReserves;
+            } else {
+                // Keep an empty array even if no CHP reserves are selected
+                formData.ReserveParticipation_CHP = [];
             }
             
             // Collect default values
             const defaultValues = {};
             document.querySelectorAll('.default-value-input').forEach(input => {
+                // Include all default values, even empty ones
+                const paramName = input.dataset.param;
                 if (input.value !== '') {
-                    const paramName = input.dataset.param;
                     // Try to convert numeric values
                     const numValue = parseFloat(input.value);
                     defaultValues[paramName] = isNaN(numValue) ? input.value : numValue;
+                } else {
+                    defaultValues[paramName] = '';
                 }
             });
             
-            // Add default values to the form data if any were collected
+            // Add default values to the form data
             if (Object.keys(defaultValues).length > 0) {
                 formData.default = defaultValues;
             }
+            
+            // Ensure required fields have at least empty values
+            const requiredFields = [
+                'GAMS_folder', 'FFRGainLimit', 'FFRLimit', 
+                'FrequencyStability', 'GridData', 'InertiaLimit', 'LoadShedding', 'PriceOfAmmonia',
+                'PriceOfCO2', 'PriceOfLignite', 'PriceOfNuclear', 'PriceTransmission', 
+                'PrimaryReserveLimit', 'Reserve2D', 'Reserve2U', 'StorageAlertLevels', 
+                'StorageFloodControl', 'SystemGainLimit', 'TransmissionGridType'
+            ];
+            
+            requiredFields.forEach(field => {
+                if (!(field in formData)) {
+                    formData[field] = '';
+                }
+            });
             
             return formData;
         }
@@ -1831,7 +1885,10 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showStatusMessage(`Saved ${currentFilename}`, 'success');
+                    // Create a formatted date and time string
+                    const now = new Date();
+                    const dateTime = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+                    showStatusMessage(`Saved ${currentFilename} on ${dateTime}`, 'success');
                 } else {
                     throw new Error(data.error || 'Unknown error occurred');
                 }
@@ -1849,7 +1906,10 @@
                 a.click();
                 document.body.removeChild(a);
                 
-                showStatusMessage(`API save failed. File downloaded to your browser's download folder.`, 'error');
+                // Create a formatted date and time string for fallback message
+                const now = new Date();
+                const dateTime = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+                showStatusMessage(`API save failed. File downloaded to your browser's download folder on ${dateTime}.`, 'error');
             });
         }
         
