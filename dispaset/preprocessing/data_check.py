@@ -422,6 +422,7 @@ def check_units(config, plants):
     else:
         logging.info('The columns "Nunits" is not present in the power plant database. '
                      'A value of one will be assumed by default')
+        plants['Nunits'] = 1
 
     check_keys(plants, keys, 'all')
     check_NonNaNKeys(plants, NonNaNKeys)
