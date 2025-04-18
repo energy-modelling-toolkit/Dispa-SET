@@ -834,3 +834,61 @@ References
 .. [2] Quoilin, S., Nijs, W., Hidalgo, I., & Thiel, C. (2015). Evaluation of simplified flexibility evaluation tools using a unit commitment model. IEEE Digital Library. 
 .. [3] Quoilin, S., Gonzalez Vazquez, I., Zucker, A., & Thiel, C. (2014). Available technical flexibility for balancing variable renewable energy sources: case study in Belgium. Proceedings of the 9th Conference on Sustainable Development of Energy, Water and Environment Systems. 
 
+
+In Dispa-SET, the network can be modeled using two different approaches:
+
+Network Modeling: NTC and DC-Power Flow
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Dispa-SET offers two approaches to model power transmission between zones:
+
+1. **Net Transfer Capacity (NTC)** approach: A simple model where the flow of power between nodes is limited by the transmission line capacities without considering the physical characteristics of the lines.
+
+2. **DC-Power Flow** approach: A more detailed physical model using Power Transfer Distribution Factors (PTDF) matrices.
+
+When the DC-Power Flow approach is selected, the flow constraints are modified to account for the physical characteristics of the network. The PTDF matrix calculation follows these main steps:
+
+**1. Electrical Parameter Matrices**
+
+The primitive susceptance matrix :math:`\mathbf{B_p}` is constructed as a diagonal matrix using the reactance values of each line:
+
+.. math::
+    \mathbf{B_p} = \text{diag}\left(\frac{1}{j \cdot \text{feeder['X']}}\right)
+
+**2. Node-Branch Incidence Matrix**
+
+The node-branch incidence matrix :math:`\mathbf{A}` represents the connections between nodes and branches:
+
+.. math::
+    A_{m,\text{line}} = 
+    \begin{cases}
+        1 & \text{if node $m$ is the sending end of line} \\
+        -1 & \text{if node $m$ is the receiving end of line} \\
+        0 & \text{otherwise}
+    \end{cases}
+
+**3. Bus Admittance Matrix**
+
+The bus admittance matrix is calculated as:
+
+.. math::
+    \mathbf{B_{bus}} = \mathbf{A} \cdot \mathbf{B_p} \cdot \mathbf{A}^T
+
+**4. Slack Bus Handling**
+
+A slack bus is automatically selected (usually the node with the most connections) and the bus admittance matrix is modified accordingly.
+
+**5. PTDF Matrix Calculation**
+
+The branch-to-node PTDF matrix is calculated as:
+
+.. math::
+    \mathbf{PTDF} = |\mathbf{B_d}| \cdot \mathbf{A}^T \cdot |\mathbf{B_{bus}}^{-1}|
+
+where :math:`\mathbf{B_d} = |\mathbf{B_p}|` is the absolute value of the primitive susceptance matrix.
+
+The resulting PTDF matrix represents how power injections at each node affect flows on each transmission line. When using the DC-Power Flow model, the power flow limits are applied based on these calculated physical flows instead of the simple NTC-based approach.
+
+^^^^^^^^^^^^^^^^^^^^^^^^^
+Linear Program (LP) optimization
+
