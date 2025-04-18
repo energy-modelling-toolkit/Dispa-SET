@@ -5,6 +5,8 @@ Releases
 
 Major stable releases:
 
+*  Dispa-SET v3.0
+
 *  Dispa-SET v2.5
 
 * `Dispa-SET v2.4`_
@@ -19,6 +21,59 @@ Major stable releases:
 
 Changelog
 ---------
+
+Version 3.0
+^^^^^^^^^^^
+**New**
+
+* Boundary Sectors (renamed to Sector X)
+    - Full integration of multi-sector coupling through boundary sectors
+    - Flexible demand for boundary sectors
+    - Network Transfer Capacity (NTC) between boundary sectors
+    - Storage integrated with boundary sectors
+    - Sector X water management with flood control
+    - Alert level and spillage for boundary sectors
+    - Proper support for CHP and power-to-heat technologies
+
+* DC Power Flow
+    - Implemented DC power flow with PTDF matrix
+    - Backward compatibility with NTC model
+    - Power flow limits with maximum and minimum bidirectional NTC
+
+* Inertia and PFR constraints
+    - Added version 1.0, 1.1, and 1.2 of inertia constraints
+    - Primary Frequency Response (PFR) constraints
+
+* New Units and Technologies
+    - Added electrolyser model
+    - Added x2p (X-to-Power) units
+    - Added boundary sector unit to the base case
+    - Improved cycling storage conditions for medium-term storage
+    - Fuel prices can now be defined per unit
+
+* Model Engine
+    - Basic structure for a Linopy implementation started
+
+* Post-Processing
+    - Added dispatch plot for boundary sectors
+    - Added hide_storage feature in the plot_zone function
+
+**Improvements**
+
+* Code Quality
+    - Upgraded compatibility with newer versions of libraries
+    - Fixed dependencies with the new GAMS API
+    - Added CI/CD with GitHub Actions
+    - Improved error handling
+
+* Fixes and Enhancements
+    - Better handling of demand balancing to prevent charging reservoirs with slack
+    - Improved representation of heating technologies
+    - Fixed various issues with boundary sector formulation
+    - Updated startup and shutdown costs implementation to display properly
+    - Improved water-energy nexus representation
+    - Enhanced zone configuration
+    - Optimized plot functions for better performance and visualization
 
 Version 2.5
 ^^^^^^^^^^^
