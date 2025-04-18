@@ -286,8 +286,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     check_p2bs(config, plants_p2bs)
 
     # Define all Boundary Sector units:
-    plants_all_bs = pd.concat([plants_p2bs, plants_bs])
-    plants_all_bs = pd.concat([plants_all_bs, plants_chp])
+    #plants_all_bs = pd.concat([plants_p2bs, plants_bs])
+    plants_all_bs = pd.concat([plants_bs, plants_chp])
 
     Outages = UnitBasedTable(plants, 'Outages', config, fallbacks=['Unit', 'Technology'])
     AF = UnitBasedTable(plants, 'RenewablesAF', config, fallbacks=['Unit', 'Technology'], default=1,
