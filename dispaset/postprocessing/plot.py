@@ -1270,7 +1270,7 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
                   dispatch_limits=None, storage_limits=None):
     """
     Function that plots the dispatch data for boundary sectors, including storage levels, power exchange, and flows between sectors.
-
+                   
     :param inputs:          DispaSET inputs
     :param results:         DispaSET results
     :param z:              Zone to be considered (e.g. 'Z1_h2')
@@ -1288,16 +1288,20 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
     import pandas as pd
     import numpy as np
     from matplotlib import cm
+    import logging
+
+    # Initialize x_not_served to None
+    x_not_served = None
 
     # Define a color map for technologies and flows
     if colors is None:
         colors = commons['colors'].copy()
-        
+
         # Ensure consistent colors for storage elements - all should use WAT color
         wat_color = colors.get('WAT', '#9467bd')
         colors['Storage_Charging'] = wat_color
         colors['Storage_Discharging'] = wat_color
-        
+
         # Add color for XNotServed (similar to ShedLoad in plot_dispatch)
         colors['XNotServed'] = '#ff7f0e'  # Orange color for XNotServed
     else:
@@ -1305,7 +1309,7 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
         wat_color = colors.get('WAT', '#9467bd')
         colors['Storage_Charging'] = wat_color
         colors['Storage_Discharging'] = wat_color
-        
+
         # Ensure XNotServed color is defined
         if 'XNotServed' not in colors:
             colors['XNotServed'] = '#ff7f0e'  # Orange color for XNotServed
@@ -1459,12 +1463,39 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
     if rng is None:
         if not plotdata.empty:
             pdrng = plotdata.index[:min(len(plotdata), 7 * 24)]
+        elif storage_level is not None and not storage_level.empty:
+             pdrng = storage_level.index[:min(len(storage_level), 7 * 24)]
+        elif demand is not None and not demand.empty:
+             pdrng = demand.index[:min(len(demand), 7 * 24)]
         else:
             pdrng = pd.date_range(start='2016-01-01', end='2016-12-31', freq='h')[:7*24]
-            logging.warning('Using default date range for plot')
+            logging.warning('Using default date range for plot as no data found')
     else:
         pdrng = rng
-    
+        # Ensure pdrng is within the actual data index to avoid KeyErrors
+        available_index = pd.DatetimeIndex([])
+        if not plotdata.empty:
+            available_index = available_index.union(plotdata.index)
+        if storage_level is not None and not storage_level.empty:
+            available_index = available_index.union(storage_level.index)
+        if demand is not None and not demand.empty:
+            available_index = available_index.union(demand.index)
+        
+        if not available_index.empty:
+             pdrng = available_index.intersection(pdrng)
+             if pdrng.empty:
+                logging.warning(f"Requested range has no overlap with data index for sector {z}. Cannot plot.")
+                # Return an empty figure or handle appropriately
+                fig, ax = plt.subplots(figsize=figsize)
+                ax.text(0.5, 0.5, 'No data in selected range', horizontalalignment='center', verticalalignment='center')
+                return fig # Return empty figure
+        else:
+             logging.warning(f"No data available to plot for sector {z}.")
+             # Return an empty figure or handle appropriately
+             fig, ax = plt.subplots(figsize=figsize)
+             ax.text(0.5, 0.5, 'No data available', horizontalalignment='center', verticalalignment='center')
+             return fig # Return empty figure
+
     # Create the plot
     if storage_level is not None:
         n = 2
