@@ -969,10 +969,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # parameters[var]['val'] = Plants_sto[var].values
         parameters[var]['val'] = Plants_merged[var].values
 
-    # # The storage discharge efficiency is actually given by the unit efficiency:
-    # parameters['StorageDischargeEfficiency']['val'] = np.concatenate((Plants_sto['Efficiency'].values,
-    #                                                                   Plants_thms['Efficiency'].values,
-    #                                                                   Plants_h2['Efficiency'].values), axis=None)
+    # The storage discharge efficiency is actually given by the unit efficiency:
+    parameters['StorageDischargeEfficiency']['val'] = Plants_sto['Efficiency'].values
 
     # List of parameters whose value is known, and provided in the dataframe Plants_chp
     for var in ['CHPPowerToHeat', 'CHPPowerLossFactor', 'CHPMaxHeat']:
