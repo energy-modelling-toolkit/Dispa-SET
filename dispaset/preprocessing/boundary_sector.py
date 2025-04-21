@@ -12,7 +12,6 @@ import pandas as pd
 
 from ..common import commons
 from .data_handler import load_time_series
-from .interconnections import interconnections
 
 
 def process_boundary_sector_data(config, zones_bs=None):
