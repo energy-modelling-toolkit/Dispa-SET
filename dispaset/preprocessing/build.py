@@ -18,6 +18,7 @@ from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merg
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, \
     BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep, PTDF_matrix, merge_lines
+from .boundary_sector import zone_to_bs_mapping
 from .. import __version__
 from ..common import commons
 from ..misc.gdx_handler import write_variables
@@ -1216,27 +1217,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             MaxCostVariable.loc[zone, 'MaxCost'] = max_cost if not np.isnan(max_cost) else 0
         else:
             MaxCostVariable.loc[zone, 'MaxCost'] = 0
-
-    def zone_to_bs_mapping(plants_all_bs):
-        """
-        Creates a mapping function from boundary sector indices to their corresponding zones
-
-        :param plants_all_bs:  DataFrame containing all boundary sector plants with their zone information
-        :returns:              Function that maps boundary sector index to its zone
-        """
-        # Create a mapping dictionary from boundary sector index to zone
-        bs_to_zone = {}
-        for idx in plants_all_bs.index:
-            # Get all columns that start with 'Sector'
-            sector_cols = [col for col in plants_all_bs.columns if col.startswith('Sector')]
-            for col in sector_cols:
-                if not pd.isna(plants_all_bs.loc[idx, col]):
-                    bs_to_zone[plants_all_bs.loc[idx, col]] = plants_all_bs.loc[idx, 'Zone']
-
-        def mapping_function(bs_idx):
-            return bs_to_zone.get(bs_idx, None)
-
-        return mapping_function
 
     # Storage alert level:
     for unit in range(Nunits):
