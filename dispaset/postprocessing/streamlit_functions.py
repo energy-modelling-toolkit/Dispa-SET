@@ -400,6 +400,90 @@ def build_unit_analysis_tab(inputs, results, indicators, analysis_results):
     else: st.info("Unit Specific Data not in summary results.")
 
 
+# --- New Tab: Data Explorer ---
+def build_data_explorer_tab(inputs, results):
+    st.header("Raw Data Explorer")
+    st.markdown("Select a data source and then choose a specific table/item to view.")
+
+    data_source = st.radio(
+        "Select Data Source",
+        ("Input Parameters (param_df)", "Output Results"),
+        key="data_source_select"
+    )
+
+    source_dict = None
+    if data_source == "Input Parameters (param_df)":
+        if inputs and 'param_df' in inputs:
+            source_dict = inputs['param_df']
+        else:
+            st.warning("Input parameters (`inputs['param_df']`) not found.")
+            return
+    elif data_source == "Output Results":
+        if results:
+            source_dict = results
+        else:
+            st.warning("Results data not found.")
+            return
+
+    if source_dict:
+        # Get keys and sort them
+        available_keys = sorted(list(source_dict.keys()))
+        if not available_keys:
+            st.info(f"No data items found in {data_source}.")
+            return
+
+        selected_key = st.selectbox(
+            f"Select Item from {data_source}",
+            options=available_keys,
+            index=None, # Default to no selection
+            placeholder="Choose an item...",
+            key="data_item_select"
+        )
+
+        if selected_key:
+            selected_item = source_dict.get(selected_key)
+
+            st.subheader(f"Data for: `{selected_key}`")
+
+            if isinstance(selected_item, pd.DataFrame):
+                st.write(f"Shape: {selected_item.shape}")
+                st.dataframe(selected_item)
+                # Add download button for DataFrames
+                csv_data = convert_df_to_csv(selected_item) # Use helper
+                st.download_button(
+                    label=f"Download {selected_key} as CSV",
+                    data=csv_data,
+                    file_name=f'{selected_key}.csv',
+                    mime='text/csv',
+                    key=f"dl_{selected_key}" # Dynamic key
+                )
+            elif isinstance(selected_item, pd.Series):
+                st.write(f"Shape: {selected_item.shape}")
+                st.dataframe(selected_item)
+                # Add download button for Series
+                csv_data = convert_df_to_csv(selected_item) # Use helper
+                st.download_button(
+                    label=f"Download {selected_key} as CSV",
+                    data=csv_data,
+                    file_name=f'{selected_key}.csv',
+                    mime='text/csv',
+                    key=f"dl_{selected_key}" # Dynamic key
+                )
+            elif isinstance(selected_item, dict):
+                 st.write("Type: Dictionary")
+                 st.json(selected_item, expanded=False) # Show JSON collapsed by default
+            elif isinstance(selected_item, list):
+                 st.write("Type: List")
+                 st.write(selected_item)
+            elif selected_item is not None:
+                 st.write(f"Type: {type(selected_item).__name__}")
+                 st.write(selected_item)
+            else:
+                 st.write("Item is None or empty.")
+        else:
+            st.info("Select an item from the dropdown above to view its contents.")
+
+
 # --- Main UI Builder Function ---
 @st.cache_data # Cache results analysis if inputs/results don't change
 def run_and_get_analysis(_inputs, _results):
@@ -416,8 +500,9 @@ def build_streamlit_app(inputs, results, indicators):
     analysis_results = run_and_get_analysis(inputs, results) # Use cached wrapper
 
     # Define Tabs
-    tab_overview, tab_zone, tab_network, tab_unit = st.tabs([
-        "Overview", "Zone Analysis", "Network Analysis", "Unit Analysis"
+    tab_overview, tab_zone, tab_network, tab_unit, tab_explorer = st.tabs([
+        "Overview", "Zone Analysis", "Network Analysis", "Unit Analysis",
+        "Data Explorer"
     ])
 
     # Build Tabs
@@ -435,4 +520,7 @@ def build_streamlit_app(inputs, results, indicators):
         build_network_tab(inputs, results)
 
     with tab_unit:
-        build_unit_analysis_tab(inputs, results, indicators, analysis_results) 
+        build_unit_analysis_tab(inputs, results, indicators, analysis_results)
+
+    with tab_explorer:
+        build_data_explorer_tab(inputs, results) 
