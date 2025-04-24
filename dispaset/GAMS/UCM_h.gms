@@ -43,8 +43,8 @@ $set InputFileName Inputs.gdx
 
 * Definition of the equations that will be present in LP or MIP
 * (1 for LP 0 for MIP TC)
-$setglobal LPFormulation 1
-$setglobal MTS 1
+$setglobal LPFormulation 0
+$setglobal MTS 0
 
 * Flag to transmission grid model option
 * (1 for DC-PowerFlow 0 for NTC)
@@ -63,7 +63,7 @@ $setglobal ActivateAdvancedReserves 0
 *New
 * Definition of the equations that will be present in Frequency Constrainted UC/OD
 * (1 for FC-UC/OD 0 for UC/OD)
-$setglobal FC 0
+$setglobal FC 1
 
 *===============================================================================
 *Definition of   sets and parameters
@@ -275,11 +275,12 @@ scalar TimeStep;
 
 *MADRID
 
-scalar SystemFrequency, RoCoFMax, DeltaFrequencyMax, MaxPrimaryAllowed;
+scalar SystemFrequency, RoCoFMax, DeltaFrequencyMax, MaxPrimaryAllowed, ConversionFactor;
 SystemFrequency = 50;
 RoCoFMax = 0.5;
 DeltaFrequencyMax = 0.8;
 MaxPrimaryAllowed = 0.15;
+ConversionFactor = 1000;
 
 *Threshold values for p2h partecipation to reserve market as spinning/non-spinning reserves (TO BE IMPLEMENTED IN CONFIGFILE)
 srp = 1;
@@ -1343,10 +1344,12 @@ EQ_FFR_Available(i)..
 *         sum(cu,(PowerCapacity(cu)*LoadMaximum(cu,i)*Committed(cu,i)*Reserve(cu))-Power(cu,i))
 *;
 
+*In the case of FFR the units that participate in the service dont have to be in the state Committed = 1 to be able to provide the service FFR?
+*therefore the *Committed(ba,i) was deleted from the equation
 EQ_FFR_Capability(ba,i)..
          FFR_Available(ba,i)
          =L=
-         (PowerCapacity(ba)*LoadMaximum(ba,i)*Committed(ba,i)*Reserve(ba))-Power(ba,i)
+         (PowerCapacity(ba)*LoadMaximum(ba,i)*Reserve(ba))-Power(ba,i)
 ;
 
 EQ_FFR_Boundary(ba,i)..
@@ -1371,7 +1374,7 @@ $ifthen %MTS% == 0
 EQ_SysInertia(i)..
          SysInertia(i)
          =E=
-         sum(cu,PowerCapacity(cu)*Committed(cu,i)*InertiaConstant(cu))/1000
+         sum(cu,PowerCapacity(cu)*Committed(cu,i)*InertiaConstant(cu))/ConversionFactor
 ;
 
 EQ_Inertia_limit(u,i)..

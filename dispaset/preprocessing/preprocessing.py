@@ -428,9 +428,9 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         # replace all 1.000000e+300 values by nan since they correspond to undefined in GAMS:
         if 'profiles' in locals():
             profiles[profiles >= 1E300] = np.nan
-        for storagereservoir in SimData['sets']['au']:
-            if SimData['parameters']['StorageHours']['val'][SimData['sets']['au'].index(storagereservoir)] <= 8:
-               profiles[storagereservoir.split(' - ')[1].strip()] = 0
+        # for storagereservoir in SimData['sets']['au']:
+        #     if SimData['parameters']['StorageHours']['val'][SimData['sets']['au'].index(storagereservoir)] <= 8:
+        #        profiles[storagereservoir.split(' - ')[1].strip()] = 0
         if config['H2FlexibleDemand'] != '':
             PtLDemand[PtLDemand >= 1E300] = np.nan
         
@@ -451,8 +451,10 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     if mts_plot:
         if 'profiles' in locals():
             profiles.plot()
-        if 'profilesSectorX' in locals():
-            profilesSectorX.plot()
+        
+        if config['SectorCoupling'] == 'On':
+            if 'profilesSectorX' in locals():
+                profilesSectorX.plot()
 
     # Copy results from pre-processing
     sim_folder = config['SimulationDirectory']
