@@ -24,30 +24,44 @@ def get_script_directory():
         # Fallback for interactive interpreters or environments where __file__ is not defined
         return os.path.abspath(os.path.dirname(sys.argv[0]))
 
-def start_server(target_dir, port):
-    """Starts the HTTP server in a separate thread."""
+def start_server(target_dir, port, max_attempts=20):
+    """Starts the HTTP server in a separate thread, trying consecutive ports if needed."""
     os.chdir(target_dir)
     print(f"Changed working directory to: {os.getcwd()}")
     Handler = http.server.SimpleHTTPRequestHandler
-    
-    # Try to create the server, handle potential "Address already in use" error
-    try:
-        httpd = socketserver.TCPServer(("", port), Handler)
-    except OSError as e:
-        if "Address already in use" in str(e):
-            print(f"\nError: Port {port} is already in use.")
-            print("Please close the other program using the port or choose a different port.")
-        else:
-            print(f"\nError starting server: {e}")
-        return None  # Indicate failure
+    httpd = None
+    server_thread = None
+    used_port = None
 
-    print(f"Serving files from '{target_dir}' on http://localhost:{port}")
-    print(f"Target URL: http://localhost:{port}/{HTML_FILE}")
-    
+    for attempt in range(max_attempts):
+        current_port = port + attempt
+        try:
+            httpd = socketserver.TCPServer(("", current_port), Handler)
+            used_port = current_port
+            print(f"Successfully bound to port {used_port}.")
+            break  # Exit loop if successful
+        except OSError as e:
+            if "Address already in use" in str(e):
+                print(f"Info: Port {current_port} is busy, trying next...")
+                if attempt == max_attempts - 1: # Last attempt failed
+                    print(f"\nError: Could not find an open port after {max_attempts} attempts starting from {port}.")
+                    return None, None, None
+            else:
+                print(f"\nError starting server on port {current_port}: {e}")
+                return None, None, None # Other OS error
+
+    if httpd is None or used_port is None:
+        # This case should ideally be caught by the last attempt check, but added for safety
+        print(f"\nError: Failed to bind to any port between {port} and {port + max_attempts - 1}.")
+        return None, None, None
+
+    print(f"Serving files from '{target_dir}' on http://localhost:{used_port}")
+    print(f"Target URL: http://localhost:{used_port}/{HTML_FILE}")
+
     # Start the server in a separate thread
     server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     server_thread.start()
-    return httpd, server_thread
+    return httpd, server_thread, used_port
 
 def start_api_server(script_dir, config_dir):
     """Import and start the API server from api_server.py"""
@@ -66,22 +80,22 @@ def start_api_server(script_dir, config_dir):
             spec.loader.exec_module(api_module)
         else:
             print(f"API server module not found at {api_server_path}")
-            return None, None
+            return None, None, None
         
         # Change to the config directory where the API server will serve files from
         os.chdir(os.path.join(script_dir, config_dir))
         
-        # Start the API server
-        api_server, api_thread = api_module.start_api_server(API_PORT)
+        # Start the API server (it now returns used_port)
+        api_server, api_thread, used_api_port = api_module.start_api_server(API_PORT) # Capture used_api_port
         
         # Restore original directory
         os.chdir(original_dir)
         
-        return api_server, api_thread
+        return api_server, api_thread, used_api_port # Return used_api_port
     
     except Exception as e:
         print(f"Error starting API server: {e}")
-        return None, None
+        return None, None, None # Return None for port as well
 
 
 if __name__ == "__main__":
@@ -95,20 +109,22 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Start the API server first
-    api_server, api_thread = start_api_server(script_dir, CONFIG_DIR)
+    api_server, api_thread, used_api_port = start_api_server(script_dir, CONFIG_DIR) # Capture used_api_port
     if not api_server:
         print("Warning: API server failed to start. File saving functionality will not work.")
     else:
-        print(f"API server started on http://localhost:{API_PORT}")
+        # Print the actual port the API server is using
+        print(f"API server started on http://localhost:{used_api_port}") # Use used_api_port
 
     # Start the static file server
-    server_instance, server_thread = start_server(config_path, PORT)
+    server_instance, server_thread, used_port = start_server(config_path, PORT, max_attempts=20)
     if not server_instance:
-        print("Server failed to start. Exiting.")
+        print("File server failed to start. Exiting.")
         sys.exit(1)
 
-    # Construct the URL to open
-    target_url = f"http://localhost:{PORT}/{HTML_FILE}"
+    # Construct the URL to open using the actual file server port
+    # AND pass the actual API server port as a query parameter
+    target_url = f"http://localhost:{used_port}/{HTML_FILE}?apiPort={used_api_port}" # Pass used_api_port
 
     # Use threading to attempt opening the browser shortly after starting the server
     browser_opened = False

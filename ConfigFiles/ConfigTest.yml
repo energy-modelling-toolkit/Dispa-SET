@@ -46,10 +46,8 @@ StorageAlertLevels: ''
 StorageFloodControl: ''
 WaterValue: ''
 CostLoadShedding: ''
-CostCurtailment: ''
+CostCurtailment: 20
 CostOfSpillage: tests/dummy_data/boundary_sector/BS_Spillage_cost.csv
-CostNotServed: ''
-CostXNotServed: tests/dummy_data/boundary_sector/BS_NotServed_cost.csv
 ValueOfLostLoad: ''
 PriceTransmission: ''
 PriceOfGas: Database/FuelPrices/Gas/2015.csv
@@ -129,8 +127,6 @@ default:
   CostLoadShedding: 1500
   CostCurtailment: 20
   CostOfSpillage: 401
-  CostNotServed: ''
-  CostXNotServed: 0
   ValueOfLostLoad: 100000
   PriceTransmission: 0
   PriceOfGas: 44

@@ -806,25 +806,15 @@
                         </div>
                     </div>
                     <div class="col">
-                         <div class="form-group">
-                            <label for="costNotServed">Cost Not Served<span class="tooltiptext">Cost of not served energy (specific use case, often left empty). Can be a file path or a single value if default is used.</span></label>
-                            <input type="text" id="costNotServed" placeholder="e.g., CostNotServed.csv">
-                            <div class="default-value" data-default="">
-                                <span>Default:</span>
-                                <input type="text" class="default-value-input" value="" data-param="CostNotServed">
-                            </div>
-                        </div>
+                         <!-- Removed Cost Not Served form group -->
                     </div>
                  </div>
                  <div class="row">
                     <div class="col">
                          <div class="form-group">
-                            <label for="costXNotServed">Boundary Sector Cost Not Served<span class="tooltiptext">Cost of Unserved Energy in each boundary Sector. Can be a file path or a single value if default is used.</span></label>
+                            <label for="costXNotServed">Boundary Sector Cost Not Served<span class="tooltiptext">Cost of Unserved Energy in each boundary Sector (EUR/unit specific to the sector). Can be a file path (time series per sector). If no file is provided, the default value is taken from the Boundary Sector characteristics table.</span></label>
                             <input type="text" id="costXNotServed" placeholder="e.g., BSCostNotServed.csv">
-                            <div class="default-value" data-default="0">
-                                <span>Default:</span>
-                                <input type="text" class="default-value-input" value="0" data-param="CostXNotServed">
-                            </div>
+                            <!-- Removed default value display -->
                         </div>
                     </div>
                      <div class="col">
@@ -1310,7 +1300,6 @@
             'costloadshedding': 'CostLoadShedding',
             'costcurtailment': 'CostCurtailment',
             'costofspillage': 'CostOfSpillage',
-            'costnotserved': 'CostNotServed',
             'pricetransmission': 'PriceTransmission',
             // Fuel prices
             'priceofgas': 'PriceOfGas',
@@ -1340,8 +1329,24 @@
             'COMC', 'GTUR', 'ICEN', 'STUR'
         ];
 
+        // Get URL parameters
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        // Determine API URL - Use URL param if available, otherwise default
+        const apiPortParam = getQueryParam('apiPort');
         let currentFilename = "ConfigTest.yml";
-        const API_URL = "http://localhost:8084";
+        const DEFAULT_API_PORT = 8084; // Define the default port here
+        let API_URL = `http://localhost:${DEFAULT_API_PORT}`; // Use the defined default port
+        if (apiPortParam && !isNaN(parseInt(apiPortParam))) {
+            API_URL = `http://localhost:${apiPortParam}`;
+            console.log(`Using API port from URL parameter: ${apiPortParam}`);
+        } else {
+            console.log(`Using default API port: ${DEFAULT_API_PORT}`); // Use the defined default port
+        }
+
         const tabContentMap = new Map();
 
         // Initialize tab functionality
@@ -1936,6 +1941,11 @@
             document.querySelectorAll('.default-value-input').forEach(input => {
                 // Include all default values, even empty ones
                 const paramName = input.dataset.param;
+                // Skip CostXNotServed if it was previously handled here
+                if (paramName === 'CostXNotServed') {
+                    return; // Skip this parameter as it no longer has a dedicated default input
+                }
+
                 if (input.value !== '') {
                     // Try to convert numeric values
                     const numValue = parseFloat(input.value);
@@ -1961,7 +1971,10 @@
             
             requiredFields.forEach(field => {
                 if (!(field in formData)) {
-                    formData[field] = '';
+                    // Remove 'CostNotServed' if it was previously added here
+                    if (field !== 'CostNotServed') {
+                        formData[field] = '';
+                    }
                 }
             });
             
