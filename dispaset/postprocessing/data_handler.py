@@ -158,8 +158,8 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
         index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
 
     keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
-            'LostLoad_RampDown', 'LostLoad_2D', 'ShadowPrice', 'StorageShadowPrice',
-            'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U',
+            'LostLoad_RampDown', 'LostLoad_RampDown_Unit', 'LostLoad_2D', 'ShadowPrice', 'StorageShadowPrice',
+            'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U', 'ShadowPriceDemandModulation',
             'status']  # 'status'
     # TODO: Check backward compatibility
     keys_sparse = ['OutputPower', 'OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted',
@@ -169,7 +169,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'OutputStorageLevelViolation_H', 'OutputPowerMustRun',
                    'OutputReserve_2U', 'OutputReserve_2D', 'OutputReserve_3U', 'ShadowPrice_RampUp_TC',
                    'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown',
-                   'OutputEmissions', 'CapacityMargin',
+                   'OutputEmissions', 'CapacityMargin', 'Demand_Balance_DA',
                    'OutputXNotServed', 'OutputPowerX', 'OutputSectorXStorageLevel',
                    'OutputSectorXStorageInput', 'OutputSectorXStorageShadowPrice',
                    'SectorXShadowPrice', 'OutputXNotServed', 'OutputSectorXStorageLevelViolation_H',
@@ -184,7 +184,10 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'OutputHeatSlack', 'OutputOptimalityGap', 'OutputOptimizationCheck', 
                    'OutputOptimizationError', 'OutputPtLDemand', 'OutputStorageSlack', 
                    'OutputSystemCostD', 'SMML-SystemMinusesMaximalLoad', 'SMNL-SystemMinusesNominalLoad',
-                   'UnitHourly2URevenue', 'UnitHourlyProductionCost', 'UnitHourlyStartUpCost', 'UnitHourlyVariableCost']
+                   'UnitHourly2URevenue', 'UnitHourlyProductionCost', 'UnitHourlyStartUpCost', 'UnitHourlyVariableCost',
+                   'UnitHourly2DRevenue', 'UnitHourly3URevenue', 'UnitHourlyPowerRevenue', 
+                   'UnitHourlyProfit', 'UnitHourlyRampingCost', 'UnitHourlyRevenue',
+                   'OutputSysInertia','OutputFFR_Available','OutputFFRGain', 'OutputPrimaryReserve_Available', 'OuputSystemGain']
 
     # Setting the proper index to the result dataframes:
     for key in chain(keys, keys_sparse):
