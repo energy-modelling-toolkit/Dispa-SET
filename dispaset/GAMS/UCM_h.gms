@@ -60,9 +60,9 @@ $setglobal ActivateFlexibleDemand 1
 * Activate advanced reserve demand
 $setglobal ActivateAdvancedReserves 0
 
-*New
-* Definition of the equations that will be present in Frequency Constrainted UC/OD
-* (1 for FC-UC/OD 0 for UC/OD)
+*MN New
+*MN Definition of the equations that will be present in Frequency Constrainted UC/OD
+*MN (1 for FC-UC/OD 0 for UC/OD)
 $setglobal FC 1
 
 *===============================================================================
@@ -241,13 +241,13 @@ SectorXFloodControl(nx,h)                   [MWh]           Storage flood contro
 $If %TransmissionGrid% == 1 PTDF(l,n)       [p.u.]          Power Transfer Distribution Factor Matrix
 
 * New
-$If %MTS% == 0 InertiaConstant(au)          [s]             Inertia Constant
-$If %MTS% == 0 InertiaLimit(h)              [s\h]           Inertia Limit
-$If %MTS% == 0 Droop(au)                    [%]             Droop
-$If %MTS% == 0 SystemGainLimit(h)           [GW\Hz]         System Gain Limit
-$If %MTS% == 0 FFRGainLimit(h)              [GW\Hz]         FFR Gain Limit
-$If %MTS% == 0 PrimaryReserveLimit(h)       [MWh]           Primary Reserve
-$If %MTS% == 0 FFRLimit(h)                  [MWh]           Fast Frequency Reserve
+InertiaConstant(au)          [s]             Inertia Constant
+InertiaLimit(h)              [s\h]           Inertia Limit
+Droop(au)                    [%]             Droop
+SystemGainLimit(h)           [GW\Hz]         System Gain Limit
+FFRGainLimit(h)              [GW\Hz]         FFR Gain Limit
+PrimaryReserveLimit(h)       [MWh]           Primary Reserve
+FFRLimit(h)                  [MWh]           Fast Frequency Reserve
 
 ;
 
@@ -431,13 +431,13 @@ $If %RetrieveStatus% == 1 $LOAD CommittedCalc
 $If %TransmissionGrid% == 1 $LOAD PTDF
 
 * New
-$If %MTS% == 0 $LOAD InertiaConstant
-$If %MTS% == 0 $LOAD InertiaLimit
-$If %MTS% == 0 $LOAD Droop
-$If %MTS% == 0 $LOAD SystemGainLimit
-$If %MTS% == 0 $LOAD FFRGainLimit
-$If %MTS% == 0 $LOAD PrimaryReserveLimit
-$If %MTS% == 0 $LOAD FFRLimit
+$LOAD InertiaConstant
+$LOAD InertiaLimit
+$LOAD Droop
+$LOAD SystemGainLimit
+$LOAD FFRGainLimit
+$LOAD PrimaryReserveLimit
+$LOAD FFRLimit
 ;
 
 $If %Verbose% == 0 $goto skipdisplay
@@ -567,13 +567,13 @@ $If %RetrieveStatus% == 1 CommittedCalc,
 $If %TransmissionGrid% == 1 PTDF,
 
 *New
-$If %MTS% == 0 InertiaConstant,
-$If %MTS% == 0 InertiaLimit,
-$If %MTS% == 0 Droop,
-$If %MTS% == 0 SystemGainLimit,
-$If %MTS% == 0 FFRGainLimit,
-$If %MTS% == 0 PrimaryReserveLimit,
-$If %MTS% == 0 FFRLimit,
+InertiaConstant,
+InertiaLimit,
+Droop,
+SystemGainLimit,
+FFRGainLimit,
+PrimaryReserveLimit,
+FFRLimit,
 ;
 
 $label skipdisplay
@@ -661,13 +661,13 @@ $If %MTS% == 1 SectorXStorageInitial(nx)
 $If %MTS% == 1 SectorXStorageFinalMin(nx)
 
 *New
-$If %MTS% == 0 SysInertia(h)                       [s]         System Inertia
-$If %MTS% == 0 PrimaryReserve_Available(cu,h)         [MW]        Primary Reserve available in the system
-$If %MTS% == 0 SystemGain(h)                       [GW\Hz]     System Gain
-$If %MTS% == 0 FFR_Available(ba,h)         [MW]        Fast Frequency Reserve available in the system
-$If %MTS% == 0 FFRGain(h)                       [GW\Hz]     FFR Gain
+SysInertia(h)                       [s]         System Inertia
+PrimaryReserve_Available(cu,h)         [MW]        Primary Reserve available in the system
+SystemGain(h)                       [GW\Hz]     System Gain
+FFR_Available(ba,h)         [MW]        Fast Frequency Reserve available in the system
+FFRGain(h)                       [GW\Hz]     FFR Gain
 *MADRID
-$If %MTS% == 0 PowerLoss(h)                  [MW]        Primary Reserve available in the system
+PowerLoss(h)                  [MW]        Primary Reserve available in the system
 *$If %MTS% == 0 MaxInstantGenerator(h)                  [MW]        Primary Reserve available in the system
 *New
 TotalDemand_2U(h)                       [MW]    Total Spinning reserve up
@@ -845,24 +845,24 @@ $If %TransmissionGrid% == 1 EQ_DC_Power_Flow
 $If %TransmissionGrid% == 1 EQ_Total_Injected_Power
 
 *New
-$If %MTS% == 0 EQ_SysInertia
-$If %MTS% == 0 EQ_Inertia_limit
-$If %MTS% == 0 EQ_SystemGain
-$If %MTS% == 0 EQ_SystemGain_limit
-$If %MTS% == 0 EQ_PrimaryReserve_Available
-$If %MTS% == 0 EQ_PrimaryReserve_Capability
-$If %MTS% == 0 EQ_PrimaryReserve_Boundary
-$If %MTS% == 0 EQ_Demand_balance_PrimaryReserve
+EQ_SysInertia
+EQ_Inertia_limit
+EQ_SystemGain
+EQ_SystemGain_limit
+EQ_PrimaryReserve_Available
+EQ_PrimaryReserve_Capability
+EQ_PrimaryReserve_Boundary
+EQ_Demand_balance_PrimaryReserve
 
-$If %MTS% == 0 EQ_FFRGain
-$If %MTS% == 0 EQ_FFRGain_limit
-$If %MTS% == 0 EQ_FFR_Available
-$If %MTS% == 0 EQ_FFR_Capability
-$If %MTS% == 0 EQ_FFR_Boundary
-$If %MTS% == 0 EQ_Demand_balance_FFR
+EQ_FFRGain
+EQ_FFRGain_limit
+EQ_FFR_Available
+EQ_FFR_Capability
+EQ_FFR_Boundary
+EQ_Demand_balance_FFR
 
 *MADRID
-$If %MTS% == 0 EQ_PowerLoss
+EQ_PowerLoss
 *$If %MTS% == 0 EQ_MaxInstantGenerator
 
 *New
@@ -1265,19 +1265,21 @@ $endIf
 
 
 
-*New
-*MARCO PRIMARY RESERVE
-$ifthen %MTS% == 0
-EQ_SystemGain(i)..
+*MN *New
+*MN *MARCO PRIMARY RESERVE
+*$ifthen %MTS% == 0
+EQ_SystemGain(i)$(sum(cu,Droop(cu))>0)..
          SystemGain(i)
          =l=
-         0
-$If %FC% == 1 +sum(cu,(PowerCapacity(cu)*Committed(cu,i))/(Droop(cu)*SystemFrequency))
+*MN          0
+*MN $If %FC% == 1 +sum(cu,(PowerCapacity(cu)*Committed(cu,i))/(Droop(cu)*SystemFrequency))
+         sum(cu,(PowerCapacity(cu)*Committed(cu,i))/(Droop(cu)*SystemFrequency))
 ;
 
-EQ_SystemGain_limit(i)..
-         0
-$If %FC% == 1 +SystemGainLimit(i)
+EQ_SystemGain_limit(i)$((SystemGainLimit(i))<>0)..
+*MN          0
+*MN $If %FC% == 1 +SystemGainLimit(i)
+         SystemGainLimit(i)
          =l=
          SystemGain(i)
 ;
@@ -1313,7 +1315,7 @@ $If %FC% == 1 +PrimaryReserveLimit(i)
          =l=
          sum(cu,PrimaryReserve_Available(cu,i))
 ;
-$endIf
+*$endIf
 
 *New
 *MARCO FFR
@@ -1370,20 +1372,21 @@ $endIf
 
 * New
 *MARCO INERTIA RESERVES
-$ifthen %MTS% == 0
+*MN $ifthen %MTS% == 0
 EQ_SysInertia(i)..
          SysInertia(i)
          =E=
          sum(cu,PowerCapacity(cu)*Committed(cu,i)*InertiaConstant(cu))/ConversionFactor
 ;
 
-EQ_Inertia_limit(u,i)..
-         0
-$If %FC% == 1 +InertiaLimit(i)
+EQ_Inertia_limit(u,i)$(InertiaLimit(i)>0)..
+*MN          0
+*MN $If %FC% == 1 +InertiaLimit(i)
+         InertiaLimit(i)
          =l=
          SysInertia(i)
 ;
-$endIf
+*MN $endIf
 
 *Minimum power output is above the must-run output level for each unit in all periods
 EQ_Power_must_run(u,i)..
@@ -2326,13 +2329,13 @@ UnitHourlyProductionCost(au,h)
 UnitHourlyProfit(au,h)
 
 *New
-$If %MTS% == 0 OutputSysInertia(h)
-$If %MTS% == 0 OutputSystemGain(h)
-$If %MTS% == 0 OutputPrimaryReserve_Available(cu,h)
-$If %MTS% == 0 OutputFFRGain(h)
-$If %MTS% == 0 OutputFFR_Available(ba,h)
+$If %MTS%==0 OutputSysInertia(h)
+$If %MTS%==0 OutputSystemGain(h)
+$If %MTS%==0 OutputPrimaryReserve_Available(cu,h)
+$If %MTS%==0 OutputFFRGain(h)
+$If %MTS%==0 OutputFFR_Available(ba,h)
 *MADRID
-$If %MTS% == 0 OutputPowerLoss(h)
+$If %MTS%==0 OutputPowerLoss(h)
 *$If %MTS% == 0 OutputMaxInstantGenerator(h)
 
 OutputTotalDemand_2U(h)
