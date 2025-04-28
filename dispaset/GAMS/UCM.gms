@@ -236,11 +236,12 @@ scalar TimeStep;
 
 *MADRID
 
-scalar SystemFrequency, RoCoFMax, DeltaFrequencyMax, MaxPrimaryAllowed;
+scalar SystemFrequency, RoCoFMax, DeltaFrequencyMax, MaxPrimaryAllowed, ConversionFactor;
 SystemFrequency = 50;
 RoCoFMax = 0.5;
 DeltaFrequencyMax = 0.8;
 MaxPrimaryAllowed = 0.15;
+ConversionFactor = 1000;
 
 *Threshold values for p2h partecipation to reserve market as spinning/non-spinning reserves (TO BE IMPLEMENTED IN CONFIGFILE)
 srp = 1;
@@ -1077,7 +1078,7 @@ $ifthen %MTS% == 0
 EQ_SysInertia(i)..
          SysInertia(i)
          =E=
-         sum(cu,PowerCapacity(cu)*Committed(cu,i)*InertiaConstant(cu))/1000
+         sum(cu,PowerCapacity(cu)*Committed(cu,i)*InertiaConstant(cu))/ConversionFactor
 ;
 
 EQ_Inertia_limit(u,i)..
