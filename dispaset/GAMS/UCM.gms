@@ -999,7 +999,7 @@ EQ_Demand_balance_PrimaryReserve(i)$((PrimaryReserveLimit(i))<>0)..
 EQ_FFRGain(i)$(sum(ba,Droop(ba))>0)..
          FFRGain(i)
          =l=
-         sum(ba,(PowerCapacity(ba)*Committed(ba,i))/(Droop(ba)*SystemFrequency))
+         sum(ba,(PowerCapacity(ba)*Nunits(ba))/(Droop(ba)*SystemFrequency))
 ;
 
 EQ_FFRGain_limit(i)$((FFRGainLimit(i))<>0)..
@@ -1017,13 +1017,13 @@ EQ_FFR_Available(i)..
 EQ_FFR_Capability(ba,i)..
          FFR_Available(ba,i)
          =L=
-         (PowerCapacity(ba)*LoadMaximum(ba,i)*Committed(ba,i)*Reserve(ba))-Power(ba,i)
+         (PowerCapacity(ba)*Nunits(ba)*LoadMaximum(ba,i)*Reserve(ba))-Power(ba,i)
 ;
 
 EQ_FFR_Boundary(ba,i)..
          FFR_Available(ba,i)
          =L=
-         PowerCapacity(ba)
+         PowerCapacity(ba)*Nunits(ba)*Reserve(ba)
 ;
 
 *Hourly demand balance in the FFR market
