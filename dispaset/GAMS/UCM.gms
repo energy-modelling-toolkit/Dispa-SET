@@ -68,6 +68,8 @@ hu(au)           Heat only units
 *New
 cu(au)           Conventional units only
 ba(au)           Batteries only
+res              Reserve types
+
 *Fuels
 f                Fuel types
 *Technologies
@@ -164,7 +166,7 @@ RampStartUpMaximum(au)                      [MW\h\u]        Start-up ramp limit
 RampStartUpMaximumH(au,h)                   [MW\h\u]        Start-up ramp limit - Clustered formulation
 RampShutDownMaximumH(au,h)                  [MW\h\u]        Shut-down ramp limit - Clustered formulation
 RampUpMaximum(au)                           [MW\h\u]        Ramp up limit
-Reserve(au)                                 [n.a.]          Reserve technology {1 0}
+Reserve(au,res)                             [n.a.]          Reserve technology and type {1 0}
 StorageCapacity(au)                         [MWh\u]         Storage capacity
 StorageDischargeEfficiency(au)              [%]             Discharge efficiency
 StorageOutflow(au,h)                        [MW\u]          Storage outflows
@@ -270,6 +272,7 @@ $LOAD chp
 *New
 $LOAD cu
 $LOAD ba
+$LOAD res
 $LOAD tc
 $LOAD xu
 $LOAD h
@@ -840,8 +843,8 @@ EQ_No_Flexible_Demand(n,i)..
 
 *Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(n,i)..
-         sum((u),Reserve_2U(u,i)*Reserve(u)*Location(u,n))
-         + sum((chp),Reserve_2U(chp,i)*Reserve(chp)*Location(chp,n))
+         sum((u),Reserve_2U(u,i)*Reserve(u ,'2U')*Location(u,n))
+         + sum((chp),Reserve_2U(chp,i)*Reserve(chp ,'2U')*Location(chp,n))
          + CurtailmentReserve_2U(n,i) + LL_2U(n,i)
          =E=
 *New
@@ -874,8 +877,8 @@ EQ_Tot_Demand_2U(i)..
 
 *Hourly demand balance in the upwards non-spinning reserve market for each node
 EQ_Demand_balance_3U(n,i)..
-         sum((u),(Reserve_2U(u,i) + Reserve_3U(u,i))*Reserve(u)*Location(u,n))
-         + sum((chp),(Reserve_2U(chp,i) + Reserve_3U(chp,i))*Reserve(chp)*Location(chp,n))
+         sum((u),(Reserve_2U(u,i) + Reserve_3U(u,i))*Reserve(u ,'RR')*Location(u,n))
+         + sum((chp),(Reserve_2U(chp,i) + Reserve_3U(chp,i))*Reserve(chp ,'RR')*Location(chp,n))
          + CurtailmentReserve_2U(n,i) + CurtailmentReserve_3U(n,i) + LL_3U(n,i)
          =E=
          Demand("2U",n,i)
@@ -885,8 +888,8 @@ $If %ActivateAdvancedReserves% == 1 + smax((u,tc),PowerCapacity(u)/Nunits(u)*Tec
 
 *Hourly demand balance in the downwards reserve market for each node
 EQ_Demand_balance_2D(n,i)..
-         sum((u),Reserve_2D(u,i)*Reserve(u)*Location(u,n))
-         + sum((chp),Reserve_2D(chp,i)*Reserve(chp)*Location(chp,n))
+         sum((u),Reserve_2D(u,i)*Reserve(u ,'2D')*Location(u,n))
+         + sum((chp),Reserve_2D(chp,i)*Reserve(chp ,'2D')*Location(chp,n))
          + LL_2D(n,i)
          =E=
          Demand("2D",n,i)
@@ -976,13 +979,13 @@ EQ_PrimaryReserve_Available(i)..
 EQ_PrimaryReserve_Capability(cu,i)..
          PrimaryReserve_Available(cu,i)
          =L=
-         (PowerCapacity(cu)*LoadMaximum(cu,i)*Committed(cu,i)-Power(cu,i))*Reserve(cu)
+         (PowerCapacity(cu)*LoadMaximum(cu,i)*Committed(cu,i)-Power(cu,i))*Reserve(cu ,'PFR')
 ;
 
 EQ_PrimaryReserve_Boundary(cu,i)..
          PrimaryReserve_Available(cu,i)
          =L=
-         PowerCapacity(cu)*Committed(cu,i)*Reserve(cu)*MaxPrimaryAllowed
+         PowerCapacity(cu)*Committed(cu,i)*Reserve(cu ,'PFR')*MaxPrimaryAllowed
 ;
 
 *Hourly demand balance in the Primary Reserve market
@@ -1017,13 +1020,13 @@ EQ_FFR_Available(i)..
 EQ_FFR_Capability(ba,i)..
          FFR_Available(ba,i)
          =L=
-         (PowerCapacity(ba)*Nunits(ba)*LoadMaximum(ba,i)*Reserve(ba))-Power(ba,i)
+         (PowerCapacity(ba)*Nunits(ba)*LoadMaximum(ba,i)*Reserve(ba ,'FFR'))-Power(ba,i)
 ;
 
 EQ_FFR_Boundary(ba,i)..
          FFR_Available(ba,i)
          =L=
-         PowerCapacity(ba)*Nunits(ba)*Reserve(ba)
+         PowerCapacity(ba)*Nunits(ba)*Reserve(ba ,'FFR')
 ;
 
 *Hourly demand balance in the FFR market
