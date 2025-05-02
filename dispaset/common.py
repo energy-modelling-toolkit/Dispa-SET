@@ -32,7 +32,7 @@ commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF
 commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 # List of Conventional technologies:
 commons['tech_conventional'] = ['HDAM', 'HROR', 'HPHS', 
-                                'COMC', 'GTUR', 'ICEN', 'STUR',
+                                'COMC', 'GTUR', 'ICEN', 'STUR'
                                 ]#MARCO
 # List of Batteries technologies:
 commons['tech_batteries'] = ['BATS']#MARCO
@@ -51,6 +51,8 @@ commons['tech_bs2p'] = ['BSPG']
 commons['tech_boundary_sector'] = ['BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP', 'HOBOX', 'P2BS']#MARCO , 'HDAMC', 'HRORC'
 # List of CHP types:
 commons['types_CHP'] = ['extraction', 'back-pressure', 'p2h']
+# List of Reserve types:
+commons['types_Reserves'] = ['PFR', 'FFR', '2U', '2D', 'RR']
 # DispaSET fuels:
 commons['Fuels'] = ['AIR', 'AMO', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH',
                     'GEO', 'HYD', 'WHT', 'ELE', 'THE']
