@@ -283,7 +283,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     check_chp(config, plants_chp)
     
     # Defining the reserves:
-    plants_res = plants[[u in config['ReserveParticipation'] for u in plants['Technology']]]   
+    # TODO: add list of VRE to the Reserve participation in config and remove from here
+    plants_res = plants[[u in config['ReserveParticipation'] or u in config['ReserveParticipation_CHP'] or u in commons['tech_renewables'] for u in plants['Technology']]]
+ 
 
     # Defining the P2BS units:
     plants_p2bs = plants[[u in commons['tech_p2bs'] for u in plants['Technology']]]
@@ -678,7 +680,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     Plants_batteries = Plants_merged[[u in commons['tech_batteries'] for u in Plants_merged['Technology']]].copy()
 
     # Defining the reserves:
-    Plants_res = Plants_merged[[u in config['ReserveParticipation'] for u in Plants_merged['Technology']]]  
+    # TODO: add list of VRE to the Reserve participation in config and remove from here
+    Plants_res = Plants_merged[[u in config['ReserveParticipation'] or u in config['ReserveParticipation_CHP']  or u in commons['tech_renewables'] for u in Plants_merged['Technology']]]
 
     # Filter boundary sector only plants
     Plants_boundary_sector_only = Plants_merged[
@@ -829,8 +832,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                  Plants_merged['Technology']]].index.tolist()
     sets['cu'] = Plants_conventional.index.tolist()
     sets['ba'] = Plants_batteries.index.tolist()
-    sets['res'] = Plants_res.index.tolist()
-
+    sets['res'] = ['FFR', 'PFR', '2U', '2D', 'RR']
     ###################################################################################################################
     ############################################   Parameters    ######################################################
     ###################################################################################################################
@@ -891,7 +893,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['RampDownMaximum'] = ['au']
     sets_param['RampStartUpMaximum'] = ['au']
     sets_param['RampShutDownMaximum'] = ['au']
-    sets_param['Reserve'] = ['au']  # changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
+    sets_param['Reserve'] = ['au','res']  # changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
     sets_param['StorageCapacity'] = ['au']
     sets_param['StorageHours'] = ['au']
     sets_param['StorageChargingCapacity'] = ['au']
@@ -1344,40 +1346,40 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 logging.warning('Outages factors not found for unit ' + u + '. Assuming no outages')
 
     # Participation to the reserve market
-    list_of_participating_units = []  # new list
-    for unit in Plants_merged.index:
-        tech = Plants_merged.loc[unit, 'Technology']
-        if tech in config['ReserveParticipation'] and Plants_merged.loc[unit, 'CHPType'] == '':
-            list_of_participating_units.append(
-                unit)  # if unit same technology as allowed without CHP and unit is no CHP then add to list
-        elif tech in config['ReserveParticipation_CHP'] and Plants_merged.loc[unit, 'CHPType'] != '':
-            list_of_participating_units.append(
-                unit)  # if unit same technology as allowed with CHP and unit is CHP then add to list
+    # list_of_participating_units = []  # new list
+    # for unit in Plants_merged.index:
+    #     tech = Plants_merged.loc[unit, 'Technology']
+    #     if tech in config['ReserveParticipation'] and Plants_merged.loc[unit, 'CHPType'] == '':
+    #         list_of_participating_units.append(
+    #             unit)  # if unit same technology as allowed without CHP and unit is no CHP then add to list
+    #     elif tech in config['ReserveParticipation_CHP'] and Plants_merged.loc[unit, 'CHPType'] != '':
+    #         list_of_participating_units.append(
+    #             unit)  # if unit same technology as allowed with CHP and unit is CHP then add to list
 
-    values = np.array([s in list_of_participating_units for s in sets['au']],
-                      dtype='bool')  # same as before but with new list
-    parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
+    # values = np.array([s in list_of_participating_units for s in sets['au']],
+    #                   dtype='bool')  # same as before but with new list
+    # parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
     
     # Binary table of participation to the reserve market
-    sets['reserve_type'] = ['FFR', 'PFR', '2U', '2D', 'RR']
-    parameters['ReserveType'] = define_parameter(['res', 'reserve_type'], sets, value=0)
-    for i, u in enumerate(sets['res']):
+    # TODO: suggestion is to create commons by type of reserve instead of technologies
+    parameters['Reserve'] = define_parameter(['au', 'res'], sets, value=0)
+    for i, u in enumerate(sets['au']):
         if u in Plants_res.index:
             if Plants_res.loc[u, 'Technology'] in commons['tech_batteries']:
-                parameters['ReserveType']['val'][i, 0] = 1
-            elif Plants_res.loc[u, 'Technology'] in commons['tech_batteries'] + commons['tech_conventional'] :
-                parameters['ReserveType']['val'][i, 1] = 1
-                parameters['ReserveType']['val'][i, 2] = 1
-                parameters['ReserveType']['val'][i, 3] = 1
-                parameters['ReserveType']['val'][i, 4] = 1
-            elif Plants_res.loc[u, 'Technology'] in commons['tech_batteries'] + commons['tech_conventional'] + commons['tech_renewables']:
-                parameters['ReserveType']['val'][i, 2] = 1
-                parameters['ReserveType']['val'][i, 3] = 1
-                parameters['ReserveType']['val'][i, 4] = 1
-            else:
-                logging.error('ReserveType not valid for plant ' + u)
-                sys.exit(1)
-                          
+                parameters['Reserve']['val'][i, 0] = 1
+            if Plants_res.loc[u, 'Technology'] in commons['tech_conventional'] :
+                parameters['Reserve']['val'][i, 1] = 1
+                parameters['Reserve']['val'][i, 2] = 1
+                parameters['Reserve']['val'][i, 3] = 1
+                parameters['Reserve']['val'][i, 4] = 1
+            if Plants_res.loc[u, 'Technology'] in commons['tech_renewables']:
+                parameters['Reserve']['val'][i, 2] = 1
+                parameters['Reserve']['val'][i, 3] = 1
+                parameters['Reserve']['val'][i, 4] = 1
+        else:
+            logging.error('Reserve not valid for plant ' + u)
+            sys.exit(1)
+                      
     # Technologies
     for unit in range(Nunits):
         idx = sets['t'].index(Plants_merged['Technology'].iloc[unit])
