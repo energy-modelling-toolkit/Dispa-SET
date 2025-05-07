@@ -205,8 +205,6 @@ PTDF(l_int,n)                               [p.u.]          Power Transfer Distr
 InertiaConstant(au)          [s]             Inertia Constant
 InertiaLimit(h)              [s\h]           Inertia Limit
 Droop(au)                    [%]             Droop
-SystemGainLimit(h)           [GW\Hz]         System Gain Limit
-FFRGainLimit(h)              [GW\Hz]         FFR Gain Limit
 PrimaryReserveLimit(h)       [MWh]           Primary Reserve
 FFRLimit(h)                  [MWh]           Fast Frequency Reserve
 
@@ -367,8 +365,6 @@ $LOAD PTDF
 $LOAD InertiaConstant
 $LOAD InertiaLimit
 $LOAD Droop
-$LOAD SystemGainLimit
-$LOAD FFRGainLimit
 $LOAD PrimaryReserveLimit
 $LOAD FFRLimit
 ;
@@ -443,9 +439,7 @@ $If %MTS% == 1 SectorXStorageFinalMin(nx)
 *New
 SysInertia(h)                           [s]         System Inertia
 PrimaryReserve_Available(cu,h)          [MW]        Primary Reserve available in the system
-SystemGain(h)                           [GW\Hz]     System Gain
 FFR_Available(ba,h)                     [MW]        Fast Frequency Reserve available in the system
-FFRGain(h)                              [GW\Hz]     FFR Gain
 *MADRID
 PowerLoss(h)                            [MW]        Primary Reserve available in the system
 *$If %MTS% == 0 MaxInstantGenerator(h)                  [MW]        Primary Reserve available in the system
@@ -605,17 +599,13 @@ EQ_Total_Injected_Power
 *New
 EQ_SysInertia
 EQ_Inertia_limit
-EQ_SystemGain
-EQ_SystemGain_limit
 EQ_PrimaryReserve_Available
 EQ_PrimaryReserve_Capability
-EQ_PrimaryReserve_Boundary
+EQ_PrimaryReserve_Allowed
 EQ_Demand_balance_PrimaryReserve
-EQ_FFRGain
-EQ_FFRGain_limit
+
 EQ_FFR_Available
 EQ_FFR_Capability
-EQ_FFR_Boundary
 EQ_Demand_balance_FFR
 
 *MADRID
@@ -958,34 +948,22 @@ EQ_PowerLoss(u,i)$(ord(u))..
 *New
 *MARCO PRIMARY RESERVE
 
-EQ_SystemGain(i)$(sum(cu,Droop(cu))>0)..
-         SystemGain(i)
-         =l=
-         sum(cu,(PowerCapacity(cu)*Committed(cu,i))/(Droop(cu)*SystemFrequency))
-;
-
-EQ_SystemGain_limit(i)$((SystemGainLimit(i))<>0)..
-         SystemGainLimit(i)
-         =l=
-         SystemGain(i)
-;
-
-EQ_PrimaryReserve_Available(i)..
+EQ_PrimaryReserve_Available(i)$(sum(cu,Droop(cu))>0)..
          sum(cu,PrimaryReserve_Available(cu,i))
          =l=
-         SystemGain(i)*DeltaFrequencyMax
+         sum(cu,(PowerCapacity(cu)*Nunits(cu)*Committed(cu,i))/(Droop(cu)*SystemFrequency))*DeltaFrequencyMax
 ;
 
 EQ_PrimaryReserve_Capability(cu,i)..
          PrimaryReserve_Available(cu,i)
          =L=
-         (PowerCapacity(cu)*LoadMaximum(cu,i)*Committed(cu,i)-Power(cu,i))*Reserve(cu ,'PFR')
+         (PowerCapacity(cu)*Nunits(cu)*LoadMaximum(cu,i)*Committed(cu,i)-Power(cu,i))*Reserve(cu ,'PFR')
 ;
 
-EQ_PrimaryReserve_Boundary(cu,i)..
+EQ_PrimaryReserve_Allowed(cu,i)..
          PrimaryReserve_Available(cu,i)
          =L=
-         PowerCapacity(cu)*Committed(cu,i)*Reserve(cu ,'PFR')*MaxPrimaryAllowed
+         PowerCapacity(cu)*Nunits(cu)*Committed(cu,i)*Reserve(cu ,'PFR')*MaxPrimaryAllowed
 ;
 
 *Hourly demand balance in the Primary Reserve market
@@ -999,34 +977,16 @@ EQ_Demand_balance_PrimaryReserve(i)$((PrimaryReserveLimit(i))<>0)..
 *New
 *MARCO FFR
 
-EQ_FFRGain(i)$(sum(ba,Droop(ba))>0)..
-         FFRGain(i)
-         =l=
-         sum(ba,(PowerCapacity(ba)*Nunits(ba))/(Droop(ba)*SystemFrequency))
-;
-
-EQ_FFRGain_limit(i)$((FFRGainLimit(i))<>0)..
-         FFRGainLimit(i)
-         =l=
-         FFRGain(i)
-;
-
-EQ_FFR_Available(i)..
+EQ_FFR_Available(i)$(sum(ba,Droop(ba))>0)..
          sum(ba,FFR_Available(ba,i))
          =l=
-         FFRGain(i)*DeltaFrequencyMax
+         sum(ba,(PowerCapacity(ba)*Nunits(ba))/(Droop(ba)*SystemFrequency))*DeltaFrequencyMax
 ;
 
 EQ_FFR_Capability(ba,i)..
          FFR_Available(ba,i)
          =L=
-         (PowerCapacity(ba)*Nunits(ba)*LoadMaximum(ba,i)*Reserve(ba ,'FFR'))-Power(ba,i)
-;
-
-EQ_FFR_Boundary(ba,i)..
-         FFR_Available(ba,i)
-         =L=
-         PowerCapacity(ba)*Nunits(ba)*Reserve(ba ,'FFR')
+         (PowerCapacity(ba)*Nunits(ba)*LoadMaximum(ba,i)-Power(ba,i))*Reserve(ba ,'FFR')
 ;
 
 *Hourly demand balance in the FFR market
@@ -1531,18 +1491,13 @@ EQ_Total_Injected_Power,
 *new
 $If %MTS% == 0 EQ_SysInertia,
 $If %MTS% == 0 EQ_Inertia_limit,
-$If %MTS% == 0 EQ_SystemGain,
-$If %MTS% == 0 EQ_SystemGain_limit,
 $If %MTS% == 0 EQ_PrimaryReserve_Available,
 $If %MTS% == 0 EQ_PrimaryReserve_Capability,
-$If %MTS% == 0 EQ_PrimaryReserve_Boundary,
+$If %MTS% == 0 EQ_PrimaryReserve_Allowed,
 $If %MTS% == 0 EQ_Demand_balance_PrimaryReserve,
 
-$If %MTS% == 0 EQ_FFRGain,
-$If %MTS% == 0 EQ_FFRGain_limit,
 $If %MTS% == 0 EQ_FFR_Available,
 $If %MTS% == 0 EQ_FFR_Capability,
-$If %MTS% == 0 EQ_FFR_Boundary,
 $If %MTS% == 0 EQ_Demand_balance_FFR,
 *MADRID
 $If %MTS% == 0 EQ_PowerLoss,
@@ -1735,9 +1690,7 @@ UnitHourlyProfit(au,h)
 
 *New
 $If %MTS% == 0 OutputSysInertia(h)
-$If %MTS% == 0 OutputSystemGain(h)
 $If %MTS% == 0 OutputPrimaryReserve_Available(cu,h)
-$If %MTS% == 0 OutputFFRGain(h)
 $If %MTS% == 0 OutputFFR_Available(ba,h)
 *MADRID
 $If %MTS% == 0 OutputPowerLoss(h)
@@ -1848,13 +1801,9 @@ OutputShutDown(au,z) = ShutDown.L(au,z);
 
 *New
 $If %MTS%==0 OutputSysInertia(z) = SysInertia.L(z);
-$If %MTS%==0 OutputSystemGain(z) = SystemGain.L(z);
 $If %MTS%==0 OutputPrimaryReserve_Available(cu,z) = PrimaryReserve_Available.L(cu,z);
-$If %MTS%==0 OutputFFRGain(z) = FFRGain.L(z);
 $If %MTS%==0 OutputFFR_Available(ba,z) = FFR_Available.L(ba,z);
-*OutputSysInertia(z) = SysInertia.L(z);
-*OutputSystemGain(z) = SystemGain.L(z);
-*OutputPrimaryReserve_Available(cu,z) = PrimaryReserve_Available.L(cu,z);
+
 *MADRID
 $If %MTS%==0 OutputPowerLoss(z) = PowerLoss.L(z);
 *OutputPowerLoss(z) = PowerLoss.L(z);
@@ -1976,9 +1925,7 @@ OutputDemand_2D,
 
 *New
 $If %MTS%==0 OutputSysInertia,
-$If %MTS%==0 OutputSystemGain,
 $If %MTS%==0 OutputPrimaryReserve_Available,
-$If %MTS%==0 OutputFFRGain,
 $If %MTS%==0 OutputFFR_Available,
 *MADRID
 $If %MTS%==0 OutputPowerLoss,

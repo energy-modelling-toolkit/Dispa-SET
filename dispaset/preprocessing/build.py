@@ -147,22 +147,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # logging.warning('No Inertia Limit will be considered (no valid file provided)')
         # InertiaLimit = pd.DataFrame(index=config['idx_long'])
 
-    # PFR Gain Limit:
-    if 'SystemGainLimit' in config and os.path.isfile(config['SystemGainLimit']):
-        SystemGainLimit = load_time_series(config, config['SystemGainLimit']).fillna(0)
-    else:
-        logging.warning('No Gain Limit will be considered (no valid file provided)')
-        SystemGainLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
-        # logging.warning('No Inertia Limit will be considered (no valid file provided)')
-        # InertiaLimit = pd.DataFrame(index=config['idx_long'])
-
-    # FFR Gain Limit:
-    if 'FFRGainLimit' in config and os.path.isfile(config['FFRGainLimit']):
-        FFRGainLimit = load_time_series(config, config['FFRGainLimit']).fillna(0)
-    else:
-        logging.warning('No FFR Gain Limit will be considered (no valid file provided)')
-        FFRGainLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
-
     # Boundary Sector Interconnections:
     if 'BoundarySectorInterconnections' in config and os.path.isfile(config['BoundarySectorInterconnections']):
         BS_flows = load_time_series(config, config['BoundarySectorInterconnections']).fillna(0)
@@ -750,7 +734,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel,
                'SectorXFloodControl': SectorXFloodControl,
                'CostOfSpillage': CostOfSpillage, 'CostXSpillage': CostXSpillage,
-               'InertiaLimit': InertiaLimit, 'SystemGainLimit': SystemGainLimit, 'FFRGainLimit': FFRGainLimit, 'FFRLimit': FFRLimit, 'PrimaryReserveLimit': PrimaryReserveLimit}
+               'InertiaLimit': InertiaLimit, 'FFRLimit': FFRLimit, 'PrimaryReserveLimit': PrimaryReserveLimit}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
@@ -929,9 +913,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['InertiaConstant'] = ['au']
     sets_param['InertiaLimit'] = ['h']
     sets_param['Droop'] = ['au']
-    sets_param['SystemGainLimit'] = ['h']
     sets_param['PrimaryReserveLimit'] = ['h']
-    sets_param['FFRGainLimit'] = ['h']
     sets_param['FFRLimit'] = ['h']
     sets_param['PTDF'] = ['l_int', 'n']
 
@@ -1274,12 +1256,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # if MTS == 0:
     if len(finalTS['InertiaLimit'].columns) != 0:
         parameters['InertiaLimit']['val'] = finalTS['InertiaLimit'].iloc[:, 0].values
-    # System Gain to parameters dict
-    if len(finalTS['SystemGainLimit'].columns) != 0:
-        parameters['SystemGainLimit']['val'] = finalTS['SystemGainLimit'].iloc[:, 0].values
-    # FFR Gain to parameters dict
-    if len(finalTS['FFRGainLimit'].columns) != 0:
-        parameters['FFRGainLimit']['val'] = finalTS['FFRGainLimit'].iloc[:, 0].values
     # FFR to parameters dict
     if len(finalTS['FFRLimit'].columns) != 0:
         parameters['FFRLimit']['val'] = finalTS['FFRLimit'].iloc[:, 0].values

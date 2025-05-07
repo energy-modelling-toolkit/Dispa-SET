@@ -160,10 +160,6 @@ commons['PathParameters'] = {
     # 'PTDFMatrix': 145,
     # Inertia Limit data
     'InertiaLimit': 155,
-    # Gain Limit data
-    'SystemGainLimit': 156,
-    # FFR Gain Limit data
-    'FFRGainLimit': 157,
     # Hydrogen data
     'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
     # Storage data
@@ -197,10 +193,6 @@ commons['default'] = {
     'ValueOfLostLoad': 204, 'CostOfSpillage': 205, 'WaterValue': 206,
     # Inertia requirement default
     'InertiaLimit': 155,
-    # Gain requirement default
-    'SystemGainLimit': 156,
-    # FFR Gain requirement default
-    'FFRGainLimit': 157,
     # Inertia requirement default
     'FFRLimit': 158, 'PrimaryReserveLimit': 159
 }
