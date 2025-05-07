@@ -834,7 +834,6 @@ EQ_No_Flexible_Demand(n,i)..
 *Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(n,i)..
          sum((u),Reserve_2U(u,i)*Reserve(u ,'2U')*Location(u,n))
-         + sum((chp),Reserve_2U(chp,i)*Reserve(chp ,'2U')*Location(chp,n))
          + CurtailmentReserve_2U(n,i) + LL_2U(n,i)
          =E=
 *New
@@ -868,7 +867,6 @@ EQ_Tot_Demand_2U(i)..
 *Hourly demand balance in the upwards non-spinning reserve market for each node
 EQ_Demand_balance_3U(n,i)..
          sum((u),(Reserve_2U(u,i) + Reserve_3U(u,i))*Reserve(u ,'RR')*Location(u,n))
-         + sum((chp),(Reserve_2U(chp,i) + Reserve_3U(chp,i))*Reserve(chp ,'RR')*Location(chp,n))
          + CurtailmentReserve_2U(n,i) + CurtailmentReserve_3U(n,i) + LL_3U(n,i)
          =E=
          Demand("2U",n,i)
@@ -879,7 +877,6 @@ $If %ActivateAdvancedReserves% == 1 + smax((u,tc),PowerCapacity(u)/Nunits(u)*Tec
 *Hourly demand balance in the downwards reserve market for each node
 EQ_Demand_balance_2D(n,i)..
          sum((u),Reserve_2D(u,i)*Reserve(u ,'2D')*Location(u,n))
-         + sum((chp),Reserve_2D(chp,i)*Reserve(chp ,'2D')*Location(chp,n))
          + LL_2D(n,i)
          =E=
          Demand("2D",n,i)
