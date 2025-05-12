@@ -816,7 +816,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                  Plants_merged['Technology']]].index.tolist()
     sets['cu'] = Plants_conventional.index.tolist()
     sets['ba'] = Plants_batteries.index.tolist()
-    sets['res'] = ['FFR', 'PFR', '2U', '2D', 'RR']
+    sets['res_U'] = ['FFRU', 'PFRU', '2U', 'RR']
+    sets['res_D'] = ['FFRD', 'PFRD', '2D']
+    sets['res'] = sets['res_U'] + sets['res_D']
+    
     ###################################################################################################################
     ############################################   Parameters    ######################################################
     ###################################################################################################################
@@ -1339,22 +1342,33 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Binary table of participation to the reserve market
     # TODO: suggestion is to create commons by type of reserve instead of technologies
     parameters['Reserve'] = define_parameter(['au', 'res'], sets, value=0)
+    res_index = {r: idx for idx, r in enumerate(sets['res'])}
+    
     for i, u in enumerate(sets['au']):
-        if u in Plants_res.index:
-            if Plants_res.loc[u, 'Technology'] in commons['tech_batteries']:
-                parameters['Reserve']['val'][i, 0] = 1
-            if Plants_res.loc[u, 'Technology'] in commons['tech_conventional'] :
-                parameters['Reserve']['val'][i, 1] = 1
-                parameters['Reserve']['val'][i, 2] = 1
-                parameters['Reserve']['val'][i, 3] = 1
-                parameters['Reserve']['val'][i, 4] = 1
-            if Plants_res.loc[u, 'Technology'] in commons['tech_renewables']:
-                parameters['Reserve']['val'][i, 2] = 1
-                parameters['Reserve']['val'][i, 3] = 1
-                parameters['Reserve']['val'][i, 4] = 1
-        else:
+        if u not in Plants_res.index:
             logging.error('Reserve not valid for plant ' + u)
             sys.exit(1)
+    
+        tech = Plants_res.loc[u, 'Technology']
+    
+        for r in sets['res']:
+            j = res_index[r]
+            
+            if r in sets['res_U']:
+                if tech in commons['tech_batteries'] and r in sets['res_U'][:2]:  # FFRU, PFRU
+                    parameters['Reserve']['val'][i, j] = 1
+                elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # PFRU, 2U, RR
+                    parameters['Reserve']['val'][i, j] = 1
+                elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:  # 2U, RR
+                    parameters['Reserve']['val'][i, j] = 1
+    
+            elif r in sets['res_D']:
+                if tech in commons['tech_batteries'] and r in sets['res_D'][:2]:  # FFRD, PFRD
+                    parameters['Reserve']['val'][i, j] = 1
+                elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # PFRD, 2D
+                    parameters['Reserve']['val'][i, j] = 1
+                elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:  # 2D
+                    parameters['Reserve']['val'][i, j] = 1         
                       
     # Technologies
     for unit in range(Nunits):
