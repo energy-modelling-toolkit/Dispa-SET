@@ -271,31 +271,58 @@ def gdx_to_dataframe(data, fixindex=False, verbose=False, inputs=False):
             elif dim > 4:
                 logging.warning('Variable ' + symbol + ' has more than 2 dimensions, which is very tiring. Skipping')
             elif dim == 4:
-                vars1 = set()
-                vars2 = set()
-                for element in data[symbol]:
-                    if not element[0] in vars1:
-                        vars1.add(element[0])
-                    if not element[1] in vars2:
-                        vars2.add(element[1])
-                vars1 = list(vars1)
-                vars2 = list(vars2)
-                pd_index = pd.MultiIndex.from_product([vars1, vars2], names=('Zones', 'Emissions'))
-                if inputs:
-                    out[symbol] = pd.DataFrame(columns=pd_index)
-                else:
-                    out[symbol] = pd.DataFrame(columns=pd_index, index=out['OutputPower'].index)
-                for element1 in data[symbol]:
-                    element = copy.deepcopy(element1)
-                    for var1 in vars1:
-                        for var2 in vars2:
-                            if (var2 == element[1]) and (var1 == element[0]):
-                                out[symbol].loc[element[2], (var1, var2)] = element[3]
-                out[symbol].index = out[symbol].index.astype(int)
-                out[symbol].sort_index(inplace=True)
-                out[symbol] = out[symbol].fillna(0)
-
-                logging.warning('Successfully loaded variable ' + symbol)
+                if symbol == "OutputReserve_Available":
+                    vars1 = set()
+                    vars2 = set()
+                    for element in data[symbol]:
+                        if not element[2] in vars1:
+                            vars1.add(element[2])
+                        if not element[0] in vars2:
+                            vars2.add(element[0])
+                    vars1 = list(vars1)
+                    vars2 = list(vars2)
+                    pd_index = pd.MultiIndex.from_product([vars1, vars2], names=('Reserve', 'PowerPlant'))
+                    if inputs:
+                        out[symbol] = pd.DataFrame(columns=pd_index)
+                    else:
+                        out[symbol] = pd.DataFrame(columns=pd_index, index=out['OutputPower'].index)
+                    for element1 in data[symbol]:
+                        element = copy.deepcopy(element1)
+                        for var1 in vars1:
+                            for var2 in vars2:
+                                if (var2 == element[0]) and (var1 == element[2]):
+                                    out[symbol].loc[element[1], (var1, var2)] = element[3]
+                    out[symbol].index = out[symbol].index.astype(int)
+                    out[symbol].sort_index(inplace=True)
+                    out[symbol] = out[symbol].fillna(0)
+                    
+                    logging.warning('Successfully loaded variable ' + symbol)
+                else: 
+                    vars1 = set()
+                    vars2 = set()
+                    for element in data[symbol]:
+                        if not element[0] in vars1:
+                            vars1.add(element[0])
+                        if not element[1] in vars2:
+                            vars2.add(element[1])
+                    vars1 = list(vars1)
+                    vars2 = list(vars2)
+                    pd_index = pd.MultiIndex.from_product([vars1, vars2], names=('Zones', 'Emissions'))
+                    if inputs:
+                        out[symbol] = pd.DataFrame(columns=pd_index)
+                    else:
+                        out[symbol] = pd.DataFrame(columns=pd_index, index=out['OutputPower'].index)
+                    for element1 in data[symbol]:
+                        element = copy.deepcopy(element1)
+                        for var1 in vars1:
+                            for var2 in vars2:
+                                if (var2 == element[1]) and (var1 == element[0]):
+                                    out[symbol].loc[element[2], (var1, var2)] = element[3]
+                    out[symbol].index = out[symbol].index.astype(int)
+                    out[symbol].sort_index(inplace=True)
+                    out[symbol] = out[symbol].fillna(0)
+                    
+                    logging.warning('Successfully loaded variable ' + symbol)
         else:
             logging.debug('Variable ' + symbol + ' is empty. Skipping')
     for symbol in out:
