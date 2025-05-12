@@ -54,6 +54,7 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'OutputSysInertia': ('h'), 
             'OutputPowerLoss': ('h'),
             'OutputPrimaryReserve_Available': ('h'),
+            'OutputReserve_Available':('u','h','res'),
             'status': tuple(),
             '*': tuple()
             }
@@ -178,7 +179,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D',
                    'OutputFlowX', 'OutputSectorXStorageAlertViolation', 'OutputSectorXFloodControlViolation',
                    'OutputCostStartUpH', 'OutputCostRampUpH',
-                   'OutputSysInertia', 'OutputPowerLoss', 'OutputPrimaryReserve_Available', 
+                   'OutputSysInertia', 'OutputPowerLoss', 
                    'LostLoad_2D', 'OutputCurtailedHeat', 'OutputCurtailmentPerUnit', 'OutputH2Output', 
                    'OutputHeatSlack', 'OutputOptimalityGap', 'OutputOptimizationCheck', 
                    'OutputOptimizationError', 'OutputPtLDemand', 'OutputStorageSlack', 
@@ -186,7 +187,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'UnitHourly2URevenue', 'UnitHourlyProductionCost', 'UnitHourlyStartUpCost', 'UnitHourlyVariableCost',
                    'UnitHourly2DRevenue', 'UnitHourly3URevenue', 'UnitHourlyPowerRevenue', 
                    'UnitHourlyProfit', 'UnitHourlyRampingCost', 'UnitHourlyRevenue',
-                   'OutputSysInertia','OutputFFR_Available', 'OutputPrimaryReserve_Available']
+                   'OutputSysInertia','OutputFFR_Available', 'OutputPrimaryReserve_Available', 'OutputReserve_Available']
 
     # Setting the proper index to the result dataframes:
     for key in chain(keys, keys_sparse):
