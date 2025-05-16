@@ -880,7 +880,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['RampDownMaximum'] = ['au']
     sets_param['RampStartUpMaximum'] = ['au']
     sets_param['RampShutDownMaximum'] = ['au']
-    sets_param['Reserve'] = ['au','res']  # changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
+    sets_param['Reserve'] = ['res', 'au', 'h']  # changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
     sets_param['StorageCapacity'] = ['au']
     sets_param['StorageHours'] = ['au']
     sets_param['StorageChargingCapacity'] = ['au']
@@ -1341,34 +1341,69 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
     # Binary table of participation to the reserve market
     # TODO: suggestion is to create commons by type of reserve instead of technologies
-    parameters['Reserve'] = define_parameter(['au', 'res'], sets, value=0)
-    res_index = {r: idx for idx, r in enumerate(sets['res'])}
+
+    values = np.zeros((len(sets['res']), len(sets['au']), len(sets['h'])))
     
-    for i, u in enumerate(sets['au']):
+    res_index = {r: idx for idx, r in enumerate(sets['res'])}
+    au_index = {u: idx for idx, u in enumerate(sets['au'])}
+    
+    for u in sets['au']:
         if u not in Plants_res.index:
             logging.error('Reserve not valid for plant ' + u)
             sys.exit(1)
     
+        i = au_index[u]
         tech = Plants_res.loc[u, 'Technology']
     
         for r in sets['res']:
             j = res_index[r]
-            
+    
             if r in sets['res_U']:
                 if tech in commons['tech_batteries'] and r in sets['res_U'][:2]:  # FFRU, PFRU
-                    parameters['Reserve']['val'][i, j] = 1
+                    values[j, i, :] = 0.1
                 elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # PFRU, 2U, RR
-                    parameters['Reserve']['val'][i, j] = 1
+                    values[j, i, :] = 0.2
                 elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:  # 2U, RR
-                    parameters['Reserve']['val'][i, j] = 1
+                    values[j, i, :] = 0.3
     
             elif r in sets['res_D']:
                 if tech in commons['tech_batteries'] and r in sets['res_D'][:2]:  # FFRD, PFRD
-                    parameters['Reserve']['val'][i, j] = 1
+                    values[j, i, :] = 0.4
                 elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # PFRD, 2D
-                    parameters['Reserve']['val'][i, j] = 1
+                    values[j, i, :] = 0.5
                 elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:  # 2D
-                    parameters['Reserve']['val'][i, j] = 1         
+                    values[j, i, :] = 0.6
+    
+    parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
+   
+    # parameters['Reserve'] = define_parameter(['au', 'res'], sets, value=0)
+    # res_index = {r: idx for idx, r in enumerate(sets['res'])}
+    
+    # for i, u in enumerate(sets['au']):
+    #     if u not in Plants_res.index:
+    #         logging.error('Reserve not valid for plant ' + u)
+    #         sys.exit(1)
+    
+    #     tech = Plants_res.loc[u, 'Technology']
+    
+    #     for r in sets['res']:
+    #         j = res_index[r]
+            
+    #         if r in sets['res_U']:
+    #             if tech in commons['tech_batteries'] and r in sets['res_U'][:2]:  # FFRU, PFRU
+    #                 parameters['Reserve']['val'][i, j] = 1
+    #             elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # PFRU, 2U, RR
+    #                 parameters['Reserve']['val'][i, j] = 1
+    #             elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:  # 2U, RR
+    #                 parameters['Reserve']['val'][i, j] = 1
+    
+    #         elif r in sets['res_D']:
+    #             if tech in commons['tech_batteries'] and r in sets['res_D'][:2]:  # FFRD, PFRD
+    #                 parameters['Reserve']['val'][i, j] = 1
+    #             elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # PFRD, 2D
+    #                 parameters['Reserve']['val'][i, j] = 1
+    #             elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:  # 2D
+    #                 parameters['Reserve']['val'][i, j] = 1         
                       
     # Technologies
     for unit in range(Nunits):
