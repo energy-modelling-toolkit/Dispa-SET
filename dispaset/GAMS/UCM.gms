@@ -397,8 +397,10 @@ CostShutDownH(au,h)                     [EUR]   cost of shutting down
 CostRampUpH(au,h)                       [EUR]   Ramping cost
 CostRampDownH(au,h)                     [EUR]   Ramping cost
 CurtailedPower(n,h)                     [MW]    Curtailed power at node n
-CurtailmentReserve_2U(n,h)              [MW]    Curtailed power used for reserves at node n
-CurtailmentReserve_3U(n,h)              [MW]    Curtailed power used for reserves at node n
+*new
+CurtailmentReserve(res,n,h)             [MW]    Curtailed power used for reserves at node n
+*CurtailmentReserve_2U(n,h)              [MW]    Curtailed power used for reserves at node n
+*CurtailmentReserve_3U(n,h)              [MW]    Curtailed power used for reserves at node n
 FlowX(lx,h)                             [MW]    Flow through boundary sector lines
 Power(au,h)                             [MW]    Power output
 PowerConsumption(p2x,h)                 [MW]    Power consumption by P2X units
@@ -414,9 +416,11 @@ LL_MaxPower(n,h)                        [MW]    Deficit in terms of maximum powe
 LL_RampUp(au,h)                         [MW]    Deficit in terms of ramping up for each plant
 LL_RampDown(au,h)                       [MW]    Deficit in terms of ramping down
 LL_MinPower(n,h)                        [MW]    Power exceeding the demand
-LL_2U(n,h)                              [MW]    Deficit in reserve up
-LL_3U(n,h)                              [MW]    Deficit in reserve up - non spinning
-LL_2D(n,h)                              [MW]    Deficit in reserve down
+*new
+LL_Reserve(res,n,h)                     [MW]    Deficit in reserves
+*LL_2U(n,h)                              [MW]    Deficit in reserve up
+*LL_3U(n,h)                              [MW]    Deficit in reserve up - non spinning
+*LL_2D(n,h)                              [MW]    Deficit in reserve down
 LL_StorageAlert(au,h)                   [MWh]   Unsatisfied water level constraint for going below alert level at each hour
 LL_FloodControl(au,h)                   [MWh]   Unsatisfied water level constraint for going above flood level at each hour
 SectorXStorageAlertViolation(nx,h)      [MWh]   Boundary Sector Unsatisfied water level constraint for going below alert level at each hour
@@ -425,9 +429,11 @@ LL_SectorXFlexDemand(nx)                [MWh]   Deficit in flex demand
 LL_SectorXFlexSupply(nx)                [MWh]   Deficit in flex supply
 spillage(au,h)                          [MWh]   spillage from water reservoirs
 SystemCost(h)                           [EUR]   Hourly system cost
+*new
+Reserve_Available(res,au,h)             [MW]    all reserves up
 *Reserve_2U(au,h)                        [MW]    Spinning reserve up
-Reserve_2D(au,h)                        [MW]    Spinning reserve down
-Reserve_3U(au,h)                        [MW]    Non spinning quick start reserve up
+*Reserve_2D(au,h)                        [MW]    Spinning reserve down
+*Reserve_3U(au,h)                        [MW]    Non spinning quick start reserve up
 Heat(au,h)                              [MW]    Heat output by chp plant
 WaterSlack(au)                          [MWh]   Unsatisfied water level constraint at end of optimization period
 StorageSlack(au,h)                      [MWh]   Unsatisfied storage level constraint at end of simulation timestep
@@ -446,9 +452,7 @@ SystemInertia(h)                        [s]         System Inertia
 PrimaryReserve_Available(au,h)          [MW]        Primary Reserve available in the system
 FFR_Available(au,h)                     [MW]        Fast Frequency Reserve available in the system
 
-*Reserve_FFRU(au,h)                      [MW]    fast frequency reserve up
-*Reserve_PFRU(au,h)                      [MW]    fast frequency reserve up
-Reserve_Available(res,au,h)             [MW]    all reserves up
+
 
 *MADRID
 PowerLoss(h)                            [MW]        Primary Reserve available in the system
@@ -656,7 +660,9 @@ EQ_SystemCost(i)..
          +sum(nx, CostXNotServed(nx,i) * XNotServed(nx,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
-         +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
+*new
+*         +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
+         +0.8*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
          +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
          +0.7*Config("ValueOfLostLoad","val")*(sum(nx,(SectorXWaterNotWithdrawn(nx,i))*TimeStep))                                                                             
          +sum(s,CostStorageAlert(s,i)*LL_StorageAlert(s,i)*TimeStep)
@@ -683,7 +689,9 @@ EQ_SystemCost(i)..
          +sum(nx, CostXNotServed(nx,i) * XNotServed(nx,i)*TimeStep)
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
-         +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
+*new
+*         +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
+         +0.8*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))         
          +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
          +15*(sum(nx,(SectorXWaterNotWithdrawn(nx,i))*TimeStep))                                                                                                              
          +sum(s,CostStorageAlert(s,i)*LL_StorageAlert(s,i)*TimeStep)
@@ -876,7 +884,7 @@ EQ_PowerLoss(u,i)$(ord(u))..
 *Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(res_U,n,i)..
          sum((u),Reserve_Available(res_U,u,i)*Reserve('2U',u,i)*Location(u,n))
-         + CurtailmentReserve_2U(n,i) + LL_2U(n,i)
+         + CurtailmentReserve('2U',n,i) + LL_Reserve('2U',n,i)
          =E=
 *New
          Demand("2U",n,i)
@@ -888,7 +896,7 @@ $If %ActivateAdvancedReserves% == 1 +(Demand("2U",n,i) + smax((u,tc),PowerCapaci
 *Hourly demand balance in the upwards non-spinning reserve market for each node
 EQ_Demand_balance_3U(res_U,n,i)..
          sum((u),(Reserve_Available('2U',u,i) + Reserve_Available('RR',u,i))*Reserve('RR',u,i)*Location(u,n))
-         + CurtailmentReserve_3U(n,i) + LL_3U(n,i)
+         + CurtailmentReserve('RR',n,i) + LL_Reserve('RR',n,i)
          =E=
          Demand("2U",n,i)
 $If %ActivateAdvancedReserves% == 2 + max(smax((u,tc),PowerCapacity(u)/Nunits(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0))
@@ -898,7 +906,7 @@ $If %ActivateAdvancedReserves% == 1 + smax((u,tc),PowerCapacity(u)/Nunits(u)*Tec
 *Hourly demand balance in the downwards reserve market for each node
 EQ_Demand_balance_2D(res_D,n,i)..
          sum((u),Reserve_Available(res_D,u,i)*Reserve('2D',u,i)*Location(u,n))
-         + LL_2D(n,i)
+         + LL_Reserve('2D',n,i)
          =E=
          Demand("2D",n,i)
 $If %ActivateAdvancedReserves% == 2 + max(smax(s,StorageChargingCapacity(s)/Nunits(s)*Location(s,n)), smax(l,-FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0))
@@ -907,7 +915,7 @@ $If %ActivateAdvancedReserves% == 1 + smax(s,StorageChargingCapacity(s)/Nunits(s
 
 *Curtailed power
 EQ_Curtailed_Power(n,i)..
-        CurtailedPower(n,i) + CurtailmentReserve_2U(n,i) + CurtailmentReserve_3U(n,i)
+        CurtailedPower(n,i) + sum(res,CurtailmentReserve(res,n,i))
         =E=
         sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,i)-Power(u,i))$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
 ;
@@ -1607,7 +1615,9 @@ SectorXStorageLevelViolation_H.L(nx,i)$(ord(i)=LastKeptHour-FirstHour+1) = Secto
 ObjectiveFunction.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = SystemCostD.L;
 Error.L = sum((i,n), CostLoadShedding(n,i)*ShedLoad.L(n,i)
           +Config("ValueOfLostLoad","val")*(LL_MaxPower.L(n,i)+LL_MinPower.L(n,i))
-          +0.8*Config("ValueOfLostLoad","val")*(LL_2U.L(n,i)+LL_2D.L(n,i)+LL_3U.L(n,i)))
+*new
+*          +0.8*Config("ValueOfLostLoad","val")*(LL_2U.L(n,i)+LL_2D.L(n,i)+LL_3U.L(n,i)))
+          +0.8*Config("ValueOfLostLoad","val")*(sum(res,LL_Reserve.L(res,n,i))))
           +sum((au,i), 0.7*Config("ValueOfLostLoad","val")*(LL_RampUp.L(au,i)+LL_RampDown.L(au,i)))
 ;
 OptimalityGap.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = UCM_SIMPLE.objVal - UCM_SIMPLE.objEst;
@@ -1792,17 +1802,21 @@ OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(au,z)  = Spillage.L(au,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
-OutputCurtailmentReserve_2U(n,z)=CurtailmentReserve_2U.L(n,z);
-OutputCurtailmentReserve_3U(n,z)=CurtailmentReserve_3U.L(n,z);
+*new
+OutputCurtailmentReserve_2U(n,z)=CurtailmentReserve.L('2U',n,z);
+OutputCurtailmentReserve_3U(n,z)=CurtailmentReserve.L('RR',n,z);
+
 OutputCurtailmentPerUnit(u,z)=(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1);
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
 $If %ActivateFlexibleDemand% == 1 OutputAccumulatedOverSupply(n,z)=AccumulatedOverSupply.L(n,z);
 $If %ActivateFlexibleDemand% == 1 ShadowPriceDemandModulation(n,z)=EQ_Flexible_Demand.m(n,z);
 LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
 LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
-LostLoad_2D(n,z) = LL_2D.L(n,z);
-LostLoad_2U(n,z) = LL_2U.L(n,z);
-LostLoad_3U(n,z) = LL_3U.L(n,z);
+*new
+LostLoad_2D(n,z) = LL_Reserve.L('2D',n,z);
+LostLoad_2U(n,z) = LL_Reserve.L('2U',n,z);
+LostLoad_3U(n,z) = LL_Reserve.L('RR',n,z);
+
 LostLoad_StorageAlert(au,z) = LL_StorageAlert.L(au,z);
 LostLoad_FloodControl(au,z) = LL_FloodControl.L(au,z);
 OutputSectorXStorageAlertViolation(nx,z) = SectorXStorageAlertViolation.L(nx,z);
@@ -1826,11 +1840,11 @@ $If not %LPFormulation% == 1 OutputCostStartUpH(au,z) = CostStartUpH.L(au,z);
 $If not %LPFormulation% == 1 OutputCostShutDownH(au,z) = CostShutDownH.L(au,z);
 $If not %LPFormulation% == 1 OutputCostRampUpH(au,z) = CostRampUpH.L(au,z);
 $If not %LPFormulation% == 1 OutputCostRampDownH(au,z) = CostRampDownH.L(au,z);
-
+*new
 ShadowPrice_2U(n,z) =  EQ_Demand_balance_2U.m('2U',n,z);
 ShadowPrice_2D(n,z) =  EQ_Demand_balance_2D.m('2D',n,z);
 ShadowPrice_3U(n,z) =  EQ_Demand_balance_3U.m('RR',n,z);
-
+*new
 OutputReserve_2U(au,z) = Reserve_Available.L('2U',au,z);
 OutputReserve_2D(au,z) = Reserve_Available.L('2D',au,z);
 OutputReserve_3U(au,z) = Reserve_Available.L('RR',au,z);
@@ -1868,6 +1882,7 @@ OutputOptimalityGap(z) = OptimalityGap.L(z);
 OutputOptimizationError(z) = OptimizationError.L(z);
 OutputOptimizationCheck(z) = OptimizationError.L(z) - OptimalityGap.L(z);
 UnitHourlyPowerRevenue(au,z) = sum(n, EQ_Demand_balance_DA.m(n,z) * Location(au,n) * Power.L(au,z));
+*new
 UnitHourly2URevenue(au,z) = sum(n, OutputReserve_2U(au,z) * ShadowPrice_2U(n,z) * Location(au,n));
 UnitHourly2DRevenue(au,z) = sum(n, OutputReserve_2D(au,z) * ShadowPrice_2D(n,z) * Location(au,n));
 UnitHourly3URevenue(au,z) = sum(n, OutputReserve_3U(au,z) * ShadowPrice_3U(n,z) * Location(au,n));
