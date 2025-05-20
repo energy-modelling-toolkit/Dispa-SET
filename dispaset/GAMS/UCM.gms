@@ -210,8 +210,9 @@ Droop(au)                                    [%]             Droop
 PrimaryReserveLimit(h)                      [MWh]           Primary Reserve
 FFRLimit(h)                                 [MWh]           Fast Frequency Reserve
 
-;
 
+
+;
 
 
 *Parameters as used within the loop
@@ -375,6 +376,17 @@ $LOAD FFRLimit
 ;
 
 
+*new
+Parameter ReserveDuration(res)
+/
+  FFRU  0.0167
+  PFRU  0.25
+  2U    0.5
+  RR    1.0
+  FFRD  0.0167
+  PFRD  0.25
+  2D    0.5
+/;
 *===============================================================================
 *Definition of variables
 *===============================================================================
@@ -561,6 +573,11 @@ EQ_Power_available
 EQ_2U_limit_chp
 EQ_2D_limit_chp
 EQ_3U_limit_chp
+
+*new
+EQ_Reserve_UP_limit_ba
+EQ_Reserve_DOWN_limit_ba
+
 EQ_Storage_minimum
 EQ_Storage_alert
 EQ_Storage_flood_control
@@ -624,8 +641,9 @@ EQ_FFR_Available
 *EQ_FFR_Capability
 EQ_Demand_balance_FFR
 
-EQ_Reserves_Up_Capability
-EQ_Reserves_Down_Capability,
+EQ_Reserves_Up_Capability_1
+EQ_Reserves_Up_Capability_2
+EQ_Reserves_Down_Capability
 
 *MADRID
 EQ_PowerLoss
@@ -947,14 +965,24 @@ EQ_Curtailed_Power(n,i)..
 *         (Nunits(u)-Committed(u,i))*QuickStartPower(u,i)*TimeStep
 *;
 
-EQ_Reserves_Up_Capability(u,i)..
-    sum(res_U, Reserve_Available(res_U,u,i) * Reserve(res_U,u,i))
-    =L=
+*TODO: debemos separar la ecuacion para FFRU de las otras reservas res_U y quizas lo mismo para las res_D porque en esta solo participan baterias 
+EQ_Reserves_Up_Capability_1(u,i)$(ba(u))..
+    Reserve_Available('FFRU',u,i) * Reserve('FFRU',u,i)
+  =L=
+  + PowerCapacity(u) * Nunits(u) * LoadMaximum(u,i)
+  - Power(u,i)
+;
+
+EQ_Reserves_Up_Capability_2(u,i)..
+  sum(res_U$(not sameas(res_U, 'FFRU')),
+        Reserve_Available(res_U,u,i) * Reserve(res_U,u,i)$(not ba(u)))
+  =L=
     PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i)$(not ba(u))
-  + PowerCapacity(u) *Nunits(u)* LoadMaximum(u,i)$(ba(u))
+  + PowerCapacity(u) * Nunits(u) * LoadMaximum(u,i)$(ba(u))
   - Power(u,i)
   + (Nunits(u) - Committed(u,i)) * QuickStartPower(u,i) * TimeStep$(QuickStartPower(u,i) > 0)
 ;
+
 
 *EQ_Reserve_2D_capability(u,i)..
 *         Reserve_2D(u,i)
@@ -988,6 +1016,24 @@ EQ_3U_limit_chp(res_U,chp,i)..
          =l=
          (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))*(CHPPowerToHeat(chp))
 ;
+*-----------------------------------------------------------------------------
+EQ_Reserve_UP_limit_ba(res_U,ba,i)..
+         Reserve_Available(res_U,ba,i)
+         =l=
+         StorageLevel(ba,i)/(ReserveDuration(res_U)/StorageDischargeEfficiency(ba))
+;
+
+EQ_Reserve_DOWN_limit_ba(res_D,ba,i)..
+         Reserve_Available(res_D,ba,i)
+         =l=
+         (StorageCapacity(ba)*Nunits(ba)-StorageLevel(ba,i))*(StorageChargingEfficiency(ba))/(ReserveDuration(res_D))        
+;
+
+*EQ_3U_limit_ba(res_U,chp,i)..
+*         Reserve_Available('RR',chp,i)
+*         =l=
+*         (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))*(CHPPowerToHeat(chp))
+*;
 *----------------------------------------------------------------------------------------------------------------------------------
 
 *New
@@ -1478,6 +1524,11 @@ EQ_Power_available,
 EQ_2U_limit_chp,
 EQ_2D_limit_chp,
 EQ_3U_limit_chp,
+
+*new
+EQ_Reserve_UP_limit_ba
+EQ_Reserve_DOWN_limit_ba
+
 EQ_Storage_minimum,
 EQ_Storage_alert,
 EQ_Storage_flood_control,
@@ -1537,7 +1588,8 @@ $If %MTS% == 0 EQ_FFR_Available,
 *$If %MTS% == 0 EQ_FFR_Capability,
 $If %MTS% == 0 EQ_Demand_balance_FFR,
 
-EQ_Reserves_Up_Capability,
+EQ_Reserves_Up_Capability_1,
+EQ_Reserves_Up_Capability_2,
 EQ_Reserves_Down_Capability,
 
 *MADRID
