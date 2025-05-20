@@ -398,6 +398,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     if mts_plot:
         if 'profiles' in locals():
             profiles.plot()
+        # TODO: the 2 lines below produce an error working with the excel config
         if 'profilesSectorX' in locals():
             profilesSectorX.plot()
 

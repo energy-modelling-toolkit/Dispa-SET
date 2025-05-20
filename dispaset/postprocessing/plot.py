@@ -1044,10 +1044,11 @@ def plot_tech_cap(inputs, plot=True, figsize=(10, 7), alpha=0.8, width=0.5):
                 elif inputs['param_df']['Technology'].loc['BATS', u]:
                     Cap.loc[z, 'BATS'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i, 0] * \
                                           inputs['param_df']['Nunits'].iloc[i, 0]
+                # TODO: the 4 lines below produce an error working with the config excel
                 elif u in inputs['param_df']['sets']['p2h'] or inputs['param_df']['sets']['chp'] or \
                         inputs['param_df']['Technology'].loc['SCSP', u] or inputs['param_df']['sets']['thms']:
                     Cap.loc[z, 'Thermal'] += inputs['param_df']['StorageCapacity'].fillna(0).iloc[i, 0] * \
-                                             inputs['param_df']['Nunits'].iloc[i, 0]
+                                              inputs['param_df']['Nunits'].iloc[i, 0]
     # for i, u in enumerate(filter_sector(inputs['param_df']['SectorXStorageCapacity'], inputs).index):
     #     for z in inputs['sets']['n']:
     #         if inputs['param_df']['Location'].loc[z, u]:
