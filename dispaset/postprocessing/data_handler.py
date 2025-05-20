@@ -187,7 +187,8 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'UnitHourly2URevenue', 'UnitHourlyProductionCost', 'UnitHourlyStartUpCost', 'UnitHourlyVariableCost',
                    'UnitHourly2DRevenue', 'UnitHourly3URevenue', 'UnitHourlyPowerRevenue', 
                    'UnitHourlyProfit', 'UnitHourlyRampingCost', 'UnitHourlyRevenue',
-                   'OutputSysInertia','OutputFFR_Available', 'OutputPrimaryReserve_Available', 'OutputReserve_Available']
+                   'OutputSysInertia','OutputFFR_Available', 'OutputPrimaryReserve_Available', 
+                   'OutputReserve_Available', 'OutputReserve_FFRD', 'OutputReserve_FFRU', 'OutputReserve_PFRD', 'OutputReserve_PFRU']
 
     # Setting the proper index to the result dataframes:
     for key in chain(keys, keys_sparse):
