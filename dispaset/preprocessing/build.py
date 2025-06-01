@@ -14,7 +14,7 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, \
     check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_FFRLimit, check_PrimaryReserveLimit, check_CostXNotServed,\
     check_grid_data
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
-    load_geo_data, GenericTable
+    load_geo_data, GenericTable, load_config
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, \
     BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep, PTDF_matrix, merge_lines
