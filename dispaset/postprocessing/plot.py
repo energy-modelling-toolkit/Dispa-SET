@@ -123,19 +123,27 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         axes[n - 1].fill_between(pdrng, ntc.loc[pdrng, 'ZeroLine'], ntc.loc[pdrng, 'FlowOut'],
                                  facecolor=colors['FlowOut'],
                                  alpha=alpha)
-        axes[n - 1].set_ylabel('NTC [' + units[0] + ']')
+        axes[n - 1].set_ylabel('NTC [' + units[0] + ']', fontsize=14)
         if ntc_limits is not None:
             axes[n - 1].set_ylim(ntc_limits[0], ntc_limits[1])
     else:
         fig, axes = plt.subplots(nrows=n, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
                                  gridspec_kw={'height_ratios': height_ratio, 'hspace': 0.04})
-
+    #CHANGE FONTSIZE FOR XTICKS AND YTICKS
+    for ax in axes:
+        ax.tick_params(axis='x', labelsize=17)  # Tamaño del texto para el eje X
+        ax.tick_params(axis='y', labelsize=17)  # Tamaño del texto para el eje Y
+    for label in ax.get_xticklabels():
+        label.set_rotation(0)  # Rotación eje X
+    for label in ax.get_yticklabels():
+        label.set_rotation(0)   # Rotación eje Y (opcional)
+        
     # Create left axis:
     if plot_lines:
         axes[0].plot(pdrng, demand[pdrng], color='k')
     axes[0].set_xlim(pdrng[0], pdrng[-1])
 
-    fig.suptitle(y_ax + ' dispatch for zone ' + demand.name)
+    fig.suptitle(y_ax + ' dispatch for zone ' + demand.name, fontsize=25)
 
     # Define labels, patches and colors
     labels = []
@@ -167,7 +175,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         if isinstance(minlevel, pd.Series):
             axes[1].plot(pdrng, minlevel[pdrng], color='k', alpha=alpha, linestyle=':')
         axes[1].set_ylabel('Level [' + units[1] + ']')
-        axes[1].yaxis.label.set_fontsize(12)
+        axes[1].yaxis.label.set_fontsize(14)
         line_SOC = mlines.Line2D([], [], color='black', alpha=alpha, label='Min level', linestyle=':')
         if storage_limits is not None:
             axes[1].set_ylim(storage_limits[0], storage_limits[1])
@@ -213,7 +221,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         patches.append(mpatches.Patch(facecolor=colors['curtailment'], label='Curtailment'))
 
     axes[0].set_ylabel(y_ax + ' [' + units[0] + ']')
-    axes[0].yaxis.label.set_fontsize(12)
+    axes[0].yaxis.label.set_fontsize(14)
     if dispatch_limits is not None:
         axes[0].set_ylim(dispatch_limits[0], dispatch_limits[1])
 
@@ -254,8 +262,9 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
             axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
                                  linestyle='dashed')
     else:
-        plt.legend(title='Dispatch for ' + demand.name, handles=[line_demand] + [line_shedload] + [line_SOC] +
-                                                                patches[::-1], loc=4, bbox_to_anchor=(1.2, 0.5))
+        #FONT FOR LEGEND
+        plt.legend(title='Dispatch for ' + demand.name, title_fontsize=17, handles=[line_demand] + [line_shedload] + [line_SOC] +
+                                                                patches[::-1], loc=4, bbox_to_anchor=(1.28, 0), fontsize=17)
         if plot_lines:
             axes[0].fill_between(demand.index, demand, reduced_demand, facecolor="none", hatch="X", edgecolor="k",
                                  linestyle='dashed')
