@@ -168,7 +168,7 @@ RampStartUpMaximum(au)                      [MW\h\u]        Start-up ramp limit
 RampStartUpMaximumH(au,h)                   [MW\h\u]        Start-up ramp limit - Clustered formulation
 RampShutDownMaximumH(au,h)                  [MW\h\u]        Shut-down ramp limit - Clustered formulation
 RampUpMaximum(au)                           [MW\h\u]        Ramp up limit
-Reserve(res,au,h)                           [n.a.]          Reserve technology and type {1 0}
+ReserveParticipation(res,au,h)                           [n.a.]          Reserve technology and type {1 0}
 StorageCapacity(au)                         [MWh\u]         Storage capacity
 StorageDischargeEfficiency(au)              [%]             Discharge efficiency
 StorageOutflow(au,h)                        [MW\u]          Storage outflows
@@ -209,6 +209,7 @@ InertiaLimit(h)                             [s\h]           Inertia Limit
 Droop(au)                                    [%]             Droop
 PrimaryReserveLimit(h)                      [MWh]           Primary Reserve
 FFRLimit(h)                                 [MWh]           Fast Frequency Reserve
+ReserveDemand(res,n,h)                      [MW]            Reserve Demand
 
 
 
@@ -334,7 +335,7 @@ $LOAD RampDownMaximum
 $LOAD RampShutDownMaximum
 $LOAD RampStartUpMaximum
 $LOAD RampUpMaximum
-$LOAD Reserve
+$LOAD ReserveParticipation
 $LOAD StorageCapacity
 $LOAD StorageInflow
 $LOAD StorageInitial
@@ -373,6 +374,7 @@ $LOAD InertiaLimit
 $LOAD Droop
 $LOAD PrimaryReserveLimit
 $LOAD FFRLimit
+$LOAD ReserveDemand
 ;
 
 
@@ -382,7 +384,7 @@ Parameter ReserveDuration(res)
   FFRU  0.0167
   PFRU  0.25
   2U    0.5
-  RR    1.0
+  3U    1.0
   FFRD  0.0167
   PFRD  0.25
   2D    0.5
@@ -642,7 +644,7 @@ EQ_FFR_Available
 EQ_Demand_balance_FFR
 
 EQ_Reserves_Up_Capability_1
-EQ_Reserves_Up_Capability_2
+*EQ_Reserves_Up_Capability_2
 EQ_Reserves_Down_Capability
 
 *MADRID
@@ -901,7 +903,7 @@ EQ_PowerLoss(u,i)$(ord(u))..
 *---------------------------------------------------RESERVES BALANCES ---------------------------------------------------
 *Hourly demand balance in the upwards spinning reserve market for each node
 EQ_Demand_balance_2U(res_U,n,i)..
-         sum((u),Reserve_Available(res_U,u,i)*Reserve('2U',u,i)*Location(u,n))
+         sum((u),Reserve_Available(res_U,u,i)*ReserveParticipation('2U',u,i)*Location(u,n))
          + CurtailmentReserve('2U',n,i) + LL_Reserve('2U',n,i)
          =E=
 *New
@@ -913,8 +915,8 @@ $If %ActivateAdvancedReserves% == 1 +(Demand("2U",n,i) + smax((u,tc),PowerCapaci
 
 *Hourly demand balance in the upwards non-spinning reserve market for each node
 EQ_Demand_balance_3U(res_U,n,i)..
-         sum((u),(Reserve_Available('2U',u,i) + Reserve_Available('RR',u,i))*Reserve('RR',u,i)*Location(u,n))
-         + CurtailmentReserve('RR',n,i) + LL_Reserve('RR',n,i)
+         sum((u),(Reserve_Available('2U',u,i) + Reserve_Available('3U',u,i))*ReserveParticipation('3U',u,i)*Location(u,n))
+         + CurtailmentReserve('3U',n,i) + LL_Reserve('3U',n,i)
          =E=
          Demand("2U",n,i)
 $If %ActivateAdvancedReserves% == 2 + max(smax((u,tc),PowerCapacity(u)/Nunits(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0))
@@ -923,7 +925,7 @@ $If %ActivateAdvancedReserves% == 1 + smax((u,tc),PowerCapacity(u)/Nunits(u)*Tec
 
 *Hourly demand balance in the downwards reserve market for each node
 EQ_Demand_balance_2D(res_D,n,i)..
-         sum((u),Reserve_Available(res_D,u,i)*Reserve('2D',u,i)*Location(u,n))
+         sum((u),Reserve_Available(res_D,u,i)*ReserveParticipation('2D',u,i)*Location(u,n))
          + LL_Reserve('2D',n,i)
          =E=
          Demand("2D",n,i)
@@ -941,14 +943,14 @@ EQ_Curtailed_Power(n,i)..
 *EQ_FFR_Capability(u,i)$(ba(u))..
 *         FFR_Available(u,i)
 *         =L=
-*         ((PowerCapacity(u)*Nunits(u)*LoadMaximum(u,i)-Power(u,i))*Reserve(u ,'FFR'))$(ba(u))
+*         ((PowerCapacity(u)*Nunits(u)*LoadMaximum(u,i)-Power(u,i))*ReserveParticipation(u ,'FFR'))$(ba(u))
 *;
 
 *EQ_PrimaryReserve_Capability(u,i)$(cu(u) or ba(u)) ..
 *    PrimaryReserve_Available(u,i)
 *    =l=
-*    (PowerCapacity(u)*Nunits(u)*LoadMaximum(u,i)*Committed(u,i) - Power(u,i)) * Reserve(u,'PFR')$(cu(u)) 
-*  + (PowerCapacity(u)*Nunits(u)*LoadMaximum(u,i) - Power(u,i) - FFR_Available(u,i)) * Reserve(u,'PFR')$(ba(u))
+*    (PowerCapacity(u)*Nunits(u)*LoadMaximum(u,i)*Committed(u,i) - Power(u,i)) * ReserveParticipation(u,'PFR')$(cu(u)) 
+*  + (PowerCapacity(u)*Nunits(u)*LoadMaximum(u,i) - Power(u,i) - FFR_Available(u,i)) * ReserveParticipation(u,'PFR')$(ba(u))
 *;
 
 ** Reserve capability
@@ -966,22 +968,16 @@ EQ_Curtailed_Power(n,i)..
 *;
 
 *TODO: debemos separar la ecuacion para FFRU de las otras reservas res_U y quizas lo mismo para las res_D porque en esta solo participan baterias 
-EQ_Reserves_Up_Capability_1(u,i)$(ba(u))..
-    Reserve_Available('FFRU',u,i) * Reserve('FFRU',u,i)
-  =L=
-  + PowerCapacity(u) * Nunits(u) * LoadMaximum(u,i)
-  - Power(u,i)
-;
+*EQ_Reserves_Up_Capability_1(u,i)..
+*  sum(res_U$( (ba(u) and sameas(res_U,'FFRU')) or (not ba(u) and not sameas(res_U,'FFRU')) ),
+*    Reserve_Available(res_U,u,i) * ReserveParticipation(res_U,u,i)
+*  )
+*  =L=
+*    (PowerCapacity(u) * Nunits(u) * LoadMaximum(u,i))$(ba(u))
+*  - Power(u,i)
+*  + (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i))$(not ba(u))
+*  + (Nunits(u) - Committed(u,i)) * QuickStartPower(u,i) * TimeStep$(QuickStartPower(u,i) > 0);
 
-EQ_Reserves_Up_Capability_2(u,i)..
-  sum(res_U$(not sameas(res_U, 'FFRU')),
-        Reserve_Available(res_U,u,i) * Reserve(res_U,u,i)$(not ba(u)))
-  =L=
-    PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i)$(not ba(u))
-  + PowerCapacity(u) * Nunits(u) * LoadMaximum(u,i)$(ba(u))
-  - Power(u,i)
-  + (Nunits(u) - Committed(u,i)) * QuickStartPower(u,i) * TimeStep$(QuickStartPower(u,i) > 0)
-;
 
 
 *EQ_Reserve_2D_capability(u,i)..
@@ -992,7 +988,7 @@ EQ_Reserves_Up_Capability_2(u,i)..
 *;
 
 EQ_Reserves_Down_Capability(u,i)..
-         sum(res_D, Reserve_Available(res_D,u,i) *Reserve(res_D,u,i) ) 
+         sum(res_D, Reserve_Available(res_D,u,i) *ReserveParticipation(res_D,u,i) ) 
          =L=
          (Power(u,i) - PowerMustRun(u,i) * Committed(u,i))
          + (StorageChargingCapacity(u)*Nunits(u)-StorageInput(u,i))$(s(u))
@@ -1012,7 +1008,7 @@ EQ_2D_limit_chp(res_D,chp,i)..
 ;
 
 EQ_3U_limit_chp(res_U,chp,i)..
-         Reserve_Available('RR',chp,i)
+         Reserve_Available('3U',chp,i)
          =l=
          (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))*(CHPPowerToHeat(chp))
 ;
@@ -1030,7 +1026,7 @@ EQ_Reserve_DOWN_limit_ba(res_D,ba,i)..
 ;
 
 *EQ_3U_limit_ba(res_U,chp,i)..
-*         Reserve_Available('RR',chp,i)
+*         Reserve_Available('3U',chp,i)
 *         =l=
 *         (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))*(CHPPowerToHeat(chp))
 *;
@@ -1051,7 +1047,7 @@ EQ_PrimaryReserve_Available(i)$(sum(u$(cu(u) or ba(u)), Droop(u)) > 0) ..
 EQ_PrimaryReserve_Allowed(u,i)$(cu(u))..
          Reserve_Available('PFRU',u,i)
          =L=
-         (PowerCapacity(u)*Nunits(u)*Committed(u,i)*Reserve('PFRU',u,i)*MaxPrimaryAllowed)$(cu(u))
+         (PowerCapacity(u)*Nunits(u)*Committed(u,i)*ReserveParticipation('PFRU',u,i)*MaxPrimaryAllowed)$(cu(u))
 ;
 
 * --------- PRIMARY RESERVE: SYSTEM HOURLY REQUIREMENT ---------
@@ -1508,9 +1504,9 @@ $If not %LPFormulation% == 1 EQ_MinDownTime,
 EQ_RampUp_TC,
 EQ_RampDown_TC,
 EQ_Demand_balance_DA,
-EQ_Demand_balance_2U,
-EQ_Demand_balance_2D,
-EQ_Demand_balance_3U,
+*EQ_Demand_balance_2U,
+*EQ_Demand_balance_2D,
+*EQ_Demand_balance_3U,
 $If not %LPFormulation% == 1 EQ_Power_must_run,
 EQ_P2X_Power_Balance,
 EQ_Max_Power_Consumption,
@@ -1588,8 +1584,8 @@ $If %MTS% == 0 EQ_FFR_Available,
 *$If %MTS% == 0 EQ_FFR_Capability,
 $If %MTS% == 0 EQ_Demand_balance_FFR,
 
-EQ_Reserves_Up_Capability_1,
-EQ_Reserves_Up_Capability_2,
+*EQ_Reserves_Up_Capability_1,
+*EQ_Reserves_Up_Capability_2,
 EQ_Reserves_Down_Capability,
 
 *MADRID
@@ -1856,7 +1852,7 @@ OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
 *new
 OutputCurtailmentReserve_2U(n,z)=CurtailmentReserve.L('2U',n,z);
-OutputCurtailmentReserve_3U(n,z)=CurtailmentReserve.L('RR',n,z);
+OutputCurtailmentReserve_3U(n,z)=CurtailmentReserve.L('3U',n,z);
 
 OutputCurtailmentPerUnit(u,z)=(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1);
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
@@ -1867,7 +1863,7 @@ LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
 *new
 LostLoad_2D(n,z) = LL_Reserve.L('2D',n,z);
 LostLoad_2U(n,z) = LL_Reserve.L('2U',n,z);
-LostLoad_3U(n,z) = LL_Reserve.L('RR',n,z);
+LostLoad_3U(n,z) = LL_Reserve.L('3U',n,z);
 
 LostLoad_StorageAlert(au,z) = LL_StorageAlert.L(au,z);
 LostLoad_FloodControl(au,z) = LL_FloodControl.L(au,z);
@@ -1893,13 +1889,13 @@ $If not %LPFormulation% == 1 OutputCostShutDownH(au,z) = CostShutDownH.L(au,z);
 $If not %LPFormulation% == 1 OutputCostRampUpH(au,z) = CostRampUpH.L(au,z);
 $If not %LPFormulation% == 1 OutputCostRampDownH(au,z) = CostRampDownH.L(au,z);
 *new
-ShadowPrice_2U(n,z) =  EQ_Demand_balance_2U.m('2U',n,z);
-ShadowPrice_2D(n,z) =  EQ_Demand_balance_2D.m('2D',n,z);
-ShadowPrice_3U(n,z) =  EQ_Demand_balance_3U.m('RR',n,z);
+*ShadowPrice_2U(n,z) =  EQ_Demand_balance_2U.m('2U',n,z);
+*ShadowPrice_2D(n,z) =  EQ_Demand_balance_2D.m('2D',n,z);
+*ShadowPrice_3U(n,z) =  EQ_Demand_balance_3U.m('3U',n,z);
 *new
 OutputReserve_2U(au,z) = Reserve_Available.L('2U',au,z);
 OutputReserve_2D(au,z) = Reserve_Available.L('2D',au,z);
-OutputReserve_3U(au,z) = Reserve_Available.L('RR',au,z);
+OutputReserve_3U(au,z) = Reserve_Available.L('3U',au,z);
 
 ShadowPrice_RampUp_TC(u,z) = EQ_RampUp_TC.m(u,z);
 ShadowPrice_RampDown_TC(u,z) = EQ_RampDown_TC.m(u,z);
@@ -1935,10 +1931,10 @@ OutputOptimizationError(z) = OptimizationError.L(z);
 OutputOptimizationCheck(z) = OptimizationError.L(z) - OptimalityGap.L(z);
 UnitHourlyPowerRevenue(au,z) = sum(n, EQ_Demand_balance_DA.m(n,z) * Location(au,n) * Power.L(au,z));
 *new
-UnitHourly2URevenue(au,z) = sum(n, OutputReserve_2U(au,z) * ShadowPrice_2U(n,z) * Location(au,n));
-UnitHourly2DRevenue(au,z) = sum(n, OutputReserve_2D(au,z) * ShadowPrice_2D(n,z) * Location(au,n));
-UnitHourly3URevenue(au,z) = sum(n, OutputReserve_3U(au,z) * ShadowPrice_3U(n,z) * Location(au,n));
-UnitHourlyRevenue(au,z) = UnitHourlyPowerRevenue(au,z) + UnitHourly2URevenue(au,z) + UnitHourly2DRevenue(au,z) + UnitHourly3URevenue(au,z);
+*UnitHourly2URevenue(au,z) = sum(n, OutputReserve_2U(au,z) * ShadowPrice_2U(n,z) * Location(au,n));
+*UnitHourly2DRevenue(au,z) = sum(n, OutputReserve_2D(au,z) * ShadowPrice_2D(n,z) * Location(au,n));
+*UnitHourly3URevenue(au,z) = sum(n, OutputReserve_3U(au,z) * ShadowPrice_3U(n,z) * Location(au,n));
+*UnitHourlyRevenue(au,z) = UnitHourlyPowerRevenue(au,z) + UnitHourly2URevenue(au,z) + UnitHourly2DRevenue(au,z) + UnitHourly3URevenue(au,z);
 UnitHourlyFixedCost(u,z) = Committed.L(u,z) * CostFixed(u);
 UnitHourlyVariableCost(au,z) = Power.L(au,z) * CostVariable(au,z);
 UnitHourlyStartUpCost(u,z) = StartUp.L(u,z) * CostStartUp(u);
@@ -1946,7 +1942,7 @@ UnitHourlyShutDownCost(u,z) = ShutDown.L(u,z) * CostShutDown(u);
 UnitHourlyRampingCost(au,z) = CostRampUpH.L(au,z) + CostRampDownH.L(au,z);
 UnitHourlyProductionCost(au,z) = sum(u, UnitHourlyFixedCost(u,z) + UnitHourlyStartUpCost(u,z) + UnitHourlyShutDownCost(u,z) + UnitHourlyRampingCost(u,z))
                                 + UnitHourlyVariableCost(au,z);
-UnitHourlyProfit(au,z) = UnitHourlyRevenue(au,z) - UnitHourlyProductionCost(au,z);
+*UnitHourlyProfit(au,z) = UnitHourlyRevenue(au,z) - UnitHourlyProductionCost(au,z);
 
 
 EXECUTE_UNLOAD "Results.gdx"

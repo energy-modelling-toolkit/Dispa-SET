@@ -715,11 +715,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             else:
                 logging.info('Using generic reserve calculation for zone ' + z)
                 reserve_2U_tot[z], reserve_2D_tot[z] = generic_reserve(Load[z])
+    
+                
+    # New Reserves calculation
+    # Calculate the percentage that each zone represents of the total load in each hour
+    Load_shares = Load.div(Load.sum(axis=1), axis=0)    
+    # Prorratear el valor total de FFR por los porcentajes de cada zona
+    FFRLimit_allocated = Load_shares.mul(FFRLimit.iloc[:, 0], axis=0)
+    PrimaryReserveLimit_allocated = Load_shares.mul(PrimaryReserveLimit.iloc[:, 0], axis=0)
 
     # %% Store all times series and format
 
     # Formatting all time series (merging, resempling) and store in the FinalTS dict
-    finalTS = {'Load': Load, 'Reserve2D': reserve_2D_tot, 'Reserve2U': reserve_2U_tot,
+    finalTS = {'Load': Load, 'Reserve2D': reserve_2D_tot, 'Reserve2U': reserve_2U_tot, 'Reserve3U': reserve_2U_tot,
                'Efficiencies': Efficiencies,
                'NTCs': NTCs, 'Inter_RoW': Inter_RoW,'PriceTransmission': PriceTransmission,
                'BS_NTCs': BS_NTCs, 'BS_Inter_RoW': BS_Inter_RoW,
@@ -734,7 +742,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel,
                'SectorXFloodControl': SectorXFloodControl,
                'CostOfSpillage': CostOfSpillage, 'CostXSpillage': CostXSpillage,
-               'InertiaLimit': InertiaLimit, 'FFRLimit': FFRLimit, 'PrimaryReserveLimit': PrimaryReserveLimit}
+               'InertiaLimit': InertiaLimit, 'FFRU': FFRLimit_allocated, 'FFRD': FFRLimit_allocated, 
+               'PFRU': PrimaryReserveLimit_allocated, 'PFRD': PrimaryReserveLimit_allocated}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
@@ -816,7 +825,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                  Plants_merged['Technology']]].index.tolist()
     sets['cu'] = Plants_conventional.index.tolist()
     sets['ba'] = Plants_batteries.index.tolist()
-    sets['res_U'] = ['FFRU', 'PFRU', '2U', 'RR']
+    sets['res_U'] = ['FFRU', 'PFRU', '2U', '3U']
     sets['res_D'] = ['FFRD', 'PFRD', '2D']
     sets['res'] = sets['res_U'] + sets['res_D']
     
@@ -851,6 +860,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['Curtailment'] = ['n']
     sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
+    sets_param['ReserveDemand'] = ['res', 'n', 'h']      #new for reserves FCR
     sets_param['Efficiency'] = ['au', 'h']
     sets_param['X2PowerConversionMultiplier'] = ['nx', 'x2p', 'h']
     sets_param['Power2XConversionMultiplier'] = ['nx', 'p2x', 'h']
@@ -880,7 +890,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['RampDownMaximum'] = ['au']
     sets_param['RampStartUpMaximum'] = ['au']
     sets_param['RampShutDownMaximum'] = ['au']
-    sets_param['Reserve'] = ['res', 'au', 'h']  # changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
+    sets_param['ReserveParticipation'] = ['res', 'au', 'h']  # changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
     sets_param['StorageCapacity'] = ['au']
     sets_param['StorageHours'] = ['au']
     sets_param['StorageChargingCapacity'] = ['au']
@@ -935,7 +945,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         parameters[var] = define_parameter(sets_param[var], sets, value=1e7)
 
     # Boolean parameters:
-    for var in ['Technology', 'Fuel', 'Reserve', 'Location', 'LocationX']:
+    for var in ['Technology', 'Fuel', 'ReserveParticipation', 'Location', 'LocationX']:
         parameters[var] = define_parameter(sets_param[var], sets, value='bool')
     # %%
         # List of parameters whose value is known and provided in the dataframe BoundarySector
@@ -1152,6 +1162,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         values[3, i, :] = finalTS['Load'][sets['n'][i]] * finalTS['ShareOfFlexibleDemand'][sets['n'][i]]
     parameters['Demand'] = {'sets': sets_param['Demand'], 'val': values}
 
+    # Reserves Demand
+    values = np.ndarray([len(sets['res']), len(sets['n']), len(sets['h'])])
+    for i in range(len(sets['n'])):
+        values[0, i, :] = finalTS['FFRU'][sets['n'][i]]
+        values[1, i, :] = finalTS['PFRU'][sets['n'][i]]
+        values[2, i, :] = finalTS['Reserve2U'][sets['n'][i]]
+        values[3, i, :] = finalTS['Reserve3U'][sets['n'][i]]
+        values[4, i, :] = finalTS['FFRD'][sets['n'][i]]
+        values[5, i, :] = finalTS['PFRD'][sets['n'][i]]
+        values[6, i, :] = finalTS['Reserve2D'][sets['n'][i]]
+    parameters['ReserveDemand'] = {'sets': sets_param['ReserveDemand'], 'val': values}
+
     # Emission Rate:
     parameters['EmissionRate']['val'][:, 0] = Plants_merged['EmissionRate'].values
 
@@ -1257,14 +1279,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Inertia limit to parameters dict
     # parameters['InertiaLimit']['val'] = InertiaLimit['InertiaLimit'].values
     # if MTS == 0:
-    if len(finalTS['InertiaLimit'].columns) != 0:
-        parameters['InertiaLimit']['val'] = finalTS['InertiaLimit'].iloc[:, 0].values
-    # FFR to parameters dict
-    if len(finalTS['FFRLimit'].columns) != 0:
-        parameters['FFRLimit']['val'] = finalTS['FFRLimit'].iloc[:, 0].values
-    # Primary Reserve to parameters dict
-    if len(finalTS['PrimaryReserveLimit'].columns) != 0:
-        parameters['PrimaryReserveLimit']['val'] = finalTS['PrimaryReserveLimit'].iloc[:, 0].values
+    # if len(finalTS['InertiaLimit'].columns) != 0:
+    #     parameters['InertiaLimit']['val'] = finalTS['InertiaLimit'].iloc[:, 0].values
+    # # FFR to parameters dict
+    # if len(finalTS['FFRLimit'].columns) != 0:
+    #     parameters['FFRLimit']['val'] = finalTS['FFRLimit'].iloc[:, 0].values
+    # # Primary Reserve to parameters dict
+    # if len(finalTS['PrimaryReserveLimit'].columns) != 0:
+    #     parameters['PrimaryReserveLimit']['val'] = finalTS['PrimaryReserveLimit'].iloc[:, 0].values
 
     # Maximum Line Capacity
     for i, l in enumerate(sets['l_int']):
@@ -1374,7 +1396,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:  # 2D
                     values[j, i, :] = 0.6
     
-    parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
+    parameters['ReserveParticipation'] = {'sets': sets_param['ReserveParticipation'], 'val': values}
    
     # parameters['Reserve'] = define_parameter(['au', 'res'], sets, value=0)
     # res_index = {r: idx for idx, r in enumerate(sets['res'])}
