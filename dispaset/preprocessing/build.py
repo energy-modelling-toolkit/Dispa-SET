@@ -47,11 +47,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Checking the config first:
     if isinstance(config, str):
         config = load_config(config)
+        
+    # cheking a logical simularion time period:::::RAY
+    startdate = config['StartDate']
+    stopdate = config['StopDate']
+
+    if startdate > stopdate:
+        logging.critical("Illogical starting and ending dates in the simulation period. StartDate is later than StopDate. Please check the config file.")
+        sys.exit(1) # Exit the script as this is a critical error
 
     # Boolean variable to check wether it is milp or lp:
     LP = config['SimulationType'] == 'LP' or config['SimulationType'] == 'LP clustered'
 
-    # Boolean variable to check wether it is NTC or DC-POWERFLOW:
+    # Boolean vvariable to check wether it is NTC or DC-POWERFLOW:
     grid_flag = config.get('TransmissionGridType', '')  # If key does not exist it returns ""
 
     # Remove SectorCoupling_flag declaration since it's always 'On' in the next version
