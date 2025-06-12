@@ -1411,6 +1411,7 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
         logging.info(f'Flow data processed for sector {z}')
     
     # Process OutputXNotServed data if present
+    x_not_served = None                                  #### Ray eventual change... needs revission
     if 'OutputXNotServed' in results and z in results['OutputXNotServed'].columns:
         x_not_served = results['OutputXNotServed'][z] / 1000  # Convert to GW
         if x_not_served.sum() > 0:
