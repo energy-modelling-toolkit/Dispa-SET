@@ -55,6 +55,10 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'OutputPowerLoss': ('h'),
             'OutputPrimaryReserve_Available': ('h'),
             'OutputReserve_Available':('u','h','res'),
+            'LostLoad_FFRU': ('n', 'h'),
+            'LostLoad_FFRD': ('n', 'h'),
+            'LostLoad_PFRU': ('n', 'h'),
+            'LostLoad_PFRD': ('n', 'h'),
             'status': tuple(),
             '*': tuple()
             }
@@ -160,6 +164,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
     keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
             'LostLoad_RampDown', 'LostLoad_RampDown_Unit', 'LostLoad_2D', 'ShadowPrice', 'StorageShadowPrice',
             'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U', 'ShadowPriceDemandModulation',
+            'LostLoad_FFRU', 'LostLoad_FFRD', 'LostLoad_PFRU', 'LostLoad_PFRD',
             'status']  # 'status'
     # TODO: Check backward compatibility
     keys_sparse = ['OutputPower', 'OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted',
@@ -188,7 +193,9 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'UnitHourly2DRevenue', 'UnitHourly3URevenue', 'UnitHourlyPowerRevenue', 
                    'UnitHourlyProfit', 'UnitHourlyRampingCost', 'UnitHourlyRevenue',
                    'OutputSysInertia','OutputFFR_Available', 'OutputPrimaryReserve_Available', 
-                   'OutputReserve_Available', 'OutputReserve_FFRD', 'OutputReserve_FFRU', 'OutputReserve_PFRD', 'OutputReserve_PFRU']
+                   'OutputReserve_Available', 'OutputReserve_FFRD', 'OutputReserve_FFRU', 'OutputReserve_PFRD', 'OutputReserve_PFRU',
+                   'OutputDemand_FFRU', 'OutputDemand_FFRD', 'OutputDemand_PFRU', 'OutputDemand_PFRD',
+                   'OutputCurtailmentReserve_FFRU', 'OutputCurtailmentReserve_FFRD', 'OutputCurtailmentReserve_PFRU', 'OutputCurtailmentReserve_PFRD']
 
     # Setting the proper index to the result dataframes:
     for key in chain(keys, keys_sparse):

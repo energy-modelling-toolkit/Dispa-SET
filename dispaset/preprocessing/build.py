@@ -1382,19 +1382,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
             if r in sets['res_U']:
                 if tech in commons['tech_batteries'] and r in sets['res_U'][:2]:  # FFRU, PFRU
-                    values[j, i, :] = 0.1
+                    values[j, i, :] = 1
                 elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # PFRU, 2U, RR
-                    values[j, i, :] = 0.2
+                    values[j, i, :] = 1
                 elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:  # 2U, RR
-                    values[j, i, :] = 0.3
+                    values[j, i, :] = 1
     
             elif r in sets['res_D']:
                 if tech in commons['tech_batteries'] and r in sets['res_D'][:2]:  # FFRD, PFRD
-                    values[j, i, :] = 0.4
+                    values[j, i, :] = 1
                 elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # PFRD, 2D
-                    values[j, i, :] = 0.5
+                    values[j, i, :] = 1
                 elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:  # 2D
-                    values[j, i, :] = 0.6
+                    values[j, i, :] = 1
     
     parameters['ReserveParticipation'] = {'sets': sets_param['ReserveParticipation'], 'val': values}
    
