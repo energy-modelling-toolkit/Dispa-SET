@@ -643,8 +643,7 @@ EQ_FFR_Available
 *EQ_FFR_Capability
 EQ_Demand_balance_FFR
 
-*EQ_Reserves_Up_Capability_1
-*EQ_Reserves_Up_Capability_2
+EQ_Reserves_Up_Capability
 EQ_Reserves_Down_Capability
 EQ_UpwardReserves_balance
 EQ_DownwardReserves_balance
@@ -906,7 +905,7 @@ EQ_PowerLoss(u,i)$(ord(u))..
 * General formulation for Reserve Upward Balances
 EQ_UpwardReserves_balance(res_U,n,i)..
          sum((u),Reserve_Available(res_U,u,i)*ReserveParticipation(res_U,u,i)*Location(u,n))
-         + CurtailmentReserve(res_U,n,i) + LL_Reserve(res_U,n,i)
+         +  CurtailmentReserve(res_U,n,i)$(not sameas(res_U,'FFRU')) + LL_Reserve(res_U,n,i)
          =E=
          ReserveDemand(res_U,n,i)
 ;
@@ -953,7 +952,7 @@ EQ_DownwardReserves_balance(res_D,n,i)..
 
 *Curtailed power
 EQ_Curtailed_Power(n,i)..
-        CurtailedPower(n,i) + sum(res,CurtailmentReserve(res,n,i))
+        CurtailedPower(n,i) + sum(res_U$(not sameas(res_U,'FFRU')),CurtailmentReserve(res_U,n,i))
         =E=
         sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,i)-Power(u,i))$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
 ;
@@ -986,24 +985,15 @@ EQ_Curtailed_Power(n,i)..
 *;
 
 *TODO: debemos separar la ecuacion para FFRU de las otras reservas res_U y quizas lo mismo para las res_D porque en esta solo participan baterias 
-*EQ_Reserves_Up_Capability_1(u,i)..
-*  sum(res_U$( (ba(u) and sameas(res_U,'FFRU')) or (not ba(u) and not sameas(res_U,'FFRU')) ),
-*    Reserve_Available(res_U,u,i) * ReserveParticipation(res_U,u,i)
-*  )
-*  =L=
-*    (PowerCapacity(u) * Nunits(u) * LoadMaximum(u,i))$(ba(u))
-*  - Power(u,i)
-*  + (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i))$(not ba(u))
-*  + (Nunits(u) - Committed(u,i)) * QuickStartPower(u,i) * TimeStep$(QuickStartPower(u,i) > 0);
-
-
-
-*EQ_Reserve_2D_capability(u,i)..
-*         Reserve_2D(u,i)
-*         =L=
-*         (Power(u,i) - PowerMustRun(u,i) * Committed(u,i))
-*         + (StorageChargingCapacity(u)*Nunits(u)-StorageInput(u,i))$(s(u))
-*;
+EQ_Reserves_Up_Capability(u,i)..
+  sum(res_U$( (ba(u) and sameas(res_U,'FFRU')) or (not ba(u) and not sameas(res_U,'FFRU')) ),
+    Reserve_Available(res_U,u,i) * ReserveParticipation(res_U,u,i)
+  )
+  =L=
+    (PowerCapacity(u) * Nunits(u) * LoadMaximum(u,i))$(ba(u))
+  - Power(u,i)
+  + (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i))$(not ba(u))
+  + (Nunits(u) - Committed(u,i)) * QuickStartPower(u,i) * TimeStep$(QuickStartPower(u,i) > 0);
 
 EQ_Reserves_Down_Capability(u,i)..
          sum(res_D, Reserve_Available(res_D,u,i) *ReserveParticipation(res_D,u,i) ) 
@@ -1602,8 +1592,7 @@ $If %MTS% == 0 EQ_FFR_Available,
 *$If %MTS% == 0 EQ_FFR_Capability,
 *$If %MTS% == 0 EQ_Demand_balance_FFR,
 
-*EQ_Reserves_Up_Capability_1,
-*EQ_Reserves_Up_Capability_2,
+EQ_Reserves_Up_Capability,
 EQ_Reserves_Down_Capability,
 EQ_UpwardReserves_balance,
 EQ_DownwardReserves_balance,
