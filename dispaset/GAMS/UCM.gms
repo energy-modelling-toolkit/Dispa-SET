@@ -602,6 +602,7 @@ EQ_BS_Spillage_limits_upper
 $If %RetrieveStatus% == 1 EQ_CommittedCalc
 EQ_DC_Power_Flow
 EQ_Total_Injected_Power
+EQ_X2P_Power_Consumption
 
 *New
 $If %MTS% == 0 EQ_SysInertia
@@ -792,7 +793,7 @@ EQ_Residual_Load(n,i)..
 EQ_Demand_balance_DA(n,i)..
          sum(u,Power(u,i)*Location(u,n))
          +sum(x2p,Power(x2p,i)*Location(x2p,n))
-         -InjectedPower(i,n)
+         +InjectedPower(i,n)
          +sum(l_RoW,Flow(l_RoW,i)*LineNode(l_RoW,n))     
          +ShedLoad(n,i)
          +LL_MaxPower(n,i)
@@ -1468,7 +1469,11 @@ EQ_Max_Flex_Supply_BS(nx,i)..
 EQ_P2X_Power_Balance(p2x,i)..
          Power(p2x,i)
          =E=
-         PowerConsumption(p2x,i)
+         0
+;
+EQ_X2P_Power_Consumption(p2x,h)$(x2p(p2x) and i(h))..
+    PowerConsumption(p2x,h) =E= 0
+
 ;
 
 EQ_Max_Power_Consumption(p2x,i)..
@@ -1505,6 +1510,7 @@ EQ_Demand_balance_2D,
 EQ_Demand_balance_3U,
 $If not %LPFormulation% == 1 EQ_Power_must_run,
 EQ_P2X_Power_Balance,
+EQ_X2P_Power_Consumption
 EQ_Max_Power_Consumption,
 EQ_Power_Balance_of_P2X_units,
 EQ_Power_Balance_of_X2P_units,                                  

@@ -657,7 +657,8 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
     else:
         level = None
         minlevel = None
-
+        
+    # Demand Calculation
     if 'OutputPowerConsumption' in results:
         demand_p2x = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1000  # GW
         demand_p2x = demand_p2x.sum(axis=1)
