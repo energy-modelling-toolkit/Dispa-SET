@@ -637,11 +637,11 @@ EQ_Inertia_limit
 EQ_PrimaryReserve_Available
 *EQ_PrimaryReserve_Capability
 EQ_PrimaryReserve_Allowed
-EQ_Demand_balance_PrimaryReserve
+*EQ_Demand_balance_PrimaryReserve
 
 EQ_FFR_Available
 *EQ_FFR_Capability
-EQ_Demand_balance_FFR
+*EQ_Demand_balance_FFR
 
 EQ_Reserves_Up_Capability
 EQ_Reserves_Down_Capability
@@ -984,7 +984,7 @@ EQ_Curtailed_Power(n,i)..
 *         (Nunits(u)-Committed(u,i))*QuickStartPower(u,i)*TimeStep
 *;
 
-*TODO: debemos separar la ecuacion para FFRU de las otras reservas res_U y quizas lo mismo para las res_D porque en esta solo participan baterias 
+*Capability for all reserves upward
 EQ_Reserves_Up_Capability(u,i)..
   sum(res_U$( (ba(u) and sameas(res_U,'FFRU')) or (not ba(u) and not sameas(res_U,'FFRU')) ),
     Reserve_Available(res_U,u,i) * ReserveParticipation(res_U,u,i)
@@ -1042,12 +1042,12 @@ EQ_Reserve_DOWN_limit_ba(res_D,ba,i)..
 
 *New
 *MARCO PRIMARY RESERVE
-* --------- PRIMARY RESERVE: SYSTEM-WIDE CONSTRAINT ---------
-EQ_PrimaryReserve_Available(i)$(sum(u$(cu(u) or ba(u)), Droop(u)) > 0) ..
-    sum(u$(cu(u) or ba(u)), Reserve_Available('PFRU',u,i))
+* --------- PRIMARY RESERVE: SYSTEM-WIDE CONSTRAINT -------------------------------------------------------------------------------
+EQ_PrimaryReserve_Available(u,i)$((Droop(u)) > 0) ..
+    Reserve_Available('PFRU',u,i)
     =l=
-    sum(u$(cu(u)), (PowerCapacity(u)*Nunits(u)*Committed(u,i))/(Droop(u)*SystemFrequency)) * DeltaFrequencyMax
-  + sum(u$(ba(u)), (PowerCapacity(u)*Nunits(u))/(Droop(u)*SystemFrequency)) * DeltaFrequencyMax
+    (((PowerCapacity(u)*Nunits(u)*Committed(u,i))/(Droop(u)*SystemFrequency)) * DeltaFrequencyMax)$(cu(u))
+  + (((PowerCapacity(u)*Nunits(u))/(Droop(u)*SystemFrequency)) * DeltaFrequencyMax)$(ba(u))
 ;
 
 
@@ -1058,32 +1058,32 @@ EQ_PrimaryReserve_Allowed(u,i)$(cu(u))..
          (PowerCapacity(u)*Nunits(u)*Committed(u,i)*ReserveParticipation('PFRU',u,i)*MaxPrimaryAllowed)$(cu(u))
 ;
 
-* --------- PRIMARY RESERVE: SYSTEM HOURLY REQUIREMENT ---------
-*Hourly demand balance in the Primary Reserve market
-EQ_Demand_balance_PrimaryReserve(i)$((PrimaryReserveLimit(i))<>0)..
-         PrimaryReserveLimit(i)
-         =l=
-         sum(u$(cu(u) or ba(u)),Reserve_Available('PFRU',u,i))
-;
+** --------- PRIMARY RESERVE: SYSTEM HOURLY REQUIREMENT ---------
+**Hourly demand balance in the Primary Reserve market
+*EQ_Demand_balance_PrimaryReserve(i)$((PrimaryReserveLimit(i))<>0)..
+*         PrimaryReserveLimit(i)
+*         =l=
+*         sum(u$(cu(u) or ba(u)),Reserve_Available('PFRU',u,i))
+*;
 
 
 *New
 *MARCO FFR
-* --------- FFR RESERVE: SYSTEM-WIDE CONSTRAINT ------------------------------------------------------------------
-EQ_FFR_Available(i)$(sum(u$(ba(u)),Droop(u))>0)..
-         sum(u$(ba(u)),Reserve_Available('FFRU',u,i))
+* --------- FFR RESERVE: SYSTEM-WIDE CONSTRAINT ----------------------------------------------------------------------------------
+EQ_FFR_Available(u,i)$((Droop(u))>0)..
+         Reserve_Available('FFRU',u,i)
          =l=
-         sum(u$(ba(u)),(PowerCapacity(u)*Nunits(u))/(Droop(u)*SystemFrequency))*DeltaFrequencyMax
+        (((PowerCapacity(u)*Nunits(u))/(Droop(u)*SystemFrequency))*DeltaFrequencyMax)$(ba(u))
 ;
 
-* --------- FFR RESERVE: SYSTEM HOURLY REQUIREMENT ---------
-*Hourly demand balance in the FFR market
-EQ_Demand_balance_FFR(i)$((FFRLimit(i))<>0)..
-         FFRLimit(i)
-         =l=
-         sum(u$(ba(u)),Reserve_Available('FFRU',u,i))
-;
-*--------------------------------------------------------------------------------------------------------------------------
+** --------- FFR RESERVE: SYSTEM HOURLY REQUIREMENT ---------
+**Hourly demand balance in the FFR market
+*EQ_Demand_balance_FFR(i)$((FFRLimit(i))<>0)..
+*         FFRLimit(i)
+*         =l=
+*         sum(u$(ba(u)),Reserve_Available('FFRU',u,i))
+*;
+*---------------------------------------------------------------------------------------------------------------------------------
 * New
 *MARCO SYSTEM INERTIA 
 
@@ -1098,7 +1098,7 @@ EQ_Inertia_limit(u,i)$(InertiaLimit(i)>0)..
          =l=
          SystemInertia(i)
 ;
-*--------------------------------------------------------------------------------------------------------------------------
+*---------------------------------------------------------------------------------------------------------------------------------
 
 *Minimum power output is above the must-run output level for each unit in all periods
 EQ_Power_must_run(u,i)..
