@@ -986,14 +986,15 @@ EQ_Curtailed_Power(n,i)..
 
 *Capability for all reserves upward
 EQ_Reserves_Up_Capability(u,i)..
-  sum(res_U$( (ba(u) and sameas(res_U,'FFRU')) or (not ba(u) and not sameas(res_U,'FFRU')) ),
-    Reserve_Available(res_U,u,i) * ReserveParticipation(res_U,u,i)
-  )
+    Power(u,i)
+  + sum(res_U,
+        Reserve_Available(res_U,u,i) * ReserveParticipation(res_U,u,i)
+    )
   =L=
-    (PowerCapacity(u) * Nunits(u) * LoadMaximum(u,i))$(ba(u))
-  - Power(u,i)
-  + (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i))$(not ba(u))
-  + (Nunits(u) - Committed(u,i)) * QuickStartPower(u,i) * TimeStep$(QuickStartPower(u,i) > 0);
+  + PowerCapacity(u) * LoadMaximum(u,i) * Nunits(u)$(ba(u)) * Committed(u,i)$(not ba(u))
+  + sum(res_U$(sameas(res_U,'3U') and QuickStartPower(u,i) > 0),
+        (Nunits(u) - Committed(u,i)) * QuickStartPower(u,i) * TimeStep)
+;
 
 EQ_Reserves_Down_Capability(u,i)..
          sum(res_D, Reserve_Available(res_D,u,i) *ReserveParticipation(res_D,u,i) ) 

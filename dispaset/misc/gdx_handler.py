@@ -285,7 +285,7 @@ def gdx_to_dataframe(data, fixindex=False, verbose=False, inputs=False):
                     if inputs:
                         out[symbol] = pd.DataFrame(columns=pd_index)
                     else:
-                        out[symbol] = pd.DataFrame(columns=pd_index, index=out['OutputPower'].index)
+                        out[symbol] = pd.DataFrame(columns=pd_index, index=out['Demand_Balance_DA'].index)
                     for element1 in data[symbol]:
                         element = copy.deepcopy(element1)
                         for var1 in vars1:
