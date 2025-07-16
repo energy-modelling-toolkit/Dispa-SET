@@ -634,12 +634,12 @@ EQ_Total_Injected_Power
 *New
 EQ_SystemInertia
 EQ_Inertia_limit
-EQ_PrimaryReserve_Available
+*EQ_PrimaryReserve_Available
 *EQ_PrimaryReserve_Capability
-EQ_PrimaryReserve_Allowed
+*EQ_PrimaryReserve_Allowed
 *EQ_Demand_balance_PrimaryReserve
 
-EQ_FFR_Available
+*EQ_FFR_Available
 *EQ_FFR_Capability
 *EQ_Demand_balance_FFR
 
@@ -647,6 +647,8 @@ EQ_Reserves_Up_Capability
 EQ_Reserves_Down_Capability
 EQ_UpwardReserves_balance
 EQ_DownwardReserves_balance
+EQ_Total_Delivery_Limit_Up
+EQ_Total_Delivery_Limit_Down
 
 *MADRID
 EQ_PowerLoss
@@ -952,7 +954,8 @@ EQ_DownwardReserves_balance(res_D,n,i)..
 
 *Curtailed power
 EQ_Curtailed_Power(n,i)..
-        CurtailedPower(n,i) + sum(res_U$(not sameas(res_U,'FFRU')),CurtailmentReserve(res_U,n,i))
+        CurtailedPower(n,i)
+        + sum(res_U$(not sameas(res_U,'FFRU')),CurtailmentReserve(res_U,n,i))
         =E=
         sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,i)-Power(u,i))$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
 ;
@@ -987,21 +990,32 @@ EQ_Curtailed_Power(n,i)..
 *Capability for all reserves upward
 EQ_Reserves_Up_Capability(u,i)..
     Power(u,i)
-  + sum(res_U,
-        Reserve_Available(res_U,u,i) * ReserveParticipation(res_U,u,i)
-    )
+  + sum(res_U, Reserve_Available(res_U,u,i))
   =L=
-  + PowerCapacity(u) * LoadMaximum(u,i) * Nunits(u)$(ba(u)) * Committed(u,i)$(not ba(u))
-  + sum(res_U$(sameas(res_U,'3U') and QuickStartPower(u,i) > 0),
-        (Nunits(u) - Committed(u,i)) * QuickStartPower(u,i) * TimeStep)
-;
+    // Part 1: Conventional Units (not batteries), excluding 3U
+    sum(res_U$(not sameas(res_U,'3U') and not ba(u)), 
+        PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i) * ReserveParticipation(res_U,u,i))
+        
+  + // Part 2: Batteries (ba = true)
+    sum(res_U$ba(u), 
+        PowerCapacity(u) * LoadMaximum(u,i) * Nunits(u) * ReserveParticipation(res_U,u,i))
 
+  + // Part 3: Reserve 3U, only units with QuickStartPower
+    sum(res_U$(sameas(res_U,'3U') and QuickStartPower(u,i) > 0),
+        (Nunits(u) - Committed(u,i)) * QuickStartPower(u,i) * ReserveParticipation(res_U,u,i));
+
+*Capability for all reserves downward
 EQ_Reserves_Down_Capability(u,i)..
-         sum(res_D, Reserve_Available(res_D,u,i) *ReserveParticipation(res_D,u,i) ) 
-         =L=
-         (Power(u,i) - PowerMustRun(u,i) * Committed(u,i))
-         + (StorageChargingCapacity(u)*Nunits(u)-StorageInput(u,i))$(s(u))
-;
+    sum(res_D, Reserve_Available(res_D,u,i)) =L=
+
+    // Part 1: Conventional Units (not batteries)
+    sum(res_D$(not s(u)), 
+        (Power(u,i) - PowerMustRun(u,i) * Committed(u,i)) * ReserveParticipation(res_D,u,i))
+
+  + // Part 2: Batteries (ba = true), downward reserve is available storage charging capacity
+    sum(res_D$(s(u)), 
+        (StorageChargingCapacity(u) * Nunits(u) - StorageInput(u,i)) * ReserveParticipation(res_D,u,i));
+
 
 *---------------------------------------TECHNOLOGY ESPECIFIC RESERVE LIMITS---------------------------------------------------------------
 EQ_2U_limit_chp(res_U,chp,i)..
@@ -1022,10 +1036,10 @@ EQ_3U_limit_chp(res_U,chp,i)..
          (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))*(CHPPowerToHeat(chp))
 ;
 *-----------------------------------------------------------------------------
-EQ_Reserve_UP_limit_ba(res_U,ba,i)..
-         Reserve_Available(res_U,ba,i)
-         =l=
-         StorageLevel(ba,i)/(ReserveDuration(res_U)/StorageDischargeEfficiency(ba))
+EQ_Reserve_UP_limit_ba(ba,i)..
+    sum(res_U, Reserve_Available(res_U,ba,i) * ReserveDuration(res_U))
+    =L=
+    StorageLevel(ba,i) * StorageDischargeEfficiency(ba)
 ;
 
 EQ_Reserve_DOWN_limit_ba(res_D,ba,i)..
@@ -1042,22 +1056,40 @@ EQ_Reserve_DOWN_limit_ba(res_D,ba,i)..
 *----------------------------------------------------------------------------------------------------------------------------------
 
 *New
+* --------- General: SYSTEM-WIDE CONSTRAINT -------------------------------------------------------------------------------
+*System-wide upward
+EQ_Total_Delivery_Limit_Up(u,i)..
+    Power(u,i) + sum(res_U, Reserve_Available(res_U,u,i)) =L=
+    PowerCapacity(u) * LoadMaximum(u,i) * (
+        Committed(u,i)$(not ba(u)) + Nunits(u)$(ba(u))
+    );
+    
+*System-wide downward
+EQ_Total_Delivery_Limit_Down(u,i)..
+    Power(u,i) - sum(res_D, Reserve_Available(res_D,u,i)) =G=
+
+    // Parte 1: Unidades convencionales (no baterías)
+    PowerCapacity(u) * PartLoadMin(u) * Committed(u,i)$(not s(u))
+
+  - // Parte 2: Baterías (capacidad de carga disponible)
+    StorageChargingCapacity(u) * Nunits(u)$(s(u));
+    
 *MARCO PRIMARY RESERVE
 * --------- PRIMARY RESERVE: SYSTEM-WIDE CONSTRAINT -------------------------------------------------------------------------------
-EQ_PrimaryReserve_Available(u,i)$((Droop(u)) > 0) ..
-    Reserve_Available('PFRU',u,i)
-    =l=
-    (((PowerCapacity(u)*Nunits(u)*Committed(u,i))/(Droop(u)*SystemFrequency)) * DeltaFrequencyMax)$(cu(u))
-  + (((PowerCapacity(u)*Nunits(u))/(Droop(u)*SystemFrequency)) * DeltaFrequencyMax)$(ba(u))
-;
+*EQ_PrimaryReserve_Available(u,i)$((Droop(u)) > 0) ..
+*    Reserve_Available('PFRU',u,i)
+*    =l=
+*    (((PowerCapacity(u)*Nunits(u)*Committed(u,i))/(Droop(u)*SystemFrequency)) * DeltaFrequencyMax)$(cu(u))
+*  + (((PowerCapacity(u)*Nunits(u))/(Droop(u)*SystemFrequency)) * DeltaFrequencyMax)$(ba(u))
+*;
 
 
 * --------- PRIMARY RESERVE: POLICY LIMIT PER UNIT ---------
-EQ_PrimaryReserve_Allowed(u,i)$(cu(u))..
-         Reserve_Available('PFRU',u,i)
-         =L=
-         (PowerCapacity(u)*Nunits(u)*Committed(u,i)*ReserveParticipation('PFRU',u,i)*MaxPrimaryAllowed)$(cu(u))
-;
+*EQ_PrimaryReserve_Allowed(u,i)$(cu(u))..
+*         Reserve_Available('PFRU',u,i)
+*         =L=
+*         (PowerCapacity(u)*Nunits(u)*Committed(u,i)*ReserveParticipation('PFRU',u,i)*MaxPrimaryAllowed)$(cu(u))
+*;
 
 ** --------- PRIMARY RESERVE: SYSTEM HOURLY REQUIREMENT ---------
 **Hourly demand balance in the Primary Reserve market
@@ -1071,11 +1103,11 @@ EQ_PrimaryReserve_Allowed(u,i)$(cu(u))..
 *New
 *MARCO FFR
 * --------- FFR RESERVE: SYSTEM-WIDE CONSTRAINT ----------------------------------------------------------------------------------
-EQ_FFR_Available(u,i)$((Droop(u))>0)..
-         Reserve_Available('FFRU',u,i)
-         =l=
-        (((PowerCapacity(u)*Nunits(u))/(Droop(u)*SystemFrequency))*DeltaFrequencyMax)$(ba(u))
-;
+*EQ_FFR_Available(u,i)$((Droop(u))>0)..
+*         Reserve_Available('FFRU',u,i)
+*         =l=
+*        (((PowerCapacity(u)*Nunits(u))/(Droop(u)*SystemFrequency))*DeltaFrequencyMax)$(ba(u))
+*;
 
 ** --------- FFR RESERVE: SYSTEM HOURLY REQUIREMENT ---------
 **Hourly demand balance in the FFR market
@@ -1584,12 +1616,12 @@ EQ_Total_Injected_Power,
 *new
 $If %MTS% == 0 EQ_SystemInertia,
 $If %MTS% == 0 EQ_Inertia_limit,
-$If %MTS% == 0 EQ_PrimaryReserve_Available,
+*$If %MTS% == 0 EQ_PrimaryReserve_Available,
 *$If %MTS% == 0 EQ_PrimaryReserve_Capability,
-$If %MTS% == 0 EQ_PrimaryReserve_Allowed,
+*$If %MTS% == 0 EQ_PrimaryReserve_Allowed,
 *$If %MTS% == 0 EQ_Demand_balance_PrimaryReserve,
 
-$If %MTS% == 0 EQ_FFR_Available,
+*$If %MTS% == 0 EQ_FFR_Available,
 *$If %MTS% == 0 EQ_FFR_Capability,
 *$If %MTS% == 0 EQ_Demand_balance_FFR,
 
@@ -1597,6 +1629,8 @@ EQ_Reserves_Up_Capability,
 EQ_Reserves_Down_Capability,
 EQ_UpwardReserves_balance,
 EQ_DownwardReserves_balance,
+EQ_Total_Delivery_Limit_Up,
+EQ_Total_Delivery_Limit_Down,
 
 *MADRID
 $If %MTS% == 0 EQ_PowerLoss,
