@@ -1363,7 +1363,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
     # Binary table of participation to the reserve market
     # TODO: suggestion is to create commons by type of reserve instead of technologies
-
+    constants = {
+        'SystemFrequency': 50,
+        'DeltaFrequencyMax': 0.8
+        }
     values = np.zeros((len(sets['res']), len(sets['au']), len(sets['h'])))
     
     res_index = {r: idx for idx, r in enumerate(sets['res'])}
@@ -1376,26 +1379,36 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
         i = au_index[u]
         tech = Plants_res.loc[u, 'Technology']
+        droop = Plants_merged.loc[u, 'Droop']
     
         for r in sets['res']:
             j = res_index[r]
     
+            eligible = False
             if r in sets['res_U']:
-                if tech in commons['tech_batteries'] and r in sets['res_U'][:2]:  # FFRU, PFRU
-                    values[j, i, :] = 1
+                if tech in commons['tech_batteries'] and r in sets['res_U'][:2]:     # FFRU, PFRU
+                    eligible = True
                 elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # PFRU, 2U, RR
-                    values[j, i, :] = 1
-                elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:  # 2U, RR
-                    values[j, i, :] = 1
+                    eligible = True
+                elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:   # 2U, RR
+                    eligible = True
     
             elif r in sets['res_D']:
-                if tech in commons['tech_batteries'] and r in sets['res_D'][:2]:  # FFRD, PFRD
-                    values[j, i, :] = 1
+                if tech in commons['tech_batteries'] and r in sets['res_D'][:2]:     # FFRD, PFRD
+                    eligible = True
                 elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # PFRD, 2D
-                    values[j, i, :] = 1
-                elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:  # 2D
-                    values[j, i, :] = 1
+                    eligible = True
+                elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:   # 2D
+                    eligible = True
     
+            # Si es elegible, calcular participación
+            if eligible:
+                if r in ['PFRU', 'FFRU'] and droop > 0:
+                    factor = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
+                    values[j, i, :] = factor
+                else:
+                    values[j, i, :] = 1  # Participación binaria para otras reservas
+        
     parameters['ReserveParticipation'] = {'sets': sets_param['ReserveParticipation'], 'val': values}
    
     # parameters['Reserve'] = define_parameter(['au', 'res'], sets, value=0)
