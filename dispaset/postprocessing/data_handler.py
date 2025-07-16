@@ -68,6 +68,8 @@ def GAMSstatus(statustype, num):
     :param num:     Indicated termination condition (Integer)
     :returns:       String with the status
     """
+    
+    # Section 1: Define Model Status Messages
     if statustype == "model":
         msg = {1: u'Optimal solution achieved',
                2: u'Local optimal solution achieved',
@@ -88,6 +90,8 @@ def GAMSstatus(statustype, num):
                17: u'Singular in a CNS models',
                18: u'Unbounded \u2013 no solution',
                19: u'Infeasible \u2013 no solution'}
+        
+    # Section 2: Define Solver Status Messages
     elif statustype == "solver":
         msg = {1: u'Normal termination',
                2: u'Solver ran out of iterations (fix with iterlim)',
@@ -102,8 +106,12 @@ def GAMSstatus(statustype, num):
                11: u'Solver terminated with some type of failure (see LST file)',
                12: u'Solver terminated with some type of failure (see LST file)',
                13: u'Solver terminated with some type of failure (see LST file)'}
+        
+    # Section 3: Handle Incorrect Status Type
     else:
         sys.exit('Incorrect GAMS status type')
+        
+    # Section 4: Return Status Message
     return str(msg[num])
 
 
@@ -120,7 +128,8 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                                 (inputs, results, status). The latter is a dictionary with diagnostic messages.
     :returns inputs,results:    Two dictionaries with all the input and outputs
     """
-
+    
+    # Section 1: Load Input and Result Files
     inputfile = path + '/' + inputs_file
     resultfile = path + '/' + results_file
     if cache is not None or temp_path is not None:
@@ -129,6 +138,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
 
     inputs = pd.read_pickle(inputfile)
 
+    # Section 2: Clean and Prepare Data
     # Clean power plant names:
     inputs['sets']['u'] = clean_strings(inputs['sets']['u'])
     inputs['units'].index = clean_strings(inputs['units'].index.tolist())
@@ -137,6 +147,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
     if not 'param_df' in inputs:
         inputs['param_df'] = ds_to_df(inputs)
 
+    # Section 3: Get GAMS Path and Load Results
     # Get GAMS path from config or try to locate it
     gams_dir = get_gams_path(inputs.get('config', {}).get('GAMS_folder'))
     if not gams_dir:
@@ -146,6 +157,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
     results = gdx_to_dataframe(gdx_to_list(gams_dir, resultfile, varname='all', verbose=True),
                                fixindex=True, verbose=True)
 
+    # Section 4: Set Datetime Index
     # Set datetime index:
     StartDate = inputs['config']['StartDate']
     StopDate = inputs['config']['StopDate']  # last day of the simulation with look-ahead period
@@ -161,6 +173,8 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
             'LostLoad_RampDown', 'LostLoad_2D', 'ShadowPrice', 'StorageShadowPrice',
             'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U',
             'status']  # 'status'
+    
+    # Section 5: Process Results for Each Key
     # TODO: Check backward compatibility
     keys_sparse = ['OutputPower', 'OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted',
                    'OutputCurtailedPower', 'OutputFlow', 'OutputShedLoad', 'OutputSpillage', 'OutputStorageLevel',
@@ -186,6 +200,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'OutputSystemCostD', 'SMML-SystemMinusesMaximalLoad', 'SMNL-SystemMinusesNominalLoad',
                    'UnitHourly2URevenue', 'UnitHourlyProductionCost', 'UnitHourlyStartUpCost', 'UnitHourlyVariableCost']
 
+    # Section 6: Include Water Slack in Results
     # Setting the proper index to the result dataframes:
     for key in chain(keys, keys_sparse):
         if key in results:
@@ -219,6 +234,8 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
 
         # Clean power plant names:
     results['OutputPower'].columns = clean_strings(results['OutputPower'].columns.tolist())
+    
+    # Section 7: Remove Epsilons and Clean Data
     # Remove epsilons:
     if 'ShadowPrice' in results:
         results['ShadowPrice'][results['ShadowPrice'] >= 1e300] = 0
@@ -232,6 +249,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
     # Remove powerplants with no generation
     results['OutputPower'] = results['OutputPower'].loc[:, (results['OutputPower'] != 0).any(axis=0)]
 
+    # Section 8: Calculate Additional Metrics
     # Total nodal power consumption
     results['NodalPowerConsumption'] = pd.DataFrame()
     for z in inputs['sets']['n']:
@@ -261,6 +279,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
     results['SMML-SystemMinusesMaximalLoad'] = results['EENS-ExpectedEnergyNotServed'] / results[
         'TotalDemand'].max()
 
+    # Section 9: Handle Status and Return Results
     status = {}
     if "model" in results['status']:
         errors = results['status'][(results['status']['model'] != 1) & (results['status']['model'] != 8)]
@@ -339,21 +358,31 @@ def inputs_to_xarray(inputs):
 
     try:
         import xarray as xr
+
+        # Section 1: Initialize Data Structures
         # build set dictionary {parameter:set}
         in_keys = {}
+        
+        # Section 2: Build Set Dictionary
         for k, v in inputs['parameters'].items():
             in_keys[k] = tuple(v['sets'])
+            
+        # Section 3: Remove Config and Store Metadata
         # Remove config from dict and add it later as dataset attribute (metadata)
         __ = in_keys.pop('Config')
         config = inputs['config']
         version = inputs.get('version', '')
         all_ds = []
+        
+        # Section 4: Iterate and Build Values and Coordinates
         # Iterate all and build values nad coordinates
         for k, v in in_keys.items():
             val = inputs['parameters'][k]['val']
             var_name = k
             ind = v
             coords = OrderedDict()
+            
+            # Section 4.1: Build Coordinates Dictionary
             # Build dictionary for the specific parameter {sets:set elements}
             for sett in ind:
                 coords[sett] = inputs['sets'][sett]
@@ -365,18 +394,23 @@ def inputs_to_xarray(inputs):
                               name=var_name)
 
             all_ds.append(ds)
+            
+        # Section 5: Merge DataArrays and Add Metadata
         inputs = xr.merge(all_ds)
         inputs.attrs['version'] = version
         for key in config:
             if isinstance(config[key], (float, int, str)):
                 inputs.attrs[key] = config[key]
+                
+        # Section 6: Replace 'h' with DateTimeIndex
         # Replace h with DateTimeIndex
         StartDate = config['StartDate']
         StopDate = config['StopDate']  # last day of the simulation with look-ahead period
         StopDate_long = dt.datetime(*StopDate) + dt.timedelta(days=config['LookAhead'])
         index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
         inputs.coords['h'] = index_long
-
+        
+    # Section 7: Handle Import Error
     except ImportError:
         logging.warn('Cannot find xarray package. Falling back to dict of dataframes')
     return inputs
