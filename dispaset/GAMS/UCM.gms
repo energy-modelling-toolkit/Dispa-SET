@@ -630,7 +630,7 @@ EQ_Total_Injected_Power
 *New
 EQ_SystemInertia
 EQ_Inertia_limit
-*EQ_PrimaryReserve_Allowed
+EQ_PrimaryReserve_Allowed
 
 EQ_Reserves_Up_Capability
 EQ_Reserves_Down_Capability
@@ -898,7 +898,7 @@ EQ_PowerLoss(u,i)$(ord(u))..
 *---------------------------------------------------RESERVES BALANCES ---------------------------------------------------
 *General formulation for hourly demand balance in the Upward Reserve Services for each node
 EQ_UpwardReserves_balance(res_U,n,i)..
-         sum((u),Reserve_Available(res_U,u,i)*ReserveParticipation(res_U,u,i)*Location(u,n))
+         sum((u),Reserve_Available(res_U,u,i)*Location(u,n))
          +  CurtailmentReserve(res_U,n,i)$(not sameas(res_U,'FFRU')) + LL_Reserve(res_U,n,i)
          =E=
          ReserveDemand(res_U,n,i)
@@ -953,34 +953,29 @@ EQ_Curtailed_Power(n,i)..
 ;
 *---------------------------------------------------RESERVES CAPABILITIES ------------------------------------------------
 *Capability for all reserves upward
-EQ_Reserves_Up_Capability(u,i)..
-         Power(u,i)
-         + sum(res_U, Reserve_Available(res_U,u,i))
+EQ_Reserves_Up_Capability(res_U,u,i)..
+         Reserve_Available(res_U,u,i)
          =L=
          // Part 1: Conventional Units (not batteries), excluding 3U
-         sum(res_U$(not sameas(res_U,'3U') and not ba(u)), 
-         PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i) * ReserveParticipation(res_U,u,i))
+         (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i) * ReserveParticipation(res_U,u,i))$(not sameas(res_U,'3U') and not ba(u))
         
          + // Part 2: Batteries (ba = true)
-         sum(res_U$ba(u), 
-         PowerCapacity(u) * LoadMaximum(u,i) * Nunits(u) * ReserveParticipation(res_U,u,i))
+         (PowerCapacity(u) * LoadMaximum(u,i) * Nunits(u) * ReserveParticipation(res_U,u,i))$ba(u)
 
          + // Part 3: Reserve 3U, only units with QuickStartPower
-         sum(res_U$(sameas(res_U,'3U') and QuickStartPower(u,i) > 0),
-         (Nunits(u) - Committed(u,i)) * QuickStartPower(u,i) * ReserveParticipation(res_U,u,i));
+         ((Nunits(u) - Committed(u,i)) * QuickStartPower(u,i) * ReserveParticipation(res_U,u,i))$(sameas(res_U,'3U') and QuickStartPower(u,i) > 0)
+;
 
 *Capability for all reserves downward
-EQ_Reserves_Down_Capability(u,i)..
-         sum(res_D, Reserve_Available(res_D,u,i))
+EQ_Reserves_Down_Capability(res_D,u,i)..
+         Reserve_Available(res_D,u,i)
          =L=
          // Part 1: Conventional Units (not batteries)
-         sum(res_D$(not s(u)), 
-         (Power(u,i) - PowerMustRun(u,i) * Committed(u,i)) * ReserveParticipation(res_D,u,i))
+         ((Power(u,i) - PowerMustRun(u,i) * Committed(u,i)) * ReserveParticipation(res_D,u,i))$(not s(u))
 
          + // Part 2: Batteries (ba = true), downward reserve is available storage charging capacity
-         sum(res_D$(s(u)), 
-         (StorageChargingCapacity(u) * Nunits(u) - StorageInput(u,i)) * ReserveParticipation(res_D,u,i));
-
+         ((StorageChargingCapacity(u) * Nunits(u) - StorageInput(u,i)) * ReserveParticipation(res_D,u,i))$(s(u))
+;
 
 *---------------------------------------TECHNOLOGY ESPECIFIC RESERVE LIMITS---------------------------------------------------------------
 *Reserves limits for CHP units
@@ -1039,12 +1034,12 @@ EQ_Total_Delivery_Limit_Down(u,i)..
          - StorageChargingCapacity(u) * Nunits(u)$(s(u))
 ;
     
-* --------- PRIMARY RESERVE: POLICY 10% LIMIT PER UNIT ---------
-*EQ_PrimaryReserve_Allowed(u,i)$(cu(u))..
-*         Reserve_Available('PFRU',u,i)
-*         =L=
-*         (PowerCapacity(u)*Nunits(u)*Committed(u,i)*ReserveParticipation('PFRU',u,i)*MaxPrimaryAllowed)$(cu(u))
-*;
+*---------------------------------------PRIMARY RESERVE: POLICY 10% LIMIT PER UNIT ---------------------------------------------------------------
+EQ_PrimaryReserve_Allowed(u,i)$(cu(u))..
+         Reserve_Available('PFRU',u,i)
+         =L=
+         (PowerCapacity(u)*Nunits(u)*Committed(u,i)*ReserveParticipation('PFRU',u,i)*MaxPrimaryAllowed)$(cu(u))
+;
 
 *---------------------------------------SYSTEM INERTIA REQUIRED LIMITS---------------------------------------------------------------
 EQ_SystemInertia(i)..
@@ -1539,7 +1534,7 @@ EQ_Total_Injected_Power,
 *new
 $If %MTS% == 0 EQ_SystemInertia,
 $If %MTS% == 0 EQ_Inertia_limit,
-*$If %MTS% == 0 EQ_PrimaryReserve_Allowed,
+$If %MTS% == 0 EQ_PrimaryReserve_Allowed,
 
 EQ_Reserves_Up_Capability,
 EQ_Reserves_Down_Capability,
