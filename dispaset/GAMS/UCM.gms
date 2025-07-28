@@ -971,10 +971,10 @@ EQ_Reserves_Down_Capability(res_D,u,i)..
          Reserve_Available(res_D,u,i)
          =L=
          // Part 1: Conventional Units (not batteries)
-         ((Power(u,i) - PowerMustRun(u,i) * Committed(u,i)) * ReserveParticipation(res_D,u,i))$(not s(u))
+         Power(u,i) - (PowerMustRun(u,i)* Committed(u,i))
 
-         + // Part 2: Batteries (ba = true), downward reserve is available storage charging capacity
-         ((StorageChargingCapacity(u) * Nunits(u) - StorageInput(u,i)) * ReserveParticipation(res_D,u,i))$(s(u))
+*         + // Part 2: Batteries (ba = true), downward reserve is available storage charging capacity
+*         ((StorageLevel(u,i) - StorageMinimum(u)) * Nunits(u))$(s(u))
 ;
 
 *---------------------------------------TECHNOLOGY ESPECIFIC RESERVE LIMITS---------------------------------------------------------------
@@ -999,15 +999,15 @@ EQ_3U_limit_chp(res_U,chp,i)..
 
 *Reserves limits for Batteries
 EQ_Reserve_UP_limit_ba(ba,i)..
-         sum(res_U, Reserve_Available(res_U,ba,i) * ReserveDuration(res_U))
+         sum(res_U, Reserve_Available(res_U,ba,i)* ReserveDuration(res_U))
          =L=
-         StorageLevel(ba,i) * StorageDischargeEfficiency(ba)
+         (StorageLevel(ba,i) - StorageMinimum(ba)) * PowerCapacity(ba) * StorageDischargeEfficiency(ba) 
 ;
 
-EQ_Reserve_DOWN_limit_ba(res_D,ba,i)..
-         Reserve_Available(res_D,ba,i)
+EQ_Reserve_DOWN_limit_ba(ba,i)..
+         sum(res_D, Reserve_Available(res_D,ba,i) * ReserveDuration(res_D))
          =l=
-         (StorageCapacity(ba)*Nunits(ba)-StorageLevel(ba,i))*(StorageChargingEfficiency(ba))/(ReserveDuration(res_D))        
+         (StorageCapacity(ba) - StorageLevel(ba,i)) * StorageChargingCapacity(ba) * StorageChargingEfficiency(ba)      
 ;
 
 *EQ_3U_limit_ba(res_U,chp,i)..
@@ -1028,17 +1028,18 @@ EQ_Total_Delivery_Limit_Down(u,i)..
          Power(u,i) - sum(res_D, Reserve_Available(res_D,u,i))
          =G=
          // Part 1: Conventional Units (not batteries)
-         PowerCapacity(u) * PartLoadMin(u) * Committed(u,i)$(not s(u))
+         PowerCapacity(u) * PartLoadMin(u) * Committed(u,i)
     
          // Part 2: Batteries (available storage charging capacity)
-         - StorageChargingCapacity(u) * Nunits(u)$(s(u))
+         + StorageChargingCapacity(u) * (Committed(u,i)-Nunits(u))$s(u)
+;
 ;
     
 *---------------------------------------PRIMARY RESERVE: POLICY 10% LIMIT PER UNIT ---------------------------------------------------------------
 EQ_PrimaryReserve_Allowed(u,i)$(cu(u))..
          Reserve_Available('PFRU',u,i)
          =L=
-         (PowerCapacity(u)*Nunits(u)*Committed(u,i)*ReserveParticipation('PFRU',u,i)*MaxPrimaryAllowed)$(cu(u))
+         (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i) * MaxPrimaryAllowed)$(cu(u))
 ;
 
 *---------------------------------------SYSTEM INERTIA REQUIRED LIMITS---------------------------------------------------------------
