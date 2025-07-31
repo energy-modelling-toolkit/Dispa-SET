@@ -210,27 +210,41 @@ def get_plot_data(inputs, results, z):
     :param z:               Zone to be considered (e.g. 'BE')
     :returns plotdata:      Dataframe with the dispatch data storage and outflows are negative
     """
+    # 1. Process Generation Data (by fuel)
     tmp = filter_by_zone(results['OutputPower'], inputs, z)
     plotdata = aggregate_by_fuel(tmp, inputs)
-
+    
+    # 2. Process Storage Data
     if 'OutputStorageInput' in results:
+        # Filter for storage units and zone
         # onnly take the columns that correspond to storage units (StorageInput is also used for CHP plants):
         cols = [col for col in results['OutputStorageInput'] if
                 inputs['units'].loc[col, 'Technology'] in commons['tech_storage']]
         tmp = filter_by_zone(results['OutputStorageInput'][cols], inputs, z)
+        
+        # Aggregate storage by technology
         bb = pd.DataFrame()
         for tech in commons['tech_storage']:
             aa = filter_by_tech(tmp, inputs, tech)
             aa = aa.sum(axis=1)
             aa = pd.DataFrame(aa, columns=[tech])
             bb = pd.concat([bb, aa], axis=1)
+            
+        # Invert storage values (charging as consumption)
         bb = -bb
+        
+        # Add to main plotdata
         plotdata = pd.concat([plotdata, bb], axis=1)
         # plotdata['Storage'] = -tmp.sum(axis=1)
+        
     else:
+        # Initialize Storage if no data
         plotdata['Storage'] = 0
+    
+    # 3. Fill missing values (NaNs)
     plotdata.fillna(value=0, inplace=True)
 
+    # 4. Process Network Flow Data (FlowIn, FlowOut)
     plotdata['FlowIn'] = 0
     plotdata['FlowOut'] = 0
     for col in results['OutputFlow']:
@@ -240,15 +254,16 @@ def get_plot_data(inputs, results, z):
         if from_node.strip() == z:
             plotdata['FlowOut'] = plotdata['FlowOut'] - results['OutputFlow'][col]
     
-    # re-ordering columns:
+    # 5. Reorder Columns for Plotting (Merit Order)
     OrderedColumns = [col for col in commons['MeritOrder'] if col in plotdata.columns]
     plotdata = plotdata[OrderedColumns]
 
-    # remove empty columns:
+    # 6. Remove Empty Data Columns
     for col in plotdata.columns:
         if plotdata[col].max() == 0 and plotdata[col].min() == 0 and col not in ['FlowIn', 'FlowOut']:
             del plotdata[col]
 
+    # 7. Return Prepared Data
     return plotdata
 
 

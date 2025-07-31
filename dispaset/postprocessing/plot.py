@@ -47,6 +47,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     if colors == None:
         colors = commons['colors']
 
+    # Plotting Range (rng) Handling:
     if rng is None:
         pdrng = plotdata.index[:min(len(plotdata) - 1, 7 * 24)]
     elif not type(rng) == type(demand.index):
@@ -59,6 +60,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     else:
         pdrng = rng
 
+    # Plot Lines Decision:
     if (pdrng[-1] - pdrng[0]) > datetime.timedelta(days=32):  # if the range is too big, don't plot the lines
         plot_lines = False
         logging.warning('The plotting range for the dispatch plot is too big to plot the lines')
@@ -66,6 +68,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         plot_lines = True
 
     # NTC plot data
+    # NTC Data Assignment:
     if (ntc is not None) and ('FlowIn' in plotdata) and ('FlowOut' in plotdata):
         ntc['FlowIn'], ntc['FlowOut'], ntc['ZeroLine'] = plotdata['FlowIn'], plotdata['FlowOut'], 0
         plotdata['FlowOut'], plotdata['FlowIn'] = (np.minimum(0, ntc['FlowIn'] + ntc['FlowOut']),
@@ -81,6 +84,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         plotdata['FlowOut'], plotdata['FlowIn'] = (np.minimum(0, ntc['FlowIn'] + ntc['FlowOut']),
                                                    np.maximum(0, ntc['FlowOut'] + ntc['FlowIn']))
 
+    # Dispatch Data Processing (Negative and Positive Contributions)
     # find the zero line position:
     cols = plotdata.columns.tolist()
     idx_zero = 0
@@ -93,6 +97,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         idx_zero += 1
         tmp = plotdata.iloc[:, idx_zero].mean()
 
+    # Processing Negative Values (sumplot_neg): 
     tmp = plotdata[cols[:idx_zero]].sum(axis=1)
     sumplot_neg = pd.DataFrame()
     sumplot_neg['sum'] = tmp
@@ -101,15 +106,21 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         sumplot_neg[col] = - tmp2[col]
     sumplot_neg = sumplot_neg.cumsum(axis=1)
 
+    # Processing Positive Values (sumplot_pos):
     sumplot_pos = plotdata[cols[idx_zero:]].cumsum(axis=1)
     sumplot_pos['zero'] = 0
     sumplot_pos = sumplot_pos[['zero'] + sumplot_pos.columns[:-1].tolist()]
+    
+    # Figure and Axes Creation
+    # Determine Number of Subplots (n) and Height Ratios:
     if level is not None and not level.empty:
         n = 3
         height_ratio = [2.7, .8, .8]
     else:
         n = 2
         height_ratio = [2.3, .8]
+        
+    # Create Subplots (fig, axes):
     if ntc is not None:
         fig, axes = plt.subplots(nrows=n, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
                                  gridspec_kw={'height_ratios': height_ratio, 'hspace': 0.04})
@@ -130,6 +141,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         fig, axes = plt.subplots(nrows=n, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
                                  gridspec_kw={'height_ratios': height_ratio, 'hspace': 0.04})
 
+    # Main Dispatch Plot Setup:
     # Create left axis:
     if plot_lines:
         axes[0].plot(pdrng, demand[pdrng], color='k')
@@ -202,6 +214,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         labels.append(col2)
         patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
+        
     # Plot curtailment:
     if isinstance(curtailment, pd.Series):
         if not curtailment.index.equals(demand.index):
@@ -594,6 +607,7 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
     :param rug_plot:    Rug plot on/off
     """
     
+    # 1. Input & Zone Handling
     if colors is None:
         colors = commons['colors']
     if colors is not None:
@@ -610,8 +624,10 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
         z = inputs['sets']['n'][np.random.randint(Nzones)]
         logging.critical('Randomly selected zone: ' + z)
 
+    # 2. Get Plot Data
     plotdata = get_plot_data(inputs, results, z) / 1000  # GW
 
+    # 3. Storage Level Calculation
     aggregation = False
     if 'OutputStorageLevel' in results or 'OutputSectorXStorageLevel' in results:
         if 'OutputStorageLevel' in results:
@@ -657,8 +673,8 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
     else:
         level = None
         minlevel = None
-        
-    # Demand Calculation
+
+    # 4. Demand Calculation        
     if 'OutputPowerConsumption' in results:
         demand_p2x = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1000  # GW
         demand_p2x = demand_p2x.sum(axis=1)
@@ -675,6 +691,7 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
     demand = pd.DataFrame(demand_da + demand_p2x + demand_flex, columns=[('DA', z)])
     demand = demand[('DA', z)]
 
+    # 5. Shed Load, Shifted Load & Energy Balance Check
     sum_generation = plotdata.sum(axis=1)
     # if 'OutputShedLoad' in results:
     if 'OutputShedLoad' in results and z in results['OutputShedLoad']:
@@ -701,6 +718,7 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
     else:
         curtailment = None
 
+    # 6. Curtailment & NTC Assignment
     # Assign NTC
     ntc = pd.DataFrame(0, columns=['NTCIn', 'NTCOut'], index=plotdata.index)
     for col in inputs['param_df']['FlowMaximum']:
@@ -715,6 +733,7 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
     else:
         ntc = None
 
+    # 7. Prepare for plot_dispatch Call
     # Plot power dispatch
     demand.rename(z, inplace=True)
     if hide_storage_plot:
@@ -739,6 +758,7 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
                       storage_limits=storage_limits, ntc_limits=ntc_limits, units=units, figsize=figsize, colors=colors)
 
 
+    # 9. Generation Rug Plot (Optional) & Return
     # Generation plot:
     if rug_plot:
         ZoneGeneration = filter_by_zone(results['OutputPower'], inputs, z)

@@ -26,10 +26,11 @@ option
 
 Option solver=gurobi;
 
+
+
 *===============================================================================
 *Definition of the dataset-related options
 *===============================================================================
-
 * Name of the input file (Ideally, stick to the default Input.gdx)
 *$set InputFileName Input.gdx
 $set InputFileName Inputs.gdx
@@ -53,6 +54,8 @@ $setglobal ActivateAdvancedReserves 0
 * Definition of the equations that will be present in Frequency Constrainted UC/OD
 * (1 for FC-UC/OD 0 for UC/OD)
 $setglobal FC 0
+
+
 
 *===============================================================================
 *Definition of   sets and parameters
@@ -110,6 +113,14 @@ Alias(i,ii);
 
 *Parameters as defined in the input file
 * \u indicate that the value is provided for one single unit
+
+
+
+*---------------------------------------------------------------------
+*Fully clustered by function and subsystem
+*---------------------------------------------------------------------
+*BASIC OPERATIONAL & ECONOMIC PARAMETERS
+*---------------------------------------------------------------------
 PARAMETERS
 AvailabilityFactor(au,h)                    [%]             Availability factor
 CHPPowerLossFactor(u)                       [%]             Power loss when generating heat
@@ -124,7 +135,7 @@ CostRampDown(au)                            [EUR\MW]        Ramp-down costs
 CostShutDown(au)                            [EUR\u]         Shut-down costs
 CostStartUp(au)                             [EUR\u]         Start-up costs
 CostVariable(au,h)                          [EUR\MW]        Variable costs
-CostOfSpillage(au,h)                          [EUR\MW]        Cost of spillage
+CostOfSpillage(au,h)                        [EUR\MW]        Cost of spillage
 CostWaterValue(au,h)                        [EUR\MW]        Cost of storage level violation for each unit
 CostStorageAlert(au,h)                      [EUR\MW]        Cost of violating storage alert level
 CostFloodControl(au,h)                      [EUR\MW]        Cost of violating storage flood level
@@ -160,9 +171,6 @@ PowerCapacity(au)                           [MW\u]          Installed capacity
 PowerInitial(au)                            [MW\u]          Power output before initial period
 PowerMinStable(au)                          [MW\u]          Minimum power output
 PriceTransmission(l,h)                      [EUR\MWh]       Transmission price
-StorageChargingCapacity(au)                 [MW\u]          Storage capacity
-StorageChargingEfficiency(au)               [%]             Charging efficiency
-StorageSelfDischarge(au)                    [%\day]         Self-discharge of the storage units
 RampDownMaximum(au)                         [MW\h\u]        Ramp down limit
 RampShutDownMaximum(au)                     [MW\h\u]        Shut-down ramp limit
 RampStartUpMaximum(au)                      [MW\h\u]        Start-up ramp limit
@@ -180,31 +188,55 @@ StorageMinimum(au)                          [MWh]           Storage minimum
 Technology(au,t)                            [n.a.]          Technology type {1 0}
 TimeDownMinimum(au)                         [h]             Minimum down time
 TimeUpMinimum(au)                           [h]             Minimum up time
+Nunits(au)                                  [n.a.]          Number of units inside the cluster (upper bound value for integer variables)
+K_QuickStart(n)                             [n.a.]          Part of the reserve that can be provided by offline quickstart units
+QuickStartPower(au,h)                       [MW\h\u]        Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
+StorageHours(au)                            [h]             Storage hours
+
+
+
+*---------------------------------------------------------------------
+*BOUNDARY SECTOR (SECTOR X) PARAMETERS
+*---------------------------------------------------------------------
 SectorXFlexDemandInput(nx,h)                [MWh]           Flexible demand inside BS at each timestep (unless for MTS)
 SectorXFlexDemandInputInitial(nx)           [MWh]           Cumulative flexible demand inside the loop
 SectorXFlexMaxCapacity(nx)                  [MW]            Max capacity for BS Flexible demand
 SectorXFlexSupplyInput(nx,h)                [MWh]           Flexible demand inside BS at each timestep (unless for MTS)
 SectorXFlexSupplyInputInitial(nx)           [MWh]           Cumulative flexible demand inside the loop
 SectorXFlexMaxSupply(nx)                    [MW]            Max capacity for BS Flexible demand
-$If %RetrieveStatus%==1 CommittedCalc(u,z)  [n.a.]          Committment status as for the MILP
-Nunits(au)                                  [n.a.]          Number of units inside the cluster (upper bound value for integer variables)
-K_QuickStart(n)                             [n.a.]          Part of the reserve that can be provided by offline quickstart units
-QuickStartPower(au,h)                       [MW\h\u]        Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
-StorageAlertLevel(au,h)                     [MWh]           Storage alert - Will only be violated to avoid power rationing
-StorageFloodControl(au,h)                   [MWh]           Storage flood control
-StorageHours(au)                            [h]             Storage hours
 SectorXStorageCapacity(nx)                  [MWh]           Storage capacity of the boundary sector
 SectorXStorageSelfDischarge(nx)             [%]             Boundary sector storage self discharge
 SectorXStorageHours(nx)                     [h]             Boundary sector storage hours
 SectorXStorageMinimum(nx)                   [MWh]           Boundary sector storage minimum
-SectorXStoragePowerMax(nx)                   [MW]            Maximum power capacity of the boundary sector storage
-$If %MTS% == 0 SectorXStorageInitial(nx)    [MWh]           Boundary sector storage initial state of charge
+SectorXStoragePowerMax(nx)                  [MW]            Maximum power capacity of the boundary sector storage
 SectorXStorageProfile(nx,h)                 [%]             Boundary sector storage level respected at the end of each horizon
 SectorXAlertLevel(nx,h)                     [MWh]           Storage alert of the boundary sector - Will only be violated to avoid power rationing
 SectorXFloodControl(nx,h)                   [MWh]           Storage flood control of the boundary sector
-PTDF(l_int,n)                               [p.u.]          Power Transfer Distribution Factor Matrix
+$If %MTS% == 0 SectorXStorageInitial(nx)    [MWh]           Boundary sector storage initial state of charge
 
-* New
+
+
+*---------------------------------------------------------------------
+*STORAGE & CHARGING PARAMETERS
+*---------------------------------------------------------------------
+StorageChargingCapacity(au)                 [MW\u]          Storage capacity
+StorageChargingEfficiency(au)               [%]             Charging efficiency
+StorageSelfDischarge(au)                    [%\day]         Self-discharge of the storage units
+StorageAlertLevel(au,h)                     [MWh]           Storage alert - Will only be violated to avoid power rationing
+StorageFloodControl(au,h)                   [MWh]           Storage flood control
+
+
+
+*---------------------------------------------------------------------
+*FLEXIBLE DEMAND & WARM-START PARAMETERS
+*---------------------------------------------------------------------
+$If %RetrieveStatus%==1 CommittedCalc(u,z)  [n.a.]          Committment status as for the MILP
+
+
+
+*---------------------------------------------------------------------
+*RESERVE & FREQUENCY-RELATED PARAMETERS (CONDITIONAL ON %MTS% == 0)
+*---------------------------------------------------------------------
 $If %MTS% == 0 InertiaConstant(au)          [s]             Inertia Constant
 $If %MTS% == 0 InertiaLimit(h)              [s\h]           Inertia Limit
 $If %MTS% == 0 Droop(au)                    [%]             Droop
@@ -213,45 +245,75 @@ $If %MTS% == 0 FFRGainLimit(h)              [GW\Hz]         FFR Gain Limit
 $If %MTS% == 0 PrimaryReserveLimit(h)       [MWh]           Primary Reserve
 $If %MTS% == 0 FFRLimit(h)                  [MWh]           Fast Frequency Reserve
 
-;
+
+
+*---------------------------------------------------------------------
+*NETWORK DATA: POWER TRANSFER DISTRIBUTION FACTORS
+*---------------------------------------------------------------------
+PTDF(l_int,n)                               [p.u.]          Power Transfer Distribution Factor Matrix
 
 
 
-*Parameters as used within the loop
-PARAMETERS
+*---------------------------------------------------------------------
+* PARAMETERS USED WITHIN THE LOOP (DERIVED OR TIME-DEPENDENT)
+*---------------------------------------------------------------------
+*DYNAMIC UNIT LIMITS & COSTS
+*---------------------------------------------------------------------
 CostLoadShedding(n,h)                       [EUR\MW]        Value of lost load
 LoadMaximum(au,h)                           [%]             Maximum load given AF and OF
 PowerMustRun(au,h)                          [MW\u]          Minimum power output
 StorageFinalMin(au)                         [MWh]           Minimum storage level at the end of the optimization horizon
 $If %MTS% == 0 SectorXStorageFinalMin(nx)   [MWh]           Minimum boundary sector storage level at the end of the optimization horizon
+
+
+
+*---------------------------------------------------------------------
+*FLEXIBLE DEMAND PARAMETERS
+*---------------------------------------------------------------------
 MaxFlexDemand(n)                            [MW]            Maximum value of the flexible demand parameter
 MaxOverSupply(n,h)                          [MWh]           Maximum flexible demand accumultation
 AccumulatedOverSupply_inital(n)             [MWh]           Initial value of the flexible demand accumulation
-;
 
-* Scalar variables necessary to the loop:
+
+
+*---------------------------------------------------------------------
+*SCALARS FOR SIMULATION CONTROL
+*---------------------------------------------------------------------
 scalar FirstHour,LastHour,LastKeptHour,day,ndays,failed,srp,nsrp;
 FirstHour = 1;
 scalar TimeStep;
 
-*MADRID
 
+
+*---------------------------------------------------------------------
+*FREQUENCY STABILITY CONSTANTS (MADRID)
+*---------------------------------------------------------------------
 scalar SystemFrequency, RoCoFMax, DeltaFrequencyMax, MaxPrimaryAllowed;
 SystemFrequency = 50;
 RoCoFMax = 0.5;
 DeltaFrequencyMax = 0.8;
 MaxPrimaryAllowed = 0.15;
 
-*Threshold values for p2h partecipation to reserve market as spinning/non-spinning reserves (TO BE IMPLEMENTED IN CONFIGFILE)
+
+
+*---------------------------------------------------------------------
+*RESERVE PARTICIPATION THRESHOLDS
+*---------------------------------------------------------------------
 srp = 1;
 nsrp = 3;
+
+
 
 *===============================================================================
 *Data import
 *===============================================================================
-
 $gdxin %inputfilename%
 
+
+
+*---------------------------------------------------------------------
+*SETS: Core model dimensions
+*---------------------------------------------------------------------
 $LOAD mk
 $LOAD n
 $LOAD nx
@@ -278,6 +340,12 @@ $LOAD tc
 $LOAD xu
 $LOAD h
 $LOAD z
+
+
+
+*---------------------------------------------------------------------
+*BASIC PARAMETERS: Core operational and economic inputs
+*---------------------------------------------------------------------
 $LOAD AvailabilityFactor
 $LOAD CHPPowerLossFactor
 $LOAD CHPPowerToHeat
@@ -346,6 +414,12 @@ $LOAD TimeDownMinimum
 $LOAD TimeUpMinimum
 $LOAD CostRampUp
 $LOAD CostRampDown
+
+
+
+*---------------------------------------------------------------------
+*BOUNDARY SECTOR (SECTOR X) FLEXIBLE DEMAND & SUPPLY
+*---------------------------------------------------------------------
 $LOAD SectorXFlexDemandInput
 $LOAD SectorXFlexDemandInputInitial
 $LOAD SectorXFlexMaxCapacity
@@ -359,11 +433,34 @@ $LOAD SectorXStorageHours
 $LOAD SectorXStorageMinimum
 $LOAD SectorXAlertLevel
 $LOAD SectorXFloodControl
+
+
+
+*---------------------------------------------------------------------
+*CONDITIONAL LOAD: SECTOR X INITIAL STATE (ONLY IF %MTS% == 0)
+*---------------------------------------------------------------------
 $If %MTS% == 0 $LOAD SectorXStorageInitial
+
+
+
+*---------------------------------------------------------------------
+*CONDITIONAL LOAD: WARM-START COMMITMENT STATUS
+*---------------------------------------------------------------------
 $LOAD SectorXStorageProfile
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
+
+
+
+*---------------------------------------------------------------------
+*NETWORK DATA: DC POWER FLOW (PTDF)
+*---------------------------------------------------------------------
 $LOAD PTDF
 
+
+
+*---------------------------------------------------------------------
+* RESERVE & FREQUENCY-RELATED PARAMETERS (CONDITIONAL ON %MTS% == 0)
+*---------------------------------------------------------------------
 * New
 $If %MTS% == 0 $LOAD InertiaConstant
 $If %MTS% == 0 $LOAD InertiaLimit
@@ -375,10 +472,10 @@ $If %MTS% == 0 $LOAD FFRLimit
 ;
 
 
+
 *===============================================================================
 *Definition of variables
 *===============================================================================
-
 VARIABLES
 Committed(au,h)      [n.a.]  Unit committed at hour h {1 0} or integer
 StartUp(au,h)        [n.a.]  Unit start up at hour h {1 0}  or integer
@@ -475,11 +572,11 @@ Flow(l,h)                           [MW]    Flow through lines
 *Binary Variables
 *LoadRampAux(n, h);
 
+
+
 *===============================================================================
 *Assignment of initial values
 *===============================================================================
-
-
 *Initial commitment status
 CommittedInitial(au)=0;
 CommittedInitial(u)$(PowerInitial(u)>0)=1;
@@ -512,6 +609,8 @@ TimeStep = Config("SimulationTimeStep","val");
 * Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial;
 
 $offorder
+
+
 
 *===============================================================================
 *Declaration and definition of equations
@@ -1482,6 +1581,8 @@ EQ_Max_Power_Consumption(p2x,i)..
          PowerCapacity(p2x) * Nunits(p2x)
 ;
 
+
+
 *===============================================================================
 *Definition of models
 *===============================================================================
@@ -1596,6 +1697,8 @@ EQ_Tot_Demand_2U,
 UCM_SIMPLE.optcr = 0.01;
 UCM_SIMPLE.optfile=1;
 
+
+
 *===============================================================================
 *Solving loop
 *===============================================================================
@@ -1672,10 +1775,11 @@ OptimizationError.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = Error.L - OptimalityG
 
 * Display PowerX.L,Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,CurtailmentReserve_2U.L, CurtailmentReserve_3U.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_2U.L,LL_2D.L,LL_RampUp.L,LL_RampDown.L;
 
+
+
 *===============================================================================
 *Result export
 *===============================================================================
-
 PARAMETER
 OutputDemand_2U(n,h)
 OutputDemand_3U(n,h)
@@ -2047,4 +2151,5 @@ UnitHourlyProfit
 $onorder
 
 $exit
+
 
