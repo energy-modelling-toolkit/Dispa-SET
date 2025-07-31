@@ -899,7 +899,7 @@ EQ_PowerLoss(u,i)$(ord(u))..
 *General formulation for hourly demand balance in the Upward Reserve Services for each node
 EQ_UpwardReserves_balance(res_U,n,i)..
          sum((u),Reserve_Available(res_U,u,i)*Location(u,n))
-         +  CurtailmentReserve(res_U,n,i)$(not sameas(res_U,'FFRU')) + LL_Reserve(res_U,n,i)
+         + LL_Reserve(res_U,n,i)
          =E=
          ReserveDemand(res_U,n,i)
 ;
@@ -947,9 +947,8 @@ EQ_DownwardReserves_balance(res_D,n,i)..
 *Curtailed power
 EQ_Curtailed_Power(n,i)..
          CurtailedPower(n,i)
-         + sum(res_U$(not sameas(res_U,'FFRU')),CurtailmentReserve(res_U,n,i))
          =E=
-         sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,i)-Power(u,i))$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
+         sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,i)-Power(u,i)- sum(res_U, Reserve_Available(res_U,u,i)))$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
 ;
 *---------------------------------------------------RESERVES CAPABILITIES ------------------------------------------------
 *Capability for all reserves upward
@@ -1671,6 +1670,7 @@ OutputSystemCost(h)
 OutputSpillage(au,h)
 OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
+OutputCurtailmentReserve(res_U,n,h)
 OutputCurtailmentReserve_2U(n,h)
 OutputCurtailmentReserve_3U(n,h)
 OutputCurtailmentPerUnit(u,h)
@@ -1820,10 +1820,11 @@ OutputSpillage(au,z)  = Spillage.L(au,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
 *new
-OutputCurtailmentReserve_2U(n,z)=CurtailmentReserve.L('2U',n,z);
-OutputCurtailmentReserve_3U(n,z)=CurtailmentReserve.L('3U',n,z);
-OutputCurtailmentReserve_FFRU(n,z)=CurtailmentReserve.L('FFRU',n,z);
-OutputCurtailmentReserve_PFRU(n,z)=CurtailmentReserve.L('PFRU',n,z);
+OutputCurtailmentReserve(res_U,n,z) = sum(u,(Reserve_Available.L(res_U,u,z))$(sum(tr,Technology(u,tr))>=1)* Location(u,n));
+OutputCurtailmentReserve_2U(n,z)=OutputCurtailmentReserve('2U',n,z);
+OutputCurtailmentReserve_3U(n,z)=OutputCurtailmentReserve('3U',n,z);
+OutputCurtailmentReserve_FFRU(n,z)=OutputCurtailmentReserve('FFRU',n,z);
+OutputCurtailmentReserve_PFRU(n,z)=OutputCurtailmentReserve('PFRU',n,z);
 
 OutputCurtailmentPerUnit(u,z)=(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,z)-Power.L(u,z))$(sum(tr,Technology(u,tr))>=1);
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,z)=DemandModulation.L(n,z);
@@ -1953,6 +1954,7 @@ OutputSystemCost,
 OutputSpillage,
 OutputShedLoad,
 OutputCurtailedPower,
+OutputCurtailmentReserve,
 OutputCurtailmentReserve_2U,
 OutputCurtailmentReserve_3U,
 OutputCurtailmentPerUnit,
