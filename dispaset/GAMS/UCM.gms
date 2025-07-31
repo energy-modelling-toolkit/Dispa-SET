@@ -973,8 +973,11 @@ EQ_Reserves_Down_Capability(res_D,u,i)..
          // Part 1: Conventional Units (not batteries)
          Power(u,i) - (PowerMustRun(u,i)* Committed(u,i))
 
-*         + // Part 2: Batteries (ba = true), downward reserve is available storage charging capacity
-*         ((StorageLevel(u,i) - StorageMinimum(u)) * Nunits(u))$(s(u))
+         + // Part 2: Batteries (ba = true), downward reserve is available battery charging capacity
+         (StorageChargingCapacity(u) * Nunits(u))$(ba(u))
+         
+*         + // Part 3: Charging Storage (s = true), downward reserve is available storage charging capacity
+*         (StorageChargingCapacity(u) * Nunits(u))$(s(u) and not ba(u))
 ;
 
 *---------------------------------------TECHNOLOGY ESPECIFIC RESERVE LIMITS---------------------------------------------------------------
@@ -1032,7 +1035,6 @@ EQ_Total_Delivery_Limit_Down(u,i)..
     
          // Part 2: Batteries (available storage charging capacity)
          + StorageChargingCapacity(u) * (Committed(u,i)-Nunits(u))$s(u)
-;
 ;
     
 *---------------------------------------PRIMARY RESERVE: POLICY 10% LIMIT PER UNIT ---------------------------------------------------------------
@@ -1756,6 +1758,7 @@ LostLoad_PFRU(n,h)
 LostLoad_PFRD(n,h)
 OutputCurtailmentReserve_FFRU(n,h)
 OutputCurtailmentReserve_PFRU(n,h)
+OutputQuickStartPower(au,h)
 
 *MADRID
 $If %MTS% == 0 OutputPowerLoss(h)
@@ -1888,6 +1891,7 @@ OutputReserve_FFRU(au,z) = Reserve_Available.L('FFRU',au,z);
 OutputReserve_FFRD(au,z) = Reserve_Available.L('FFRD',au,z);
 OutputReserve_PFRU(au,z) = Reserve_Available.L('PFRU',au,z);
 OutputReserve_PFRD(au,z) = Reserve_Available.L('PFRD',au,z);
+OutputQuickStartPower(au,z)=QuickStartPower(au,z);
 
 *MADRID
 $If %MTS%==0 OutputPowerLoss(z) = PowerLoss.L(z);
@@ -2028,6 +2032,7 @@ LostLoad_PFRU,
 LostLoad_PFRD,
 OutputCurtailmentReserve_FFRU,
 OutputCurtailmentReserve_PFRU,
+OutputQuickStartPower,
 
 
 *MADRID
