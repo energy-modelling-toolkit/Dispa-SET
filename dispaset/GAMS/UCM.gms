@@ -906,7 +906,7 @@ EQ_UpwardReserves_balance(res_U,n,i)..
 
 *General formulation for hourly demand balance in the Downward Reserve Services for each node
 EQ_DownwardReserves_balance(res_D,n,i)..
-         sum((u),Reserve_Available(res_D,u,i)*ReserveParticipation(res_D,u,i)*Location(u,n))
+         sum((u),Reserve_Available(res_D,u,i)*Location(u,n))
          + LL_Reserve(res_D,n,i)
          =E=
          ReserveDemand(res_D,n,i)
