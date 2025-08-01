@@ -179,6 +179,7 @@ StorageMinimum(au)                          [MWh]           Storage minimum
 Technology(au,t)                            [n.a.]          Technology type {1 0}
 TimeDownMinimum(au)                         [h]             Minimum down time
 TimeUpMinimum(au)                           [h]             Minimum up time
+TimeStartUp(au)                             [h]             Start up time
 SectorXFlexDemandInput(nx,h)                [MWh]           Flexible demand inside BS at each timestep (unless for MTS)
 SectorXFlexDemandInputInitial(nx)           [MWh]           Cumulative flexible demand inside the loop
 SectorXFlexMaxCapacity(nx)                  [MW]            Max capacity for BS Flexible demand
@@ -187,8 +188,6 @@ SectorXFlexSupplyInputInitial(nx)           [MWh]           Cumulative flexible 
 SectorXFlexMaxSupply(nx)                    [MW]            Max capacity for BS Flexible demand
 $If %RetrieveStatus%==1 CommittedCalc(u,z)  [n.a.]          Committment status as for the MILP
 Nunits(au)                                  [n.a.]          Number of units inside the cluster (upper bound value for integer variables)
-K_QuickStart(n)                             [n.a.]          Part of the reserve that can be provided by offline quickstart units
-QuickStartPower(au,h)                       [MW\h\u]        Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
 StorageAlertLevel(au,h)                     [MWh]           Storage alert - Will only be violated to avoid power rationing
 StorageFloodControl(au,h)                   [MWh]           Storage flood control
 StorageHours(au)                            [h]             Storage hours
@@ -348,6 +347,7 @@ $LOAD StorageOutflow
 $LOAD Technology
 $LOAD TimeDownMinimum
 $LOAD TimeUpMinimum
+$LOAD TimeStartUp
 $LOAD CostRampUp
 $LOAD CostRampDown
 $LOAD SectorXFlexDemandInput
@@ -399,8 +399,8 @@ StartUp(au,h)        [n.a.]  Unit start up at hour h {1 0}  or integer
 ShutDown(au,h)       [n.a.]  Unit shut down at hour h {1 0} or integer
 ;
 
-$If %LPFormulation% == 1 POSITIVE VARIABLES Committed (au,h) ; Committed.UP(au,h) = 1 ;
-$If not %LPFormulation% == 1 INTEGER VARIABLES Committed (au,h), StartUp(au,h), ShutDown(au,h) ; Committed.UP(au,h) = Nunits(au) ; StartUp.UP(au,h) = Nunits(au) ; ShutDown.UP(au,h) = Nunits(au) ;
+$If %LPFormulation% == 1 POSITIVE VARIABLES Committed (au,h); Committed.UP(au,h) = 1 ; 
+$If not %LPFormulation% == 1 INTEGER VARIABLES Committed (au,h), StartUp(au,h), ShutDown(au,h); Committed.UP(au,h) = Nunits(au) ;StartUp.UP(au,h) = Nunits(au) ; ShutDown.UP(au,h) = Nunits(au) ;
 
 
 
@@ -512,17 +512,12 @@ PowerMinStable(au) = PartLoadMin(au)*PowerCapacity(au);
 
 LoadMaximum(au,h)= AvailabilityFactor(au,h)*(1-OutageFactor(au,h));
 
-* parameters for clustered formulation (quickstart is defined as the capability to go to minimum power in 15 min)
-QuickStartPower(au,h) = 0;
-QuickStartPower(au,h)$(RampStartUpMaximum(au)>=PowerMinStable(au)*4) = PowerCapacity(au)*LoadMaximum(au,h);
-RampStartUpMaximumH(au,h) = min(PowerCapacity(au)*LoadMaximum(au,h),max(RampStartUpMaximum(au),PowerMinStable(au),QuickStartPower(au,h)));
+* parameters for clustered formulation
+RampStartUpMaximumH(au,h) = min(PowerCapacity(au)*LoadMaximum(au,h),max(RampStartUpMaximum(au),PowerMinStable(au)));
 RampShutDownMaximumH(au,h) = min(PowerCapacity(au)*LoadMaximum(au,h),max(RampShutDownMaximum(au),PowerMinStable(au)));
 
 PowerMustRun(u,h)=PowerMinStable(u)*LoadMaximum(u,h);
 PowerMustRun(u,h)$(sum(tr,Technology(u,tr))>=1 and smin(n,Location(u,n)*(1-Curtailment(n)))=1) = PowerCapacity(u)*LoadMaximum(u,h);
-
-* Part of the reserve that can be provided by offline quickstart units:
-K_QuickStart(n) = Config("QuickStartShare","val");
 
 * Flexible Demand
 MaxFlexDemand(n) = smax(h,Demand("Flex",n,h));
@@ -638,6 +633,8 @@ EQ_UpwardReserves_balance
 EQ_DownwardReserves_balance
 EQ_Total_Delivery_Limit_Up
 EQ_Total_Delivery_Limit_Down
+*EQ_Min_3U_If_Used
+*EQ_Zero_3U_If_NotUsed
 
 *MADRID
 EQ_PowerLoss
@@ -961,8 +958,8 @@ EQ_Reserves_Up_Capability(res_U,u,i)..
          + // Part 2: Batteries (ba = true)
          (PowerCapacity(u) * LoadMaximum(u,i) * Nunits(u) * ReserveParticipation(res_U,u,i))$ba(u)
 
-         + // Part 3: Reserve 3U, only units with QuickStartPower
-         ((Nunits(u) - Committed(u,i)) * QuickStartPower(u,i) * ReserveParticipation(res_U,u,i))$(sameas(res_U,'3U') and QuickStartPower(u,i) > 0)
+         + // Part 3: Reserve 3U, only units with StartUpTime <= 0.25 and > 0
+         (PowerCapacity(u) * StartUp(u,i) * ReserveParticipation(res_U,u,i))$(sameas(res_U,'3U') and TimeStartUp(u) > 0 and TimeStartUp(u) <= 0.25)
 ;
 
 *Capability for all reserves downward
@@ -1544,6 +1541,8 @@ EQ_UpwardReserves_balance,
 EQ_DownwardReserves_balance,
 EQ_Total_Delivery_Limit_Up,
 EQ_Total_Delivery_Limit_Down,
+*EQ_Min_3U_If_Used,
+*EQ_Zero_3U_If_NotUsed,
 
 *MADRID
 $If %MTS% == 0 EQ_PowerLoss,
@@ -1758,7 +1757,6 @@ LostLoad_PFRU(n,h)
 LostLoad_PFRD(n,h)
 OutputCurtailmentReserve_FFRU(n,h)
 OutputCurtailmentReserve_PFRU(n,h)
-OutputQuickStartPower(au,h)
 
 *MADRID
 $If %MTS% == 0 OutputPowerLoss(h)
@@ -1781,11 +1779,9 @@ $If %ActivateAdvancedReserves% == 1 OutputDemand_3U(n,z)=Demand("2U",n,z) + Outp
 $If %ActivateAdvancedReserves% == 1 OutputDemand_2D(n,z)=Demand("2D",n,z) + OutputMaxOutageDown(n,z);
 
 *New
-*$If %ActivateAdvancedReserves% == 0 OutputDemand_2U(n,z)=(Demand("2U",n,z))*(1-K_QuickStart(n));
 $If %ActivateAdvancedReserves% == 0 OutputDemand_2U(n,z)=Demand("2U",n,z);
 
 *New
-*$If %ActivateAdvancedReserves% == 0 OutputDemand_3U(n,z)=Demand("2U",n,z);
 $If %ActivateAdvancedReserves% == 0 OutputDemand_3U(n,z)=Demand("2U",n,z);
 
 $If %ActivateAdvancedReserves% == 0 OutputDemand_2D(n,z)=Demand("2D",n,z);
@@ -1892,7 +1888,6 @@ OutputReserve_FFRU(au,z) = Reserve_Available.L('FFRU',au,z);
 OutputReserve_FFRD(au,z) = Reserve_Available.L('FFRD',au,z);
 OutputReserve_PFRU(au,z) = Reserve_Available.L('PFRU',au,z);
 OutputReserve_PFRD(au,z) = Reserve_Available.L('PFRD',au,z);
-OutputQuickStartPower(au,z)=QuickStartPower(au,z);
 
 *MADRID
 $If %MTS%==0 OutputPowerLoss(z) = PowerLoss.L(z);
@@ -2034,7 +2029,6 @@ LostLoad_PFRU,
 LostLoad_PFRD,
 OutputCurtailmentReserve_FFRU,
 OutputCurtailmentReserve_PFRU,
-OutputQuickStartPower,
 
 
 *MADRID
