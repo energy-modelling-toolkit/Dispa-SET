@@ -572,6 +572,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                    'STOMinSOC': 'SectorXStorageMinimum', 'STOHours': 'SectorXStorageHours'}, inplace=True)
 
     Plants_merged.rename(columns={'StartUpCost': 'CostStartUp',
+                                  'StartUpTime': 'TimeStartUp',
                                   'RampUpMax': 'RampUpMaximum',
                                   'RampDownMax': 'RampDownMaximum',
                                   'MinUpTime': 'TimeUpMinimum',
@@ -907,6 +908,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['Technology'] = ['au', 't']
     sets_param['TimeUpMinimum'] = ['au']
     sets_param['TimeDownMinimum'] = ['au']
+    sets_param['TimeStartUp'] = ['au']
     sets_param['SectorXFlexDemandInput'] = ['nx', 'h']
     sets_param['SectorXFlexDemandInputInitial'] = ['nx']
     sets_param['SectorXFlexMaxCapacity'] = ['nx']
@@ -954,12 +956,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
     if MTS == 0:
-        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
+        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp', 'TimeStartUp',
                     'CostRampUp', 'StorageCapacity', 'StorageHours', 'StorageSelfDischarge', 'StorageChargingCapacity',
                     'InertiaConstant', 'Droop']:
             parameters[var]['val'] = Plants_merged[var].values
     else:
-        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
+        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp', 'TimeStartUp',
                     'CostRampUp', 'StorageCapacity', 'StorageHours', 'StorageSelfDischarge', 'StorageChargingCapacity']:
             parameters[var]['val'] = Plants_merged[var].values
 
