@@ -1367,7 +1367,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # TODO: suggestion is to create commons by type of reserve instead of technologies
     constants = {
         'SystemFrequency': 50,
-        'DeltaFrequencyMax': 0.8
+        'DeltaFrequencyMax': 0.8,
+        'FullActivationTime2':5,
+        'FullActivationTime3':15
         }
     values = np.zeros((len(sets['res']), len(sets['au']), len(sets['h'])))
     
@@ -1382,21 +1384,23 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         i = au_index[u]
         tech = Plants_res.loc[u, 'Technology']
         droop = Plants_merged.loc[u, 'Droop']
+        rampuprate = Plants_merged.loc[u, 'RampUpRate']
+        rampdownrate = Plants_merged.loc[u, 'RampDownRate']
     
         for r in sets['res']:
             j = res_index[r]
     
             eligible = False
             if r in sets['res_U']:
-                if tech in commons['tech_batteries'] and r in sets['res_U'][:2]:     # FFRU, PFRU
+                if tech in commons['tech_batteries'] and r in sets['res_U'][:]:     # FFRU, PFRU
                     eligible = True
-                elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # PFRU, 2U, RR
+                elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # PFRU, 2U, 3U
                     eligible = True
-                elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:   # 2U, RR
+                elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:   # 2U, 3U
                     eligible = True
     
             elif r in sets['res_D']:
-                if tech in commons['tech_batteries'] and r in sets['res_D'][:2]:     # FFRD, PFRD
+                if tech in commons['tech_batteries'] and r in sets['res_D'][:]:     # FFRD, PFRD
                     eligible = True
                 elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # PFRD, 2D
                     eligible = True
@@ -1405,8 +1409,17 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
             # Si es elegible, calcular participación
             if eligible:
-                if r in ['PFRU', 'FFRU'] and droop > 0:
+                if r in ['PFRU', 'PFRD', 'FFRU', 'FFRD'] and droop > 0:
                     factor = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
+                    values[j, i, :] = factor
+                if r in ['2U'] and rampuprate < 0.02:
+                    factor = rampuprate * constants['FullActivationTime2']
+                    values[j, i, :] = factor
+                if r in ['2D'] and rampdownrate < 0.02:
+                    factor = rampdownrate * constants['FullActivationTime2']
+                    values[j, i, :] = factor  
+                if r in ['3U'] and rampuprate < 0.066:
+                    factor = rampuprate * constants['FullActivationTime3']
                     values[j, i, :] = factor
                 else:
                     values[j, i, :] = 1  # Participación binaria para otras reservas
