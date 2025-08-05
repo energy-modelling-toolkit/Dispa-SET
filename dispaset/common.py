@@ -53,7 +53,7 @@ commons['types_CHP'] = ['extraction', 'back-pressure', 'p2h']
 commons['Fuels'] = ['AIR', 'AMO', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH',
                     'GEO', 'HYD', 'WHT', 'ELE', 'THE']
 # Ordered list of fuels for plotting (the first ones are negative):
-commons['MeritOrder'] = ['SCSP', 'BATS', 'BEVS', 'HDAM', 'HPHS', 'P2GS', 'FlowOut', 'GEO', 'NUC', 'LIG',
+commons['MeritOrder'] = ['SCSP', 'BATS', 'BEVS', 'HDAM', 'HPHS', 'P2X', 'FlowOut', 'GEO', 'NUC', 'LIG',
                          'HRD', 'BIO', 'AMO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT',
                          'HYD', 'AIR', 'WHT', 'ELE']
 commons['MeritOrderHeat'] = ['GEO', 'NUC', 'LIG', 'HRD', 'BIO', 'AMO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN',
@@ -101,7 +101,8 @@ commons['colors'] = {'LIG': '#af4b9180',
                      'BATS': '#41A317ff',
                      'BEVS': '#b9c33799',
                      'SCSP': '#e6a532ff',
-                     'P2GS': '#A0522D',
+                     'P2X': '#A0522D',
+                     'X2P': '#A0522D',
                      'ShedLoad': '#ffffffff',
                      'AIR': '#aed6f1ff',
                      'WHT': '#a93226ff',
@@ -116,8 +117,8 @@ commons['colors']['reserves'] = 'black'
 # Hatches associated with each fuel:
 commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '', 'GAS': '', 'NUC': '', 'SUN': '', 'WIN': '', 'WAT': '',
                       'BIO': '', 'AMO': '', 'GEO': '', 'Storage': '', 'WST': '', 'OTH': '', 'HYD': '',
-                      'FlowIn': '//', 'FlowOut': '//', 'HDAM': '/', 'HPHS': '/', 'SCSP': '/', 'THMS': '', 'BATS': '/',
-                      'BEVS': '/', 'P2GS': '/', 'AIR': '', 'WHT': '', 'HeatSlack': '/', 'ELE': '', 'THE': ''
+                      'FlowIn': '', 'FlowOut': '', 'HDAM': '', 'HPHS': '', 'SCSP': '', 'THMS': '', 'BATS': '',
+                      'BEVS': '', 'P2X': '', 'X2P': '','AIR': '', 'WHT': '', 'ELE': '', 'THE': ''
                       }
 
 commons['logfile'] = str(datetime.datetime.now()).replace(':', '-').replace(' ', '_') + '.dispa.log'

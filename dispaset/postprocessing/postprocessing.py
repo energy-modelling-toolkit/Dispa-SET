@@ -240,6 +240,13 @@ def get_plot_data(inputs, results, z):
     else:
         # Initialize Storage if no data
         plotdata['Storage'] = 0
+        
+    # 3. Process power consumption (p2x) data
+    if 'OutputPowerConsumption' in results:
+        # Filter by zone
+        tmp = filter_by_zone(results['OutputPowerConsumption'], inputs, z)
+        plotdata['P2X'] = -tmp.sum(axis=1)
+
     
     # 3. Fill missing values (NaNs)
     plotdata.fillna(value=0, inplace=True)
@@ -256,6 +263,13 @@ def get_plot_data(inputs, results, z):
     
     # 5. Reorder Columns for Plotting (Merit Order)
     OrderedColumns = [col for col in commons['MeritOrder'] if col in plotdata.columns]
+    # check if there are some missing columns:
+    for col in plotdata.columns:
+        if col not in commons['MeritOrder']:
+            if plotdata[col].sum() < 0:
+                OrderedColumns.insert(0,col)
+            else:
+                OrderedColumns.append(col)
     plotdata = plotdata[OrderedColumns]
 
     # 6. Remove Empty Data Columns

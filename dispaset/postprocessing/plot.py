@@ -189,7 +189,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         col1 = sumplot_neg.columns[j]
         col2 = sumplot_neg.columns[j + 1]
         color = colors[col2]
-        if plot_lines:
+        if plot_lines and col2 in commons['hatches']:
             hatch = commons['hatches'][col2]
         else:
             hatch = ''
@@ -688,7 +688,7 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
         demand_flex = pd.Series(0, index=results['OutputPower'].index)
 
     demand_da = inputs['param_df']['Demand'][('DA', z)] / 1000  # GW
-    demand = pd.DataFrame(demand_da + demand_p2x + demand_flex, columns=[('DA', z)])
+    demand = pd.DataFrame(demand_da + demand_flex, columns=[('DA', z)])
     demand = demand[('DA', z)]
 
     # 5. Shed Load, Shifted Load & Energy Balance Check
@@ -925,116 +925,6 @@ def plot_ElyserCap_vs_Utilization(inputs, results):
     return True
 
 
-def plot_H2_and_demand(inputs, results):
-    # TODO: Check this function adn decide if necessary
-    """
-    This function plots the demand and the electrolyser demand as bar chart
-
-    :param inputs:      Dispa-SET inputs
-    :param results:     Dispa-SET results
-    """
-
-    # Get demand
-    def get_demand(inputs, results):
-        Demand = pd.DataFrame(index=['0'], columns=inputs['sets']['n'])
-        for z in inputs['sets']['n']:
-            plotdata = get_plot_data(inputs, results, z) / 1000  # GW
-
-            aggregation = False
-            if 'OutputStorageLevel' in results:
-                lev = filter_by_zone(results['OutputStorageLevel'], inputs, z)
-                lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] / 1e3  # GWh of storage
-                for col in lev.columns:
-                    if 'BEVS' in col:
-                        lev[col] = lev[col] * inputs['param_df']['AvailabilityFactor'][col]
-                level = filter_by_storage(lev, inputs, StorageSubset='s')
-                levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
-                for t in ['HDAM', 'HPHS', 'BEVS', 'BATS', 'SCSP', 'P2GS']:
-                    temp = filter_by_tech(level, inputs, t)
-                    levels[t] = temp.sum(axis=1)
-                levels.dropna(axis=1, inplace=True)
-                for col in levels.columns:
-                    if levels[col].max() == 0 and levels[col].min() == 0:
-                        del levels[col]
-                if aggregation is True:
-                    level = level.sum(axis=1)
-                else:
-                    level = levels
-            else:
-                level = pd.Series(0, index=results['OutputPower'].index)
-
-            if 'OutputPowerConsumption' in results:
-                demand_p2x = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1e6  # TWh
-                demand_p2x = demand_p2x.sum(axis=1)
-            else:
-                demand_p2x = pd.Series(0, index=results['OutputPower'].index)
-            if ('Flex', z) in inputs['param_df']['Demand']:
-                demand_flex = inputs['param_df']['Demand'][('Flex', z)] / 1e6
-            else:
-                demand_flex = pd.Series(0, index=results['OutputPower'].index)
-
-            demand_da = inputs['param_df']['Demand'][('DA', z)] / 1e6  # TWh
-            demand = pd.DataFrame(demand_da + demand_p2x + demand_flex, columns=[('DA', z)])
-            demand = demand[('DA', z)]
-            Demand[z] = demand.sum()
-            # Get elyser consumption
-        Elyser_consumption = pd.DataFrame(index=['0'], columns=inputs['sets']['n'])
-        for u in results['OutputStorageInput'].columns:
-            if 'P2GS' in u:
-                c = u.split()[2].split('_')[0]
-                Elyser_consumption[c] = results['OutputStorageInput'][u].sum() / 1e6  # TWh
-                Elyser_consumption[c].fillna(0)
-
-        return Demand, Elyser_consumption
-
-    Demand = {}
-    Elyser_consumption = {}
-    scenarios = list(inputs.keys())  # TODO Remove scenarios
-    for s in scenarios:
-        Demand[s], Elyser_consumption[s] = get_demand(inputs[s], results[s])
-
-    labels = inputs[scenarios[0]]['sets']['n']
-
-    x = np.arange(len(labels))  # the label locations
-    if len(scenarios) == 2:
-        width = 0.3
-    else:
-        width = 0.2
-
-    fig, ax = plt.subplots(figsize=(13, 5))
-    plt.rcParams.update({'font.size': 15})
-    for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
-                 ax.get_xticklabels() + ax.get_yticklabels()):
-        item.set_fontsize(15)
-    if len(scenarios) == 2:
-        ax.bar(x - width / 2 - 0.03, Demand[scenarios[0]].iloc[0, :] + Elyser_consumption[scenarios[0]].iloc[0, :],
-               width, color=(1, 0.5, 0, 0.7))
-        ax.bar(x - width / 2 - 0.03, Demand[scenarios[0]].iloc[0, :], width, color=(1, 0.5, 0, 1),
-               label=str(scenarios[0]))
-        ax.bar(x + width / 2 + 0.03, Demand[scenarios[1]].iloc[0, :] + Elyser_consumption[scenarios[1]].iloc[0, :],
-               width, color=(0.192, 0.549, 0.905, 0.7))
-        ax.bar(x + width / 2 + 0.03, Demand[scenarios[1]].iloc[0, :], width, color=(0.192, 0.549, 0.905),
-               label=str(scenarios[1]))
-    elif len(scenarios) == 3:
-        ax.bar(x - 0.22, Demand[scenarios[0]].iloc[0, :] + Elyser_consumption[scenarios[0]].iloc[0, :], width,
-               label=str(scenarios[0]), color=(1, 0.5, 0, 0.7))
-        ax.bar(x - 0.22, Demand[scenarios[0]].iloc[0, :], width, color=(1, 0.5, 0, 1))
-        ax.bar(x, Demand[scenarios[1]].iloc[0, :] + Elyser_consumption[scenarios[1]].iloc[0, :], width,
-               label=str(scenarios[1]), color=(0.192, 0.549, 0.905, 0.7))
-        ax.bar(x, Demand[scenarios[1]].iloc[0, :], width, color=(0.192, 0.549, 0.905))
-        ax.bar(x + 0.22, Demand[scenarios[2]].iloc[0, :] + Elyser_consumption[scenarios[2]].iloc[0, :], width,
-               label=str(scenarios[2]), color=(0.192, 0.549, 0.3, 0.7))
-        ax.bar(x + 0.22, Demand[scenarios[2]].iloc[0, :], width, color=(0.192, 0.549, 0.3))
-
-    # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel('[GWh]')
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.legend()
-
-    plt.show()
-
-    return True
 
 
 def plot_tech_cap(inputs, plot=True, figsize=(10, 7), alpha=0.8, width=0.5):
