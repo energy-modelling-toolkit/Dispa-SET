@@ -506,7 +506,6 @@ StorageInput(au,h)                      [MW]   Charging input for storage units
 StorageLevel(au,h)                      [MWh]   Storage level of charge
 SectorXStorageLevel(nx,h)               [MWh]   Storage level of charge of the boundary sector
 SectorXSpillage(slx,h)                  [MW]    Spillage from boundary sector x to boundary sector y
-SectorXWaterNotWithdrawn(nx,h)          [MWh]   Available water not utilized
 LL_MaxPower(n,h)                        [MW]    Deficit in terms of maximum power
 LL_RampUp(au,h)                         [MW]    Deficit in terms of ramping up for each plant
 LL_RampDown(au,h)                       [MW]    Deficit in terms of ramping down
@@ -622,7 +621,6 @@ EQ_CHP_extraction
 EQ_CHP_backpressure
 *EQ_CHP_demand_satisfaction 
 EQ_BS_Demand_balance
-EQ_BS_Demand_balance2
 EQ_CHP_max_heat
 EQ_Commitment
 EQ_MinUpTime
@@ -753,8 +751,7 @@ EQ_SystemCost(i)..
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
-         +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
-         +0.7*Config("ValueOfLostLoad","val")*(sum(nx,(SectorXWaterNotWithdrawn(nx,i))*TimeStep))                                                                             
+         +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)                                                                       
          +sum(s,CostStorageAlert(s,i)*LL_StorageAlert(s,i)*TimeStep)
          +sum(s,CostFloodControl(s,i)*LL_FloodControl(s,i)*TimeStep)
 *         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep
@@ -780,8 +777,7 @@ EQ_SystemCost(i)..
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
-         +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
-         +15*(sum(nx,(SectorXWaterNotWithdrawn(nx,i))*TimeStep))                                                                                                              
+         +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)                                                                                                        
          +sum(s,CostStorageAlert(s,i)*LL_StorageAlert(s,i)*TimeStep)
          +sum(s,CostFloodControl(s,i)*LL_FloodControl(s,i)*TimeStep)
 *         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep
@@ -1509,19 +1505,6 @@ EQ_BS_Demand_balance(nx,i)..
         SectorXDemand(nx,i)
         + SectorXFlexDemand(nx,i)
         + SectorXStorageInput(nx,i)
-        + SectorXWaterNotWithdrawn(nx,i)
-;
-
-EQ_BS_Demand_balance2(nx,i)..
-        SectorXStorageInput(nx,i)
-        + SectorXDemand(nx,i)$(SectorXDemand(nx,i)<0)
-        =L=
-        sum(p2x, PowerX(nx,p2x,i))
-        + sum(x2p, PowerX(nx,x2p,i))
-        + sum(lx,FlowX(lx,i)*LineXNode(lx,nx))
-        + SectorXFlexSupply(nx,i)
-        + sum(slx,SectorXSpillage(slx,i)*SectorXSpillageNode(slx,nx))
-        + sum(chp, Heat(chp,i)*LocationX(chp,nx))
 ;
 
 * Equations concerning boundary sector flexible demand
@@ -1594,7 +1577,6 @@ EQ_CHP_extraction,
 EQ_CHP_backpressure,
 *EQ_CHP_demand_satisfaction,
 EQ_BS_Demand_balance,
-*EQ_BS_Demand_balance2,
 EQ_CHP_max_heat,
 EQ_CostRampUp,
 EQ_CostRampDown,
@@ -1805,7 +1787,6 @@ OutputSectorXStorageLevelViolation_H(nx,h)
 OutputSectorXStorageInput(nx,h)
 $If %MTS% == 1 OutputSectorXStorageFinalMin(nx)
 $If %MTS% == 1 OutputSectorXStorageInitial(nx)
-OutputSectorXWaterNotWithdrawn(nx,h)
 OutputSectorXSpillage(slx,h)
 OutputSystemCost(h)
 OutputSpillage(au,h)
@@ -1936,7 +1917,6 @@ OutputSectorXStorageLevelViolation_H(nx,z) = SectorXStorageLevelViolation_H.l(nx
 $If %MTS% == 1 OutputSectorXStorageFinalMin(nx) = SectorXStorageFinalMin.L(nx)/max(1,SectorXStorageCapacity(nx));
 $If %MTS% == 1 OutputSectorXStorageInitial(nx) = SectorXStorageInitial.L(nx)/max(1,SectorXStorageCapacity(nx));
 OutputSectorXStorageInput(nx,z) = SectorXStorageInput.l(nx,z);
-OutputSectorXWaterNotWithdrawn(nx,z) = SectorXWaterNotWithdrawn.l(nx,z);
 OutputSectorXSpillage(slx,z) = SectorXSpillage.l(slx,z);
 OutputSystemCost(z)=SystemCost.L(z);
 OutputSpillage(au,z)  = Spillage.L(au,z) ;
@@ -2051,7 +2031,6 @@ OutputSectorXSelfDischarge,
 OutputSectorXStorageShadowPrice,
 OutputSectorXStorageLevelViolation_H,
 OutputSectorXStorageInput,
-OutputSectorXWaterNotWithdrawn,
 OutputSectorXSpillage,
 $If %MTS% == 1 OutputSectorXStorageFinalMin,
 $If %MTS% == 1 OutputSectorXStorageInitial,
