@@ -173,7 +173,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                            default=config['default']['ShareOfFlexibleDemand'])
     Reserve2D = NodeBasedTable('Reserve2D', config, default=None)
     Reserve2U = NodeBasedTable('Reserve2U', config, default=None)
-    # aqui deberia inicializar los df de los resultados que no estan con timestamp
 
     # FFR Required:
     if 'FFRLimit' in config and os.path.isfile(config['FFRLimit']):
@@ -238,7 +237,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             plants[key] = 0
 
     # If not present, add the non-compulsory fields to the units table:
-    # MARCO CHANGE: AGREGAR COLUMNAS QUE SON NECESARIAS PARA LAS NUEVAS FUNCIONES
+    # Add necessary columns to support new functions
     for key in ['CHPPowerLossFactor', 'CHPPowerToHeat', 'CHPType', 'STOCapacity', 'STOSelfDischarge',
                 'STOMaxChargingPower', 'STOChargingEfficiency', 'CHPMaxHeat', 'WaterWithdrawal',
                 'WaterConsumption', 'InertiaConstant', 'STOHours', 'Droop']:
@@ -721,7 +720,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # New Reserves calculation
     # Calculate the percentage that each zone represents of the total load in each hour
     Load_shares = Load.div(Load.sum(axis=1), axis=0)    
-    # Prorratear el valor total de FFR por los porcentajes de cada zona
+    # Distribute the total FFR value proportionally based on each zone's percentage share.
     FFRLimit_allocated = Load_shares.mul(FFRLimit.iloc[:, 0], axis=0)
     PrimaryReserveLimit_allocated = Load_shares.mul(PrimaryReserveLimit.iloc[:, 0], axis=0)
 
@@ -1364,7 +1363,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
     
     # Binary table of participation to the reserve market
-    # TODO: suggestion is to create commons by type of reserve instead of technologies
+    # TODO: suggestion is to create commons by type of reserve instead of technologies?
     constants = {
         'SystemFrequency': 50,
         'DeltaFrequencyMax': 0.8,
@@ -1407,7 +1406,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:   # 2D
                     eligible = True
     
-            # Si es elegible, calcular participación
+            # If eligible, calculate reserve participation based on physical limits (Droop, RampUpRate, RampDownRate)
             if eligible:
                 if r in ['PFRU', 'PFRD', 'FFRU', 'FFRD'] and droop > 0:
                     factor = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
@@ -1425,35 +1424,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     values[j, i, :] = 1  # Participación binaria para otras reservas
         
     parameters['ReserveParticipation'] = {'sets': sets_param['ReserveParticipation'], 'val': values}
-   
-    # parameters['Reserve'] = define_parameter(['au', 'res'], sets, value=0)
-    # res_index = {r: idx for idx, r in enumerate(sets['res'])}
-    
-    # for i, u in enumerate(sets['au']):
-    #     if u not in Plants_res.index:
-    #         logging.error('Reserve not valid for plant ' + u)
-    #         sys.exit(1)
-    
-    #     tech = Plants_res.loc[u, 'Technology']
-    
-    #     for r in sets['res']:
-    #         j = res_index[r]
-            
-    #         if r in sets['res_U']:
-    #             if tech in commons['tech_batteries'] and r in sets['res_U'][:2]:  # FFRU, PFRU
-    #                 parameters['Reserve']['val'][i, j] = 1
-    #             elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # PFRU, 2U, RR
-    #                 parameters['Reserve']['val'][i, j] = 1
-    #             elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:  # 2U, RR
-    #                 parameters['Reserve']['val'][i, j] = 1
-    
-    #         elif r in sets['res_D']:
-    #             if tech in commons['tech_batteries'] and r in sets['res_D'][:2]:  # FFRD, PFRD
-    #                 parameters['Reserve']['val'][i, j] = 1
-    #             elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # PFRD, 2D
-    #                 parameters['Reserve']['val'][i, j] = 1
-    #             elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:  # 2D
-    #                 parameters['Reserve']['val'][i, j] = 1         
+         
                       
     # Technologies
     for unit in range(Nunits):
