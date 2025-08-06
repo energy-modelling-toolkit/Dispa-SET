@@ -1362,7 +1362,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     #                   dtype='bool')  # same as before but with new list
     # parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
     
-    # Binary table of participation to the reserve market
+    # ReserveParticipation table for the reserves market
     # TODO: suggestion is to create commons by type of reserve instead of technologies?
     constants = {
         'SystemFrequency': 50,
@@ -1409,17 +1409,17 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             # If eligible, calculate reserve participation based on physical limits (Droop, RampUpRate, RampDownRate)
             if eligible:
                 if r in ['PFRU', 'PFRD', 'FFRU', 'FFRD'] and droop > 0:
-                    factor = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
-                    values[j, i, :] = factor
-                if r in ['2U'] and rampuprate < 0.02:
-                    factor = rampuprate * constants['FullActivationTime2']
-                    values[j, i, :] = factor
-                if r in ['2D'] and rampdownrate < 0.02:
-                    factor = rampdownrate * constants['FullActivationTime2']
-                    values[j, i, :] = factor  
-                if r in ['3U'] and rampuprate < 0.066:
-                    factor = rampuprate * constants['FullActivationTime3']
-                    values[j, i, :] = factor
+                    factor1 = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
+                    values[j, i, :] = factor1
+                elif r in ['2U'] and rampuprate < 0.02:
+                    factor2 = rampuprate * constants['FullActivationTime2']
+                    values[j, i, :] = factor2
+                elif r in ['2D'] and rampdownrate < 0.02:
+                    factor3 = rampdownrate * constants['FullActivationTime2']
+                    values[j, i, :] = factor3  
+                elif r in ['3U'] and rampuprate < 0.066:
+                    factor4 = rampuprate * constants['FullActivationTime3']
+                    values[j, i, :] = factor4
                 else:
                     values[j, i, :] = 1  # Participación binaria para otras reservas
         
