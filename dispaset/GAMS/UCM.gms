@@ -1002,13 +1002,13 @@ EQ_3U_limit_chp(res_U,chp,i)..
 EQ_Reserve_UP_limit_ba(ba,i)..
          sum(res_U, Reserve_Available(res_U,ba,i)* ReserveDuration(res_U))
          =L=
-         (StorageLevel(ba,i) - StorageMinimum(ba)) * StorageDischargeEfficiency(ba) 
+         StorageCapacity(ba) * (StorageLevel(ba,i) - StorageMinimum(ba)) * StorageDischargeEfficiency(ba) 
 ;
 
 EQ_Reserve_DOWN_limit_ba(ba,i)..
          sum(res_D, Reserve_Available(res_D,ba,i) * ReserveDuration(res_D))
          =l=
-         (StorageCapacity(ba) - StorageLevel(ba,i)) * StorageChargingEfficiency(ba)      
+         StorageCapacity(ba) * (1 - StorageLevel(ba,i)) * StorageChargingEfficiency(ba)      
 ;
 
 *EQ_3U_limit_ba(res_U,chp,i)..
