@@ -234,11 +234,10 @@ scalar TimeStep;
 
 
 *New
-scalar SystemFrequency, RoCoFMax, DeltaFrequencyMax, MaxPrimaryAllowed, ConversionFactor;
+scalar SystemFrequency, RoCoFMax, DeltaFrequencyMax, ConversionFactor;
 SystemFrequency = 50;
 RoCoFMax = 0.5;
 DeltaFrequencyMax = 0.8;
-MaxPrimaryAllowed = 0.15;
 ConversionFactor = 1000;
 
 *Threshold values for p2h partecipation to reserve market as spinning/non-spinning reserves (TO BE IMPLEMENTED IN CONFIGFILE)
@@ -626,7 +625,6 @@ EQ_Total_Injected_Power
 *New
 EQ_SystemInertia
 EQ_Inertia_limit
-EQ_PrimaryReserve_Allowed
 
 EQ_Reserves_Up_Capability
 EQ_Reserves_Down_Capability
@@ -1043,13 +1041,6 @@ EQ_Total_Delivery_Limit_Down(u,i)..
          
          + // Part 3: Non-committed batteries only (available storage charging capacity)
          (StorageChargingCapacity(u) * (Committed(u,i)-Nunits(u)))$ba(u)
-;
-
-*---------------------------------------PRIMARY RESERVE: POLICY 10% LIMIT PER UNIT ---------------------------------------------------------------
-EQ_PrimaryReserve_Allowed(u,i)$(cu(u))..
-         Reserve_Available('PFRU',u,i)
-         =L=
-         (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i) * MaxPrimaryAllowed)$(cu(u))
 ;
 
 *---------------------------------------SYSTEM INERTIA REQUIRED LIMITS---------------------------------------------------------------
@@ -1545,7 +1536,6 @@ EQ_Total_Injected_Power,
 *new
 $If %MTS% == 0 EQ_SystemInertia,
 $If %MTS% == 0 EQ_Inertia_limit,
-$If %MTS% == 0 EQ_PrimaryReserve_Allowed,
 
 EQ_Reserves_Up_Capability,
 EQ_Reserves_Down_Capability,
