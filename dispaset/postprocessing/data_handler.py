@@ -54,11 +54,13 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'OutputSysInertia': ('h'), 
             'OutputPowerLoss': ('h'),
             'OutputPrimaryReserve_Available': ('h'),
-            'OutputReserve_Available':('u','h','res'),
+            'OutputReserveProvision':('u','h','res'),
             'LostLoad_FFRU': ('n', 'h'),
             'LostLoad_FFRD': ('n', 'h'),
             'LostLoad_PFRU': ('n', 'h'),
             'LostLoad_PFRD': ('n', 'h'),
+            'OutputContingencyPerZone': ('n', 'h'),
+            'OutputContingency': ('h'),
             'status': tuple(),
             '*': tuple()
             }
@@ -193,9 +195,10 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'UnitHourly2DRevenue', 'UnitHourly3URevenue', 'UnitHourlyPowerRevenue', 
                    'UnitHourlyProfit', 'UnitHourlyRampingCost', 'UnitHourlyRevenue',
                    'OutputSysInertia','OutputFFR_Available', 'OutputPrimaryReserve_Available', 
-                   'OutputReserve_Available', 'OutputReserve_FFRD', 'OutputReserve_FFRU', 'OutputReserve_PFRD', 'OutputReserve_PFRU',
+                   'OutputReserveProvision', 'OutputReserve_FFRD', 'OutputReserve_FFRU', 'OutputReserve_PFRD', 'OutputReserve_PFRU',
                    'OutputDemand_FFRU', 'OutputDemand_FFRD', 'OutputDemand_PFRU', 'OutputDemand_PFRD',
-                   'OutputCurtailmentReserve_FFRU', 'OutputCurtailmentReserve_FFRD', 'OutputCurtailmentReserve_PFRU', 'OutputCurtailmentReserve_PFRD']
+                   'OutputCurtailmentReserve_FFRU', 'OutputCurtailmentReserve_FFRD', 'OutputCurtailmentReserve_PFRU', 'OutputCurtailmentReserve_PFRD',
+                   'OutputContingencyPerZone', 'OutputContingency']
 
     # Setting the proper index to the result dataframes:
     for key in chain(keys, keys_sparse):

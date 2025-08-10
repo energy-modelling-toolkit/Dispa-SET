@@ -444,7 +444,7 @@ LL_SectorXFlexSupply(nx)                [MWh]   Deficit in flex supply
 spillage(au,h)                          [MWh]   spillage from water reservoirs
 SystemCost(h)                           [EUR]   Hourly system cost
 *new
-Reserve_Available(res,au,h)             [MW]    all reserves up
+ReserveProvision(res,au,h)             [MW]    all reserves up
 *Reserve_2U(au,h)                        [MW]    Spinning reserve up
 *Reserve_2D(au,h)                        [MW]    Spinning reserve down
 *Reserve_3U(au,h)                        [MW]    Non spinning quick start reserve up
@@ -894,7 +894,7 @@ EQ_PowerLoss(u,i)$(ord(u))..
 *---------------------------------------------------RESERVES BALANCES ---------------------------------------------------
 *General formulation for hourly demand balance in the Upward Reserve Services for each node
 EQ_UpwardReserves_balance(res_U,n,i)..
-         sum((u),Reserve_Available(res_U,u,i)*Location(u,n))
+         sum((u),ReserveProvision(res_U,u,i)*Location(u,n))
          + LL_Reserve(res_U,n,i)
          =E=
          ReserveDemand(res_U,n,i)
@@ -902,7 +902,7 @@ EQ_UpwardReserves_balance(res_U,n,i)..
 
 *General formulation for hourly demand balance in the Downward Reserve Services for each node
 EQ_DownwardReserves_balance(res_D,n,i)..
-         sum((u),Reserve_Available(res_D,u,i)*Location(u,n))
+         sum((u),ReserveProvision(res_D,u,i)*Location(u,n))
          + LL_Reserve(res_D,n,i)
          =E=
          ReserveDemand(res_D,n,i)
@@ -910,7 +910,7 @@ EQ_DownwardReserves_balance(res_D,n,i)..
 
 **Hourly demand balance in the upwards spinning reserve market for each node
 *EQ_Demand_balance_2U(res_U,n,i)..
-*         sum((u),Reserve_Available(res_U,u,i)*ReserveParticipation('2U',u,i)*Location(u,n))
+*         sum((u),ReserveProvision(res_U,u,i)*ReserveParticipation('2U',u,i)*Location(u,n))
 *         + CurtailmentReserve('2U',n,i) + LL_Reserve('2U',n,i)
 *         =E=
 **New
@@ -922,7 +922,7 @@ EQ_DownwardReserves_balance(res_D,n,i)..
 
 **Hourly demand balance in the upwards non-spinning reserve market for each node
 *EQ_Demand_balance_3U(res_U,n,i)..
-*         sum((u),(Reserve_Available('2U',u,i) + Reserve_Available('3U',u,i))*ReserveParticipation('3U',u,i)*Location(u,n))
+*         sum((u),(ReserveProvision('2U',u,i) + ReserveProvision('3U',u,i))*ReserveParticipation('3U',u,i)*Location(u,n))
 *         + CurtailmentReserve('3U',n,i) + LL_Reserve('3U',n,i)
 *         =E=
 *         Demand("2U",n,i)
@@ -932,7 +932,7 @@ EQ_DownwardReserves_balance(res_D,n,i)..
 
 **Hourly demand balance in the downwards reserve market for each node
 *EQ_Demand_balance_2D(res_D,n,i)..
-*         sum((u),Reserve_Available(res_D,u,i)*ReserveParticipation('2D',u,i)*Location(u,n))
+*         sum((u),ReserveProvision(res_D,u,i)*ReserveParticipation('2D',u,i)*Location(u,n))
 *         + LL_Reserve('2D',n,i)
 *         =E=
 *         Demand("2D",n,i)
@@ -944,12 +944,12 @@ EQ_DownwardReserves_balance(res_D,n,i)..
 EQ_Curtailed_Power(n,i)..
          CurtailedPower(n,i)
          =E=
-         sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,i)-Power(u,i)- sum(res_U, Reserve_Available(res_U,u,i)))$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
+         sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,i)-Power(u,i)- sum(res_U, ReserveProvision(res_U,u,i)))$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
 ;
 *---------------------------------------------------RESERVES CAPABILITIES ------------------------------------------------
 *Capability for all reserves upward
 EQ_Reserves_Up_Capability(res_U,u,i)..
-         Reserve_Available(res_U,u,i)
+         ReserveProvision(res_U,u,i)
          =L=
          // Part 1: All committed conventional units (except batteries)
          (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i) * ReserveParticipation(res_U,u,i))$(not ba(u))
@@ -963,7 +963,7 @@ EQ_Reserves_Up_Capability(res_U,u,i)..
 
 *Capability for all reserves downward
 EQ_Reserves_Down_Capability(res_D,u,i)..
-         Reserve_Available(res_D,u,i)
+         ReserveProvision(res_D,u,i)
          =L=
          // Part 1: All committed conventional units (except batteries)
          (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i) * ReserveParticipation(res_D,u,i))$(not ba(u))
@@ -979,45 +979,45 @@ EQ_Reserves_Down_Capability(res_D,u,i)..
 *---------------------------------------TECHNOLOGY ESPECIFIC RESERVE LIMITS---------------------------------------------------------------
 *Reserves limits for CHP units
 EQ_2U_limit_chp(res_U,chp,i)..
-         Reserve_Available('2U',chp,i)
+         ReserveProvision('2U',chp,i)
          =l=
          (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))/(0.25/CHPPowerToHeat(chp))
 ;
 
 EQ_2D_limit_chp(res_D,chp,i)..
-         Reserve_Available('2D',chp,i)
+         ReserveProvision('2D',chp,i)
          =l=
          StorageLevel(chp,i)/(0.25/CHPPowerToHeat(chp))
 ;
 
 EQ_3U_limit_chp(res_U,chp,i)..
-         Reserve_Available('3U',chp,i)
+         ReserveProvision('3U',chp,i)
          =l=
          (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))*(CHPPowerToHeat(chp))
 ;
 
 *Reserves limits for Batteries
 EQ_Reserve_UP_limit_ba(ba,i)..
-         sum(res_U, Reserve_Available(res_U,ba,i)* ReserveDuration(res_U))
+         sum(res_U, ReserveProvision(res_U,ba,i)* ReserveDuration(res_U))
          =L=
          StorageCapacity(ba) * (StorageLevel(ba,i) - StorageMinimum(ba)) * StorageDischargeEfficiency(ba) 
 ;
 
 EQ_Reserve_DOWN_limit_ba(ba,i)..
-         sum(res_D, Reserve_Available(res_D,ba,i) * ReserveDuration(res_D))
+         sum(res_D, ReserveProvision(res_D,ba,i) * ReserveDuration(res_D))
          =l=
          StorageCapacity(ba) * (1 - StorageLevel(ba,i)) * StorageChargingEfficiency(ba)      
 ;
 
 *EQ_3U_limit_ba(res_U,chp,i)..
-*         Reserve_Available('3U',chp,i)
+*         ReserveProvision('3U',chp,i)
 *         =l=
 *         (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))*(CHPPowerToHeat(chp))
 *;
 *---------------------------------------GENERAL SYSTEM-WIDE RESERVE LIMITS---------------------------------------------------------------
 *System-wide reserve limits upward
 EQ_Total_Delivery_Limit_Up(u,i)..
-         Power(u,i) + sum(res_U, Reserve_Available(res_U,u,i))
+         Power(u,i) + sum(res_U, ReserveProvision(res_U,u,i))
          =L=
          // Part 1: All committed conventional units (except batteries)
          (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i))$(not ba(u))
@@ -1031,7 +1031,7 @@ EQ_Total_Delivery_Limit_Up(u,i)..
     
 *System-wide reserve limits downward
 EQ_Total_Delivery_Limit_Down(u,i)..
-         Power(u,i) - sum(res_D, Reserve_Available(res_D,u,i))
+         Power(u,i) - sum(res_D, ReserveProvision(res_D,u,i))
          =G=
          // Part 1: All committed conventional units (except batteries)
          (PowerCapacity(u) * PartLoadMin(u) * Committed(u,i))$(not ba(u))
@@ -1744,7 +1744,7 @@ $If %MTS% == 0 OutputSystemInertia(h)
 $If %MTS% == 0 OutputPrimaryReserve_Available(au,h)
 $If %MTS% == 0 OutputFFR_Available(au,h)
 
-OutputReserve_Available(res,au,h)
+OutputReserveProvision(res,au,h)
 OutputReserve_FFRU(au,h)
 OutputReserve_FFRD(au,h)
 OutputReserve_PFRU(au,h)
@@ -1820,7 +1820,7 @@ OutputSpillage(au,z)  = Spillage.L(au,z) ;
 OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
 *new
-OutputCurtailmentReserve(res_U,n,z) = sum(u,(Reserve_Available.L(res_U,u,z))$(sum(tr,Technology(u,tr))>=1)* Location(u,n));
+OutputCurtailmentReserve(res_U,n,z) = sum(u,(ReserveProvision.L(res_U,u,z))$(sum(tr,Technology(u,tr))>=1)* Location(u,n));
 OutputCurtailmentReserve_2U(n,z)=OutputCurtailmentReserve('2U',n,z);
 OutputCurtailmentReserve_3U(n,z)=OutputCurtailmentReserve('3U',n,z);
 OutputCurtailmentReserve_FFRU(n,z)=OutputCurtailmentReserve('FFRU',n,z);
@@ -1869,9 +1869,9 @@ $If not %LPFormulation% == 1 OutputCostRampDownH(au,z) = CostRampDownH.L(au,z);
 *ShadowPrice_2D(n,z) =  EQ_Demand_balance_2D.m('2D',n,z);
 *ShadowPrice_3U(n,z) =  EQ_Demand_balance_3U.m('3U',n,z);
 *new
-OutputReserve_2U(au,z) = Reserve_Available.L('2U',au,z);
-OutputReserve_2D(au,z) = Reserve_Available.L('2D',au,z);
-OutputReserve_3U(au,z) = Reserve_Available.L('3U',au,z);
+OutputReserve_2U(au,z) = ReserveProvision.L('2U',au,z);
+OutputReserve_2D(au,z) = ReserveProvision.L('2D',au,z);
+OutputReserve_3U(au,z) = ReserveProvision.L('3U',au,z);
 OutputDemand_FFRU(n,z)=ReserveDemand("FFRU",n,z);
 OutputDemand_FFRD(n,z)=ReserveDemand("FFRD",n,z);
 OutputDemand_PFRU(n,z)=ReserveDemand("PFRU",n,z);
@@ -1887,11 +1887,11 @@ OutputShutDown(au,z) = ShutDown.L(au,z);
 $If %MTS%==0 OutputSystemInertia(z) = SystemInertia.L(z);
 *$If %MTS%==0 OutputPrimaryReserve_Available(au,z) = PrimaryReserve_Available.L(au,z);
 *$If %MTS%==0 OutputFFR_Available(au,z) = FFR_Available.L(au,z);
-OutputReserve_Available(res,au,z) = Reserve_Available.L(res,au,z);
-OutputReserve_FFRU(au,z) = Reserve_Available.L('FFRU',au,z);
-OutputReserve_FFRD(au,z) = Reserve_Available.L('FFRD',au,z);
-OutputReserve_PFRU(au,z) = Reserve_Available.L('PFRU',au,z);
-OutputReserve_PFRD(au,z) = Reserve_Available.L('PFRD',au,z);
+OutputReserveProvision(res,au,z) = ReserveProvision.L(res,au,z);
+OutputReserve_FFRU(au,z) = ReserveProvision.L('FFRU',au,z);
+OutputReserve_FFRD(au,z) = ReserveProvision.L('FFRD',au,z);
+OutputReserve_PFRU(au,z) = ReserveProvision.L('PFRU',au,z);
+OutputReserve_PFRD(au,z) = ReserveProvision.L('PFRD',au,z);
 OutputContingencyPerZone(n,z) = smax(au$(Location(au,n)), Power.L(au,z));
 OutputContingency(z) = smax(au, Power.L(au,z));
 
@@ -2020,7 +2020,7 @@ OutputDemand_2D,
 $If %MTS%==0 OutputSystemInertia,
 $If %MTS%==0 OutputPrimaryReserve_Available,
 $If %MTS%==0 OutputFFR_Available,
-OutputReserve_Available,
+OutputReserveProvision,
 OutputReserve_FFRU,
 OutputReserve_FFRD,
 OutputReserve_PFRU,
