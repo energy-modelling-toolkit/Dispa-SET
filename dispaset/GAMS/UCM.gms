@@ -1759,6 +1759,8 @@ LostLoad_PFRU(n,h)
 LostLoad_PFRD(n,h)
 OutputCurtailmentReserve_FFRU(n,h)
 OutputCurtailmentReserve_PFRU(n,h)
+OutputContingencyPerZone(n,h)
+OutputContingency(h)
 
 *MADRID
 $If %MTS% == 0 OutputPowerLoss(h)
@@ -1890,6 +1892,8 @@ OutputReserve_FFRU(au,z) = Reserve_Available.L('FFRU',au,z);
 OutputReserve_FFRD(au,z) = Reserve_Available.L('FFRD',au,z);
 OutputReserve_PFRU(au,z) = Reserve_Available.L('PFRU',au,z);
 OutputReserve_PFRD(au,z) = Reserve_Available.L('PFRD',au,z);
+OutputContingencyPerZone(n,z) = smax(au$(Location(au,n)), Power.L(au,z));
+OutputContingency(z) = smax(au, Power.L(au,z));
 
 *MADRID
 $If %MTS%==0 OutputPowerLoss(z) = PowerLoss.L(z);
@@ -2031,6 +2035,8 @@ LostLoad_PFRU,
 LostLoad_PFRD,
 OutputCurtailmentReserve_FFRU,
 OutputCurtailmentReserve_PFRU,
+OutputContingencyPerZone,
+OutputContingency,
 
 
 *MADRID
