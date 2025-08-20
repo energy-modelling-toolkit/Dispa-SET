@@ -1367,8 +1367,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     constants = {
         'SystemFrequency': 50,
         'DeltaFrequencyMax': 0.8,
-        'FullActivationTime2':5,
-        'FullActivationTime3':15
+        'FullActivationTime2':2.5, # time in minutes 
+        'FullActivationTime3':7.5 # time in minutes 
         }
     values = np.zeros((len(sets['res']), len(sets['au']), len(sets['h'])))
     
@@ -1383,6 +1383,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         i = au_index[u]
         tech = Plants_res.loc[u, 'Technology']
         droop = Plants_merged.loc[u, 'Droop']
+        partloadmin = Plants_merged.loc[u, 'PartLoadMin']
         rampuprate = Plants_merged.loc[u, 'RampUpRate']
         rampdownrate = Plants_merged.loc[u, 'RampDownRate']
     
@@ -1411,13 +1412,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 if r in ['PFRU', 'PFRD', 'FFRU', 'FFRD'] and droop > 0:
                     factor1 = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
                     values[j, i, :] = factor1
-                elif r in ['2U'] and rampuprate < 0.02:
+                elif r in ['2U'] and rampuprate * constants['FullActivationTime2'] >= partloadmin: #It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.
                     factor2 = rampuprate * constants['FullActivationTime2']
                     values[j, i, :] = factor2
-                elif r in ['2D'] and rampdownrate < 0.02:
+                elif r in ['2D'] and rampdownrate * constants['FullActivationTime2'] >= partloadmin:#It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.
                     factor3 = rampdownrate * constants['FullActivationTime2']
                     values[j, i, :] = factor3  
-                elif r in ['3U'] and rampuprate < 0.066:
+                elif r in ['3U'] and rampuprate * constants['FullActivationTime3'] >= partloadmin:#It is the minimum ramp-up rate required to reach the PartLoadMin in 7 minutes.
                     factor4 = rampuprate * constants['FullActivationTime3']
                     values[j, i, :] = factor4
                 else:
