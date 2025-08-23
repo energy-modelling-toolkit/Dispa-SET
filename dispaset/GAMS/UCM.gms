@@ -563,9 +563,8 @@ EQ_Power_Balance_of_X2P_units
 EQ_Max_Power_Consumption_of_BS_units
 EQ_Power_must_run
 EQ_Power_available
-EQ_2U_limit_chp
-EQ_2D_limit_chp
-EQ_3U_limit_chp
+EQ_Reserve_UP_limit_chp
+EQ_Reserve_DOWN_limit_chp
 
 *new
 EQ_Reserve_UP_limit_ba
@@ -978,22 +977,16 @@ EQ_Reserves_Down_Capability(res_D,au,i)..
 
 *---------------------------------------TECHNOLOGY ESPECIFIC RESERVE LIMITS---------------------------------------------------------------
 *Reserves limits for CHP units
-EQ_2U_limit_chp(res_U,chp,i)..
-         ReserveProvision('2U',chp,i)
+EQ_Reserve_UP_limit_chp(chp,i)..
+         sum(res_U, ReserveProvision(res_U,chp,i)* ReserveDuration(res_U))
          =l=
-         (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))/(0.25/CHPPowerToHeat(chp))
+         StorageCapacity(chp) * Nunits(chp) * (1-StorageLevel(chp,i)) * CHPPowerToHeat(chp)
 ;
 
-EQ_2D_limit_chp(res_D,chp,i)..
-         ReserveProvision('2D',chp,i)
+EQ_Reserve_DOWN_limit_chp(chp,i)..
+         sum(res_D, ReserveProvision(res_D,chp,i) * ReserveDuration(res_D))
          =l=
-         StorageLevel(chp,i)/(0.25/CHPPowerToHeat(chp))
-;
-
-EQ_3U_limit_chp(res_U,chp,i)..
-         ReserveProvision('3U',chp,i)
-         =l=
-         (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))*(CHPPowerToHeat(chp))
+         StorageCapacity(chp) * Nunits(chp) * StorageLevel(chp,i) * CHPPowerToHeat(chp)
 ;
 
 *Reserves limits for Batteries
@@ -1009,11 +1002,6 @@ EQ_Reserve_DOWN_limit_ba(ba,i)..
          StorageCapacity(ba) * (1 - StorageLevel(ba,i)) * StorageChargingEfficiency(ba)      
 ;
 
-*EQ_3U_limit_ba(res_U,chp,i)..
-*         ReserveProvision('3U',chp,i)
-*         =l=
-*         (StorageCapacity(chp)*Nunits(chp)-StorageLevel(chp,i))*(CHPPowerToHeat(chp))
-*;
 *---------------------------------------GENERAL SYSTEM-WIDE RESERVE LIMITS---------------------------------------------------------------
 *System-wide reserve limits upward
 EQ_Total_Delivery_Limit_Up(au,i)..
@@ -1478,9 +1466,8 @@ EQ_Power_Balance_of_P2X_units,
 EQ_Power_Balance_of_X2P_units,                                  
 EQ_Max_Power_Consumption_of_BS_units,
 EQ_Power_available,
-EQ_2U_limit_chp,
-EQ_2D_limit_chp,
-EQ_3U_limit_chp,
+EQ_Reserve_UP_limit_chp,
+EQ_Reserve_DOWN_limit_chp,
 
 *new
 EQ_Reserve_UP_limit_ba
