@@ -67,7 +67,7 @@ th(au)           Units with thermal storage
 hu(au)           Heat only units
 *New
 cu(u)           Conventional units only
-ba(u)           Batteries only
+ba(au)           Batteries only
 res              Reserve types
 res_U(res)       Reserve up
 res_D(res)       Reserve down
@@ -385,8 +385,8 @@ Parameter
    FFRD  0.0167, PFRD  0.25, 2D  0.5 /
    
     FullActivationTime(res)
-/  FFRU  0.000277, PFRU  0.00833, 2U  0.0833, 3U  0.25,
-   FFRD  0.000277, PFRD  0.00833, 2D  0.0833 /
+/  FFRU  0.000278, PFRU  0.004167, 2U  0.04167, 3U  0.125,
+   FFRD  0.000278, PFRD  0.004167, 2D  0.04167 /
    
 ;
 *===============================================================================
@@ -894,7 +894,7 @@ EQ_PowerLoss(u,i)$(ord(u))..
 *---------------------------------------------------RESERVES BALANCES ---------------------------------------------------
 *General formulation for hourly demand balance in the Upward Reserve Services for each node
 EQ_UpwardReserves_balance(res_U,n,i)..
-         sum((u),ReserveProvision(res_U,u,i)*Location(u,n))
+         sum((au),ReserveProvision(res_U,au,i)*Location(au,n))
          + LL_Reserve(res_U,n,i)
          =E=
          ReserveDemand(res_U,n,i)
@@ -902,7 +902,7 @@ EQ_UpwardReserves_balance(res_U,n,i)..
 
 *General formulation for hourly demand balance in the Downward Reserve Services for each node
 EQ_DownwardReserves_balance(res_D,n,i)..
-         sum((u),ReserveProvision(res_D,u,i)*Location(u,n))
+         sum((au),ReserveProvision(res_D,au,i)*Location(au,n))
          + LL_Reserve(res_D,n,i)
          =E=
          ReserveDemand(res_D,n,i)
@@ -944,35 +944,35 @@ EQ_DownwardReserves_balance(res_D,n,i)..
 EQ_Curtailed_Power(n,i)..
          CurtailedPower(n,i)
          =E=
-         sum(u,(Nunits(u)*PowerCapacity(u)*LoadMaximum(u,i)-Power(u,i)- sum(res_U, ReserveProvision(res_U,u,i)))$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
+         sum(au,(Nunits(au)*PowerCapacity(au)*LoadMaximum(au,i)-Power(au,i)- sum(res_U, ReserveProvision(res_U,au,i)))$(sum(tr,Technology(au,tr))>=1) * Location(au,n))
 ;
 *---------------------------------------------------RESERVES CAPABILITIES ------------------------------------------------
 *Capability for all reserves upward
-EQ_Reserves_Up_Capability(res_U,u,i)..
-         ReserveProvision(res_U,u,i)
+EQ_Reserves_Up_Capability(res_U,au,i)..
+         ReserveProvision(res_U,au,i)
          =L=
          // Part 1: All committed conventional units (except batteries)
-         (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i) * ReserveParticipation(res_U,u,i))$(not ba(u))
+         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i) * ReserveParticipation(res_U,au,i))$(not ba(au))
         
-         + // Part 2: Batteries only
-         (PowerCapacity(u) * LoadMaximum(u,i) * Nunits(u) * ReserveParticipation(res_U,u,i))$ba(u)
+         + // Part 2: Committed or non-committed Batteries only
+         (PowerCapacity(au) * LoadMaximum(au,i) * Nunits(au) * ReserveParticipation(res_U,au,i))$ba(au)
 
          + // Part 3: All non-committed conventional units with StartUpTime <= FullActivationTime and StartUpTime > 0
-         (PowerCapacity(u) * LoadMaximum(u,i) * (Nunits(u) - Committed(u,i)) * ReserveParticipation(res_U,u,i))$(TimeStartUp(u) > 0 and TimeStartUp(u) <= FullActivationTime(res_U))
+         (PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)) * ReserveParticipation(res_U,au,i))$(TimeStartUp(au) > 0 and TimeStartUp(au) <= FullActivationTime(res_U) and not ba(au))
 ;
 
 *Capability for all reserves downward
-EQ_Reserves_Down_Capability(res_D,u,i)..
-         ReserveProvision(res_D,u,i)
+EQ_Reserves_Down_Capability(res_D,au,i)..
+         ReserveProvision(res_D,au,i)
          =L=
          // Part 1: All committed conventional units (except batteries)
-         (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i) * ReserveParticipation(res_D,u,i))$(not ba(u))
+         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i) * ReserveParticipation(res_D,au,i))$(not ba(au))
          
          + // Part 2: Committed Batteries only
-         (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i) * Nunits(u) * ReserveParticipation(res_D,u,i))$ba(u)
+         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i) * Nunits(au) * ReserveParticipation(res_D,au,i))$ba(au)
 
          + // Part 3: Non-committed batteries only
-         (StorageChargingCapacity(u) * (Nunits(u)-Committed(u,i)) * ReserveParticipation(res_D,u,i))$ba(u)
+         (StorageChargingCapacity(au) * (Nunits(au)-Committed(au,i)) * ReserveParticipation(res_D,au,i))$ba(au)
          
 ;
 
@@ -1016,31 +1016,31 @@ EQ_Reserve_DOWN_limit_ba(ba,i)..
 *;
 *---------------------------------------GENERAL SYSTEM-WIDE RESERVE LIMITS---------------------------------------------------------------
 *System-wide reserve limits upward
-EQ_Total_Delivery_Limit_Up(u,i)..
-         Power(u,i) + sum(res_U, ReserveProvision(res_U,u,i))
+EQ_Total_Delivery_Limit_Up(au,i)..
+         Power(au,i) + sum(res_U, ReserveProvision(res_U,au,i))
          =L=
          // Part 1: All committed conventional units (except batteries)
-         (PowerCapacity(u) * LoadMaximum(u,i) * Committed(u,i))$(not ba(u))
+         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i))$(not ba(au))
          
          + // Part 2: Batteries only
-         (PowerCapacity(u) * LoadMaximum(u,i) * Nunits(u))$ba(u)
+         (PowerCapacity(au) * LoadMaximum(au,i) * Nunits(au))$ba(au)
          
          + // Part 3: All non-committed conventional units
-         (PowerCapacity(u) * LoadMaximum(u,i) * (Nunits(u) - Committed(u,i)))$(not ba(u))
+         (PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)))$(not ba(au))
 ;
     
 *System-wide reserve limits downward
-EQ_Total_Delivery_Limit_Down(u,i)..
-         Power(u,i) - sum(res_D, ReserveProvision(res_D,u,i))
+EQ_Total_Delivery_Limit_Down(au,i)..
+         Power(au,i) - sum(res_D, ReserveProvision(res_D,au,i))
          =G=
          // Part 1: All committed conventional units (except batteries)
-         (PowerCapacity(u) * PartLoadMin(u) * Committed(u,i))$(not ba(u))
+         (PowerCapacity(au) * PartLoadMin(au) * Committed(au,i))$(not ba(au))
          
          + // Part 2: Committed Batteries only
-         (PowerCapacity(u) * PartLoadMin(u) * Committed(u,i) * Nunits(u))$ba(u)
+         (PowerCapacity(au) * PartLoadMin(au) * Committed(au,i) * Nunits(au))$ba(au)
          
          + // Part 3: Non-committed batteries only (available storage charging capacity)
-         (StorageChargingCapacity(u) * (Committed(u,i)-Nunits(u)))$ba(u)
+         (StorageChargingCapacity(au) * (Committed(au,i)-Nunits(au)))$ba(au)
 ;
 
 *---------------------------------------SYSTEM INERTIA REQUIRED LIMITS---------------------------------------------------------------
