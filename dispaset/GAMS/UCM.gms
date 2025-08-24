@@ -957,7 +957,7 @@ EQ_Reserves_Up_Capability(res_U,au,i)..
          (PowerCapacity(au) * LoadMaximum(au,i) * Nunits(au) * ReserveParticipation(res_U,au,i))$ba(au)
 
          + // Part 3: All non-committed conventional units with StartUpTime <= FullActivationTime and StartUpTime > 0
-         (PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)) * ReserveParticipation(res_U,au,i))$(TimeStartUp(au) > 0 and TimeStartUp(au) <= FullActivationTime(res_U) and not ba(au))
+         (PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)))$(TimeStartUp(au) > 0 and TimeStartUp(au) <= FullActivationTime(res_U) and not ba(au))
 ;
 
 *Capability for all reserves downward
@@ -980,26 +980,26 @@ EQ_Reserves_Down_Capability(res_D,au,i)..
 EQ_Reserve_UP_limit_chp(chp,i)..
          sum(res_U, ReserveProvision(res_U,chp,i)* ReserveDuration(res_U))
          =l=
-         StorageCapacity(chp) * Nunits(chp) * (1-StorageLevel(chp,i)) * CHPPowerToHeat(chp)
+         (StorageCapacity(chp) * Nunits(chp) - StorageLevel(chp,i)) * CHPPowerToHeat(chp)
 ;
 
 EQ_Reserve_DOWN_limit_chp(chp,i)..
          sum(res_D, ReserveProvision(res_D,chp,i) * ReserveDuration(res_D))
          =l=
-         StorageCapacity(chp) * Nunits(chp) * StorageLevel(chp,i) * CHPPowerToHeat(chp)
+         StorageLevel(chp,i) * CHPPowerToHeat(chp)
 ;
 
 *Reserves limits for Batteries
 EQ_Reserve_UP_limit_ba(ba,i)..
          sum(res_U, ReserveProvision(res_U,ba,i)* ReserveDuration(res_U))
          =L=
-         StorageCapacity(ba) * (StorageLevel(ba,i) - StorageMinimum(ba)) * StorageDischargeEfficiency(ba) 
+         (StorageLevel(ba,i) - StorageMinimum(ba)) * StorageDischargeEfficiency(ba) 
 ;
 
 EQ_Reserve_DOWN_limit_ba(ba,i)..
          sum(res_D, ReserveProvision(res_D,ba,i) * ReserveDuration(res_D))
          =l=
-         StorageCapacity(ba) * (1 - StorageLevel(ba,i)) * StorageChargingEfficiency(ba)      
+         (StorageCapacity(ba) - StorageLevel(ba,i)) * StorageChargingEfficiency(ba)      
 ;
 
 *---------------------------------------GENERAL SYSTEM-WIDE RESERVE LIMITS---------------------------------------------------------------
