@@ -1241,6 +1241,7 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
     # Get storage level for the lower subplot
     storage_level = None
     if 'OutputSectorXStorageLevel' in results and z in results['OutputSectorXStorageLevel'].columns:
+        # storage_level = results['OutputSectorXStorageLevel'][z] / 1000  # Convert to GWh
         storageXcapacity = inputs['parameters']['SectorXStorageCapacity']['val'].item()
         storage_level = results['OutputSectorXStorageLevel'][z] * storageXcapacity / 1000  # Convert to GWh
         logging.info(f'Storage level data processed for sector {z}')
