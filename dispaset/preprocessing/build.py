@@ -1000,10 +1000,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # Particular treatment of SectorXStorageMinimum:
         for i, u in enumerate(sets['nx']):
             if u in BoundarySector.index:
-                parameters['SectorXStorageMinimum']['val'][i] = BoundarySector.loc[
-                    u, 'SectorXStorageMinimum'] * \
-                    BoundarySector.loc[
-                                                                    u, 'SectorXStorageCapacity']
+                    parameters['SectorXStorageMinimum']['val'][i] = (
+                    BoundarySector.loc[u, 'SectorXStorageMinimum'] *
+                    BoundarySector.loc[u, 'SectorXStorageCapacity'])
 
     # Storage profile and initial state:
     for i, s in enumerate(sets['asu']):
