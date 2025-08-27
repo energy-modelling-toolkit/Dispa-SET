@@ -435,6 +435,7 @@ LL_Reserve(res,n,h)                     [MW]    Deficit in reserves
 *LL_2U(n,h)                              [MW]    Deficit in reserve up
 *LL_3U(n,h)                              [MW]    Deficit in reserve up - non spinning
 *LL_2D(n,h)                              [MW]    Deficit in reserve down
+LL_Inertia(h)                           [GWs]    Deficit in system inertia
 LL_StorageAlert(au,h)                   [MWh]   Unsatisfied water level constraint for going below alert level at each hour
 LL_FloodControl(au,h)                   [MWh]   Unsatisfied water level constraint for going above flood level at each hour
 SectorXStorageAlertViolation(nx,h)      [MWh]   Boundary Sector Unsatisfied water level constraint for going below alert level at each hour
@@ -670,6 +671,7 @@ EQ_SystemCost(i)..
 *new
 *         +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
          +0.8*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
+         +0.8*Config("ValueOfLostLoad","val")*(LL_Inertia(i)*TimeStep)
          +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
          +0.7*Config("ValueOfLostLoad","val")*(sum(nx,(SectorXWaterNotWithdrawn(nx,i))*TimeStep))                                                                             
          +sum(s,CostStorageAlert(s,i)*LL_StorageAlert(s,i)*TimeStep)
@@ -698,7 +700,8 @@ EQ_SystemCost(i)..
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
 *new
 *         +0.8*Config("ValueOfLostLoad","val")*(sum(n,(LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i))*TimeStep))
-         +0.8*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))         
+         +0.8*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
+         +0.8*Config("ValueOfLostLoad","val")*(LL_Inertia(i)*TimeStep)
          +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
          +15*(sum(nx,(SectorXWaterNotWithdrawn(nx,i))*TimeStep))                                                                                                              
          +sum(s,CostStorageAlert(s,i)*LL_StorageAlert(s,i)*TimeStep)
@@ -1041,7 +1044,7 @@ EQ_SystemInertia(i)..
 EQ_Inertia_limit(u,i)$(InertiaLimit(i)>0)..
          InertiaLimit(i)
          =l=
-         SystemInertia(i)
+         SystemInertia(i) + LL_Inertia(i)
 ;
 *---------------------------------------------------------------------------------------------------------------------------------
 
@@ -1673,6 +1676,7 @@ LostLoad_MinPower(n,h)
 LostLoad_2D(n,h)
 LostLoad_2U(n,h)
 LostLoad_3U(n,h)
+LostLoad_Inertia(h)
 LostLoad_StorageAlert(au,h)
 LostLoad_FloodControl(au,h)
 $If not %LPFormulation% == 1 LostLoad_RampUp(n,h)
@@ -1827,6 +1831,7 @@ LostLoad_FFRU(n,z) = LL_Reserve.L('FFRU',n,z);
 LostLoad_FFRD(n,z) = LL_Reserve.L('FFRD',n,z);
 LostLoad_PFRU(n,z) = LL_Reserve.L('PFRU',n,z);
 LostLoad_PFRD(n,z) = LL_Reserve.L('PFRD',n,z);
+LostLoad_Inertia(z) = LL_Inertia.L(z);
 
 LostLoad_StorageAlert(au,z) = LL_StorageAlert.L(au,z);
 LostLoad_FloodControl(au,z) = LL_FloodControl.L(au,z);

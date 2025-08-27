@@ -59,6 +59,7 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'LostLoad_FFRD': ('n', 'h'),
             'LostLoad_PFRU': ('n', 'h'),
             'LostLoad_PFRD': ('n', 'h'),
+            'LostLoad_Inertia': ('h'),
             'OutputContingencyPerZone': ('n', 'h'),
             'OutputContingency': ('h'),
             'status': tuple(),
@@ -164,7 +165,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
         index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
 
     keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
-            'LostLoad_RampDown', 'LostLoad_RampDown_Unit', 'LostLoad_2D', 'ShadowPrice', 'StorageShadowPrice',
+            'LostLoad_RampDown', 'LostLoad_RampDown_Unit', 'LostLoad_2D', 'LostLoad_Inertia', 'ShadowPrice', 'StorageShadowPrice',
             'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U', 'ShadowPriceDemandModulation',
             'LostLoad_FFRU', 'LostLoad_FFRD', 'LostLoad_PFRU', 'LostLoad_PFRD',
             'status']  # 'status'
