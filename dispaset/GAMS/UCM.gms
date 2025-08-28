@@ -203,7 +203,7 @@ SectorXFlexDemandInputInitial(nx)           [MWh]           Cumulative flexible 
 SectorXFlexMaxCapacity(nx)                  [MW]            Max capacity for BS Flexible demand
 SectorXFlexSupplyInput(nx,h)                [MWh]           Flexible demand inside BS at each timestep (unless for MTS)
 SectorXFlexSupplyInputInitial(nx)           [MWh]           Cumulative flexible demand inside the loop
-SectorXFlexMaxSupply(nx)                    [MW]            Max capacity for BS Flexible demand
+SectorXFlexMaxSupply(nx)                    [MW]            Max capacity for BS Flexible supply
 SectorXStorageCapacity(nx)                  [MWh]           Storage capacity of the boundary sector
 SectorXStorageSelfDischarge(nx)             [%]             Boundary sector storage self discharge
 SectorXStorageHours(nx)                     [h]             Boundary sector storage hours
