@@ -1614,6 +1614,7 @@ Error.L = sum((i,n), CostLoadShedding(n,i)*ShedLoad.L(n,i)
 *new
 *          +0.8*Config("ValueOfLostLoad","val")*(LL_2U.L(n,i)+LL_2D.L(n,i)+LL_3U.L(n,i)))
           +0.8*Config("ValueOfLostLoad","val")*(sum(res,LL_Reserve.L(res,n,i))))
+          + 0.8*Config("ValueOfLostLoad","val")*sum(i,LL_Inertia.L(i))
           +sum((au,i), 0.7*Config("ValueOfLostLoad","val")*(LL_RampUp.L(au,i)+LL_RampDown.L(au,i)))
 ;
 OptimalityGap.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = UCM_SIMPLE.objVal - UCM_SIMPLE.objEst;
