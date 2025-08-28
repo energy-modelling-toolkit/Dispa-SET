@@ -991,7 +991,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 if u in BoundarySector.index:
                     parameters['SectorXFlexMaxCapacity']['val'][i] = BoundarySector.loc[u, 'MaxFlexDemand']
 
-        # Particular treatment of SectorXFlexMaxCapacity that is not a time-series and that is given from the BS Inputs database
+        # Particular treatment of SectorXFlexMaxSupply that is not a time-series and that is given from the BS Inputs database
         if 'SectorXFlexibleSupply' in config and config['SectorXFlexibleSupply'] != '':
             for i, u in enumerate(sets['nx']):
                 if u in BoundarySector.index:
