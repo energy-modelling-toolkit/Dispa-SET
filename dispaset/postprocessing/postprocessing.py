@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 
 from ..common import commons
 
+import time
+
 
 def get_load_data(inputs, z):
     """ 
@@ -334,7 +336,7 @@ def get_result_analysis(inputs, results, units='MWh'):
             print('\nAverage electricity cost (EUR/' + unit_small[1] + '): \n'  + str(Cost_kwh_zone) + '\nEntireRegion ' + str(Cost_kwh))
 
     for key in ['LostLoad_RampUp', 'LostLoad_2D', 'LostLoad_MinPower',
-                'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower',
+                'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_Inertia', 'LostLoad_MaxPower',
                 'LostLoad_StorageLevelViolation']:
         if key == 'LostLoad_StorageLevelViolation':
             if isinstance(results[key], pd.Series):
@@ -530,6 +532,7 @@ def CostExPost(inputs, results):
              +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
              +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
              +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
+             +0.8*Config("ValueOfLostLoad","val")*(LL_Inertia(i))
              +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
              +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
 
@@ -627,7 +630,8 @@ def CostExPost(inputs, results):
 
     costs['LostLoad'] = 80e3 * (results['LostLoad_2D'].reindex(timeindex).sum(axis=1).fillna(0) +
                                 results['LostLoad_2U'].reindex(timeindex).sum(axis=1).fillna(0) +
-                                results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0)) + \
+                                results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0) + 
+                                results['LostLoad_Inertia'].reindex(timeindex).sum(axis=1).fillna(0)) +\
                         100e3 * (results['LostLoad_MaxPower'].reindex(timeindex).sum(axis=1).fillna(0) +
                                  results['LostLoad_MinPower'].reindex(timeindex).sum(axis=1).fillna(0)) + \
                         70e3 * (results['LostLoad_RampDown'].reindex(timeindex).sum(axis=1).fillna(0) +
@@ -1063,275 +1067,386 @@ def curtailment(inputs,results):
 
     return curtailment
 
-# %%
-def get_frequency_security_constraints(inputs, results):
+# %% trapezoid weights
+def trapezoid_weight(tt, prep, ramp, delivery=None, deact=None):
     """
-    Reads the DispaSET results and provides frequency security constraints 
-
-    :param inputs:      DispaSET inputs
-    :param results:     DispaSET results
+    this function builds a trapezoidal (0→1→0) or triangular (0→1) profile
     """
-    
-    OutputCommitted = results['OutputCommitted']
-    OutputPower = results['OutputPower'] 
-    units = inputs['units']
-        
-    # Filter "units" to keep rows with 'WAT', 'GAS', 'BIO', 'OIL' in the "Fuel" column
-    convunits = units[units['Fuel'].isin(['WAT', 'GAS', 'BIO', 'OIL'])]
-        
-    # Get the list of generator names from the filtered "units"
-    generator_list = units.Unit.tolist()
-    convgenerator_list = convunits.Unit.tolist()
-            
-    # Filter the dataframe to keep only the columns that exist in the dataframe
-    generator_list = [col for col in generator_list if col in OutputCommitted.columns]
-        
-    # Filter the dataframe to keep only the columns that exist in the dataframe
-    convgenerator_list = [col for col in convgenerator_list if col in OutputCommitted.columns]
-        
-    # Keep only the columns in "OutputCommitted" that are in "convgenerator_list"
-    OutputSyncCommitted = OutputCommitted[convgenerator_list]
-        
-    # Create an empty DataFrame for the result
-    GeneratorContingency = pd.DataFrame(columns=['TIMESTAMP', 'GeneratorName', 'PowerCapacity'])
-    
-        
-    # Iterate through the rows of OutputSyncCommitted
-    for timestamp, row in OutputSyncCommitted.iterrows():
-        # Find generators with commitment value of 1
-        committed_generators = [col for col in row.index if row[col] == 1]
-        
-        # If there are committed generators, find the one with the highest PowerCapacity
-        if committed_generators:
-            max_committed_generator = max(committed_generators, key=lambda x: convunits.loc[x, 'PowerCapacity'])
-            max_committed_power = convunits.loc[max_committed_generator, 'PowerCapacity']
-            
-            # Append the result to GeneratorContingency
-            GeneratorContingency = GeneratorContingency.append({'TIMESTAMP': timestamp,
-                                                                'GeneratorName': max_committed_generator,
-                                                                'PowerCapacity': max_committed_power},
-                                                                 ignore_index=True)
-    
-    
-    # Inicializar un DataFrame vacío para almacenar los resultados
-    total_power_per_time = pd.DataFrame(columns=['TIMESTAMP', 'TotalPower'])
-    
-    # Iterar sobre las filas de 'OutputCommitted'
-    for timestamp, row in OutputCommitted.iterrows():
-        # Filtrar 'relevant_units' para obtener solo las columnas de generadores encendidos (valor igual a 1)
-        committed_generators = [col for col in row.index if row[col] == 1]
-    
-        # Crear una serie booleana indicando si cada generador está encendido
-        is_committed = units['Unit'].isin(committed_generators)
-        
-        # Filtrar el DataFrame original para incluir solo generadores encendidos
-        committed_units = units[is_committed]
-        
-        # Calcular la suma de PowerCapacity para generadores encendidos
-        total_power = committed_units['PowerCapacity'].sum()
-        total_power_per_time = total_power_per_time.append({'TIMESTAMP': timestamp, 'TotalPower': total_power}, ignore_index=True)
-    
-    
-    # Set the 'Hour' column as the index
-    GeneratorContingency.set_index('TIMESTAMP', inplace=True)
-    total_power_per_time.set_index('TIMESTAMP', inplace=True)
-        
-    # Print the resulting DataFrame
-    print(GeneratorContingency)
-        
-    # Merge DataFrames across columns
-    dispatch = pd.concat([GeneratorContingency, total_power_per_time], axis=1)
-        
-    # rename columns
-    dispatch = dispatch.rename(columns={'PowerCapacity': 'pcontingency','TotalPower': 'pcommitted'})
-    dispatch['ploss'] = (dispatch['pcontingency']/(dispatch['pcommitted']-dispatch['pcontingency']))*-1
-    # dispatch['ploss'] = (dispatch['pcontingency'])*-1
-    
-    dispatch = dispatch.reset_index()
-    
-    # Find the ploss max for each GeneratorName
-    max_ploss = dispatch.groupby('GeneratorName')['ploss'].max()
+    if delivery is None or deact is None:
+        # Triangular case: ramp only (e.g. mFRR)
+        return np.piecewise(tt,
+            [tt < prep,
+             (prep <= tt) & (tt < ramp),
+             tt >= ramp],
+            [0,
+             lambda t: (t - prep) / (ramp - prep),
+             1]
+        )
+    else:
+        # Trapezoidal case: ramp → delivery → deact
+        return np.piecewise(tt,
+            [tt < prep,
+             (prep <= tt) & (tt < ramp),
+             (ramp <= tt) & (tt < delivery),
+             (delivery <= tt) & (tt < deact),
+             tt >= deact],
+            [0,
+             lambda t: (t - prep) / (ramp - prep),
+             1,
+             lambda t: 1 - (t - delivery) / (deact - delivery),
+             0]
+        )
+# %% compute weights
+def compute_weights(tt, activation_times):
+    """
+    This function calculates and returns w_ffr, w_pfr, w_afrr, w_mfrr for vector tt.
+    """
+
+    w_ffr = trapezoid_weight(tt, **activation_times["ffr"])
+    w_pfr = trapezoid_weight(tt, **activation_times["pfr"])
+    w_afrr = trapezoid_weight(tt, **activation_times["afrr"])
+    w_mfrr = trapezoid_weight(tt, **activation_times["mfrr"])
+    return w_ffr, w_pfr, w_afrr, w_mfrr
 
 
+# %% frequency_response
+def frequency_response(sim_time, activation_times, H_val, FFR_cap, PFR_cap, aFRR_cap, mFRR_cap, 
+                   contingency, D_local, verbose=False):
+    """
+    This function solves the power swing differential equation, for each combination 
+    of inertia and frequency reserves desired. 
+    param sim_time:             Time to evaluate the differential equation in seconds [s]
+    param activation_times:     Activation times for each reserve in absolut values from sim_time = 0
+    param H_val:                System Inertia value
+    param FFR_cap:              Fast Frequency Reserve capacity
+    param PFR_cap:              Primary Frequency Reserve capacity
+    param aFRR_cap:             Automatic Frequency Restoration Reserve capacity
+    param mFRR_cap:             Manual Frequency Restoration Reserve capacity
+    param contingency:          Contingency size assumed by the n-1 hypothesis
+    param D_local:              Damping value assumed to be 1.5% of the load   
+    
+    returns dataframe results_df:
+                                - Time [s]
+                                - Frequency Deviation [Hz]
+                                - RoCoF [Hz/s]
+                                - Inertia [GWs]
+                                - FFR [MW]
+                                - PFR [MW]
+                                - aFRR [MW]
+                                - mFRR [MW]
+                                - Damping [MW/Hz]'
+                                - Contingency [MW]'
+                                - deltap [MW]
+    """
+    # If the value of Inertia is zero H=0
+    if H_val == 0:
+        max_freq_dev = np.inf
+        max_rocof = np.inf
+        results_df = pd.DataFrame({
+            'Time [s]': [],
+            'Frequency Deviation [Hz]': [],
+            'RoCoF [Hz/s]': [],
+            'Inertia [GWs]': [],
+            'FFR [MW]': [],
+            'PFR [MW]': [],
+            'aFRR [MW]': [],
+            'mFRR [MW]': [],
+            'Damping [MW/Hz]': [],
+            'Contingency [MW]': [],
+            'deltap [MW]': []
+        })
+        if verbose:
+            print("H_val=0: sistema inestable, retornando infinidades.")
+        return max_freq_dev, max_rocof, results_df
+    
+    # definition of simulation horizon and time step
+    t = np.arange(0, sim_time, 0.1)
 
-# %% power swing solutions
-# Create an empty dictionary to store results
-    freq_security = {}
+    # Precompute weights vector for plotting and for fixed deployment logic
+    W_ffr_vec, W_pfr_vec, W_afrr_vec, W_mfrr_vec = compute_weights(t, activation_times)
+
+    def state(y, tt):
+        f = y[0]
+        contingency_local = contingency if tt >= 1.0 else 0.0
+
+        # weights in instananeous time tt (scalar)
+        w_ffr, w_pfr, w_afrr, w_mfrr = compute_weights(np.array([tt]), activation_times)
+        w_ffr = float(w_ffr[0]); w_pfr = float(w_pfr[0]); w_afrr = float(w_afrr[0]); w_mfrr = float(w_mfrr[0])
+
+        # deployed reserves
+        ffr = FFR_cap * w_ffr * f
+        pfr = PFR_cap * w_pfr * f
+        afrr = aFRR_cap * w_afrr
+        mfrr = mFRR_cap * w_mfrr
+
+        deltap = contingency_local - (ffr + pfr + afrr + mfrr) - D_local * f
+        dfdt = deltap / (1000.0 * (2.0 * H_val / 50.0))
+        return [dfdt, deltap]
+
+    y0 = [0.0, 0.0]
+    sol = odeint(state, y0, t)
+    f = sol[:, 0]
+
+
+    ffr = FFR_cap * W_ffr_vec
+    pfr = PFR_cap * W_pfr_vec
+    afrr = aFRR_cap * W_afrr_vec
+    mfrr= mFRR_cap * W_mfrr_vec
+
+
+    contingency_vec = np.where(t >= 1.0, contingency, 0.0)
+    deltap = contingency_vec - (ffr + pfr + afrr + mfrr) - D_local * f
+
+    max_freq_dev = np.max(np.abs(f))
+    rocof = -np.gradient(f, t)
+    max_rocof = np.max(np.abs(rocof))
+
+    results_df = pd.DataFrame({
+        'Time [s]': t,
+        'Frequency Deviation [Hz]': -f,
+        'RoCoF [Hz/s]': rocof,
+        'Inertia [GWs]': H_val,
+        'FFR [MW]': ffr,
+        'PFR [MW]': pfr,
+        'aFRR [MW]': afrr,
+        'mFRR [MW]': mfrr,
+        'Damping [MW/Hz]': D_local,
+        'Contingency [MW]': contingency_vec,
+        'deltap [MW]': -deltap
+    })
+
+    if verbose:
+        print(f"Sim finished: FFR={FFR_cap},PFR={PFR_cap},aFRR={aFRR_cap},mFRR={mFRR_cap},H={H_val}")
+        print(f" -> max_freq_dev={max_freq_dev:.4f} Hz, max_rocof={max_rocof:.4f} Hz/s")
+
+    return max_freq_dev, max_rocof, results_df
+
+
+# %% frequency stability reserves
+def get_frequency_stability_reserves(path, inputs, results, activation_times=None, 
+                                     limit_freq=None, limit_rocof=None, limit_freq_steady_state=None,
+                                     use_ffr=None, use_pfr=None, use_afrr=None, use_mfrr=None):
+    """
+    Performs a sequential binary search over different combinations of.
+
+    This function iteratively explores combinations of inertia and reserves (H, FFR, PFR, aFRR, and mFRR)
+    throughtout a binary search and considering the specific activation time windows of each service. 
+    For each candidate solution, the function calls `frequency_response` to simulate the system's dynamic
+    frequency behavior after a contingency, and verifies whether the minimum stability
+    requirements (limit_freq, limit_rocof, limit_freq_stead_state) are satisfied.
+
+
+    param inputs:              DispaSET inputs, needed to compute the damping value and the maximum system inertia available
+    param results:             DispaSET results, needed to compute the size of contingency for the preliminar simulation
+    param activation_times:    Reserve activation times
+    limit_freq:                Maximum frequency deviation allowed by each TSO (default value 0.8 Hz)
+    limit_rocof:               Maximum rate of change of frequency allowed by each TSO (default value 0.5 Hz/s)
+    limit_freq_steady_state:   Maximum frequency deviation allowed by the TSO in the steady state 
+                               (default value 0.2 Hz, assumed to be 200 seconds after the contingency)   
+
+    Returns
+    -------
+    dict results_frequency_response:    Results of frequency response simulation solved 
+                                         with the optimal combination of frequency services for each contingency.
     
-    # Crear un archivo Excel para almacenar los resultados
-    with pd.ExcelWriter('power_swing_results.xlsx', engine='xlsxwriter') as writer:
-        contingency_count = 1  # Inicializar el contador de hojas
+    dataframe summary_reserves:         The optimal combination of (H, FFR, PFR, aFRR, mFRR) that ensures frequency security for each contingency.
+    dataframe data:                     Contingency, and system data related to the reserve sizing.   
+    """
+    start_time = time.time()  # begin execution timer
+   
+    # Definition of default settings for the function
+    if activation_times is None:
+        activation_times = {
+            "ffr": dict(prep=2, ramp=3, delivery=18, deact=21),
+            "pfr": dict(prep=5, ramp=18, delivery=51, deact=181),
+            "afrr": dict(prep=31, ramp=181, delivery=481, deact=931),
+            "mfrr": dict(prep=481, ramp=931)  # mfrr leght is considered for the whole timestep
+        }
     
-        for index, row in dispatch.iterrows():
-            # Perform the operations on each row
+    # Definition of Safe operational limits
+    if limit_freq is None:
+        limit_freq = 0.8
+    if limit_rocof is None:
+        limit_rocof = 0.5
+    if limit_freq_steady_state is None:
+        limit_freq_steady_state = 0.2
     
-            def power_swing(y, t, k, H):
-                deltap, f = y
+    # Definition of activated reserves
+    if use_ffr is None:
+        use_ffr = True
+    if use_pfr is None:
+        use_pfr = True
+    if use_afrr is None:
+        use_afrr = True
+    if use_mfrr is None:
+        use_mfrr = True
     
-                if t < 1:
-                    ploss = 0
-                    pprim = 0
-                elif t < time_preparation:
-                    ploss = row['ploss']
-                    deltap = ploss
-                    pprim = 0
-                else:
-                    ploss = row['ploss'] 
-                    pcommitted = row['pcommitted']
-                    pcontingency = row['pcontingency']
-                    pprim = (-k * f) / (pcommitted-pcontingency) * (t-time_preparation)
-                    deltap = ploss + pprim
+    # Function settings
+    print(limit_freq, limit_rocof, limit_freq_steady_state, use_ffr, use_pfr, use_afrr, use_mfrr)
     
-                delf = deltap*1 / (2 * H )
-                return [deltap, delf]
+    Damping = inputs["param_df"]["Demand"].filter(like="DA").sum(axis=1).to_frame("Damping")*0.015
+    Contingency = results['OutputContingency'].to_frame("Contingency") 
+    data = pd.concat([Damping, Contingency], axis=1)
     
-            # Initial conditions
-            f0 = 0
-            y0 = [0, f0]
+    # find max system inertia possible
+    product = inputs["param_df"]["InertiaConstant"]["InertiaConstant"] * inputs["param_df"]["PowerCapacity"]["PowerCapacity"]
+    system_inertia = np.floor(product.sum()/1000)
+    data["SystemInertia"] = system_inertia
     
-            # Time vector
-            t = np.arange(0, 61, 1)  # Time steps every 1 second from 0 to 60 seconds
+    total_contingencies = len(Contingency)  # Count the total number of contingencies"
+    contingency_counter = 1  # Initialize the contingnecy counter counter
+    print(f"Total Contingencies: {total_contingencies}")
+
+    # Create an empty dictionary to store results
+    results_frequency_response = {}
+    # Create an empty dataframe to store the reserves found
+    summary_reserves = pd.DataFrame(index=data.index, columns=['H_val','FFR_val','PFR_val','aFRR_val','mFRR_val'])
     
-            # Create an empty DataFrame to store results
-            results_df = pd.DataFrame({'Time': t})
+    print("Initializing sequential binary search over each reserve timeframe...")
     
-            # Function to calculate frequency at each time step
-            def calc_frequency_at_time(k, H):
-                sol = odeint(power_swing, y0, t, args=(k, H))
-                f_values = sol[:, 1]  # Frequency values at each time step
-                return f_values
+    # Perform the binary search for each row of the dataframe data     
+    for index, row in data.iterrows():
+        # Perform the operations on each row
+        print(f"Calculating frequency reserves for Contingency {contingency_counter}")
+        # Binary search range and step
+        H_range = (1, (row['SystemInertia']*2 - 1))
+        H_step = 1
+        reserve_range = (0, row['Contingency']*1.3)
+        reserve_step = row['Contingency']*0.01
     
-            # Constraints
-            def constraints_satisfied(k, H):
-                f_values = calc_frequency_at_time(k, H)
-                der_f_values = np.gradient(f_values, t)
-                min_der_f = np.min(der_f_values)
-                min_f = np.min(f_values)
-                f_at_60s = f_values[-1]
+        best_solution = None
+        best_df = None
     
-                return min_der_f >= -0.002 and min_f >= -0.016 and f_at_60s >= -0.01
-    
-            # Search for the first solution by iterating through values of H and k
-            lower_bound_H = 1
-            upper_bound_H = 1000  # Adjust the upper bound as needed
-            # lower_bound_k = 0
-            # upper_bound_k = 4000  # Adjust the upper bound as needed
-            step = 1
-    
-            found_solution = False
-            # min_k = None                                  # k variable
-            
-            # Set the constant and time preparation values
-            k = 1700  # Valor constante de k
-            time_preparation = 5
-            min_H = None
-    
-            for H in range(lower_bound_H, upper_bound_H + 1, step):
-                # for k in range(lower_bound_k, upper_bound_k + 1, step):      # k variable
-                    #if constraints_satisfied(k, H):                        # k variable
-                    if constraints_satisfied(k, H):
-                        found_solution = True
-                        #min_k = k          # k variable
-                        min_H = H
-                        break
-                # if found_solution      # k variable
-                #     break              # k variable
-    
-            if found_solution:
-                print(f"The preparation time for the Primary Reserve is set at: {time_preparation}")
-                print(f"The proportional gain constant k of the speed regulators is set at: {k}")
-                #print(f"Minimum k that satisfies constraints: {min/_k}")
-                print(f"Minimum H that satisfies constraints: {min_H}")
-                # Update the DataFrame with the new values
-                dispatch.at[index, 'k'] = k  # Store in 'k'
-                dispatch.at[index, 'min_H'] = min_H  # Store in 'min_H'
-    
-                # Solve the ODE system with the optimal k and H
-                sol = odeint(power_swing, y0, t, args=(k, min_H))
-    
-                # Extract the results
-                deltap = sol[:, 0]
-                f = sol[:, 1]
-                der_f = np.gradient(f, t)
-                pprim = np.where(t < 5, 0, (-k * f) / row['pcommitted'] * (t-5))
-                ploss = np.where(t < 5, row['ploss'], row['ploss'])
-                pcommitted = row['pcommitted']
-                pcontingency = row['pcontingency']
-    
-                # Store results in the DataFrame
-                results_df['TIMESTAMP'] = row['TIMESTAMP']
-                results_df['Frequency'] = f
-                results_df['RoCoF'] = der_f
-                results_df['DeltaP'] = deltap
-                results_df['pcontingency'] = pcontingency
-                results_df['PrimaryResponsePU'] = pprim
-                results_df['PrimaryResponseMW'] = pprim*(pcommitted-pcontingency)
-                results_df['pcommitted'] = pcommitted
-                results_df['ploss'] = ploss
-    
-                # Add the values of k and H to the DataFrame
-                results_df['K'] = k
-                results_df['min_H'] = min_H
-    
-                # Store the results_df in the dictionary
-                freq_security[f"Contingency{contingency_count}"] = results_df    
-    
-                # Guardar el DataFrame en una pestaña numerada
-                sheet_name = f'Contingency{contingency_count}'
-                results_df.to_excel(writer, sheet_name=sheet_name, index=False)
-                
-                contingency_count += 1  # Incrementar el contador de hojas
-                
-                # Plotting code remains the same
-                fig, ax1 = plt.subplots(figsize=(12, 8))
-            
-                # Frequency Values Plot (Left Y-axis)
-                ax1.plot(t, f, color='tab:blue', linestyle='-', label='$∆f_{COI}$')
-                ax1.plot(t, der_f, color='tab:orange', linestyle='-', label='$d(∆f_{COI})$')
-                ax1.set_xlabel('Time [s]', fontsize=16)
-                ax1.set_ylabel('Frequency [p.u.]', color='tab:blue', fontsize=16)
-                ax1.tick_params(axis='y', labelcolor='tab:blue', labelsize=14)
-                ax1.legend(loc='upper left', fontsize=14)
-            
-                # Power Values Plot (Right Y-axis)
-                ax2 = ax1.twinx()
-                ax2.plot(t, deltap, color='tab:green', linestyle='--', label='∆Power')
-                ax2.plot(t, ploss, color='tab:red', linestyle='--', label='PowerLoss')
-                ax2.plot(t, pprim, color='tab:purple', linestyle='--', label='PrimaryReserve')
-                ax2.set_ylabel('Power [p.u.]', color='tab:red', fontsize=16)
-                ax2.tick_params(axis='y', labelcolor='tab:red', labelsize=14)
-                ax2.legend(loc='upper right', fontsize=14)
-            
-                # Overall Plot Settings
-                plt.title('Power Swing', fontsize=18)
-                plt.xlim(0, 60)
-                plt.tight_layout()
-                plt.show()
-                
+        # --- Binary search 1: Inertia ---
+        H_candidates = []
+        low, high = H_range
+        while low <= high:
+            # adjust frequency response simulation settings
+            t = 2.00
+            mid = (low + high)/2
+            max_fd, max_r, results_df = frequency_response(t, activation_times, mid, 0, 0, 0, 0, row['Contingency'], row['Damping'])
+            # filtering results that meets the safe operational limits
+            if (max_fd <= limit_freq) and (max_r <= limit_rocof):
+                H_candidates.append(mid)
+                high = mid - H_step  # continue binary search in the lower half
             else:
-                print("No solution found within the specified range of H and k that satisfies constraints.")
-    
-    # Crear un DataFrame vacío para almacenar los resultados
-    summary = pd.DataFrame(columns=['TIMESTAMP', 'Contingency', 'TotalPowerCommitted', 'KineticEnergy', 'Inertia','PrimaryResponse'])
-    
-    # Para obtener el valor de Kinetic Energy
-    for key, df in freq_security.items():
-        # Calcula la nueva columna 'KineticEnergy'
-        df['KineticEnergy'] = df['min_H'] * df['pcontingency'] - df['pcommitted']
-    
-    # Iterar sobre los DataFrames en el diccionario y tomar el primer valor de 'A' y 'B'
-    for nombre_df, df in freq_security.items():
-        primer_timestamp = df['TIMESTAMP'].iloc[0]
-        primer_contingency = df['pcontingency'].iloc[0]  # Primer valor de la columna 'A'
-        primer_pcommitted = df['pcommitted'].iloc[0]
-        primer_KineticEnergy = df['KineticEnergy'].iloc[0]  # Primer valor de la columna 'KineticEnergy'
-        primer_inertia = df['min_H'].iloc[0]  # Primer valor de la columna 'B'
-        max_PrimaryResponseMW = df['PrimaryResponseMW'].max()  # Valor maximo de la columna 'PrimaryResponse'
+                low = mid + H_step   # continue binary search in the higher half
         
-        # Agregar los valores a 'Summary'
-        summary = summary.append({'TIMESTAMP': primer_timestamp, 'Contingency': primer_contingency, 'TotalPowerCommitted': primer_pcommitted, 'KineticEnergy': primer_KineticEnergy, 'Inertia': primer_inertia, 'PrimaryResponse': max_PrimaryResponseMW}, ignore_index=True)
+        if not H_candidates:
+            print("No valid H was found")
+            H_candidates = [(0)] # assume 0 as the default value
+        ## info message with the combinations of H    
+        # else:
+        #     print(f"List of valid H values: {[f'{v:.2f}' for v in H_candidates]}")
     
-    dispatch.set_index('TIMESTAMP', inplace=True)
-    summary.set_index('TIMESTAMP', inplace=True)
+        # --- Binary search 2: FFR ---
+        FFR_candidates = []
+        if use_ffr:
+            for H_val in H_candidates:
+                low, high = reserve_range
+                while low <= high:
+                    # adjust frequency response simulation settings
+                    t = activation_times["ffr"]["delivery"]
+                    mid = (low + high)/2
+                    max_fd, max_r, results_df = frequency_response(t, activation_times, H_val, mid, 0, 0, 0, row['Contingency'], row['Damping'])
+                    # filtering results that meets the safe operational limits
+                    if (max_fd <= limit_freq) and (max_r <= limit_rocof): 
+                        FFR_candidates.append((H_val, mid))
+                        high = mid - reserve_step  # continue binary search in the lower half
+                    else:
+                        low = mid + reserve_step   # continue binary search in the higher half
         
-    return freq_security, summary, dispatch
+            if not FFR_candidates:
+                print("No valid combination of H+FFR found")
+                FFR_candidates = [(H_val, 0) for H_val in H_candidates]
+            # # info message with the combinations of H+FFR  
+            # else:
+            #     print(f"List of valid H+FFR combinations: {[tuple(f'{v:.2f}' for v in comb) for comb in FFR_candidates]}")
+        else:
+            print("Reserves FFR are not activated")
+            FFR_candidates = [(H_val, 0) for H_val in H_candidates] # assume 0 as the default value
+
+        # --- Binary search 3: PFR ---
+        PFR_candidates = []
+        if use_pfr:
+            for H_val, FFR_val in FFR_candidates:
+                low, high = reserve_range
+                while low <= high:
+                    # adjust frequency response simulation settings
+                    t = activation_times["pfr"]["delivery"]
+                    mid = (low + high)/2
+                    max_fd, max_r, results_df = frequency_response(t, activation_times, H_val, FFR_val, mid, 0, 0, row['Contingency'], row['Damping'])
+                    # filtering results that meets the safe operational limits
+                    if (max_fd <= limit_freq) and (max_r <= limit_rocof): 
+                        PFR_candidates.append((H_val, FFR_val, mid))
+                        high = mid - reserve_step  # continue binary search in the lower half
+                    else:
+                        low = mid + reserve_step   # continue binary search in the higher half
+        
+            if not PFR_candidates:
+                print("No valid combination of H+FFR+PFR found")
+                PFR_candidates = [(H_val, FFR_val, 0) for H_val, FFR_val in FFR_candidates] 
+            # # info message with the combinations of H+FFR+PFR  
+            # else:    
+            #     print(f"List of valid H+FFR+PFR combinations: {[tuple(f'{v:.2f}' for v in comb) for comb in PFR_candidates]}")
+        else:
+            print("Reserves PFR are not activated")
+            PFR_candidates = [(H_val, FFR_val, 0) for H_val, FFR_val in FFR_candidates]  # assume 0 as the default value
+        
+        # --- Static search 4: fixed aFRR and mFRR ---
+        all_candidates = []
+        if use_afrr and use_mfrr:
+            for H_val, FFR_val, PFR_val in PFR_candidates:
+                # adjust frequency response simulation settings
+                t = activation_times["mfrr"]["ramp"] + 50
+                max_fd, max_r, results_df = frequency_response(t, activation_times, H_val, FFR_val, PFR_val, row['Contingency'], row['Contingency'], row['Contingency'], row['Damping'])
+                # filtering results for values after 300s when the system should reach the steady state frequency
+                freq_window = results_df.loc[results_df['Time [s]'] > 300]
+                # calculates the maximum absolut value of frequency deviation 300s after the power imbalance 
+                freq_steady_state = freq_window['Frequency Deviation [Hz]'].abs().max()
+                # filtering results that meets the safe operational limits
+                if (max_fd <= limit_freq) and (max_r <= limit_rocof) and (freq_steady_state <= limit_freq_steady_state): 
+                    all_candidates.append((H_val*1000, FFR_val, PFR_val, row['Contingency'], row['Contingency']))
+        
+            if not all_candidates:
+                print("No valid combination of H+FFR+PFR+aFRR+mFRR found")
+                all_candidates = [(H_val*1000, FFR_val, PFR_val, 0, 0) for H_val, FFR_val, PFR_val in PFR_candidates]   
+            # # info message with the combinations of H+FFR+PFR+aFRR+mFRR
+            # else:  
+            #     print(f"List of valid +FFR+PFR+aFRR+mFRR combinations: {[tuple(f'{v:.2f}' for v in comb) for comb in all_candidates]}")
+        else:
+            print("Reserves aFRR and mFRR are not activated")
+            all_candidates = [(H_val*1000, FFR_val, PFR_val, 0, 0) for H_val, FFR_val, PFR_val in PFR_candidates]
+                         
+        # We take the combination with the minimum sum
+        best_solution = min(all_candidates, key=lambda x: sum(x[:]))  # mínima suma de reservas
+        H_val, FFR_val, PFR_val, aFRR_val, mFRR_val = best_solution
+        _, _, best_df = frequency_response(t, activation_times, H_val/1000, FFR_val, PFR_val, aFRR_val, mFRR_val, row['Contingency'], row['Damping'])
+
+        # Store the results_df in the dictionary
+        results_frequency_response[f"Contingency{contingency_counter}"] = best_df    
+      
+        print(f"The best reserves combination for Contingency {contingency_counter} is: H={H_val/1000:.2f}, FFR={FFR_val:.2f}, PFR={PFR_val:.2f}, aFRR={aFRR_val:.2f}, mFRR={mFRR_val:.2f}")
+        # Save combinations in the summary_reserves DataFrame
+        summary_reserves.loc[index] = [H_val/1000, FFR_val, PFR_val, aFRR_val, mFRR_val]
+
+        contingency_counter += 1
+        
+    end_time = time.time()  # fin de la función
+    elapsed_time = end_time - start_time
+    print(f"Tiempo total de optimize_search: {elapsed_time:.2f} segundos")
+    
+    # Save the results of the swing equation solutions for each contingency
+    with pd.ExcelWriter(path +'results_frecuency_response.xlsx', engine='xlsxwriter') as writer:
+        for contingency, df in results_frequency_response.items():
+            df.to_excel(writer, sheet_name=contingency, index=False)
+            
+    # Save the results (reserve size) of the frequency security constraints analisys      
+    for col in summary_reserves.columns:
+        filename = path +f"{col}.csv"
+        summary_reserves[[col]].to_csv(filename, index=True)
+
+    # Save the data containing the Contingency, Damping, and max System Inertia
+    data.to_csv(path +'Contingency.csv', index=False)
+        
+    return results_frequency_response, summary_reserves, data
