@@ -48,7 +48,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     if isinstance(config, str):
         config = load_config(config)
         
-    # cheking a logical simularion time period:::::RAY
+    # cheking a logical simulation time period:::::RAY
     startdate = config['StartDate']
     stopdate = config['StopDate']
 
