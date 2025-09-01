@@ -1259,7 +1259,7 @@ EQ_Boundary_Sector_Storage_PowerMin(nx,i)..
         -SectorXStoragePowerMax(nx)
 ;
 
-*Storage balance
+*Sector X Storage balance
 EQ_Boundary_Sector_Storage_balance(nx,i)..
          SectorXStorageInitial(nx)$(ord(i) = 1)
          + SectorXStorageLevel(nx,i-1)$(ord(i) > 1)
