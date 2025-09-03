@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 from ..common import commons
 
 import time
+import pickle
 
 
 def get_load_data(inputs, z):
@@ -490,7 +491,7 @@ def get_indicators_powerplant(inputs, results):
     :param results:     DispaSET results
     :returns out:        Dataframe with the main power plants characteristics and the computed indicators
     """
-    out = inputs['units'].loc[:, ['Nunits', 'PowerCapacity', 'Zone', 'Zone_th', 'Technology', 'Fuel']]
+    out = inputs['units'].loc[:, ['Nunits', 'PowerCapacity', 'Zone', 'Technology', 'Fuel']] #, 'Zone_th'
 
     out['startups'] = 0
     for u in out.index:
@@ -1300,7 +1301,7 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
     # Create an empty dictionary to store results
     results_frequency_response = {}
     # Create an empty dataframe to store the reserves found
-    summary_reserves = pd.DataFrame(index=data.index, columns=['H_val','FFR_val','PFR_val','aFRR_val','mFRR_val'])
+    summary_reserves = pd.DataFrame(index=data.index, columns=['H_val','FFR_val','PFR_val','aFRR_val','mFRR_val', 'status'])
     
     print("Initializing sequential binary search over each reserve timeframe...")
     
@@ -1358,7 +1359,7 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
         
             if not FFR_candidates:
                 print("No valid combination of H+FFR found")
-                FFR_candidates = [(H_val, 0) for H_val in H_candidates]
+                FFR_candidates = [(0, 0) for H_val in H_candidates]
             # # info message with the combinations of H+FFR  
             # else:
             #     print(f"List of valid H+FFR combinations: {[tuple(f'{v:.2f}' for v in comb) for comb in FFR_candidates]}")
@@ -1406,29 +1407,29 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
                 freq_steady_state = freq_window['Frequency Deviation [Hz]'].abs().max()
                 # filtering results that meets the safe operational limits
                 if (max_fd <= limit_freq) and (max_r <= limit_rocof) and (freq_steady_state <= limit_freq_steady_state): 
-                    all_candidates.append((H_val*1000, FFR_val, PFR_val, row['Contingency'], row['Contingency']))
+                    all_candidates.append((H_val*1000, FFR_val, PFR_val, row['Contingency'], row['Contingency'], True))
         
             if not all_candidates:
                 print("No valid combination of H+FFR+PFR+aFRR+mFRR found")
-                all_candidates = [(H_val*1000, FFR_val, PFR_val, 0, 0) for H_val, FFR_val, PFR_val in PFR_candidates]   
+                all_candidates = [(H_val*1000, FFR_val, PFR_val, 0, 0, False) for H_val, FFR_val, PFR_val in PFR_candidates]   
             # # info message with the combinations of H+FFR+PFR+aFRR+mFRR
             # else:  
             #     print(f"List of valid +FFR+PFR+aFRR+mFRR combinations: {[tuple(f'{v:.2f}' for v in comb) for comb in all_candidates]}")
         else:
             print("Reserves aFRR and mFRR are not activated")
-            all_candidates = [(H_val*1000, FFR_val, PFR_val, 0, 0) for H_val, FFR_val, PFR_val in PFR_candidates]
+            all_candidates = [(H_val*1000, FFR_val, PFR_val, 0, 0, False) for H_val, FFR_val, PFR_val in PFR_candidates]
                          
         # We take the combination with the minimum sum
-        best_solution = min(all_candidates, key=lambda x: sum(x[:]))  # mínima suma de reservas
-        H_val, FFR_val, PFR_val, aFRR_val, mFRR_val = best_solution
-        _, _, best_df = frequency_response(t, activation_times, H_val/1000, FFR_val, PFR_val, aFRR_val, mFRR_val, row['Contingency'], row['Damping'])
+        best_solution = min(all_candidates, key=lambda x: sum(x[:-1]))  # min sum of reserves
+        H_val, FFR_val, PFR_val, aFRR_val, mFRR_val, status = best_solution
+        _, _, best_df = frequency_response(t, activation_times, H_val/1000, FFR_val, PFR_val, aFRR_val, mFRR_val, row['Contingency'], row['Damping'], True)
 
         # Store the results_df in the dictionary
         results_frequency_response[f"Contingency{contingency_counter}"] = best_df    
       
         print(f"The best reserves combination for Contingency {contingency_counter} is: H={H_val/1000:.2f}, FFR={FFR_val:.2f}, PFR={PFR_val:.2f}, aFRR={aFRR_val:.2f}, mFRR={mFRR_val:.2f}")
         # Save combinations in the summary_reserves DataFrame
-        summary_reserves.loc[index] = [H_val/1000, FFR_val, PFR_val, aFRR_val, mFRR_val]
+        summary_reserves.loc[index] = [H_val/1000, FFR_val, PFR_val, aFRR_val, mFRR_val, status]
 
         contingency_counter += 1
         
@@ -1448,5 +1449,9 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
 
     # Save the data containing the Contingency, Damping, and max System Inertia
     data.to_csv(path +'Contingency.csv', index=False)
+    
+    # Save the results in pickle file
+    with open(path +"freq_stab_results.pkl", "wb") as f:
+        pickle.dump((results_frequency_response, summary_reserves, data), f)
         
     return results_frequency_response, summary_reserves, data
