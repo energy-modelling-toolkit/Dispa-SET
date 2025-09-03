@@ -171,6 +171,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     CostLoadShedding = NodeBasedTable('CostLoadShedding', config, default=config['default']['CostLoadShedding'])
     ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand', config,
                                            default=config['default']['ShareOfFlexibleDemand'])
+    
+    # Secondary Reserves Required
     Reserve2D = NodeBasedTable('Reserve2D', config, default=None)
     Reserve2U = NodeBasedTable('Reserve2U', config, default=None)
 
@@ -179,14 +181,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         FFRLimit = load_time_series(config, config['FFRLimit']).fillna(0)
     else:
         logging.warning('No FFR requirement will be considered (no valid file provided)')
-        FFRLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
+        FFRLimit = pd.DataFrame(index=config['idx_long'], data={'FFRLimit': 0})
 
     # Primary Reserve Required:
     if 'PrimaryReserveLimit' in config and os.path.isfile(config['PrimaryReserveLimit']):
         PrimaryReserveLimit = load_time_series(config, config['PrimaryReserveLimit']).fillna(0)
     else:
         logging.warning('No Primary Reserve requirement will be considered (no valid file provided)')
-        PrimaryReserveLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
+        PrimaryReserveLimit = pd.DataFrame(index=config['idx_long'], data={'PrimaryReserveLimit': 0})
 
     # Curtailment:
     CostCurtailment = NodeBasedTable('CostCurtailment', config, default=config['default']['CostCurtailment'])
