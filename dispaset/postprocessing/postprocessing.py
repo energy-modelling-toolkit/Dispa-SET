@@ -337,7 +337,7 @@ def get_result_analysis(inputs, results, units='MWh'):
             print('\nAverage electricity cost (EUR/' + unit_small[1] + '): \n'  + str(Cost_kwh_zone) + '\nEntireRegion ' + str(Cost_kwh))
 
     for key in ['LostLoad_RampUp', 'LostLoad_2D', 'LostLoad_MinPower',
-                'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_Inertia', 'LostLoad_MaxPower',
+                'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_SystemInertia', 'LostLoad_MaxPower',
                 'LostLoad_StorageLevelViolation']:
         if key == 'LostLoad_StorageLevelViolation':
             if isinstance(results[key], pd.Series):
@@ -533,7 +533,7 @@ def CostExPost(inputs, results):
              +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
              +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
              +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
-             +0.8*Config("ValueOfLostLoad","val")*(LL_Inertia(i))
+             +0.8*Config("ValueOfLostLoad","val")*(LL_SystemInertia(i))
              +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
              +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
 
@@ -632,7 +632,7 @@ def CostExPost(inputs, results):
     costs['LostLoad'] = 80e3 * (results['LostLoad_2D'].reindex(timeindex).sum(axis=1).fillna(0) +
                                 results['LostLoad_2U'].reindex(timeindex).sum(axis=1).fillna(0) +
                                 results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0) + 
-                                results['LostLoad_Inertia'].reindex(timeindex).sum(axis=1).fillna(0)) +\
+                                results['LostLoad_SystemInertia'].reindex(timeindex).sum(axis=1).fillna(0)) +\
                         100e3 * (results['LostLoad_MaxPower'].reindex(timeindex).sum(axis=1).fillna(0) +
                                  results['LostLoad_MinPower'].reindex(timeindex).sum(axis=1).fillna(0)) + \
                         70e3 * (results['LostLoad_RampDown'].reindex(timeindex).sum(axis=1).fillna(0) +
@@ -1296,6 +1296,8 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
     
     total_contingencies = len(Contingency)  # Count the total number of contingencies"
     contingency_counter = 1  # Initialize the contingnecy counter counter
+    tolH = 1                  # Set a tolerance for the H binary search 
+    tolReserves = 10          # Set a tolerance for the Reserves binary search
     print(f"Total Contingencies: {total_contingencies}")
 
     # Create an empty dictionary to store results
@@ -1319,7 +1321,7 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
         # --- Binary search 1: Inertia ---
         H_candidates = []
         low, high = H_range
-        while low <= high:
+        while low + tolH <= high:
             # adjust frequency response simulation settings
             if use_ffr:
                 t = activation_times["ffr"]["prep"]
@@ -1346,7 +1348,7 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
         if use_ffr:
             for H_val in H_candidates:
                 low, high = reserve_range
-                while low <= high:
+                while low + tolReserves <= high:
                     # adjust frequency response simulation settings
                     t = activation_times["ffr"]["delivery"]
                     mid = (low + high)/2
@@ -1373,7 +1375,7 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
         if use_pfr:
             for H_val, FFR_val in FFR_candidates:
                 low, high = reserve_range
-                while low <= high:
+                while low + tolReserves <= high:
                     # adjust frequency response simulation settings
                     t = activation_times["pfr"]["delivery"]
                     mid = (low + high)/2
