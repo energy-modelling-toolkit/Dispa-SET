@@ -1000,11 +1000,11 @@
                     </div>
                     <div class="col">
                          <div class="form-group">
-                            <label for="inertiaLimit">Inertia Limit<span class="tooltiptext">Minimum system inertia requirement. Can be a file path (time series) or a single value if default is used.</span></label>
-                            <input type="text" id="inertiaLimit" placeholder="e.g., Inertia_req.csv">
+                            <label for="systeminertiademand">System Inertia Demand<span class="tooltiptext">Minimum system inertia requirement. Can be a file path (time series) or a single value if default is used.</span></label>
+                            <input type="text" id="systeminertiademand" placeholder="e.g., SystemInertia_req.csv">
                             <div class="default-value" data-default="">
                                 <span>Default:</span>
-                                <input type="text" class="default-value-input" value="" data-param="InertiaLimit">
+                                <input type="text" class="default-value-input" value="" data-param="SystemInertiaDemand">
                             </div>
                         </div>
                     </div>
@@ -1281,7 +1281,7 @@
             'geodata': 'GeoData',
             // Other acronyms in IDs
             'systemgainlimit': 'SystemGainLimit',
-            'inertialimit': 'InertiaLimit',
+            'systeminertiademand': 'SystemInertiaDemand',
             'frequencystability': 'FrequencyStability',
             'initialfinalreservoirlevel': 'InitialFinalReservoirLevel',
             'shareofquickstartunits': 'ShareOfQuickStartUnits',
@@ -1963,7 +1963,7 @@
             // Ensure required fields have at least empty values
             const requiredFields = [
                 'GAMS_folder', 'FFRGainLimit', 'FFRLimit', 
-                'FrequencyStability', 'GridData', 'InertiaLimit', 'LoadShedding', 'PriceOfAmmonia',
+                'FrequencyStability', 'GridData', 'SystemInertiaDemand', 'LoadShedding', 'PriceOfAmmonia',
                 'PriceOfCO2', 'PriceOfLignite', 'PriceOfNuclear', 'PriceTransmission', 
                 'PrimaryReserveLimit', 'Reserve2D', 'Reserve2U', 'StorageAlertLevels', 
                 'StorageFloodControl', 'SystemGainLimit', 'TransmissionGridType'

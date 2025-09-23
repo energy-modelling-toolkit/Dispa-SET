@@ -138,14 +138,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             logging.error('No valid grid data file provided')
             GridData = pd.DataFrame()
 
-    # Inertia Limit:
-    if 'InertiaLimit' in config and os.path.isfile(config['InertiaLimit']):
-        InertiaLimit = load_time_series(config, config['InertiaLimit']).fillna(0)
+    # Inertia Demand:
+    if 'SystemInertiaDemand' in config and os.path.isfile(config['SystemInertiaDemand']):
+        SystemInertiaDemand = load_time_series(config, config['SystemInertiaDemand']).fillna(0)
     else:
-        logging.warning('No Inertia Limit will be considered (no valid file provided)')
-        InertiaLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
-        # logging.warning('No Inertia Limit will be considered (no valid file provided)')
-        # InertiaLimit = pd.DataFrame(index=config['idx_long'])
+        logging.warning('No System Inertia Demand will be considered (no valid file provided)')
+        SystemInertiaDemand = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
 
     # Boundary Sector Interconnections:
     if 'BoundarySectorInterconnections' in config and os.path.isfile(config['BoundarySectorInterconnections']):
@@ -744,7 +742,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel,
                'SectorXFloodControl': SectorXFloodControl,
                'CostOfSpillage': CostOfSpillage, 'CostXSpillage': CostXSpillage,
-               'InertiaLimit': InertiaLimit, 'FFRU': FFRLimit_allocated, 'FFRD': FFRLimit_allocated, 
+               'SystemInertiaDemand': SystemInertiaDemand, 'FFRU': FFRLimit_allocated, 'FFRD': FFRLimit_allocated, 
                'PFRU': PrimaryReserveLimit_allocated, 'PFRD': PrimaryReserveLimit_allocated}
 
     # Merge the following time series with weighted averages
@@ -927,7 +925,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXFloodControl'] = ['nx', 'h']
     # if MTS == 0:
     sets_param['InertiaConstant'] = ['au']
-    sets_param['InertiaLimit'] = ['h']
+    sets_param['SystemInertiaDemand'] = ['h']
     sets_param['Droop'] = ['au']
     sets_param['PrimaryReserveLimit'] = ['h']
     sets_param['FFRLimit'] = ['h']
@@ -1279,11 +1277,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             parameters['CostXFloodControl']['val'][unit, :] = 0
 
     # %%###############################################################################################################
-    # Inertia limit to parameters dict
-    # parameters['InertiaLimit']['val'] = InertiaLimit['InertiaLimit'].values
+    # SystemInertiaDemand to parameters dict
+    # parameters['SystemInertiaDemand']['val'] = SystemInertiaDemand['SystemInertiaDemand'].values
     # if MTS == 0:
-    # if len(finalTS['InertiaLimit'].columns) != 0:
-    #     parameters['InertiaLimit']['val'] = finalTS['InertiaLimit'].iloc[:, 0].values
+    if len(finalTS['SystemInertiaDemand'].columns) != 0:
+        parameters['SystemInertiaDemand']['val'] = finalTS['SystemInertiaDemand'].iloc[:, 0].values
     # # FFR to parameters dict
     # if len(finalTS['FFRLimit'].columns) != 0:
     #     parameters['FFRLimit']['val'] = finalTS['FFRLimit'].iloc[:, 0].values
