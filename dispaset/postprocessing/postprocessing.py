@@ -1310,10 +1310,8 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
         # Perform the operations on each row
         print(f"Calculating frequency reserves for Contingency {contingency_counter}")
         # Binary search range and step
-        H_range = (1, (row['SystemInertia']*2 - 1))
-        H_step = 1
+        H_range = (0, (row['SystemInertia']*2))
         reserve_range = (0, row['Contingency']*1.3)
-        reserve_step = row['Contingency']*0.01
     
         best_solution = None
         best_df = None
@@ -1323,15 +1321,18 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
         low, high = H_range
         while low <= high:
             # adjust frequency response simulation settings
-            t = 2.00
+            if use_ffr:
+                t = activation_times["ffr"]["prep"]
+            elif use_pfr:
+                t = activation_times["pfr"]["prep"]
             mid = (low + high)/2
             max_fd, max_r, results_df = frequency_response(t, activation_times, mid, 0, 0, 0, 0, row['Contingency'], row['Damping'])
             # filtering results that meets the safe operational limits
             if (max_fd <= limit_freq) and (max_r <= limit_rocof):
                 H_candidates.append(mid)
-                high = mid - H_step  # continue binary search in the lower half
+                high = mid  # continue binary search in the lower half
             else:
-                low = mid + H_step   # continue binary search in the higher half
+                low = mid   # continue binary search in the higher half
         
         if not H_candidates:
             print("No valid H was found")
@@ -1353,9 +1354,9 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
                     # filtering results that meets the safe operational limits
                     if (max_fd <= limit_freq) and (max_r <= limit_rocof): 
                         FFR_candidates.append((H_val, mid))
-                        high = mid - reserve_step  # continue binary search in the lower half
+                        high = mid  # continue binary search in the lower half
                     else:
-                        low = mid + reserve_step   # continue binary search in the higher half
+                        low = mid   # continue binary search in the higher half
         
             if not FFR_candidates:
                 print("No valid combination of H+FFR found")
@@ -1380,9 +1381,9 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
                     # filtering results that meets the safe operational limits
                     if (max_fd <= limit_freq) and (max_r <= limit_rocof): 
                         PFR_candidates.append((H_val, FFR_val, mid))
-                        high = mid - reserve_step  # continue binary search in the lower half
+                        high = mid  # continue binary search in the lower half
                     else:
-                        low = mid + reserve_step   # continue binary search in the higher half
+                        low = mid   # continue binary search in the higher half
         
             if not PFR_candidates:
                 print("No valid combination of H+FFR+PFR found")
