@@ -1100,18 +1100,18 @@ def trapezoid_weight(tt, prep, ramp, delivery=None, deact=None):
 # %% compute weights
 def compute_weights(tt, activation_times):
     """
-    This function calculates and returns w_ffr, w_pfr, w_afrr, w_mfrr for vector tt.
+    This function calculates and returns w_ffr, w_fcr, w_afrr, w_mfrr for vector tt.
     """
 
     w_ffr = trapezoid_weight(tt, **activation_times["ffr"])
-    w_pfr = trapezoid_weight(tt, **activation_times["pfr"])
+    w_fcr = trapezoid_weight(tt, **activation_times["fcr"])
     w_afrr = trapezoid_weight(tt, **activation_times["afrr"])
     w_mfrr = trapezoid_weight(tt, **activation_times["mfrr"])
-    return w_ffr, w_pfr, w_afrr, w_mfrr
+    return w_ffr, w_fcr, w_afrr, w_mfrr
 
 
 # %% frequency_response
-def frequency_response(sim_time, activation_times, H_val, FFR_cap, PFR_cap, aFRR_cap, mFRR_cap, 
+def frequency_response(sim_time, activation_times, H_val, FFR_cap, FCR_cap, aFRR_cap, mFRR_cap, 
                    contingency, D_local, verbose=False):
     """
     This function solves the power swing differential equation, for each combination 
@@ -1120,7 +1120,7 @@ def frequency_response(sim_time, activation_times, H_val, FFR_cap, PFR_cap, aFRR
     param activation_times:     Activation times for each reserve in absolut values from sim_time = 0
     param H_val:                System Inertia value
     param FFR_cap:              Fast Frequency Reserve capacity
-    param PFR_cap:              Primary Frequency Reserve capacity
+    param FCR_cap:              Frequency Containment Reserve capacity
     param aFRR_cap:             Automatic Frequency Restoration Reserve capacity
     param mFRR_cap:             Manual Frequency Restoration Reserve capacity
     param contingency:          Contingency size assumed by the n-1 hypothesis
@@ -1132,7 +1132,7 @@ def frequency_response(sim_time, activation_times, H_val, FFR_cap, PFR_cap, aFRR
                                 - RoCoF [Hz/s]
                                 - Inertia [GWs]
                                 - FFR [MW]
-                                - PFR [MW]
+                                - FCR [MW]
                                 - aFRR [MW]
                                 - mFRR [MW]
                                 - Damping [MW/Hz]'
@@ -1149,7 +1149,7 @@ def frequency_response(sim_time, activation_times, H_val, FFR_cap, PFR_cap, aFRR
             'RoCoF [Hz/s]': [],
             'Inertia [GWs]': [],
             'FFR [MW]': [],
-            'PFR [MW]': [],
+            'FCR [MW]': [],
             'aFRR [MW]': [],
             'mFRR [MW]': [],
             'Damping [MW/Hz]': [],
@@ -1164,23 +1164,23 @@ def frequency_response(sim_time, activation_times, H_val, FFR_cap, PFR_cap, aFRR
     t = np.arange(0, sim_time, 0.1)
 
     # Precompute weights vector for plotting and for fixed deployment logic
-    W_ffr_vec, W_pfr_vec, W_afrr_vec, W_mfrr_vec = compute_weights(t, activation_times)
+    W_ffr_vec, W_fcr_vec, W_afrr_vec, W_mfrr_vec = compute_weights(t, activation_times)
 
     def state(y, tt):
         f = y[0]
         contingency_local = contingency if tt >= 1.0 else 0.0
 
         # weights in instananeous time tt (scalar)
-        w_ffr, w_pfr, w_afrr, w_mfrr = compute_weights(np.array([tt]), activation_times)
-        w_ffr = float(w_ffr[0]); w_pfr = float(w_pfr[0]); w_afrr = float(w_afrr[0]); w_mfrr = float(w_mfrr[0])
+        w_ffr, w_fcr, w_afrr, w_mfrr = compute_weights(np.array([tt]), activation_times)
+        w_ffr = float(w_ffr[0]); w_fcr = float(w_fcr[0]); w_afrr = float(w_afrr[0]); w_mfrr = float(w_mfrr[0])
 
         # deployed reserves
         ffr = FFR_cap * w_ffr * f
-        pfr = PFR_cap * w_pfr * f
+        fcr = FCR_cap * w_fcr * f
         afrr = aFRR_cap * w_afrr
         mfrr = mFRR_cap * w_mfrr
 
-        deltap = contingency_local - (ffr + pfr + afrr + mfrr) - D_local * f
+        deltap = contingency_local - (ffr + fcr + afrr + mfrr) - D_local * f
         dfdt = deltap / (1000.0 * (2.0 * H_val / 50.0))
         return [dfdt, deltap]
 
@@ -1190,13 +1190,13 @@ def frequency_response(sim_time, activation_times, H_val, FFR_cap, PFR_cap, aFRR
 
 
     ffr = FFR_cap * W_ffr_vec
-    pfr = PFR_cap * W_pfr_vec
+    fcr = FCR_cap * W_fcr_vec
     afrr = aFRR_cap * W_afrr_vec
     mfrr= mFRR_cap * W_mfrr_vec
 
 
     contingency_vec = np.where(t >= 1.0, contingency, 0.0)
-    deltap = contingency_vec - (ffr + pfr + afrr + mfrr) - D_local * f
+    deltap = contingency_vec - (ffr + fcr + afrr + mfrr) - D_local * f
 
     max_freq_dev = np.max(np.abs(f))
     rocof = -np.gradient(f, t)
@@ -1208,7 +1208,7 @@ def frequency_response(sim_time, activation_times, H_val, FFR_cap, PFR_cap, aFRR
         'RoCoF [Hz/s]': rocof,
         'Inertia [GWs]': H_val,
         'FFR [MW]': ffr,
-        'PFR [MW]': pfr,
+        'FCR [MW]': fcr,
         'aFRR [MW]': afrr,
         'mFRR [MW]': mfrr,
         'Damping [MW/Hz]': D_local,
@@ -1217,7 +1217,7 @@ def frequency_response(sim_time, activation_times, H_val, FFR_cap, PFR_cap, aFRR
     })
 
     if verbose:
-        print(f"Sim finished: FFR={FFR_cap},PFR={PFR_cap},aFRR={aFRR_cap},mFRR={mFRR_cap},H={H_val}")
+        print(f"Sim finished: FFR={FFR_cap},FCR={FCR_cap},aFRR={aFRR_cap},mFRR={mFRR_cap},H={H_val}")
         print(f" -> max_freq_dev={max_freq_dev:.4f} Hz, max_rocof={max_rocof:.4f} Hz/s")
 
     return max_freq_dev, max_rocof, results_df
@@ -1226,11 +1226,11 @@ def frequency_response(sim_time, activation_times, H_val, FFR_cap, PFR_cap, aFRR
 # %% frequency stability reserves
 def get_frequency_stability_reserves(path, inputs, results, activation_times=None, 
                                      limit_freq=None, limit_rocof=None, limit_freq_steady_state=None,
-                                     use_ffr=None, use_pfr=None, use_afrr=None, use_mfrr=None):
+                                     use_ffr=None, use_fcr=None, use_afrr=None, use_mfrr=None):
     """
     Performs a sequential binary search over different combinations of.
 
-    This function iteratively explores combinations of inertia and reserves (H, FFR, PFR, aFRR, and mFRR)
+    This function iteratively explores combinations of inertia and reserves (H, FFR, FCR, aFRR, and mFRR)
     throughtout a binary search and considering the specific activation time windows of each service. 
     For each candidate solution, the function calls `frequency_response` to simulate the system's dynamic
     frequency behavior after a contingency, and verifies whether the minimum stability
@@ -1250,7 +1250,7 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
     dict results_frequency_response:    Results of frequency response simulation solved 
                                          with the optimal combination of frequency services for each contingency.
     
-    dataframe summary_reserves:         The optimal combination of (H, FFR, PFR, aFRR, mFRR) that ensures frequency security for each contingency.
+    dataframe summary_reserves:         The optimal combination of (H, FFR, FCR, aFRR, mFRR) that ensures frequency security for each contingency.
     dataframe data:                     Contingency, and system data related to the reserve sizing.   
     """
     start_time = time.time()  # begin execution timer
@@ -1259,7 +1259,7 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
     if activation_times is None:
         activation_times = {
             "ffr": dict(prep=2, ramp=3, delivery=18, deact=21),
-            "pfr": dict(prep=5, ramp=18, delivery=51, deact=181),
+            "fcr": dict(prep=5, ramp=18, delivery=51, deact=181),
             "afrr": dict(prep=31, ramp=181, delivery=481, deact=931),
             "mfrr": dict(prep=481, ramp=931)  # mfrr leght is considered for the whole timestep
         }
@@ -1275,15 +1275,15 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
     # Definition of activated reserves
     if use_ffr is None:
         use_ffr = True
-    if use_pfr is None:
-        use_pfr = True
+    if use_fcr is None:
+        use_fcr = True
     if use_afrr is None:
         use_afrr = True
     if use_mfrr is None:
         use_mfrr = True
     
     # Function settings
-    print(limit_freq, limit_rocof, limit_freq_steady_state, use_ffr, use_pfr, use_afrr, use_mfrr)
+    print(limit_freq, limit_rocof, limit_freq_steady_state, use_ffr, use_fcr, use_afrr, use_mfrr)
     
     Damping = inputs["param_df"]["Demand"].filter(like="DA").sum(axis=1).to_frame("Damping")*0.015
     Contingency = results['OutputContingency'].to_frame("Contingency") 
@@ -1303,7 +1303,7 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
     # Create an empty dictionary to store results
     results_frequency_response = {}
     # Create an empty dataframe to store the reserves found
-    summary_reserves = pd.DataFrame(index=data.index, columns=['H_val','FFR_val','PFR_val','aFRR_val','mFRR_val', 'status'])
+    summary_reserves = pd.DataFrame(index=data.index, columns=['H_val','FFR_val','FCR_val','aFRR_val','mFRR_val', 'status'])
     
     print("Initializing sequential binary search over each reserve timeframe...")
     
@@ -1325,8 +1325,8 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
             # adjust frequency response simulation settings
             if use_ffr:
                 t = activation_times["ffr"]["prep"]
-            elif use_pfr:
-                t = activation_times["pfr"]["prep"]
+            elif use_fcr:
+                t = activation_times["fcr"]["prep"]
             mid = (low + high)/2
             max_fd, max_r, results_df = frequency_response(t, activation_times, mid, 0, 0, 0, 0, row['Contingency'], row['Damping'])
             # filtering results that meets the safe operational limits
@@ -1370,69 +1370,69 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
             print("Reserves FFR are not activated")
             FFR_candidates = [(H_val, 0) for H_val in H_candidates] # assume 0 as the default value
 
-        # --- Binary search 3: PFR ---
-        PFR_candidates = []
-        if use_pfr:
+        # --- Binary search 3: FCR ---
+        FCR_candidates = []
+        if use_fcr:
             for H_val, FFR_val in FFR_candidates:
                 low, high = reserve_range
                 while low + tolReserves <= high:
                     # adjust frequency response simulation settings
-                    t = activation_times["pfr"]["delivery"]
+                    t = activation_times["fcr"]["delivery"]
                     mid = (low + high)/2
                     max_fd, max_r, results_df = frequency_response(t, activation_times, H_val, FFR_val, mid, 0, 0, row['Contingency'], row['Damping'])
                     # filtering results that meets the safe operational limits
                     if (max_fd <= limit_freq) and (max_r <= limit_rocof): 
-                        PFR_candidates.append((H_val, FFR_val, mid))
+                        FCR_candidates.append((H_val, FFR_val, mid))
                         high = mid  # continue binary search in the lower half
                     else:
                         low = mid   # continue binary search in the higher half
         
-            if not PFR_candidates:
-                print("No valid combination of H+FFR+PFR found")
-                PFR_candidates = [(H_val, FFR_val, 0) for H_val, FFR_val in FFR_candidates] 
-            # # info message with the combinations of H+FFR+PFR  
+            if not FCR_candidates:
+                print("No valid combination of H+FFR+FCR found")
+                FCR_candidates = [(H_val, FFR_val, 0) for H_val, FFR_val in FFR_candidates] 
+            # # info message with the combinations of H+FFR+FCR  
             # else:    
-            #     print(f"List of valid H+FFR+PFR combinations: {[tuple(f'{v:.2f}' for v in comb) for comb in PFR_candidates]}")
+            #     print(f"List of valid H+FFR+FCR combinations: {[tuple(f'{v:.2f}' for v in comb) for comb in FCR_candidates]}")
         else:
-            print("Reserves PFR are not activated")
-            PFR_candidates = [(H_val, FFR_val, 0) for H_val, FFR_val in FFR_candidates]  # assume 0 as the default value
+            print("Reserves FCR are not activated")
+            FCR_candidates = [(H_val, FFR_val, 0) for H_val, FFR_val in FFR_candidates]  # assume 0 as the default value
         
         # --- Static search 4: fixed aFRR and mFRR ---
         all_candidates = []
         if use_afrr and use_mfrr:
-            for H_val, FFR_val, PFR_val in PFR_candidates:
+            for H_val, FFR_val, FCR_val in FCR_candidates:
                 # adjust frequency response simulation settings
                 t = activation_times["mfrr"]["ramp"] + 50
-                max_fd, max_r, results_df = frequency_response(t, activation_times, H_val, FFR_val, PFR_val, row['Contingency'], row['Contingency'], row['Contingency'], row['Damping'])
+                max_fd, max_r, results_df = frequency_response(t, activation_times, H_val, FFR_val, FCR_val, row['Contingency'], row['Contingency'], row['Contingency'], row['Damping'])
                 # filtering results for values after 300s when the system should reach the steady state frequency
                 freq_window = results_df.loc[results_df['Time [s]'] > 300]
                 # calculates the maximum absolut value of frequency deviation 300s after the power imbalance 
                 freq_steady_state = freq_window['Frequency Deviation [Hz]'].abs().max()
                 # filtering results that meets the safe operational limits
                 if (max_fd <= limit_freq) and (max_r <= limit_rocof) and (freq_steady_state <= limit_freq_steady_state): 
-                    all_candidates.append((H_val*1000, FFR_val, PFR_val, row['Contingency'], row['Contingency'], True))
+                    all_candidates.append((H_val*1000, FFR_val, FCR_val, row['Contingency'], row['Contingency'], True))
         
             if not all_candidates:
-                print("No valid combination of H+FFR+PFR+aFRR+mFRR found")
-                all_candidates = [(H_val*1000, FFR_val, PFR_val, 0, 0, False) for H_val, FFR_val, PFR_val in PFR_candidates]   
-            # # info message with the combinations of H+FFR+PFR+aFRR+mFRR
+                print("No valid combination of H+FFR+FCR+aFRR+mFRR found")
+                all_candidates = [(H_val*1000, FFR_val, FCR_val, 0, 0, False) for H_val, FFR_val, FCR_val in FCR_candidates]   
+            # # info message with the combinations of H+FFR+FCR+aFRR+mFRR
             # else:  
-            #     print(f"List of valid +FFR+PFR+aFRR+mFRR combinations: {[tuple(f'{v:.2f}' for v in comb) for comb in all_candidates]}")
+            #     print(f"List of valid +FFR+FCR+aFRR+mFRR combinations: {[tuple(f'{v:.2f}' for v in comb) for comb in all_candidates]}")
         else:
             print("Reserves aFRR and mFRR are not activated")
-            all_candidates = [(H_val*1000, FFR_val, PFR_val, 0, 0, False) for H_val, FFR_val, PFR_val in PFR_candidates]
+            all_candidates = [(H_val*1000, FFR_val, FCR_val, 0, 0, False) for H_val, FFR_val, FCR_val in FCR_candidates]
                          
         # We take the combination with the minimum sum
         best_solution = min(all_candidates, key=lambda x: sum(x[:-1]))  # min sum of reserves
-        H_val, FFR_val, PFR_val, aFRR_val, mFRR_val, status = best_solution
-        _, _, best_df = frequency_response(t, activation_times, H_val/1000, FFR_val, PFR_val, aFRR_val, mFRR_val, row['Contingency'], row['Damping'], True)
+        H_val, FFR_val, FCR_val, aFRR_val, mFRR_val, status = best_solution
+        _, _, best_df = frequency_response(t, activation_times, H_val/1000, FFR_val, FCR_val, aFRR_val, mFRR_val, row['Contingency'], row['Damping'], True)
 
         # Store the results_df in the dictionary
         results_frequency_response[f"Contingency{contingency_counter}"] = best_df    
       
-        print(f"The best reserves combination for Contingency {contingency_counter} is: H={H_val/1000:.2f}, FFR={FFR_val:.2f}, PFR={PFR_val:.2f}, aFRR={aFRR_val:.2f}, mFRR={mFRR_val:.2f}")
+        print(f"The best reserves combination for Contingency {contingency_counter} is: H={H_val/1000:.2f}, FFR={FFR_val:.2f}, FCR={FCR_val:.2f}, aFRR={aFRR_val:.2f}, mFRR={mFRR_val:.2f}")
         # Save combinations in the summary_reserves DataFrame
-        summary_reserves.loc[index] = [H_val/1000, FFR_val, PFR_val, aFRR_val, mFRR_val, status]
+        summary_reserves.loc[index] = [H_val/1000, FFR_val, FCR_val, aFRR_val, mFRR_val, status]
 
         contingency_counter += 1
         

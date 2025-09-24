@@ -927,7 +927,7 @@ def load_config_yaml(filename, AbsPath=True):
               'BoundarySectorNTC', 'BoundarySectorInterconnections', 'SectorXFlexibleDemand', 'SectorXFlexibleSupply',
               'BoundarySectorMaxSpillage', 'SectorXReservoirLevels', 'SectorXAlertLevel', 'SectorXFloodControl',
               'CostOfSpillage', 'CostXNotServed', 'CostCurtailment', 'GridData',
-              'SystemInertiaDemand', 'FFRLimit', 'PrimaryReserveLimit']
+              'SystemInertiaDemand', 'FFRDemand', 'FCRDemand']
     for param in PARAMS:
         if param not in config:
             config[param] = ''

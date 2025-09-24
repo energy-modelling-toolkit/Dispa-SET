@@ -53,12 +53,11 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'OutputCostRampDownH': ('u', 'h'),
             'OutputSystemInertia': ('h'), 
             'OutputPowerLoss': ('h'),
-            'OutputPrimaryReserve_Available': ('h'),
             'OutputReserveProvision':('u','h','res'),
             'LostLoad_FFRU': ('n', 'h'),
             'LostLoad_FFRD': ('n', 'h'),
-            'LostLoad_PFRU': ('n', 'h'),
-            'LostLoad_PFRD': ('n', 'h'),
+            'LostLoad_FCRU': ('n', 'h'),
+            'LostLoad_FCRD': ('n', 'h'),
             'LostLoad_SystemInertia': ('h'),
             'OutputContingencyPerZone': ('n', 'h'),
             'OutputContingency': ('h'),
@@ -167,7 +166,8 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
     keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
             'LostLoad_RampDown', 'LostLoad_RampDown_Unit', 'LostLoad_2D', 'LostLoad_SystemInertia', 'ShadowPrice', 'StorageShadowPrice',
             'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U', 'ShadowPriceDemandModulation',
-            'LostLoad_FFRU', 'LostLoad_FFRD', 'LostLoad_PFRU', 'LostLoad_PFRD',
+            'LostLoad_FFRU', 'LostLoad_FFRD', 'LostLoad_FCRU', 'LostLoad_FCRD',
+            'ShadowPrice_FFRU', 'ShadowPrice_FFRD','ShadowPrice_FCRU', 'ShadowPrice_FCRD', 
             'status']  # 'status'
     # TODO: Check backward compatibility
     keys_sparse = ['OutputPower', 'OutputPowerConsumption', 'OutputSystemCost', 'OutputCommitted',
@@ -194,11 +194,12 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'OutputSystemCostD', 'SMML-SystemMinusesMaximalLoad', 'SMNL-SystemMinusesNominalLoad',
                    'UnitHourly2URevenue', 'UnitHourlyProductionCost', 'UnitHourlyStartUpCost', 'UnitHourlyVariableCost',
                    'UnitHourly2DRevenue', 'UnitHourly3URevenue', 'UnitHourlyPowerRevenue', 
+                   'UnitHourlyFFRURevenue', 'UnitHourlyFFRDRevenue','UnitHourlyFCRURevenue', 'UnitHourlyFCRDRevenue',
                    'UnitHourlyProfit', 'UnitHourlyRampingCost', 'UnitHourlyRevenue',
-                   'OutputSystemInertia','OutputFFR_Available', 'OutputPrimaryReserve_Available', 
-                   'OutputReserveProvision', 'OutputReserve_FFRD', 'OutputReserve_FFRU', 'OutputReserve_PFRD', 'OutputReserve_PFRU',
-                   'OutputDemand_FFRU', 'OutputDemand_FFRD', 'OutputDemand_PFRU', 'OutputDemand_PFRD',
-                   'OutputCurtailmentReserve_FFRU', 'OutputCurtailmentReserve_FFRD', 'OutputCurtailmentReserve_PFRU', 'OutputCurtailmentReserve_PFRD',
+                   'OutputSystemInertia', 
+                   'OutputReserveProvision', 'OutputReserve_FFRD', 'OutputReserve_FFRU', 'OutputReserve_FCRD', 'OutputReserve_FCRU',
+                   'OutputDemand_FFRU', 'OutputDemand_FFRD', 'OutputDemand_FCRU', 'OutputDemand_FCRD',
+                   'OutputCurtailmentReserve_FFRU', 'OutputCurtailmentReserve_FFRD', 'OutputCurtailmentReserve_FCRU', 'OutputCurtailmentReserve_FCRD',
                    'OutputContingencyPerZone', 'OutputContingency']
 
     # Setting the proper index to the result dataframes:
@@ -241,6 +242,10 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
         results['ShadowPrice_2D'][results['ShadowPrice_2D'] >= 1e300] = 0
         results['ShadowPrice_2U'][results['ShadowPrice_2U'] >= 1e300] = 0
         results['ShadowPrice_3U'][results['ShadowPrice_3U'] >= 1e300] = 0
+        results['ShadowPrice_FFRU'][results['ShadowPrice_FFRU'] >= 1e300] = 0
+        results['ShadowPrice_FFRD'][results['ShadowPrice_FFRD'] >= 1e300] = 0
+        results['ShadowPrice_FCRU'][results['ShadowPrice_FCRU'] >= 1e300] = 0
+        results['ShadowPrice_FCRD'][results['ShadowPrice_FCRD'] >= 1e300] = 0
         # results['HeatShadowPrice'][results['HeatShadowPrice'] >= 1e300] = 0
         results['SectorXShadowPrice'][results['SectorXShadowPrice'] >= 1e300] = 0
 

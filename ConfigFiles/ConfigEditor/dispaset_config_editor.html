@@ -990,11 +990,11 @@
                 <div class="row">
                     <div class="col">
                          <div class="form-group">
-                            <label for="primaryReserveLimit">Primary Reserve (FCR)<span class="tooltiptext">Primary reserve requirement (e.g., FCR). Can be a file path (time series per zone) or a single value if default is used.</span></label>
-                            <input type="text" id="primaryReserveLimit" placeholder="e.g., FCR_req.csv">
+                            <label for="fcrdemand">Frequency Containment Reserve Demand (FCR)<span class="tooltiptext">Frequency containment reserve requirement (e.g., FCR). Can be a file path (time series per zone) or a single value if default is used.</span></label>
+                            <input type="text" id="fcrdemand" placeholder="e.g., FCR_req.csv">
                             <div class="default-value" data-default="">
                                 <span>Default:</span>
-                                <input type="text" class="default-value-input" value="" data-param="PrimaryReserveLimit">
+                                <input type="text" class="default-value-input" value="" data-param="FCRDemand">
                             </div>
                         </div>
                     </div>
@@ -1009,45 +1009,24 @@
                         </div>
                     </div>
                  </div>
-                <h3>Fast Frequency Response (FFR)</h3>
+                <h3><h3>System Frequency Stability</h3></h3>
                  <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="ffrLimit">FFR Limit<span class="tooltiptext">Limit for Fast Frequency Response (aFFR). Can be a file path or a single value if default is used.</span></label>
-                            <input type="text" id="ffrLimit" placeholder="e.g., FFR_limit.csv">
+                            <label for="ffrDemand">Fast Frequency Reserve Demand (FFR) <span class="tooltiptext">Fast Frequency Reserve requirement (FFR). Can be a file path or a single value if default is used.</span></label>
+                            <input type="text" id="ffrDemand" placeholder="e.g., FFR_req.csv">
                              <div class="default-value" data-default="">
                                 <span>Default:</span>
-                                <input type="text" class="default-value-input" value="" data-param="FFRLimit">
+                                <input type="text" class="default-value-input" value="" data-param="FFRDemand">
                             </div>
                         </div>
-                    </div>
-                     <div class="col">
-                        <div class="form-group">
-                            <label for="ffrGainLimit">FFR Gain Limit<span class="tooltiptext">Maximum gain for Fast Frequency Response (aFFR). Can be a file path or a single value if default is used.</span></label>
-                            <input type="text" id="ffrGainLimit" placeholder="e.g., FFR_gain.csv">
-                             <div class="default-value" data-default="">
-                                <span>Default:</span>
-                                <input type="text" class="default-value-input" value="" data-param="FFRGainLimit">
-                            </div>
-                        </div>
-                    </div>
+                    </div>   
                  </div>
-                 <h3>System Stability</h3>
                  <div class="row">
                     <div class="col">
                         <div class="form-group">
                             <label for="frequencyStability">Frequency Stability<span class="tooltiptext">Method or parameters for frequency stability constraints (currently placeholder).</span></label>
                             <input type="text" id="frequencyStability">
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="form-group">
-                            <label for="systemGainLimit">System Gain Limit<span class="tooltiptext">Limit on system gain (related to frequency control/reserves). Can be a file path or a single value if default is used.</span></label>
-                            <input type="text" id="systemGainLimit">
-                            <div class="default-value" data-default="">
-                                <span>Default:</span>
-                                <input type="text" class="default-value-input" value="" data-param="SystemGainLimit">
-                            </div>
                         </div>
                     </div>
                  </div>
@@ -1247,12 +1226,11 @@
             // Parameters with CO2
             'priceofco2': 'PriceOfCO2',
             // FFR related
-            'ffrlimit': 'FFRLimit',
-            'ffrgainlimit': 'FFRGainLimit',
+            'ffrdemand': 'FFRDemand',
             // Reserve parameters
             'reserve2u': 'Reserve2U',  // aFRR Up
             'reserve2d': 'Reserve2D',  // aFRR Down
-            'primaryreservelimit': 'PrimaryReserveLimit',  // FCR
+            'fcrdemand': 'FCRDemand',  // FCR
             // Boundary Sector
             'costxnotserved': 'CostXNotServed',
             'boundarysectordata': 'BoundarySectorData',
@@ -1280,7 +1258,6 @@
             // Geographical data
             'geodata': 'GeoData',
             // Other acronyms in IDs
-            'systemgainlimit': 'SystemGainLimit',
             'systeminertiademand': 'SystemInertiaDemand',
             'frequencystability': 'FrequencyStability',
             'initialfinalreservoirlevel': 'InitialFinalReservoirLevel',
@@ -1962,11 +1939,11 @@
             
             // Ensure required fields have at least empty values
             const requiredFields = [
-                'GAMS_folder', 'FFRGainLimit', 'FFRLimit', 
+                'GAMS_folder', 'FFRDemand', 
                 'FrequencyStability', 'GridData', 'SystemInertiaDemand', 'LoadShedding', 'PriceOfAmmonia',
                 'PriceOfCO2', 'PriceOfLignite', 'PriceOfNuclear', 'PriceTransmission', 
-                'PrimaryReserveLimit', 'Reserve2D', 'Reserve2U', 'StorageAlertLevels', 
-                'StorageFloodControl', 'SystemGainLimit', 'TransmissionGridType'
+                'FCRDemand', 'Reserve2D', 'Reserve2U', 'StorageAlertLevels', 
+                'StorageFloodControl', 'TransmissionGridType'
             ];
             
             requiredFields.forEach(field => {

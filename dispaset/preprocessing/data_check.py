@@ -578,35 +578,35 @@ def check_reserves(Reserve2D, Reserve2U, Load):
             logging.warning('No 2D reserve requirement data has been found for zone ' + z +
                             '. Using the standard formula')
 
-def check_FFRLimit(FFRLimit, Load):
+def check_FFRDemand(FFRDemand, Load):
     """
     Function that checks the validity of the reserve requirement time series
-    :param FFR:   DataFrame of FFR Limit
+    :param FFR:   DataFrame of FFR Demand
     :param Load:        DataFrame of Loads
     """
-    if (FFRLimit.sum(axis=1) < 0).any():
-        logging.critical('The FFR Limit table contains negative values')
+    if (FFRDemand.sum(axis=1) < 0).any():
+        logging.critical('The FFR Demand table contains negative values')
         sys.exit(1)
-    if (Load.sum(axis=1) - FFRLimit.sum(axis=1) < 0).any():
-        logging.critical('The FFR Limit table contains values higher than demand')
+    if (Load.sum(axis=1) - FFRDemand.sum(axis=1) < 0).any():
+        logging.critical('The FFR Demand table contains values higher than demand')
         sys.exit(1)
     else:
-        logging.warning('No FFR Limit requirement data has been found')
+        logging.warning('No FFR Demand requirement data has been found')
         
-def check_PrimaryReserveLimit(PrimaryReserveLimit, Load):
+def check_FCRDemand(FCRDemand, Load):
     """
     Function that checks the validity of the reserve requirement time series
-    :param PrimaryReserve:   DataFrame of Primary Reserve Limit
+    :param FCR:   DataFrame of FCR Demand
     :param Load:        DataFrame of Loads
     """
-    if (PrimaryReserveLimit.sum(axis=1) < 0).any():
-        logging.critical('The Primary Reserve Limit table contains negative values')
+    if (FCRDemand.sum(axis=1) < 0).any():
+        logging.critical('The FCR Demand table contains negative values')
         sys.exit(1)
-    if (Load.sum(axis=1) - PrimaryReserveLimit.sum(axis=1) < 0).any():
-        logging.critical('The Primary Reserve Limit table contains values higher than demand')
+    if (Load.sum(axis=1) - FCRDemand.sum(axis=1) < 0).any():
+        logging.critical('The FCR Demand table contains values higher than demand')
         sys.exit(1)
     else:
-        logging.warning('No Primary Reserve Limit requirement data has been found')
+        logging.warning('No FCR Demand requirement data has been found')
 
 
 def check_df(df, StartDate=None, StopDate=None, name=''):

@@ -11,7 +11,7 @@ import pandas as pd
 from .data_check import check_units, check_sto, check_AvailabilityFactors, \
     check_clustering, isStorage, check_chp, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves, check_p2bs, check_boundary_sector, \
-    check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_FFRLimit, check_PrimaryReserveLimit, check_CostXNotServed,\
+    check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_FFRDemand, check_FCRDemand, check_CostXNotServed,\
     check_grid_data
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
@@ -175,18 +175,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     Reserve2U = NodeBasedTable('Reserve2U', config, default=None)
 
     # FFR Required:
-    if 'FFRLimit' in config and os.path.isfile(config['FFRLimit']):
-        FFRLimit = load_time_series(config, config['FFRLimit']).fillna(0)
+    if 'FFRDemand' in config and os.path.isfile(config['FFRDemand']):
+        FFRDemand = load_time_series(config, config['FFRDemand']).fillna(0)
     else:
         logging.warning('No FFR requirement will be considered (no valid file provided)')
-        FFRLimit = pd.DataFrame(index=config['idx_long'], data={'FFRLimit': 0})
+        FFRDemand = pd.DataFrame(index=config['idx_long'], data={'FFRDemand': 0})
 
     # Primary Reserve Required:
-    if 'PrimaryReserveLimit' in config and os.path.isfile(config['PrimaryReserveLimit']):
-        PrimaryReserveLimit = load_time_series(config, config['PrimaryReserveLimit']).fillna(0)
+    if 'FCRDemand' in config and os.path.isfile(config['FCRDemand']):
+        FCRDemand = load_time_series(config, config['FCRDemand']).fillna(0)
     else:
-        logging.warning('No Primary Reserve requirement will be considered (no valid file provided)')
-        PrimaryReserveLimit = pd.DataFrame(index=config['idx_long'], data={'PrimaryReserveLimit': 0})
+        logging.warning('No FCR requirement will be considered (no valid file provided)')
+        FCRDemand = pd.DataFrame(index=config['idx_long'], data={'FCRDemand': 0})
 
     # Curtailment:
     CostCurtailment = NodeBasedTable('CostCurtailment', config, default=config['default']['CostCurtailment'])
@@ -488,8 +488,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     check_AvailabilityFactors(plants, AF)
     check_FlexibleDemand(ShareOfFlexibleDemand)
     check_reserves(Reserve2D, Reserve2U, Load)
-    check_FFRLimit(FFRLimit, Load)
-    check_PrimaryReserveLimit(PrimaryReserveLimit, Load)
+    check_FFRDemand(FFRDemand, Load)
+    check_FCRDemand(FCRDemand, Load)
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2',
@@ -721,8 +721,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Calculate the percentage that each zone represents of the total load in each hour
     Load_shares = Load.div(Load.sum(axis=1), axis=0)    
     # Distribute the total FFR value proportionally based on each zone's percentage share.
-    FFRLimit_allocated = Load_shares.mul(FFRLimit.iloc[:, 0], axis=0)
-    PrimaryReserveLimit_allocated = Load_shares.mul(PrimaryReserveLimit.iloc[:, 0], axis=0)
+    FFRDemand_allocated = Load_shares.mul(FFRDemand.iloc[:, 0], axis=0)
+    FCRDemand_allocated = Load_shares.mul(FCRDemand.iloc[:, 0], axis=0)
 
     # %% Store all times series and format
 
@@ -742,8 +742,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel,
                'SectorXFloodControl': SectorXFloodControl,
                'CostOfSpillage': CostOfSpillage, 'CostXSpillage': CostXSpillage,
-               'SystemInertiaDemand': SystemInertiaDemand, 'FFRU': FFRLimit_allocated, 'FFRD': FFRLimit_allocated, 
-               'PFRU': PrimaryReserveLimit_allocated, 'PFRD': PrimaryReserveLimit_allocated}
+               'SystemInertiaDemand': SystemInertiaDemand, 'FFRU': FFRDemand_allocated, 'FFRD': FFRDemand_allocated, 
+               'FCRU': FCRDemand_allocated, 'FCRD': FCRDemand_allocated}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
@@ -825,8 +825,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                  Plants_merged['Technology']]].index.tolist()
     sets['cu'] = Plants_conventional.index.tolist()
     sets['ba'] = Plants_batteries.index.tolist()
-    sets['res_U'] = ['FFRU', 'PFRU', '2U', '3U']
-    sets['res_D'] = ['FFRD', 'PFRD', '2D']
+    sets['res_U'] = ['FFRU', 'FCRU', '2U', '3U']
+    sets['res_D'] = ['FFRD', 'FCRD', '2D']
     sets['res'] = sets['res_U'] + sets['res_D']
     
     ###################################################################################################################
@@ -927,8 +927,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['InertiaConstant'] = ['au']
     sets_param['SystemInertiaDemand'] = ['h']
     sets_param['Droop'] = ['au']
-    sets_param['PrimaryReserveLimit'] = ['h']
-    sets_param['FFRLimit'] = ['h']
     sets_param['PTDF'] = ['l_int', 'n']
 
     # Define all the parameters and set a default value of zero:
@@ -1167,11 +1165,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     values = np.ndarray([len(sets['res']), len(sets['n']), len(sets['h'])])
     for i in range(len(sets['n'])):
         values[0, i, :] = finalTS['FFRU'][sets['n'][i]]
-        values[1, i, :] = finalTS['PFRU'][sets['n'][i]]
+        values[1, i, :] = finalTS['FCRU'][sets['n'][i]]
         values[2, i, :] = finalTS['Reserve2U'][sets['n'][i]]
         values[3, i, :] = finalTS['Reserve3U'][sets['n'][i]]
         values[4, i, :] = finalTS['FFRD'][sets['n'][i]]
-        values[5, i, :] = finalTS['PFRD'][sets['n'][i]]
+        values[5, i, :] = finalTS['FCRD'][sets['n'][i]]
         values[6, i, :] = finalTS['Reserve2D'][sets['n'][i]]
     parameters['ReserveDemand'] = {'sets': sets_param['ReserveDemand'], 'val': values}
 
@@ -1278,16 +1276,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # %%###############################################################################################################
     # SystemInertiaDemand to parameters dict
-    # parameters['SystemInertiaDemand']['val'] = SystemInertiaDemand['SystemInertiaDemand'].values
-    # if MTS == 0:
     if len(finalTS['SystemInertiaDemand'].columns) != 0:
         parameters['SystemInertiaDemand']['val'] = finalTS['SystemInertiaDemand'].iloc[:, 0].values
-    # # FFR to parameters dict
-    # if len(finalTS['FFRLimit'].columns) != 0:
-    #     parameters['FFRLimit']['val'] = finalTS['FFRLimit'].iloc[:, 0].values
-    # # Primary Reserve to parameters dict
-    # if len(finalTS['PrimaryReserveLimit'].columns) != 0:
-    #     parameters['PrimaryReserveLimit']['val'] = finalTS['PrimaryReserveLimit'].iloc[:, 0].values
 
     # Maximum Line Capacity
     for i, l in enumerate(sets['l_int']):
@@ -1392,24 +1382,24 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
             eligible = False
             if r in sets['res_U']:
-                if tech in commons['tech_batteries'] and r in sets['res_U'][:]:     # FFRU, PFRU
+                if tech in commons['tech_batteries'] and r in sets['res_U'][:]:     # FFRU, FCRU
                     eligible = True
-                elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # PFRU, 2U, 3U
+                elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # FCRU, 2U, 3U
                     eligible = True
                 elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:   # 2U, 3U
                     eligible = True
     
             elif r in sets['res_D']:
-                if tech in commons['tech_batteries'] and r in sets['res_D'][:]:     # FFRD, PFRD
+                if tech in commons['tech_batteries'] and r in sets['res_D'][:]:     # FFRD, FCRD
                     eligible = True
-                elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # PFRD, 2D
+                elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # FCRD, 2D
                     eligible = True
                 elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:   # 2D
                     eligible = True
     
             # If eligible, calculate reserve participation based on physical limits (Droop, RampUpRate, RampDownRate)
             if eligible:
-                if r in ['PFRU', 'PFRD', 'FFRU', 'FFRD'] and droop > 0:
+                if r in ['FCRU', 'FCRD', 'FFRU', 'FFRD'] and droop > 0:
                     factor1 = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
                     values[j, i, :] = factor1
                 elif r in ['2U'] and rampuprate * constants['FullActivationTime2'] >= partloadmin: #It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.
