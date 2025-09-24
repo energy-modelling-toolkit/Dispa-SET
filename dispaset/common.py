@@ -52,7 +52,7 @@ commons['tech_boundary_sector'] = ['BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP', 'HOBO
 # List of CHP types:
 commons['types_CHP'] = ['extraction', 'back-pressure', 'p2h']
 # List of Reserve types:
-commons['types_Reserves'] = ['PFR', 'FFR', '2U', '2D', 'RR']
+commons['types_Reserves'] = ['PFR', 'FFR', 'aFRRU', 'aFRRD', 'mFRRU', 'RR']
 # DispaSET fuels:
 commons['Fuels'] = ['AIR', 'AMO', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH',
                     'GEO', 'HYD', 'WHT', 'ELE', 'THE']

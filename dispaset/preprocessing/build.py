@@ -171,8 +171,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                            default=config['default']['ShareOfFlexibleDemand'])
     
     # Secondary Reserves Required
-    Reserve2D = NodeBasedTable('Reserve2D', config, default=None)
-    Reserve2U = NodeBasedTable('Reserve2U', config, default=None)
+    aFRRDDemand = NodeBasedTable('aFRRDDemand', config, default=None)
+    aFRRUDemand = NodeBasedTable('aFRRUDemand', config, default=None)
 
     # FFR Required:
     if 'FFRDemand' in config and os.path.isfile(config['FFRDemand']):
@@ -487,7 +487,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # data checks:
     check_AvailabilityFactors(plants, AF)
     check_FlexibleDemand(ShareOfFlexibleDemand)
-    check_reserves(Reserve2D, Reserve2U, Load)
+    check_reserves(aFRRDDemand, aFRRUDemand, Load)
     check_FFRDemand(FFRDemand, Load)
     check_FCRDemand(FCRDemand, Load)
 
@@ -691,30 +691,30 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     BoundarySectorEfficiencies = BoundarySectorEfficiencyTimeSeries(config, Plants_merged, zones_bs)
 
     # Reserve calculation
-    reserve_2U_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
-    reserve_2D_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
+    aFRRUDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
+    aFRRDDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     for z in Load.columns:
         if config['ReserveCalculation'] == 'Exogenous':
-            if z in Reserve2U and z in Reserve2D:
-                reserve_2U_tot[z] = Reserve2U[z]
-                reserve_2D_tot[z] = Reserve2D[z]
+            if z in aFRRUDemand and z in aFRRDDemand:
+                aFRRUDemand_tot[z] = aFRRUDemand[z]
+                aFRRDDemand_tot[z] = aFRRDDemand[z]
             else:
-                logging.critical('Exogenous reserve requirements (2D and 2U) not found for zone ' + z)
+                logging.critical('Exogenous reserve requirements (aFRRD and aFRRU) not found for zone ' + z)
                 sys.exit(1)
         else:
-            if z in Reserve2U and z in Reserve2D:
+            if z in aFRRUDemand and z in aFRRDDemand:
                 logging.info('Using exogenous reserve data for zone ' + z)
-                reserve_2U_tot[z] = Reserve2U[z]
-                reserve_2D_tot[z] = Reserve2D[z]
+                aFRRUDemand_tot[z] = aFRRUDemand[z]
+                aFRRDDemand_tot[z] = aFRRDDemand[z]
             elif config['ReserveCalculation'] == 'Percentage':
                 logging.info('Using percentage-based reserve sizing for zone ' + z)
-                reserve_2U_tot[z], reserve_2D_tot[z] = percentage_reserve(config, plants, Load, AF, z)
+                aFRRUDemand_tot[z], aFRRDDemand_tot[z] = percentage_reserve(config, plants, Load, AF, z)
             elif config['ReserveCalculation'] == 'Probabilistic':
                 logging.info('Using probabilistic reserve sizing for zone ' + z)
-                reserve_2U_tot[z], reserve_2D_tot[z] = probabilistic_reserve(config, plants, Load, AF, z)
+                aFRRUDemand_tot[z], aFRRDDemand_tot[z] = probabilistic_reserve(config, plants, Load, AF, z)
             else:
                 logging.info('Using generic reserve calculation for zone ' + z)
-                reserve_2U_tot[z], reserve_2D_tot[z] = generic_reserve(Load[z])
+                aFRRUDemand_tot[z], aFRRDDemand_tot[z] = generic_reserve(Load[z])
     
                 
     # New Reserves calculation
@@ -727,7 +727,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # %% Store all times series and format
 
     # Formatting all time series (merging, resempling) and store in the FinalTS dict
-    finalTS = {'Load': Load, 'Reserve2D': reserve_2D_tot, 'Reserve2U': reserve_2U_tot, 'Reserve3U': reserve_2U_tot,
+    finalTS = {'Load': Load, 'aFRRD': aFRRDDemand_tot, 'aFRRU': aFRRUDemand_tot, 'mFRRU': aFRRUDemand_tot,
                'Efficiencies': Efficiencies,
                'NTCs': NTCs, 'Inter_RoW': Inter_RoW,'PriceTransmission': PriceTransmission,
                'BS_NTCs': BS_NTCs, 'BS_Inter_RoW': BS_Inter_RoW,
@@ -791,7 +791,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets = {}
     sets['h'] = [str(x + 1) for x in range(Nsim)]
     sets['z'] = [str(x + 1) for x in range(int(Nsim - config['LookAhead'] * 24 / config['SimulationTimeStep']))]
-    sets['mk'] = ['DA', '2U', '2D', 'Flex']
+    sets['mk'] = ['DA', 'aFRRU', 'aFRRD', 'Flex']
     sets['n'] = config['zones']
     sets['nx'] = zones_bs
     sets['nx_CC'] = pd.Series(zones_bs)[pd.Series(zones_bs) != 'S_EC'].tolist()
@@ -825,8 +825,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                  Plants_merged['Technology']]].index.tolist()
     sets['cu'] = Plants_conventional.index.tolist()
     sets['ba'] = Plants_batteries.index.tolist()
-    sets['res_U'] = ['FFRU', 'FCRU', '2U', '3U']
-    sets['res_D'] = ['FFRD', 'FCRD', '2D']
+    sets['res_U'] = ['FFRU', 'FCRU', 'aFRRU', 'mFRRU']
+    sets['res_D'] = ['FFRD', 'FCRD', 'aFRRD']
     sets['res'] = sets['res_U'] + sets['res_D']
     
     ###################################################################################################################
@@ -1156,8 +1156,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])
     for i in range(len(sets['n'])):
         values[0, i, :] = finalTS['Load'][sets['n'][i]] * (1 - finalTS['ShareOfFlexibleDemand'][sets['n'][i]])
-        values[1, i, :] = finalTS['Reserve2U'][sets['n'][i]]
-        values[2, i, :] = finalTS['Reserve2D'][sets['n'][i]]
+        values[1, i, :] = finalTS['aFRRU'][sets['n'][i]]
+        values[2, i, :] = finalTS['aFRRD'][sets['n'][i]]
         values[3, i, :] = finalTS['Load'][sets['n'][i]] * finalTS['ShareOfFlexibleDemand'][sets['n'][i]]
     parameters['Demand'] = {'sets': sets_param['Demand'], 'val': values}
 
@@ -1166,11 +1166,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     for i in range(len(sets['n'])):
         values[0, i, :] = finalTS['FFRU'][sets['n'][i]]
         values[1, i, :] = finalTS['FCRU'][sets['n'][i]]
-        values[2, i, :] = finalTS['Reserve2U'][sets['n'][i]]
-        values[3, i, :] = finalTS['Reserve3U'][sets['n'][i]]
+        values[2, i, :] = finalTS['aFRRU'][sets['n'][i]]
+        values[3, i, :] = finalTS['mFRRU'][sets['n'][i]]
         values[4, i, :] = finalTS['FFRD'][sets['n'][i]]
         values[5, i, :] = finalTS['FCRD'][sets['n'][i]]
-        values[6, i, :] = finalTS['Reserve2D'][sets['n'][i]]
+        values[6, i, :] = finalTS['aFRRD'][sets['n'][i]]
     parameters['ReserveDemand'] = {'sets': sets_param['ReserveDemand'], 'val': values}
 
     # Emission Rate:
@@ -1384,17 +1384,17 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             if r in sets['res_U']:
                 if tech in commons['tech_batteries'] and r in sets['res_U'][:]:     # FFRU, FCRU
                     eligible = True
-                elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # FCRU, 2U, 3U
+                elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # FCRU, aFRRU, mFRRU
                     eligible = True
-                elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:   # 2U, 3U
+                elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:   # aFRRU, mFRRU
                     eligible = True
     
             elif r in sets['res_D']:
                 if tech in commons['tech_batteries'] and r in sets['res_D'][:]:     # FFRD, FCRD
                     eligible = True
-                elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # FCRD, 2D
+                elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # FCRD, aFRRD
                     eligible = True
-                elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:   # 2D
+                elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:   # aFRRD
                     eligible = True
     
             # If eligible, calculate reserve participation based on physical limits (Droop, RampUpRate, RampDownRate)
@@ -1402,13 +1402,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 if r in ['FCRU', 'FCRD', 'FFRU', 'FFRD'] and droop > 0:
                     factor1 = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
                     values[j, i, :] = factor1
-                elif r in ['2U'] and rampuprate * constants['FullActivationTime2'] >= partloadmin: #It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.
+                elif r in ['aFRRU'] and rampuprate * constants['FullActivationTime2'] >= partloadmin: #It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.
                     factor2 = rampuprate * constants['FullActivationTime2']
                     values[j, i, :] = factor2
-                elif r in ['2D'] and rampdownrate * constants['FullActivationTime2'] >= partloadmin:#It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.
+                elif r in ['aFRRD'] and rampdownrate * constants['FullActivationTime2'] >= partloadmin:#It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.
                     factor3 = rampdownrate * constants['FullActivationTime2']
                     values[j, i, :] = factor3  
-                elif r in ['3U'] and rampuprate * constants['FullActivationTime3'] >= partloadmin:#It is the minimum ramp-up rate required to reach the PartLoadMin in 7 minutes.
+                elif r in ['mFRRU'] and rampuprate * constants['FullActivationTime3'] >= partloadmin:#It is the minimum ramp-up rate required to reach the PartLoadMin in 7 minutes.
                     factor4 = rampuprate * constants['FullActivationTime3']
                     values[j, i, :] = factor4
                 else:

@@ -549,33 +549,33 @@ def check_heat_demand(plants, data, zones_th):
     return True
 
 
-def check_reserves(Reserve2D, Reserve2U, Load):
+def check_reserves(aFRRDDemand, aFRRUDemand, Load):
     """
     Function that checks the validity of the reserve requirement time series
-    :param Reserve2D:   DataFrame of reserves 2D
-    :param Reserve2U:   DataFrame of reserves 2U
+    :param aFRRDDemand:   DataFrame of reserves aFRRD
+    :param aFRRUDemand:   DataFrame of reserves aFRRU
     :param Load:        DataFrame of Loads
     """
     for z in Load.columns:
-        if z in Reserve2U:
-            if (Reserve2U[z] < 0).any():
-                logging.critical('The reserve 2U table contains negative values for zone ' + z)
+        if z in aFRRUDemand:
+            if (aFRRUDemand[z] < 0).any():
+                logging.critical('The reserve aFRRU table contains negative values for zone ' + z)
                 sys.exit(1)
-            if (Load[z] - Reserve2U[z] < 0).any():
-                logging.critical('The reserve 2U table contains negative values higher than demand for zone ' + z)
+            if (Load[z] - aFRRUDemand[z] < 0).any():
+                logging.critical('The reserve aFRRU table contains negative values higher than demand for zone ' + z)
                 sys.exit(1)
         else:
-            logging.warning('No 2U reserve requirement data has been found for zone ' + z +
+            logging.warning('No aFRRU reserve requirement data has been found for zone ' + z +
                             '. Using the standard formula')
-        if z in Reserve2D:
-            if (Reserve2D[z] < 0).any():
-                logging.critical('The reserve 2D table contains negative values for zone ' + z)
+        if z in aFRRDDemand:
+            if (aFRRDDemand[z] < 0).any():
+                logging.critical('The reserve aFRRD table contains negative values for zone ' + z)
                 sys.exit(1)
-            if (Load[z] - Reserve2D[z] < 0).any():
-                logging.critical('The reserve 2D table contains values higher than demand for zone ' + z)
+            if (Load[z] - aFRRDDemand[z] < 0).any():
+                logging.critical('The reserve aFRRD table contains values higher than demand for zone ' + z)
                 sys.exit(1)
         else:
-            logging.warning('No 2D reserve requirement data has been found for zone ' + z +
+            logging.warning('No aFRRD reserve requirement data has been found for zone ' + z +
                             '. Using the standard formula')
 
 def check_FFRDemand(FFRDemand, Load):

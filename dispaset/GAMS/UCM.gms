@@ -374,12 +374,12 @@ $LOAD ReserveDemand
 Parameter
 
     ReserveDuration(res)
-/  FFRU  0.0167, FCRU  0.25, 2U  0.5, 3U  1.0,
-   FFRD  0.0167, FCRD  0.25, 2D  0.5 /
+/  FFRU  0.0167, FCRU  0.25, aFRRU  0.5, mFRRU  1.0,
+   FFRD  0.0167, FCRD  0.25, aFRRD  0.5 /
    
     FullActivationTime(res)
-/  FFRU  0.000278, FCRU  0.004167, 2U  0.04167, 3U  0.125,
-   FFRD  0.000278, FCRD  0.004167, 2D  0.04167 /
+/  FFRU  0.000278, FCRU  0.004167, aFRRU  0.04167, mFRRU  0.125,
+   FFRD  0.000278, FCRD  0.004167, aFRRD  0.04167 /
    
 ;
 *===============================================================================
@@ -889,6 +889,7 @@ EQ_DownwardReserves_balance(res_D,n,i)..
          ReserveDemand(res_D,n,i)
 ;
 
+*OLD RESERVE FORMULATIONS
 **Hourly demand balance in the upwards spinning reserve market for each node
 *EQ_Demand_balance_2U(res_U,n,i)..
 *         sum((u),ReserveProvision(res_U,u,i)*ReserveParticipation('2U',u,i)*Location(u,n))
@@ -1610,11 +1611,11 @@ OptimizationError.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = Error.L - OptimalityG
 PARAMETER
 OutputDemand_FFRU(n,h)
 OutputDemand_FCRU(n,h)
-OutputDemand_2U(n,h)
-OutputDemand_3U(n,h)
+OutputDemand_aFRRU(n,h)
+OutputDemand_mFRRU(n,h)
 OutputDemand_FFRD(n,h)
 OutputDemand_FCRD(n,h)
-OutputDemand_2D(n,h)
+OutputDemand_aFRRD(n,h)
 OutputMaxOutageUp(n,h)
 OutputMaxOutageDown(n,h)
 OutputCommitted(au,h)
@@ -1643,8 +1644,8 @@ OutputSpillage(au,h)
 OutputShedLoad(n,h)
 OutputCurtailedPower(n,h)
 OutputCurtailmentReserve(res_U,n,h)
-OutputCurtailmentReserve_2U(n,h)
-OutputCurtailmentReserve_3U(n,h)
+OutputCurtailmentReserve_aFRRU(n,h)
+OutputCurtailmentReserve_mFRRU(n,h)
 OutputCurtailmentPerUnit(u,h)
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation(n,h)
 $If %ActivateFlexibleDemand% == 1 OutputAccumulatedOverSupply(n,h)
@@ -1654,9 +1655,9 @@ Demand_Balance_DA(n,h)
 SectorXShadowPrice(nx,h)
 LostLoad_MaxPower(n,h)
 LostLoad_MinPower(n,h)
-LostLoad_2D(n,h)
-LostLoad_2U(n,h)
-LostLoad_3U(n,h)
+LostLoad_aFRRD(n,h)
+LostLoad_aFRRU(n,h)
+LostLoad_mFRRU(n,h)
 LostLoad_SystemInertia(h)
 LostLoad_StorageAlert(au,h)
 LostLoad_FloodControl(au,h)
@@ -1682,14 +1683,14 @@ $If not %LPFormulation% == 1 OutputCostRampUpH(au,h)
 $If not %LPFormulation% == 1 OutputCostRampDownH(au,h)
 ShadowPrice_FFRU(n,h)
 ShadowPrice_FCRU(n,h)
-ShadowPrice_2U(n,h)
-ShadowPrice_3U(n,h)
+ShadowPrice_aFRRU(n,h)
+ShadowPrice_mFRRU(n,h)
 ShadowPrice_FFRD(n,h)
 ShadowPrice_FCRD(n,h)
-ShadowPrice_2D(n,h)
-OutputReserve_2U(au,h)
-OutputReserve_2D(au,h)
-OutputReserve_3U(au,h)
+ShadowPrice_aFRRD(n,h)
+OutputReserve_aFRRU(au,h)
+OutputReserve_aFRRD(au,h)
+OutputReserve_mFRRU(au,h)
 ShadowPrice_RampUp_TC(au,h)
 ShadowPrice_RampDown_TC(au,h)
 OutputRampRate(au,h)
@@ -1704,11 +1705,11 @@ OutputOptimizationCheck(h)
 UnitHourlyPowerRevenue(au,h)
 UnitHourlyFFRURevenue(au,h)
 UnitHourlyFCRURevenue(au,h)
-UnitHourly2URevenue(au,h)
-UnitHourly3URevenue(au,h)
+UnitHourlyaFRRURevenue(au,h)
+UnitHourlymFRRURevenue(au,h)
 UnitHourlyFFRDRevenue(au,h)
 UnitHourlyFCRDRevenue(au,h)
-UnitHourly2DRevenue(au,h)
+UnitHourlyaFRRDRevenue(au,h)
 UnitHourlyHeatRevenue(au,h)
 UnitHourlyRevenue(au,h)
 UnitHourlyFixedCost(au,h)
@@ -1744,25 +1745,20 @@ $If %MTS% == 0 OutputPowerLoss(h)
 *OutputTotalDemand_2U(h)
 *OutputLoadRamp(n,h)
 ;
-
-$If %ActivateAdvancedReserves% == 2 OutputMaxOutageUp(n,z)=max(smax((au,tc),PowerCapacity(au)/Nunits(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n)), smax(l,FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
-$If %ActivateAdvancedReserves% == 2 OutputMaxOutageDown(n,z)=max(smax(s,StorageChargingCapacity(s)/Nunits(s)*Location(s,n)), smax(l,-FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
-$If %ActivateAdvancedReserves% == 2 OutputDemand_2U(n,z)=(Demand("2U",n,z) + OutputMaxOutageUp(n,z))*(1-K_QuickStart(n));
-$If %ActivateAdvancedReserves% == 2 OutputDemand_3U(n,z)=Demand("2U",n,z) + OutputMaxOutageUp(n,z);
-$If %ActivateAdvancedReserves% == 2 OutputDemand_2D(n,z)=Demand("2D",n,z) + OutputMaxOutageDown(n,z);
-$If %ActivateAdvancedReserves% == 1 OutputMaxOutageUp(n,z)=smax((au,tc),PowerCapacity(au)/Nunits(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n));
-$If %ActivateAdvancedReserves% == 1 OutputMaxOutageDown(n,z)=smax(s,StorageChargingCapacity(s)/Nunits(s)*Location(s,n));
-$If %ActivateAdvancedReserves% == 1 OutputDemand_2U(n,z)=(Demand("2U",n,z) + OutputMaxOutageUp(n,z))*(1-K_QuickStart(n));
-$If %ActivateAdvancedReserves% == 1 OutputDemand_3U(n,z)=Demand("2U",n,z) + OutputMaxOutageUp(n,z);
-$If %ActivateAdvancedReserves% == 1 OutputDemand_2D(n,z)=Demand("2D",n,z) + OutputMaxOutageDown(n,z);
-
-*New
-$If %ActivateAdvancedReserves% == 0 OutputDemand_2U(n,z)=Demand("2U",n,z);
-
-*New
-$If %ActivateAdvancedReserves% == 0 OutputDemand_3U(n,z)=Demand("2U",n,z);
-
-$If %ActivateAdvancedReserves% == 0 OutputDemand_2D(n,z)=Demand("2D",n,z);
+**OLD RESERVE FORMULATIONS
+*$If %ActivateAdvancedReserves% == 2 OutputMaxOutageUp(n,z)=max(smax((au,tc),PowerCapacity(au)/Nunits(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n)), smax(l,FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
+*$If %ActivateAdvancedReserves% == 2 OutputMaxOutageDown(n,z)=max(smax(s,StorageChargingCapacity(s)/Nunits(s)*Location(s,n)), smax(l,-FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
+*$If %ActivateAdvancedReserves% == 2 OutputDemand_2U(n,z)=(Demand("2U",n,z) + OutputMaxOutageUp(n,z))*(1-K_QuickStart(n));
+*$If %ActivateAdvancedReserves% == 2 OutputDemand_3U(n,z)=Demand("2U",n,z) + OutputMaxOutageUp(n,z);
+*$If %ActivateAdvancedReserves% == 2 OutputDemand_2D(n,z)=Demand("2D",n,z) + OutputMaxOutageDown(n,z);
+*$If %ActivateAdvancedReserves% == 1 OutputMaxOutageUp(n,z)=smax((au,tc),PowerCapacity(au)/Nunits(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n));
+*$If %ActivateAdvancedReserves% == 1 OutputMaxOutageDown(n,z)=smax(s,StorageChargingCapacity(s)/Nunits(s)*Location(s,n));
+*$If %ActivateAdvancedReserves% == 1 OutputDemand_2U(n,z)=(Demand("2U",n,z) + OutputMaxOutageUp(n,z))*(1-K_QuickStart(n));
+*$If %ActivateAdvancedReserves% == 1 OutputDemand_3U(n,z)=Demand("2U",n,z) + OutputMaxOutageUp(n,z);
+*$If %ActivateAdvancedReserves% == 1 OutputDemand_2D(n,z)=Demand("2D",n,z) + OutputMaxOutageDown(n,z);
+*$If %ActivateAdvancedReserves% == 0 OutputDemand_2U(n,z)=Demand("2U",n,z);
+*$If %ActivateAdvancedReserves% == 0 OutputDemand_3U(n,z)=Demand("2U",n,z);
+*$If %ActivateAdvancedReserves% == 0 OutputDemand_2D(n,z)=Demand("2D",n,z);
 
 
 OutputCommitted(au,z)=Committed.L(au,z);
@@ -1795,8 +1791,8 @@ OutputShedLoad(n,z) = ShedLoad.L(n,z);
 OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
 *new
 OutputCurtailmentReserve(res_U,n,z) = sum(u,(ReserveProvision.L(res_U,u,z))$(sum(tr,Technology(u,tr))>=1)* Location(u,n));
-OutputCurtailmentReserve_2U(n,z)=OutputCurtailmentReserve('2U',n,z);
-OutputCurtailmentReserve_3U(n,z)=OutputCurtailmentReserve('3U',n,z);
+OutputCurtailmentReserve_aFRRU(n,z)=OutputCurtailmentReserve('aFRRU',n,z);
+OutputCurtailmentReserve_mFRRU(n,z)=OutputCurtailmentReserve('mFRRU',n,z);
 OutputCurtailmentReserve_FFRU(n,z)=OutputCurtailmentReserve('FFRU',n,z);
 OutputCurtailmentReserve_FCRU(n,z)=OutputCurtailmentReserve('FCRU',n,z);
 
@@ -1807,9 +1803,9 @@ $If %ActivateFlexibleDemand% == 1 ShadowPriceDemandModulation(n,z)=EQ_Flexible_D
 LostLoad_MaxPower(n,z)  = LL_MaxPower.L(n,z);
 LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
 *new
-LostLoad_2D(n,z) = LL_Reserve.L('2D',n,z);
-LostLoad_2U(n,z) = LL_Reserve.L('2U',n,z);
-LostLoad_3U(n,z) = LL_Reserve.L('3U',n,z);
+LostLoad_aFRRD(n,z) = LL_Reserve.L('aFRRD',n,z);
+LostLoad_aFRRU(n,z) = LL_Reserve.L('aFRRU',n,z);
+LostLoad_mFRRU(n,z) = LL_Reserve.L('mFRRU',n,z);
 LostLoad_FFRU(n,z) = LL_Reserve.L('FFRU',n,z);
 LostLoad_FFRD(n,z) = LL_Reserve.L('FFRD',n,z);
 LostLoad_FCRU(n,z) = LL_Reserve.L('FCRU',n,z);
@@ -1842,21 +1838,24 @@ $If not %LPFormulation% == 1 OutputCostRampDownH(au,z) = CostRampDownH.L(au,z);
 *new
 ShadowPrice_FFRU(n,z) =  EQ_UpwardReserves_balance.m('FFRU',n,z);
 ShadowPrice_FCRU(n,z) =  EQ_UpwardReserves_balance.m('FCRU',n,z);
-ShadowPrice_2U(n,z) =  EQ_UpwardReserves_balance.m('2U',n,z);
-ShadowPrice_3U(n,z) =  EQ_UpwardReserves_balance.m('3U',n,z);
+ShadowPrice_aFRRU(n,z) =  EQ_UpwardReserves_balance.m('aFRRU',n,z);
+ShadowPrice_mFRRU(n,z) =  EQ_UpwardReserves_balance.m('mFRRU',n,z);
 
 ShadowPrice_FFRD(n,z) =  EQ_UpwardReserves_balance.m('FFRD',n,z);
 ShadowPrice_FCRD(n,z) =  EQ_UpwardReserves_balance.m('FCRD',n,z);
-ShadowPrice_2D(n,z) =  EQ_DownwardReserves_balance.m('2D',n,z);
+ShadowPrice_aFRRD(n,z) =  EQ_DownwardReserves_balance.m('aFRRD',n,z);
 
 *new
-OutputReserve_2U(au,z) = ReserveProvision.L('2U',au,z);
-OutputReserve_2D(au,z) = ReserveProvision.L('2D',au,z);
-OutputReserve_3U(au,z) = ReserveProvision.L('3U',au,z);
+OutputReserve_aFRRU(au,z) = ReserveProvision.L('aFRRU',au,z);
+OutputReserve_aFRRD(au,z) = ReserveProvision.L('aFRRD',au,z);
+OutputReserve_mFRRU(au,z) = ReserveProvision.L('mFRRU',au,z);
 OutputDemand_FFRU(n,z)=ReserveDemand("FFRU",n,z);
 OutputDemand_FFRD(n,z)=ReserveDemand("FFRD",n,z);
 OutputDemand_FCRU(n,z)=ReserveDemand("FCRU",n,z);
 OutputDemand_FCRD(n,z)=ReserveDemand("FCRD",n,z);
+OutputDemand_aFRRU(n,z)=ReserveDemand("aFRRU",n,z);
+OutputDemand_mFRRU(n,z)=ReserveDemand("aFRRU",n,z);
+OutputDemand_aFRRD(n,z)=ReserveDemand("aFRRD",n,z);
 
 ShadowPrice_RampUp_TC(u,z) = EQ_RampUp_TC.m(u,z);
 ShadowPrice_RampDown_TC(u,z) = EQ_RampDown_TC.m(u,z);
@@ -1894,13 +1893,13 @@ UnitHourlyPowerRevenue(au,z) = sum(n, EQ_Demand_balance_DA.m(n,z) * Location(au,
 *new
 UnitHourlyFFRURevenue(au,z) = sum(n, OutputReserve_FFRU(au,z) * ShadowPrice_FFRU(n,z) * Location(au,n));
 UnitHourlyFCRURevenue(au,z) = sum(n, OutputReserve_FCRU(au,z) * ShadowPrice_FCRU(n,z) * Location(au,n));
-UnitHourly2URevenue(au,z) = sum(n, OutputReserve_2U(au,z) * ShadowPrice_2U(n,z) * Location(au,n));
-UnitHourly3URevenue(au,z) = sum(n, OutputReserve_3U(au,z) * ShadowPrice_3U(n,z) * Location(au,n));
+UnitHourlyaFRRURevenue(au,z) = sum(n, OutputReserve_aFRRU(au,z) * ShadowPrice_aFRRU(n,z) * Location(au,n));
+UnitHourlymFRRURevenue(au,z) = sum(n, OutputReserve_mFRRU(au,z) * ShadowPrice_mFRRU(n,z) * Location(au,n));
 UnitHourlyFFRDRevenue(au,z) = sum(n, OutputReserve_FFRD(au,z) * ShadowPrice_FFRD(n,z) * Location(au,n));
 UnitHourlyFCRDRevenue(au,z) = sum(n, OutputReserve_FCRD(au,z) * ShadowPrice_FCRD(n,z) * Location(au,n));
-UnitHourly2DRevenue(au,z) = sum(n, OutputReserve_2D(au,z) * ShadowPrice_2D(n,z) * Location(au,n));
+UnitHourlyaFRRDRevenue(au,z) = sum(n, OutputReserve_aFRRD(au,z) * ShadowPrice_aFRRD(n,z) * Location(au,n));
 
-UnitHourlyRevenue(au,z) = UnitHourlyPowerRevenue(au,z) + UnitHourlyFFRURevenue(au,z) + UnitHourlyFCRURevenue(au,z) + UnitHourly2URevenue(au,z) + UnitHourly3URevenue(au,z) + UnitHourlyFFRDRevenue(au,z) + UnitHourlyFCRDRevenue(au,z) + UnitHourly2DRevenue(au,z) ;
+UnitHourlyRevenue(au,z) = UnitHourlyPowerRevenue(au,z) + UnitHourlyFFRURevenue(au,z) + UnitHourlyFCRURevenue(au,z) + UnitHourlyaFRRURevenue(au,z) + UnitHourlymFRRURevenue(au,z) + UnitHourlyFFRDRevenue(au,z) + UnitHourlyFCRDRevenue(au,z) + UnitHourlyaFRRDRevenue(au,z) ;
 
 UnitHourlyFixedCost(u,z) = Committed.L(u,z) * CostFixed(u);
 UnitHourlyVariableCost(au,z) = Power.L(au,z) * CostVariable(au,z);
@@ -1941,8 +1940,8 @@ OutputSpillage,
 OutputShedLoad,
 OutputCurtailedPower,
 OutputCurtailmentReserve,
-OutputCurtailmentReserve_2U,
-OutputCurtailmentReserve_3U,
+OutputCurtailmentReserve_aFRRU,
+OutputCurtailmentReserve_mFRRU,
 OutputCurtailmentPerUnit,
 $If %ActivateFlexibleDemand% == 1 OutputDemandModulation,
 $If %ActivateFlexibleDemand% == 1 OutputAccumulatedOverSupply,
@@ -1950,9 +1949,9 @@ $If %ActivateFlexibleDemand% == 1 ShadowPriceDemandModulation,
 OutputGenMargin,
 LostLoad_MaxPower,
 LostLoad_MinPower,
-LostLoad_2D,
-LostLoad_2U,
-LostLoad_3U,
+LostLoad_aFRRD,
+LostLoad_aFRRU,
+LostLoad_mFRRU,
 LostLoad_StorageAlert,
 LostLoad_FloodControl,
 OutputSectorXStorageAlertViolation,
@@ -1963,9 +1962,9 @@ $If not %LPFormulation% == 1 LostLoad_RampUp_Unit,
 $If not %LPFormulation% == 1 LostLoad_RampDown_Unit,
 ShadowPrice,
 Demand_balance_DA,
-ShadowPrice_2U,
-ShadowPrice_2D,
-ShadowPrice_3U,
+ShadowPrice_aFRRU,
+ShadowPrice_aFRRD,
+ShadowPrice_mFRRU,
 LostLoad_WaterSlack,
 LostLoad_StorageLevelViolation,
 LostLoad_SectorXStorageLevelViolation,
@@ -1980,14 +1979,14 @@ $If not %LPFormulation% == 1 OutputCostRampUpH,
 $If not %LPFormulation% == 1 OutputCostRampDownH,
 ShadowPrice_FFRU,
 ShadowPrice_FCRU,
-ShadowPrice_2U,
-ShadowPrice_3U,
+ShadowPrice_aFRRU,
+ShadowPrice_mFRRU,
 ShadowPrice_FFRD,
 ShadowPrice_FCRD,
-ShadowPrice_2D,
-OutputReserve_2U,
-OutputReserve_2D,
-OutputReserve_3U,
+ShadowPrice_aFRRD,
+OutputReserve_aFRRU,
+OutputReserve_aFRRD,
+OutputReserve_mFRRU,
 ShadowPrice_RampUp_TC,
 ShadowPrice_RampDown_TC,
 OutputRampRate,
@@ -2001,9 +2000,9 @@ OutputOptimizationError,
 OutputOptimizationCheck,
 OutputMaxOutageUp,
 OutputMaxOutageDown,
-OutputDemand_2U,
-OutputDemand_3U,
-OutputDemand_2D,
+OutputDemand_aFRRU,
+OutputDemand_mFRRU,
+OutputDemand_aFRRD,
 
 *New
 $If %MTS%==0 OutputSystemInertia,
@@ -2035,11 +2034,11 @@ status,
 UnitHourlyPowerRevenue
 UnitHourlyFFRURevenue
 UnitHourlyFCRURevenue
-UnitHourly2URevenue
-UnitHourly3URevenue
+UnitHourlyaFRRURevenue
+UnitHourlymFRRURevenue
 UnitHourlyFFRDRevenue
 UnitHourlyFCRDRevenue
-UnitHourly2DRevenue
+UnitHourlyaFRRDRevenue
 UnitHourlyRevenue
 UnitHourlyFixedCost
 UnitHourlyVariableCost

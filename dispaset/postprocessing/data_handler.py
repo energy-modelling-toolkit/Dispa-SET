@@ -27,21 +27,21 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'OutputAccumulatedOverSupply': ('n', 'h'),
             'LostLoad_MaxPower': ('n', 'h'),
             'LostLoad_MinPower': ('n', 'h'),
-            'LostLoad_2D': ('n', 'h'),
-            'LostLoad_2U': ('n', 'h'),
-            'LostLoad_3U': ('n', 'h'),
+            'LostLoad_aFRRD': ('n', 'h'),
+            'LostLoad_aFRRU': ('n', 'h'),
+            'LostLoad_mFRRU': ('n', 'h'),
             'LostLoad_RampUp': ('n', 'h'),
             'LostLoad_RampDown': ('n', 'h'),
             'ShadowPrice': ('n', 'h'),
             'StorageShadowPrice': ('u', 'h'),
             'LostLoad_StorageLevelViolation': ('u'),
             'OutputStorageLevelViolation_H': ('u', 'h'),
-            'ShadowPrice_2U': ('u', 'h'),
-            'ShadowPrice_2D': ('u', 'h'),
-            'ShadowPrice_3U': ('u', 'h'),
-            'OutputReserve_2U': ('u', 'h'),
-            'OutputReserve_2D': ('u', 'h'),
-            'OutputReserve_3U': ('u', 'h'),
+            'ShadowPrice_aFRRU': ('u', 'h'),
+            'ShadowPrice_aFRRD': ('u', 'h'),
+            'ShadowPrice_mFRRU': ('u', 'h'),
+            'OutputReserve_aFRRU': ('u', 'h'),
+            'OutputReserve_aFRRD': ('u', 'h'),
+            'OutputReserve_mFRRU': ('u', 'h'),
             'ShadowPrice_RampUp_TC': ('u', 'h'),
             'ShadowPrice_RampDown_TC': ('u', 'h'),
             'OutputRampRate': ('u', 'h'),
@@ -163,9 +163,9 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
         index = pd.date_range(start=dt.datetime(*StartDate), end=dt.datetime(*StopDate), freq='h')
         index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
 
-    keys = ['LostLoad_2U', 'LostLoad_3U', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
-            'LostLoad_RampDown', 'LostLoad_RampDown_Unit', 'LostLoad_2D', 'LostLoad_SystemInertia', 'ShadowPrice', 'StorageShadowPrice',
-            'ShadowPrice_2U', 'ShadowPrice_2D', 'ShadowPrice_3U', 'ShadowPriceDemandModulation',
+    keys = ['LostLoad_aFRRU', 'LostLoad_mFRRU', 'LostLoad_MaxPower', 'LostLoad_MinPower', 'LostLoad_RampUp',
+            'LostLoad_RampDown', 'LostLoad_RampDown_Unit', 'LostLoad_aFRRD', 'LostLoad_SystemInertia', 'ShadowPrice', 'StorageShadowPrice',
+            'ShadowPrice_aFRRU', 'ShadowPrice_aFRRD', 'ShadowPrice_mFRRU', 'ShadowPriceDemandModulation',
             'LostLoad_FFRU', 'LostLoad_FFRD', 'LostLoad_FCRU', 'LostLoad_FCRD',
             'ShadowPrice_FFRU', 'ShadowPrice_FFRD','ShadowPrice_FCRU', 'ShadowPrice_FCRD', 
             'status']  # 'status'
@@ -175,7 +175,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'OutputStorageInput', 'OutputHeat',
                    'OutputDemandModulation', 'OutputAccumulatedOverSupply',
                    'OutputStorageLevelViolation_H', 'OutputPowerMustRun',
-                   'OutputReserve_2U', 'OutputReserve_2D', 'OutputReserve_3U', 'ShadowPrice_RampUp_TC',
+                   'OutputReserve_aFRRU', 'OutputReserve_aFRRD', 'OutputReserve_mFRRU', 'ShadowPrice_RampUp_TC',
                    'ShadowPrice_RampDown_TC', 'OutputRampRate', 'OutputStartUp', 'OutputShutDown',
                    'OutputEmissions', 'CapacityMargin', 'Demand_Balance_DA',
                    'OutputXNotServed', 'OutputPowerX', 'OutputSectorXStorageLevel',
@@ -183,17 +183,17 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'SectorXShadowPrice', 'OutputXNotServed', 'OutputSectorXStorageLevelViolation_H',
                    'OutputSectorXSpillage', 'LostLoad_SectorXSpillage','OutputSectorXWaterNotWithdrawn',
                    'OutputBSFlexDemand', 'OutputSectorXFlexSupply', 'OutputResidualLoad',
-                   'OutputCurtailmentReserve_2U', 'OutputCurtailmentReserve_3U', 'OutputMaxOutageUp',
-                   'OutputMaxOutageDown', 'OutputDemand_2U', 'OutputDemand_3U', 'OutputDemand_2D',
+                   'OutputCurtailmentReserve_aFRRU', 'OutputCurtailmentReserve_mFRRU', 'OutputMaxOutageUp',
+                   'OutputMaxOutageDown', 'OutputDemand_aFRRU', 'OutputDemand_mFRRU', 'OutputDemand_aFRRD',
                    'OutputFlowX', 'OutputSectorXStorageAlertViolation', 'OutputSectorXFloodControlViolation',
                    'OutputCostStartUpH', 'OutputCostRampUpH',
                    'OutputSystemInertia', 'OutputPowerLoss', 
-                   'LostLoad_2D', 'OutputCurtailedHeat', 'OutputCurtailmentPerUnit', 'OutputH2Output', 
+                   'LostLoad_aFRRD', 'OutputCurtailedHeat', 'OutputCurtailmentPerUnit', 'OutputH2Output', 
                    'OutputHeatSlack', 'OutputOptimalityGap', 'OutputOptimizationCheck', 
                    'OutputOptimizationError', 'OutputPtLDemand', 'OutputStorageSlack', 
                    'OutputSystemCostD', 'SMML-SystemMinusesMaximalLoad', 'SMNL-SystemMinusesNominalLoad',
-                   'UnitHourly2URevenue', 'UnitHourlyProductionCost', 'UnitHourlyStartUpCost', 'UnitHourlyVariableCost',
-                   'UnitHourly2DRevenue', 'UnitHourly3URevenue', 'UnitHourlyPowerRevenue', 
+                   'UnitHourlyaFRRURevenue', 'UnitHourlyProductionCost', 'UnitHourlyStartUpCost', 'UnitHourlyVariableCost',
+                   'UnitHourlyaFRRDRevenue', 'UnitHourlymFRRURevenue', 'UnitHourlyPowerRevenue', 
                    'UnitHourlyFFRURevenue', 'UnitHourlyFFRDRevenue','UnitHourlyFCRURevenue', 'UnitHourlyFCRDRevenue',
                    'UnitHourlyProfit', 'UnitHourlyRampingCost', 'UnitHourlyRevenue',
                    'OutputSystemInertia', 
@@ -239,9 +239,9 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
     if 'ShadowPrice' in results:
         results['ShadowPrice'][results['ShadowPrice'] >= 1e300] = 0
         results['StorageShadowPrice'][results['StorageShadowPrice'] >= 1e300] = 0
-        results['ShadowPrice_2D'][results['ShadowPrice_2D'] >= 1e300] = 0
-        results['ShadowPrice_2U'][results['ShadowPrice_2U'] >= 1e300] = 0
-        results['ShadowPrice_3U'][results['ShadowPrice_3U'] >= 1e300] = 0
+        results['ShadowPrice_aFRRD'][results['ShadowPrice_aFRRD'] >= 1e300] = 0
+        results['ShadowPrice_aFRRU'][results['ShadowPrice_aFRRU'] >= 1e300] = 0
+        results['ShadowPrice_mFRRU'][results['ShadowPrice_mFRRU'] >= 1e300] = 0
         results['ShadowPrice_FFRU'][results['ShadowPrice_FFRU'] >= 1e300] = 0
         results['ShadowPrice_FFRD'][results['ShadowPrice_FFRD'] >= 1e300] = 0
         results['ShadowPrice_FCRU'][results['ShadowPrice_FCRU'] >= 1e300] = 0

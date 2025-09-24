@@ -336,8 +336,8 @@ def get_result_analysis(inputs, results, units='MWh'):
             Cost_kwh = (demand_zone * results['ShadowPrice']).sum(axis=1).sum() / demand_zone.sum(axis=0).sum()
             print('\nAverage electricity cost (EUR/' + unit_small[1] + '): \n'  + str(Cost_kwh_zone) + '\nEntireRegion ' + str(Cost_kwh))
 
-    for key in ['LostLoad_RampUp', 'LostLoad_2D', 'LostLoad_MinPower',
-                'LostLoad_RampDown', 'LostLoad_2U', 'LostLoad_3U', 'LostLoad_SystemInertia', 'LostLoad_MaxPower',
+    for key in ['LostLoad_RampUp', 'LostLoad_aFRRD', 'LostLoad_MinPower',
+                'LostLoad_RampDown', 'LostLoad_aFRRU', 'LostLoad_mFRRU', 'LostLoad_SystemInertia', 'LostLoad_MaxPower',
                 'LostLoad_StorageLevelViolation']:
         if key == 'LostLoad_StorageLevelViolation':
             if isinstance(results[key], pd.Series):
@@ -532,7 +532,8 @@ def CostExPost(inputs, results):
              +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
              +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
              +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
-             +0.8*Config("ValueOfLostLoad","val")*(sum(n,LL_2U(n,i)+LL_2D(n,i)+LL_3U(n,i)))
+             +0.8*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
+             +0.8*Config("ValueOfLostLoad","val")*(LL_SystemInertia(i)*TimeStep)
              +0.8*Config("ValueOfLostLoad","val")*(LL_SystemInertia(i))
              +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
              +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
@@ -629,9 +630,9 @@ def CostExPost(inputs, results):
             CostHeat[u] = dfin['CostVariable'][u].fillna(0) * results['OutputHeat'][u].fillna(0)
     costs['CostHeat'] = CostHeat.sum(axis=1).fillna(0)
 
-    costs['LostLoad'] = 80e3 * (results['LostLoad_2D'].reindex(timeindex).sum(axis=1).fillna(0) +
-                                results['LostLoad_2U'].reindex(timeindex).sum(axis=1).fillna(0) +
-                                results['LostLoad_3U'].reindex(timeindex).sum(axis=1).fillna(0) + 
+    costs['LostLoad'] = 80e3 * (results['LostLoad_aFRRD'].reindex(timeindex).sum(axis=1).fillna(0) +
+                                results['LostLoad_aFRRU'].reindex(timeindex).sum(axis=1).fillna(0) +
+                                results['LostLoad_mFRRU'].reindex(timeindex).sum(axis=1).fillna(0) + 
                                 results['LostLoad_SystemInertia'].reindex(timeindex).sum(axis=1).fillna(0)) +\
                         100e3 * (results['LostLoad_MaxPower'].reindex(timeindex).sum(axis=1).fillna(0) +
                                  results['LostLoad_MinPower'].reindex(timeindex).sum(axis=1).fillna(0)) + \
@@ -895,25 +896,25 @@ def get_net_positions(inputs, results, zones, idx):
 #%%
 def shadowprices(results, zone):
     """
-    this function retrieves the schadowprices of DA, 2U, 2D, 3U for 1 zone
+    this function retrieves the schadowprices of DA, aFRRU, aFRRD, mFRRU for 1 zone
     """
-    shadowprices = pd.DataFrame(0,index = results['OutputPower'].index, columns = ['DA','2U','2D','3U'])
+    shadowprices = pd.DataFrame(0,index = results['OutputPower'].index, columns = ['DA','aFRRU','aFRRD','mFRRU'])
     
     if  zone in results['ShadowPrice'].columns:
         shadowprices['DA'] = results['ShadowPrice'][zone]
-    if zone in results['ShadowPrice_2U'].columns:
-        shadowprices['2U'] = results['ShadowPrice_2U'][zone]
-    if zone in results['ShadowPrice_2D'].columns:
-        shadowprices['2D'] = results['ShadowPrice_2D'][zone]        
-    if zone in results['ShadowPrice_3U'].columns:
-        shadowprices['3U'] = results['ShadowPrice_3U'][zone]
+    if zone in results['ShadowPrice_aFRRU'].columns:
+        shadowprices['aFRRU'] = results['ShadowPrice_aFRRU'][zone]
+    if zone in results['ShadowPrice_aFRRD'].columns:
+        shadowprices['aFRRD'] = results['ShadowPrice_aFRRD'][zone]        
+    if zone in results['ShadowPrice_mFRRU'].columns:
+        shadowprices['mFRRU'] = results['ShadowPrice_mFRRU'][zone]
 
     shadowprices.fillna(0,inplace=True)
     return shadowprices
 #%%
 def Cashflows(inputs,results,unit):
     """
-    This function calculates the different cashflows (DA,2U,2D,3U,Heat,costs) for one specific unit
+    This function calculates the different cashflows (DA,aFRRU,aFRRD,mFRRU,Heat,costs) for one specific unit
     returns: hourly cashflow
     """
     zone = inputs['units'].at[unit,'Zone']
@@ -927,20 +928,20 @@ def Cashflows(inputs,results,unit):
             if TMP.loc[i,'DA']>10000:
                 TMP.loc[i,'DA']=TMP.at[i-1,'DA']
         
-    if TMP['2U'].max() > 10000:
+    if TMP['aFRRU'].max() > 10000:
         for i in TMP.index:
-            if TMP.loc[i,'2U']>10000:
-                TMP.loc[i,'2U']=TMP.at[i-1,'2U']
+            if TMP.loc[i,'aFRRU']>10000:
+                TMP.loc[i,'aFRRU']=TMP.at[i-1,'aFRRU']
         
-    if TMP['3U'].max() > 10000:
+    if TMP['mFRRU'].max() > 10000:
         for i in TMP.index:
-            if TMP.loc[i,'3U']>10000:
-                TMP.loc[i,'3U']=TMP.at[i-1,'3U']
+            if TMP.loc[i,'mFRRU']>10000:
+                TMP.loc[i,'mFRRU']=TMP.at[i-1,'mFRRU']
         
-    if TMP['2D'].max() > 10000:
+    if TMP['aFRRD'].max() > 10000:
         for i in TMP.index:
-            if TMP.loc[i,'2D']>10000:
-                TMP.loc[i,'2D']=TMP.at[i-1,'2D']
+            if TMP.loc[i,'aFRRD']>10000:
+                TMP.loc[i,'aFRRD']=TMP.at[i-1,'aFRRD']
 
     
     #positive cashflows
@@ -948,18 +949,18 @@ def Cashflows(inputs,results,unit):
         cashflows['DA'] = results['OutputPower'][unit]*TMP['DA']
     else:
         cashflows['DA'] = 0
-    if unit in results['OutputReserve_2U'].columns and zone in results['ShadowPrice_2U'].columns:
-        cashflows['2U'] = results['OutputReserve_2U'][unit]*TMP['2U']
+    if unit in results['OutputReserve_aFRRU'].columns and zone in results['ShadowPrice_aFRRU'].columns:
+        cashflows['aFRRU'] = results['OutputReserve_aFRRU'][unit]*TMP['aFRRU']
     else:
-        cashflows['2U'] = 0
-    if unit in results['OutputReserve_2D'].columns and zone in results['ShadowPrice_2D'].columns:
-        cashflows['2D'] = results['OutputReserve_2D'][unit]*TMP['2D']
+        cashflows['aFRRU'] = 0
+    if unit in results['OutputReserve_aFRRD'].columns and zone in results['ShadowPrice_aFRRD'].columns:
+        cashflows['aFRRD'] = results['OutputReserve_aFRRD'][unit]*TMP['aFRRD']
     else:
-        cashflows['2D'] = 0
-    if unit in results['OutputReserve_3U'].columns and zone in results['ShadowPrice_3U'].columns:
-        cashflows['3U'] = results['OutputReserve_3U'][unit]*TMP['3U']
+        cashflows['aFRRD'] = 0
+    if unit in results['OutputReserve_mFRRU'].columns and zone in results['ShadowPrice_mFRRU'].columns:
+        cashflows['mFRRU'] = results['OutputReserve_mFRRU'][unit]*TMP['mFRRU']
     else:
-        cashflows['3U'] = 0
+        cashflows['mFRRU'] = 0
     if unit in results['OutputHeat'].columns and unit in results['HeatShadowPrice'].columns:
         cashflows['heat'] = results['OutputHeat'][unit]*results['HeatShadowPrice'][unit]
     else:
@@ -983,50 +984,50 @@ def reserve_availability_demand(inputs,results):
     """
     
     hourly_availability = {}
-    hourly_availability['2U'] = pd.DataFrame()
-    hourly_availability['3U'] = pd.DataFrame()
+    hourly_availability['aFRRU'] = pd.DataFrame()
+    hourly_availability['mFRRU'] = pd.DataFrame()
     hourly_availability['Down'] = pd.DataFrame()
     hourly_availability['Up'] = pd.DataFrame()
     
 
-    total_up_reserves = pd.concat([results['OutputReserve_2U'],results['OutputReserve_3U']],axis=1)
+    total_up_reserves = pd.concat([results['OutputReserve_aFRRU'],results['OutputReserve_mFRRU']],axis=1)
     total_up_reserves = total_up_reserves.groupby(level=0, axis=1).sum()
 
     availability = {}
-    availability['2U'] = pd.DataFrame(0.0,index = results['OutputReserve_2U'].columns, columns = ['mean','total'])
-    availability['3U'] = pd.DataFrame(0.0,index = results['OutputReserve_3U'].columns, columns = ['mean','total'])
-    availability['Down'] = pd.DataFrame(0.0,index = results['OutputReserve_2D'].columns, columns = ['mean','total'])
+    availability['aFRRU'] = pd.DataFrame(0.0,index = results['OutputReserve_aFRRU'].columns, columns = ['mean','total'])
+    availability['mFRRU'] = pd.DataFrame(0.0,index = results['OutputReserve_mFRRU'].columns, columns = ['mean','total'])
+    availability['Down'] = pd.DataFrame(0.0,index = results['OutputReserve_aFRRD'].columns, columns = ['mean','total'])
     availability['Up'] = pd.DataFrame(0.0,index = total_up_reserves.columns, columns = ['mean','total'])
     
     
-    for unit in results['OutputReserve_2U'].columns:
+    for unit in results['OutputReserve_aFRRU'].columns:
         zone = inputs['units'].at[unit,'Zone']
-        hourly_availability['2U'][unit] = results['OutputReserve_2U'][unit]/(inputs['param_df']['Demand']['2U',zone]/2)*100
-        availability['2U'].at[unit,'mean'] = hourly_availability['2U'][unit].mean()
-        availability['2U'].at[unit,'total'] = results['OutputReserve_2U'][unit].sum()/(inputs['param_df']['Demand']['2U',zone].sum()/2)*100
+        hourly_availability['aFRRU'][unit] = results['OutputReserve_aFRRU'][unit]/(inputs['param_df']['Demand']['aFRRU',zone]/2)*100
+        availability['aFRRU'].at[unit,'mean'] = hourly_availability['aFRRU'][unit].mean()
+        availability['aFRRU'].at[unit,'total'] = results['OutputReserve_aFRRU'][unit].sum()/(inputs['param_df']['Demand']['aFRRU',zone].sum()/2)*100
         
-    for unit in results['OutputReserve_3U'].columns:
+    for unit in results['OutputReserve_mFRRU'].columns:
         zone = inputs['units'].at[unit,'Zone']
-        hourly_availability['3U'][unit] = results['OutputReserve_3U'][unit]/(inputs['param_df']['Demand']['2U',zone]/2)*100
-        availability['3U'].at[unit,'mean'] = hourly_availability['3U'][unit].mean()
-        availability['3U'].at[unit,'total'] = results['OutputReserve_3U'][unit].sum()/(inputs['param_df']['Demand']['2U',zone].sum()/2)*100
+        hourly_availability['mFRRU'][unit] = results['OutputReserve_mFRRU'][unit]/(inputs['param_df']['Demand']['mFRRU',zone]/2)*100
+        availability['mFRRU'].at[unit,'mean'] = hourly_availability['mFRRU'][unit].mean()
+        availability['mFRRU'].at[unit,'total'] = results['OutputReserve_mFRRU'][unit].sum()/(inputs['param_df']['Demand']['mFRRU',zone].sum()/2)*100
 
-    for unit in results['OutputReserve_2D'].columns:
+    for unit in results['OutputReserve_aFRRD'].columns:
         zone = inputs['units'].at[unit,'Zone']
-        hourly_availability['Down'][unit] = results['OutputReserve_2D'][unit]/inputs['param_df']['Demand']['2D',zone]*100
+        hourly_availability['Down'][unit] = results['OutputReserve_aFRRD'][unit]/inputs['param_df']['Demand']['aFRRD',zone]*100
         availability['Down'].at[unit,'mean'] = hourly_availability['Down'][unit].mean()
-        availability['Down'].at[unit,'total'] = results['OutputReserve_2D'][unit].sum()/inputs['param_df']['Demand']['2D',zone].sum()*100
+        availability['Down'].at[unit,'total'] = results['OutputReserve_aFRRD'][unit].sum()/inputs['param_df']['Demand']['aFRRD',zone].sum()*100
 
     for unit in total_up_reserves.columns:
         zone = inputs['units'].at[unit,'Zone']
-        hourly_availability['Up'][unit] = total_up_reserves[unit]/inputs['param_df']['Demand']['2U',zone]*100
+        hourly_availability['Up'][unit] = total_up_reserves[unit]/inputs['param_df']['Demand']['aFRRU',zone]*100
         availability['Up'].at[unit,'mean'] = hourly_availability['Up'][unit].mean()
-        availability['Up'].at[unit,'total'] = total_up_reserves[unit].sum()/inputs['param_df']['Demand']['2U',zone].sum()*100
+        availability['Up'].at[unit,'total'] = total_up_reserves[unit].sum()/inputs['param_df']['Demand']['aFRRU',zone].sum()*100
     
     reserve_demand = pd.DataFrame(0.0,index = inputs['config']['zones'], columns = ['upwards','downwards'])
     for zone in inputs['config']['zones']:
-        reserve_demand.at[zone,'upwards'] = inputs['param_df']['Demand']['2U',zone].mean()/inputs['param_df']['Demand']['DA',zone].max()
-        reserve_demand.at[zone,'downwards'] = inputs['param_df']['Demand']['2D',zone].mean()/inputs['param_df']['Demand']['DA',zone].max()
+        reserve_demand.at[zone,'upwards'] = inputs['param_df']['Demand']['aFRRU',zone].mean()/inputs['param_df']['Demand']['DA',zone].max()
+        reserve_demand.at[zone,'downwards'] = inputs['param_df']['Demand']['aFRRD',zone].mean()/inputs['param_df']['Demand']['DA',zone].max()
         
     return hourly_availability, availability, reserve_demand
 

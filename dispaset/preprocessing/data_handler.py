@@ -923,7 +923,7 @@ def load_config_yaml(filename, AbsPath=True):
               'PriceOfFuelOil', 'CostXSpillage',
               'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat', 'PriceOfAmmonia',
               'CostLoadShedding', 'ShareOfFlexibleDemand', 
-              'PriceTransmission', 'Reserve2D', 'Reserve2U', 'GeoData', 'SectorXDemand', 'BoundarySectorData',
+              'PriceTransmission', 'aFRRDDemand', 'aFRRUDemand', 'GeoData', 'SectorXDemand', 'BoundarySectorData',
               'BoundarySectorNTC', 'BoundarySectorInterconnections', 'SectorXFlexibleDemand', 'SectorXFlexibleSupply',
               'BoundarySectorMaxSpillage', 'SectorXReservoirLevels', 'SectorXAlertLevel', 'SectorXFloodControl',
               'CostOfSpillage', 'CostXNotServed', 'CostCurtailment', 'GridData',

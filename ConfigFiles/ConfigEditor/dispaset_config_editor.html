@@ -976,14 +976,14 @@
                  <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="reserve2U">Upwards Secondary Reserve (aFRR Up)<span class="tooltiptext">Table with the upwards secondary reserve requirements (e.g., aFRR up) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute.</span></label>
-                            <input type="text" id="reserve2U" placeholder="e.g., ReserveUp.csv">
+                            <label for="afrrdemandU">Automatic Frequency Restoration Reserve Upwards Demand(aFRR Up)<span class="tooltiptext">Table with the upwards secondary reserve requirements (e.g., aFRR up) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="afrrdemandU" placeholder="e.g., aFRRUp_req.csv">
                         </div>
                     </div>
                     <div class="col">
                          <div class="form-group">
-                            <label for="reserve2D">Downwards Secondary Reserve (aFRR Down)<span class="tooltiptext">Table with the downwards secondary reserve requirements (e.g., aFRR down) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute.</span></label>
-                            <input type="text" id="reserve2D" placeholder="e.g., ReserveDown.csv">
+                            <label for="afrrdemandD">Automatic Frequency Restoration Reserve Downwards Demand(aFRR Down)<span class="tooltiptext">Table with the downwards secondary reserve requirements (e.g., aFRR down) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute.</span></label>
+                            <input type="text" id="afrrdemandD" placeholder="e.g., aFRRDown_req.csv">
                         </div>
                     </div>
                  </div>
@@ -1228,8 +1228,8 @@
             // FFR related
             'ffrdemand': 'FFRDemand',
             // Reserve parameters
-            'reserve2u': 'Reserve2U',  // aFRR Up
-            'reserve2d': 'Reserve2D',  // aFRR Down
+            'afrrdemandu': 'aFRRUDemand',  // aFRR Up
+            'afrrdemandd': 'aFRRDDemand',  // aFRR Down
             'fcrdemand': 'FCRDemand',  // FCR
             // Boundary Sector
             'costxnotserved': 'CostXNotServed',
