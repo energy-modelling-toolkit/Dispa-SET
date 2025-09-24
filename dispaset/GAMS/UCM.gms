@@ -66,7 +66,7 @@ s(au)            Storage Units (with reservoir)
 th(au)           Units with thermal storage
 hu(au)           Heat only units
 *New
-cu(u)           Conventional units only
+cu(u)            Conventional units only
 ba(au)           Batteries only
 res              Reserve types
 res_U(res)       Reserve up
@@ -536,9 +536,6 @@ EQ_CostShutDown
 EQ_CostRampUp
 EQ_CostRampDown
 EQ_Demand_balance_DA
-*EQ_Demand_balance_2U
-*EQ_Demand_balance_3U
-*EQ_Demand_balance_2D
 EQ_P2X_Power_Balance
 EQ_X2P_Power_Balance
 EQ_Max_Power_Consumption
@@ -888,39 +885,6 @@ EQ_DownwardReserves_balance(res_D,n,i)..
          =E=
          ReserveDemand(res_D,n,i)
 ;
-
-*OLD RESERVE FORMULATIONS
-**Hourly demand balance in the upwards spinning reserve market for each node
-*EQ_Demand_balance_2U(res_U,n,i)..
-*         sum((u),ReserveProvision(res_U,u,i)*ReserveParticipation('2U',u,i)*Location(u,n))
-*         + CurtailmentReserve('2U',n,i) + LL_Reserve('2U',n,i)
-*         =E=
-**New
-*         Demand("2U",n,i)
-*$If %ActivateAdvancedReserves% == 2 +(Demand("2U",n,i) + max(smax((u,tc),PowerCapacity(u)/Nunits(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0)))*(1-K_QuickStart(n))
-*$If %ActivateAdvancedReserves% == 1 +(Demand("2U",n,i) + smax((u,tc),PowerCapacity(u)/Nunits(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)))*(1-K_QuickStart(n))
-**$If %ActivateAdvancedReserves% == 0 +(Demand("2U",n,i))*(1-K_QuickStart(n))
-*;
-
-**Hourly demand balance in the upwards non-spinning reserve market for each node
-*EQ_Demand_balance_3U(res_U,n,i)..
-*         sum((u),(ReserveProvision('2U',u,i) + ReserveProvision('3U',u,i))*ReserveParticipation('3U',u,i)*Location(u,n))
-*         + CurtailmentReserve('3U',n,i) + LL_Reserve('3U',n,i)
-*         =E=
-*         Demand("2U",n,i)
-*$If %ActivateAdvancedReserves% == 2 + max(smax((u,tc),PowerCapacity(u)/Nunits(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n)), smax(l,FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0))
-*$If %ActivateAdvancedReserves% == 1 + smax((u,tc),PowerCapacity(u)/Nunits(u)*Technology(u,tc)*LoadMaximum(u,i)*Location(u,n))
-*;
-
-**Hourly demand balance in the downwards reserve market for each node
-*EQ_Demand_balance_2D(res_D,n,i)..
-*         sum((u),ReserveProvision(res_D,u,i)*ReserveParticipation('2D',u,i)*Location(u,n))
-*         + LL_Reserve('2D',n,i)
-*         =E=
-*         Demand("2D",n,i)
-*$If %ActivateAdvancedReserves% == 2 + max(smax(s,StorageChargingCapacity(s)/Nunits(s)*Location(s,n)), smax(l,-FlowMaximum(l,i)*LineNode(l,n))$(card(l)>0))
-*$If %ActivateAdvancedReserves% == 1 + smax(s,StorageChargingCapacity(s)/Nunits(s)*Location(s,n))
-*;
 
 *Curtailed power
 EQ_Curtailed_Power(n,i)..
@@ -1439,9 +1403,6 @@ $If not %LPFormulation% == 1 EQ_MinDownTime,
 EQ_RampUp_TC,
 EQ_RampDown_TC,
 EQ_Demand_balance_DA,
-*EQ_Demand_balance_2U,
-*EQ_Demand_balance_2D,
-*EQ_Demand_balance_3U,
 $If not %LPFormulation% == 1 EQ_Power_must_run,
 EQ_P2X_Power_Balance,
 EQ_Max_Power_Consumption,
@@ -1745,21 +1706,6 @@ $If %MTS% == 0 OutputPowerLoss(h)
 *OutputTotalDemand_2U(h)
 *OutputLoadRamp(n,h)
 ;
-**OLD RESERVE FORMULATIONS
-*$If %ActivateAdvancedReserves% == 2 OutputMaxOutageUp(n,z)=max(smax((au,tc),PowerCapacity(au)/Nunits(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n)), smax(l,FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
-*$If %ActivateAdvancedReserves% == 2 OutputMaxOutageDown(n,z)=max(smax(s,StorageChargingCapacity(s)/Nunits(s)*Location(s,n)), smax(l,-FlowMaximum(l,z)*LineNode(l,n))$(card(l)>0));
-*$If %ActivateAdvancedReserves% == 2 OutputDemand_2U(n,z)=(Demand("2U",n,z) + OutputMaxOutageUp(n,z))*(1-K_QuickStart(n));
-*$If %ActivateAdvancedReserves% == 2 OutputDemand_3U(n,z)=Demand("2U",n,z) + OutputMaxOutageUp(n,z);
-*$If %ActivateAdvancedReserves% == 2 OutputDemand_2D(n,z)=Demand("2D",n,z) + OutputMaxOutageDown(n,z);
-*$If %ActivateAdvancedReserves% == 1 OutputMaxOutageUp(n,z)=smax((au,tc),PowerCapacity(au)/Nunits(au)*Technology(au,tc)*LoadMaximum(au,z)*Location(au,n));
-*$If %ActivateAdvancedReserves% == 1 OutputMaxOutageDown(n,z)=smax(s,StorageChargingCapacity(s)/Nunits(s)*Location(s,n));
-*$If %ActivateAdvancedReserves% == 1 OutputDemand_2U(n,z)=(Demand("2U",n,z) + OutputMaxOutageUp(n,z))*(1-K_QuickStart(n));
-*$If %ActivateAdvancedReserves% == 1 OutputDemand_3U(n,z)=Demand("2U",n,z) + OutputMaxOutageUp(n,z);
-*$If %ActivateAdvancedReserves% == 1 OutputDemand_2D(n,z)=Demand("2D",n,z) + OutputMaxOutageDown(n,z);
-*$If %ActivateAdvancedReserves% == 0 OutputDemand_2U(n,z)=Demand("2U",n,z);
-*$If %ActivateAdvancedReserves% == 0 OutputDemand_3U(n,z)=Demand("2U",n,z);
-*$If %ActivateAdvancedReserves% == 0 OutputDemand_2D(n,z)=Demand("2D",n,z);
-
 
 OutputCommitted(au,z)=Committed.L(au,z);
 OutputFlow(l,z)=Flow.L(l,z);
