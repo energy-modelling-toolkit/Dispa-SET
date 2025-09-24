@@ -450,15 +450,6 @@ $If %MTS% == 1 SectorXStorageFinalMin(nx)
 *New
 SystemInertia(h)                        [s]         System Inertia
 
-
-
-*MADRID
-PowerLoss(h)                            [MW]        Primary Reserve available in the system
-*$If %MTS% == 0 MaxInstantGenerator(h)                  [MW]        Primary Reserve available in the system
-
-*FOR FUTURE
-*TotalDemand_2U(h)                       [MW]    Total Spinning reserve up
-
 ;
 
 free variable
@@ -474,13 +465,7 @@ Error
 InjectedPower(h,n)                  [p.u]   Power injected to each node of the system
 Flow(l,h)                           [MW]    Flow through lines
 
-*FOR FUTURE
-*New
-*LoadRamp(n,h)                           [MW]    Load ramp
 ;
-*FOR FUTURE
-*Binary Variables
-*LoadRampAux(n, h);
 
 *===============================================================================
 *Assignment of initial values
@@ -613,14 +598,6 @@ EQ_DownwardReserves_balance
 EQ_Total_Delivery_Limit_Up
 EQ_Total_Delivery_Limit_Down
 
-*MADRID
-EQ_PowerLoss
-*$If %MTS% == 0 EQ_MaxInstantGenerator
-
-*FOR FUTURE
-*EQ_Tot_Demand_2U
-*EQ_Load_Ramp
-*EQ_Load_Ramp_Aux
 ;
 
 $If %RetrieveStatus% == 0 $goto skipequation
@@ -840,35 +817,6 @@ EQ_No_Flexible_Demand(n,i)..
          0
 ;
 
-*--------------------------------------------------FOR FUTURE--------------------------------------------------
-*New
-**Hourly total demand in the upwards spinning reserve market for the system
-*EQ_Tot_Demand_2U(i)..
-*         sum((n),Demand("2U",n,i))
-*         =E=
-*         TotalDemand_2U(i)
-*;
-
-*New NOT WORKING
-* Big-M constraints to linearize the division
-*EQ_Load_Ramp_Aux(n, i)$(ord(i) > 1)..
-*    ResidualLoad(n, i-1) - ResidualLoad(n, i) =L= 0.0000001 * (1 - LoadRampAux(n, i));
-*    ResidualLoad(n, i) - ResidualLoad(n, i-1) =L= 5 * (1 - LoadRampAux(n, i));
-
-* Define the division using the binary variable
-*EQ_Load_Ramp(n, i)..
-*    LoadRamp(n, i) =E= (ResidualLoad(n, i) - ResidualLoad(n, i-1))/ResidualLoad(n, i);
-
-
-*MADRID
-EQ_PowerLoss(u,i)$(ord(u))..
-        PowerLoss(i)
-        =g=
-        Power(u, i)
-;
-
-*EQ_MaxInstantGenerator(u, i)$(MaxInstantPower(i) - 1 < Power(u, i))..
-*   MaxInstantGenerator(i) =e= ord(u);
 *---------------------------------------------------RESERVES BALANCES ---------------------------------------------------
 *General formulation for hourly demand balance in the Upward Reserve Services for each node
 EQ_UpwardReserves_balance(res_U,n,i)..
@@ -1475,13 +1423,6 @@ EQ_DownwardReserves_balance,
 EQ_Total_Delivery_Limit_Up,
 EQ_Total_Delivery_Limit_Down,
 
-*MADRID
-$If %MTS% == 0 EQ_PowerLoss,
-*$If %MTS% == 0 EQ_MaxInstantGenerator,
-
-*FOR FUTURE
-*EQ_Tot_Demand_2U,
-*EQ_Load_Ramp,
 /
 ;
 UCM_SIMPLE.optcr = 0.01;
@@ -1698,13 +1639,6 @@ OutputCurtailmentReserve_FCRU(n,h)
 OutputContingencyPerZone(n,h)
 OutputContingency(h)
 
-*MADRID
-$If %MTS% == 0 OutputPowerLoss(h)
-*$If %MTS% == 0 OutputMaxInstantGenerator(h)
-
-*FOR FUTURE
-*OutputTotalDemand_2U(h)
-*OutputLoadRamp(n,h)
 ;
 
 OutputCommitted(au,z)=Committed.L(au,z);
@@ -1818,15 +1752,6 @@ OutputReserve_FCRU(au,z) = ReserveProvision.L('FCRU',au,z);
 OutputReserve_FCRD(au,z) = ReserveProvision.L('FCRD',au,z);
 OutputContingencyPerZone(n,z) = smax(au$(Location(au,n)), Power.L(au,z));
 OutputContingency(z) = smax(au, Power.L(au,z));
-
-*MADRID
-$If %MTS%==0 OutputPowerLoss(z) = PowerLoss.L(z);
-*OutputPowerLoss(z) = PowerLoss.L(z);
-*$If %MTS%==0 OutputMaxInstantGenerator(z) = MaxInstantGenerator.L(z);
-
-*FOR FUTURE
-*OutputTotalDemand_2U(z) = TotalDemand_2U.L(z);
-*OutputLoadRamp(n,z) = LoadRamp.L(n,z);
 
 OutputEmissions(n,p,z) = sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n));
                         
@@ -1970,11 +1895,6 @@ OutputCurtailmentReserve_FFRU,
 OutputCurtailmentReserve_FCRU,
 OutputContingencyPerZone,
 OutputContingency,
-
-
-*MADRID
-$If %MTS%==0 OutputPowerLoss,
-*$If %MTS%==0 OutputMaxInstantGenerator,
 
 status,
 UnitHourlyPowerRevenue
