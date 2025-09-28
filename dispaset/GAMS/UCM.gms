@@ -1218,6 +1218,7 @@ EQ_CHP_extraction_Pmax(chp,i)$(CHPType(chp,'Extraction') or CHPType(chp,'P2H')).
 
 EQ_CHP_backpressure(chp,i)$(CHPType(chp,'Back-Pressure'))..
          Power(chp,i) + sum(res_U, ReserveProvision(res_U,chp,i))
+         - sum(res_D, ReserveProvision(res_D,chp,i))
          =E=
          StorageInput(chp,i) * CHPPowerToHeat(chp)
          + Heat(chp,i) * CHPPowerToHeat(chp)
