@@ -1059,6 +1059,7 @@ EQ_Storage_input(s,i)..
 *Discharge is limited by the storage level
 EQ_Storage_MaxDischarge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep)..
          Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
+         + sum(res_U, ReserveProvision(res_U,au,i)$(s(au)) * ReserveDuration(res_U) / max(StorageDischargeEfficiency(au)$(s(au)), 1e-6))
          =L=
          StorageInitial(au)$(s(au))$(ord(i) = 1)
          + StorageLevel(au,i-1)$(s(au))$(ord(i) > 1)
@@ -1068,6 +1069,7 @@ EQ_Storage_MaxDischarge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(
 *Charging is limited by the remaining storage capacity
 EQ_Storage_MaxCharge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep)..
          StorageInput(au,i)$(s(au))*StorageChargingEfficiency(au)$(s(au))*TimeStep
+         + sum(res_D, ReserveProvision(res_D,au,i)$(s(au)) * ReserveDuration(res_D) * StorageChargingEfficiency(au)$(s(au)))
          =L=
          (Nunits(au)$(s(au)) * StorageCapacity(au)$(s(au))-StorageInitial(au)$(s(au)))$(ord(i) = 1)
          + (Nunits(au)$(s(au)) * StorageCapacity(au)$(s(au))*AvailabilityFactor(au,i-1)$(s(au)) - StorageLevel(au,i-1))$(ord(i) > 1)
@@ -1080,11 +1082,13 @@ EQ_Storage_balance(au,i)..
          +StorageLevel(au,i-1)$(s(au))$(ord(i) > 1)
          +StorageInflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
          +StorageInput(au,i)$(s(au))*StorageChargingEfficiency(au)$(s(au))*TimeStep
+         + sum(res_D, ReserveProvision(res_D,au,i)$(s(au)) * ReserveDuration(res_D) * StorageChargingEfficiency(au)$(s(au)))
          =E=
          StorageLevel(au,i)$(s(au))
          +StorageOutflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
          +spillage(au,i)$(s(au) or wat(au))
          +Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
+         + sum(res_U, ReserveProvision(res_U,au,i)$(s(au)) * ReserveDuration(res_U) / max(StorageDischargeEfficiency(au)$(s(au)), 1e-6))
          +StorageSelfDischarge(au)$(s(au))*StorageLevel(au,i)$(s(au))*TimeStep
 ;
 
