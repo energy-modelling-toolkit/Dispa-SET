@@ -532,10 +532,6 @@ EQ_Power_available
 EQ_Reserve_UP_limit_chp
 EQ_Reserve_DOWN_limit_chp
 
-*new
-EQ_Reserve_UP_limit_ba
-EQ_Reserve_DOWN_limit_ba
-
 EQ_Storage_minimum
 EQ_Storage_alert
 EQ_Storage_flood_control
@@ -884,19 +880,6 @@ EQ_Reserve_DOWN_limit_chp(chp,i)..
          StorageLevel(chp,i) * CHPPowerToHeat(chp)
 ;
 
-*Reserves limits for Batteries
-EQ_Reserve_UP_limit_ba(ba,i)..
-         sum(res_U, ReserveProvision(res_U,ba,i)* ReserveDuration(res_U))
-         =L=
-         (StorageLevel(ba,i) - StorageMinimum(ba)) * StorageDischargeEfficiency(ba) 
-;
-
-EQ_Reserve_DOWN_limit_ba(ba,i)..
-         sum(res_D, ReserveProvision(res_D,ba,i) * ReserveDuration(res_D))
-         =l=
-         (StorageCapacity(ba) - StorageLevel(ba,i)) * StorageChargingEfficiency(ba)      
-;
-
 *---------------------------------------GENERAL SYSTEM-WIDE RESERVE LIMITS---------------------------------------------------------------
 *System-wide reserve limits upward
 EQ_Total_Delivery_Limit_Up(au,i)..
@@ -1235,7 +1218,7 @@ EQ_CHP_max_heat(chp,i)..
 EQ_Power_Balance_of_P2X_units(nx,p2x,i)..                                                                                                                                                                                                                                                    
          PowerX(nx,p2x,i)
          =E=
-         (PowerConsumption(p2x,i) - sum(res_D, ReserveProvision(res_D,p2x,i)))* Power2XConversionMultiplier(nx,p2x,i) * LocationX(p2x,nx)
+         (PowerConsumption(p2x,i) + sum(res_D, ReserveProvision(res_D,p2x,i)))* Power2XConversionMultiplier(nx,p2x,i) * LocationX(p2x,nx)
 ;
 
 EQ_Power_Balance_of_X2P_units(nx,x2p,i)..                                                                                                                                                                                                                                                    
@@ -1246,7 +1229,7 @@ EQ_Power_Balance_of_X2P_units(nx,x2p,i)..
 ;
 
 EQ_Max_Power_Consumption_of_BS_units(p2x,i)..
-         PowerConsumption(p2x,i) - sum(res_D, ReserveProvision(res_D,p2x,i))
+         PowerConsumption(p2x,i) + sum(res_D, ReserveProvision(res_D,p2x,i))
          =L=
          PowerCapacity(p2x) * Nunits(p2x)
 ;
@@ -1362,10 +1345,6 @@ EQ_Max_Power_Consumption_of_BS_units,
 EQ_Power_available,
 EQ_Reserve_UP_limit_chp,
 EQ_Reserve_DOWN_limit_chp,
-
-*new
-EQ_Reserve_UP_limit_ba
-EQ_Reserve_DOWN_limit_ba
 
 EQ_Storage_minimum,
 EQ_Storage_alert,
