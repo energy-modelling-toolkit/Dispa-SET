@@ -1235,18 +1235,18 @@ EQ_CHP_max_heat(chp,i)..
 EQ_Power_Balance_of_P2X_units(nx,p2x,i)..                                                                                                                                                                                                                                                    
          PowerX(nx,p2x,i)
          =E=
-         PowerConsumption(p2x,i) * Power2XConversionMultiplier(nx,p2x,i) * LocationX(p2x,nx)
+         (PowerConsumption(p2x,i) - sum(res_D, ReserveProvision(res_D,p2x,i)))* Power2XConversionMultiplier(nx,p2x,i) * LocationX(p2x,nx)
 ;
 
 EQ_Power_Balance_of_X2P_units(nx,x2p,i)..                                                                                                                                                                                                                                                    
          PowerX(nx,x2p,i) 
          =E=
          0 + 
-         (Power(x2p,i)/X2PowerConversionMultiplier(nx,x2p,i)  * LocationX(x2p,nx))$(X2PowerConversionMultiplier(nx,x2p,i)<>0)
+         ((Power(x2p,i) + sum(res_U, ReserveProvision(res_U,x2p,i)))/X2PowerConversionMultiplier(nx,x2p,i)  * LocationX(x2p,nx))$(X2PowerConversionMultiplier(nx,x2p,i)<>0)
 ;
 
 EQ_Max_Power_Consumption_of_BS_units(p2x,i)..
-         PowerConsumption(p2x,i)
+         PowerConsumption(p2x,i) - sum(res_D, ReserveProvision(res_D,p2x,i))
          =L=
          PowerCapacity(p2x) * Nunits(p2x)
 ;
