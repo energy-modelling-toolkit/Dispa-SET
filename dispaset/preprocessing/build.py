@@ -1402,15 +1402,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 if r in ['FCRU', 'FCRD', 'FFRU', 'FFRD'] and droop > 0:
                     factor1 = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
                     values[j, i, :] = factor1
-                elif r in ['aFRRU'] and rampuprate * constants['FullActivationTime2'] >= partloadmin: #It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.
-                    factor2 = rampuprate * constants['FullActivationTime2']
-                    values[j, i, :] = factor2
-                elif r in ['aFRRD'] and rampdownrate * constants['FullActivationTime2'] >= partloadmin:#It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.
-                    factor3 = rampdownrate * constants['FullActivationTime2']
-                    values[j, i, :] = factor3  
-                elif r in ['mFRRU'] and rampuprate * constants['FullActivationTime3'] >= partloadmin:#It is the minimum ramp-up rate required to reach the PartLoadMin in 7 minutes.
-                    factor4 = rampuprate * constants['FullActivationTime3']
-                    values[j, i, :] = factor4
+                # elif r in ['aFRRU'] and rampuprate * constants['FullActivationTime2'] >= partloadmin: #It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.
+                #     factor2 = rampuprate * constants['FullActivationTime2']
+                #     values[j, i, :] = factor2
+                # elif r in ['aFRRD'] and rampdownrate * constants['FullActivationTime2'] >= partloadmin:#It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.
+                #     factor3 = rampdownrate * constants['FullActivationTime2']
+                #     values[j, i, :] = factor3  
+                # elif r in ['mFRRU'] and rampuprate * constants['FullActivationTime3'] >= partloadmin:#It is the minimum ramp-up rate required to reach the PartLoadMin in 7 minutes.
+                #     factor4 = rampuprate * constants['FullActivationTime3']
+                #     values[j, i, :] = factor4
                 else:
                     values[j, i, :] = 1  # Participación binaria para otras reservas
         
