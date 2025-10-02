@@ -1052,6 +1052,7 @@ EQ_Storage_level(au,i)..
 * Storage charging is bounded by the maximum capacity
 EQ_Storage_input(s,i)..
          StorageInput(s,i)
+         + sum(res_D, ReserveProvision(res_D,s,i))$(s)
          =L=
          StorageChargingCapacity(s)*(Nunits(s)-Committed(s,i))
 ;
@@ -1082,13 +1083,11 @@ EQ_Storage_balance(au,i)..
          +StorageLevel(au,i-1)$(s(au))$(ord(i) > 1)
          +StorageInflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
          +StorageInput(au,i)$(s(au))*StorageChargingEfficiency(au)$(s(au))*TimeStep
-         + sum(res_D, ReserveProvision(res_D,au,i)$(s(au)) * ReserveDuration(res_D) * StorageChargingEfficiency(au)$(s(au)))
          =E=
          StorageLevel(au,i)$(s(au))
          +StorageOutflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
          +spillage(au,i)$(s(au) or wat(au))
          +Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
-         + sum(res_U, ReserveProvision(res_U,au,i)$(s(au)) * ReserveDuration(res_U) / max(StorageDischargeEfficiency(au)$(s(au)), 1e-6))
          +StorageSelfDischarge(au)$(s(au))*StorageLevel(au,i)$(s(au))*TimeStep
 ;
 
@@ -1191,7 +1190,6 @@ EQ_CHP_extraction(chp,i)$(CHPType(chp,'Extraction'))..
          =G=
          StorageInput(chp,i) * CHPPowerToHeat(chp)
          + Heat(chp,i) * CHPPowerToHeat(chp)
-
 ;
 
 EQ_CHP_extraction_Pmax(chp,i)$(CHPType(chp,'Extraction') or CHPType(chp,'P2H'))..
