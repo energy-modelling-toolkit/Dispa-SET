@@ -1288,14 +1288,23 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
     
     Damping = inputs["param_df"]["Demand"].filter(like="DA").sum(axis=1).to_frame("Damping")*0.015
     Contingency = results['OutputContingency'].to_frame("Contingency") 
-    data = pd.concat([Damping, Contingency], axis=1)
+    data = pd.concat([Contingency, Damping], axis=1)
+    
+    # Build reduced DataFrame 
+    data_grouped = group_contingencies_data(data, "Contingency", "Damping", tol_max=10.0, tol_min=50.0)
+    group_cols = ["Contingency_group", "Damping_group"]
+    data_reduced = (
+        data_grouped.groupby(group_cols)
+        .size()
+        .reset_index(name="count")
+    )
     
     # find max system inertia possible
     product = inputs["param_df"]["InertiaConstant"]["InertiaConstant"] * inputs["param_df"]["PowerCapacity"]["PowerCapacity"]
     system_inertia = np.floor(product.sum()/1000)
-    data["SystemInertia"] = system_inertia
+    data_reduced["SystemInertia"] = system_inertia
     
-    total_contingencies = len(Contingency)  # Count the total number of contingencies"
+    total_contingencies = len(data_reduced)  # Count the total number of contingencies"
     contingency_counter = 1  # Initialize the contingnecy counter counter
     tolH = 1                  # Set a tolerance for the H binary search 
     tolReserves = 10          # Set a tolerance for the Reserves binary search
@@ -1304,17 +1313,20 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
     # Create an empty dictionary to store results
     results_frequency_response = {}
     # Create an empty dataframe to store the reserves found
-    summary_reserves = pd.DataFrame(index=data.index, columns=['H_val','FFR_val','FCR_val','aFRR_val','mFRR_val', 'status'])
-    
+    summary_reserves = data_grouped.copy()      
+    summary_reserves_reduced  = data_reduced.copy()
+    columns=['H_val','FFR_val','FCR_val','aFRR_val','mFRR_val', 'status']
+    for col in columns:
+        summary_reserves_reduced[col] = pd.NA   
     print("Initializing sequential binary search over each reserve timeframe...")
     
     # Perform the binary search for each row of the dataframe data     
-    for index, row in data.iterrows():
+    for index, row in data_reduced.iterrows():
         # Perform the operations on each row
         print(f"Calculating frequency reserves for Contingency {contingency_counter}")
         # Binary search range and step
         H_range = (0, (row['SystemInertia']*2))
-        reserve_range = (0, row['Contingency']*1.3)
+        reserve_range = (0, row['Contingency_group']*1.3)
     
         best_solution = None
         best_df = None
@@ -1329,7 +1341,7 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
             elif use_fcr:
                 t = activation_times["fcr"]["prep"]
             mid = (low + high)/2
-            max_fd, max_r, results_df = frequency_response(t, activation_times, mid, 0, 0, 0, 0, row['Contingency'], row['Damping'])
+            max_fd, max_r, results_df = frequency_response(t, activation_times, mid, 0, 0, 0, 0, row['Contingency_group'], row['Damping_group'])
             # filtering results that meets the safe operational limits
             if (max_fd <= limit_freq) and (max_r <= limit_rocof):
                 H_candidates.append(mid)
@@ -1353,7 +1365,7 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
                     # adjust frequency response simulation settings
                     t = activation_times["ffr"]["delivery"]
                     mid = (low + high)/2
-                    max_fd, max_r, results_df = frequency_response(t, activation_times, H_val, mid, 0, 0, 0, row['Contingency'], row['Damping'])
+                    max_fd, max_r, results_df = frequency_response(t, activation_times, H_val, mid, 0, 0, 0, row['Contingency_group'], row['Damping_group'])
                     # filtering results that meets the safe operational limits
                     if (max_fd <= limit_freq) and (max_r <= limit_rocof): 
                         FFR_candidates.append((H_val, mid))
@@ -1380,7 +1392,7 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
                     # adjust frequency response simulation settings
                     t = activation_times["fcr"]["delivery"]
                     mid = (low + high)/2
-                    max_fd, max_r, results_df = frequency_response(t, activation_times, H_val, FFR_val, mid, 0, 0, row['Contingency'], row['Damping'])
+                    max_fd, max_r, results_df = frequency_response(t, activation_times, H_val, FFR_val, mid, 0, 0, row['Contingency_group'], row['Damping_group'])
                     # filtering results that meets the safe operational limits
                     if (max_fd <= limit_freq) and (max_r <= limit_rocof): 
                         FCR_candidates.append((H_val, FFR_val, mid))
@@ -1404,14 +1416,14 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
             for H_val, FFR_val, FCR_val in FCR_candidates:
                 # adjust frequency response simulation settings
                 t = activation_times["mfrr"]["ramp"] + 50
-                max_fd, max_r, results_df = frequency_response(t, activation_times, H_val, FFR_val, FCR_val, row['Contingency'], row['Contingency'], row['Contingency'], row['Damping'])
+                max_fd, max_r, results_df = frequency_response(t, activation_times, H_val, FFR_val, FCR_val, row['Contingency_group'], row['Contingency_group'], row['Contingency_group'], row['Damping_group'])
                 # filtering results for values after 300s when the system should reach the steady state frequency
                 freq_window = results_df.loc[results_df['Time [s]'] > 300]
                 # calculates the maximum absolut value of frequency deviation 300s after the power imbalance 
                 freq_steady_state = freq_window['Frequency Deviation [Hz]'].abs().max()
                 # filtering results that meets the safe operational limits
                 if (max_fd <= limit_freq) and (max_r <= limit_rocof) and (freq_steady_state <= limit_freq_steady_state): 
-                    all_candidates.append((H_val*1000, FFR_val, FCR_val, row['Contingency'], row['Contingency'], True))
+                    all_candidates.append((H_val*1000, FFR_val, FCR_val, row['Contingency_group'], row['Contingency_group'], True))
         
             if not all_candidates:
                 print("No valid combination of H+FFR+FCR+aFRR+mFRR found")
@@ -1426,14 +1438,14 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
         # We take the combination with the minimum sum
         best_solution = min(all_candidates, key=lambda x: sum(x[:-1]))  # min sum of reserves
         H_val, FFR_val, FCR_val, aFRR_val, mFRR_val, status = best_solution
-        _, _, best_df = frequency_response(t, activation_times, H_val/1000, FFR_val, FCR_val, aFRR_val, mFRR_val, row['Contingency'], row['Damping'], True)
+        _, _, best_df = frequency_response(t, activation_times, H_val/1000, FFR_val, FCR_val, aFRR_val, mFRR_val, row['Contingency_group'], row['Damping_group'], True)
 
         # Store the results_df in the dictionary
         results_frequency_response[f"Contingency{contingency_counter}"] = best_df    
       
         print(f"The best reserves combination for Contingency {contingency_counter} is: H={H_val/1000:.2f}, FFR={FFR_val:.2f}, FCR={FCR_val:.2f}, aFRR={aFRR_val:.2f}, mFRR={mFRR_val:.2f}")
         # Save combinations in the summary_reserves DataFrame
-        summary_reserves.loc[index] = [H_val/1000, FFR_val, FCR_val, aFRR_val, mFRR_val, status]
+        summary_reserves_reduced.loc[index] = [row['Contingency_group'], row['Damping_group'], row['count'], row['SystemInertia'], H_val/1000, FFR_val, FCR_val, aFRR_val, mFRR_val, status]
 
         contingency_counter += 1
         
@@ -1441,21 +1453,76 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
     elapsed_time = end_time - start_time
     print(f"Tiempo total de optimize_search: {elapsed_time:.2f} segundos")
     
+    # Map back to full time series
+    summary_reserves = summary_reserves.merge(
+        summary_reserves_reduced,
+        left_on=group_cols,
+        right_on=group_cols,
+        how="left"
+    )
+    # We convert the 'index' column into the DataFrame's index.
+    summary_reserves = summary_reserves.set_index('index').sort_index()
+    data_grouped = data_grouped.set_index('index').sort_index()
+    
     # Save the results of the swing equation solutions for each contingency
     with pd.ExcelWriter(path +'results_frecuency_response.xlsx', engine='xlsxwriter') as writer:
         for contingency, df in results_frequency_response.items():
             df.to_excel(writer, sheet_name=contingency, index=False)
             
-    # Save the results (reserve size) of the frequency security constraints analisys      
-    for col in summary_reserves.columns:
+    # Save the results (reserve size) of the frequency security constraints analisys  
+    columns_to_save  = ['H_val', 'FFR_val', 'FCR_val', 'aFRR_val', 'mFRR_val']    
+    for col in columns_to_save:
         filename = path +f"{col}.csv"
         summary_reserves[[col]].to_csv(filename, index=True)
 
     # Save the data containing the Contingency, Damping, and max System Inertia
-    data.to_csv(path +'Contingency.csv', index=False)
+    data_grouped.to_csv(path +'Contingency.csv', index=True)
     
     # Save the results in pickle file
     with open(path +"freq_stab_results.pkl", "wb") as f:
-        pickle.dump((results_frequency_response, summary_reserves, data), f)
+        pickle.dump((results_frequency_response, summary_reserves, data_grouped), f)
         
-    return results_frequency_response, summary_reserves, data
+    return results_frequency_response, summary_reserves, data_grouped
+
+#%%
+def group_contingencies_data(df, col_max, col_min, tol_max=1.0, tol_min=0.02):
+    """
+    Group values upwards with tolerances for multiple columns.
+    Always assigns group representative as the maximum of each group.
+    
+    Parameters
+    ----------
+    df : DataFrame
+        Original DataFrame
+    cols : list of str
+        Column names to group on
+    tolerances : dict
+        Tolerance per column, e.g. {"Contingency": 1.0, "Damping": 1.0}
+    """
+    df_sorted = df.sort_values([col_max, col_min]).reset_index(drop=False)
+    
+    grouped_max, grouped_min = [], []
+    current_group = []
+    current_max = df_sorted.loc[0, col_max]
+    current_min = df_sorted.loc[0, col_min]
+    
+    for _, row in df_sorted.iterrows():
+        val_max, val_min = row[col_max], row[col_min]
+        if (current_max - val_max <= tol_max) and (val_min - current_min <= tol_min):
+            current_group.append((val_max, val_min))
+            current_max = max([x[0] for x in current_group])
+            current_min = min([x[1] for x in current_group])
+        else:
+            grouped_max.extend([current_max]*len(current_group))
+            grouped_min.extend([current_min]*len(current_group))
+            current_group = [(val_max, val_min)]
+            current_max, current_min = val_max, val_min
+    
+    # último grupo
+    grouped_max.extend([current_max]*len(current_group))
+    grouped_min.extend([current_min]*len(current_group))
+    
+    df_sorted[col_max + "_group"] = grouped_max
+    df_sorted[col_min + "_group"] = grouped_min
+    
+    return df_sorted
