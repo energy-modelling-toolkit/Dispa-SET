@@ -142,7 +142,7 @@ Optimization Variables
     Reserve_2D(u,h)            MW      Spinning reserve down
     Reserve_3U(u,h)            MW      Non spinning quick start reserve up
     ShedLoad(n,h)              MW      Shed load
-    StorageInput(au,h)         MWh     Charging input for storage units
+    StorageInput(au,h)         MW      Charging input for storage units
     StorageLevel(au,h)         MWh     Storage level of charge
     StorageSlack(au,h)	       MWh     Unsatisfied storage level
     Spillage(s,h)              MWh     Spillage from water reservoirs
