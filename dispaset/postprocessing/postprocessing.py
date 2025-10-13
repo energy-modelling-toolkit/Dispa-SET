@@ -1259,11 +1259,11 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
     # Definition of default settings for the function
     if activation_times is None:
         activation_times = {
-            "ffr": dict(prep=2, ramp=3, delivery=18, deact=21),
-            "fcr": dict(prep=5, ramp=18, delivery=51, deact=181),
-            "afrr": dict(prep=31, ramp=181, delivery=481, deact=931),
-            "mfrr": dict(prep=481, ramp=931)  # mfrr leght is considered for the whole timestep
-        }
+                    "ffr": dict(prep=2, ramp=3, delivery=61, deact=301),
+                    "fcr": dict(prep=5, ramp=16, delivery=181, deact=301),
+                    "afrr": dict(prep=31, ramp=301, delivery=481, deact=901),
+                    "mfrr": dict(prep=481, ramp=901)  # mfrr leght is considered for the whole timestep
+                }
     
     # Definition of Safe operational limits
     if limit_freq is None:

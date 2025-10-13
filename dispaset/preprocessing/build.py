@@ -1357,8 +1357,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     constants = {
         'SystemFrequency': 50,
         'DeltaFrequencyMax': 0.8,
-        'FullActivationTime2':2.5, # time in minutes 
-        'FullActivationTime3':7.5 # time in minutes 
+        'FullActivationTime2':5, # time in minutes () 
+        'FullActivationTime3':15 # time in minutes ()
         }
     values = np.zeros((len(sets['res']), len(sets['au']), len(sets['h'])))
     
