@@ -1418,7 +1418,7 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
                 t = activation_times["mfrr"]["ramp"] + 50
                 max_fd, max_r, results_df = frequency_response(t, activation_times, H_val, FFR_val, FCR_val, row['Contingency_group'], row['Contingency_group'], row['Contingency_group'], row['Damping_group'])
                 # filtering results for values after 300s when the system should reach the steady state frequency
-                freq_window = results_df.loc[results_df['Time [s]'] > 300]
+                freq_window = results_df.loc[results_df['Time [s]'] > 350]
                 # calculates the maximum absolut value of frequency deviation 300s after the power imbalance 
                 freq_steady_state = freq_window['Frequency Deviation [Hz]'].abs().max()
                 # filtering results that meets the safe operational limits
