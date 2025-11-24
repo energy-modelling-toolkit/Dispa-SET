@@ -232,7 +232,7 @@ scalar TimeStep;
 
 
 *New
-scalar ConversionFactor;
+scalar ConversionFactor, local_kept;
 ConversionFactor = 1000;
 
 *Threshold values for p2h partecipation to reserve market as spinning/non-spinning reserves (TO BE IMPLEMENTED IN CONFIGFILE)
@@ -374,12 +374,12 @@ $LOAD ReserveDemand
 Parameter
 
     ReserveDuration(res)
-/  FFRU  0.0167, FCRU  0.25, aFRRU  0.5, mFRRU  1.0,
-   FFRD  0.0167, FCRD  0.25, aFRRD  0.5 /
+/  FFRU  0.0833, FCRU  0.25, aFRRU  0.5, mFRRU  1.0,
+   FFRD  0.0833, FCRD  0.25, aFRRD  0.5 /
    
     FullActivationTime(res)
-/  FFRU  0.000278, FCRU  0.004167, aFRRU  0.04167, mFRRU  0.125,
-   FFRD  0.000278, FCRD  0.004167, aFRRD  0.04167 /
+/  FFRU  0.000278, FCRU  0.004167, aFRRU  0.0833, mFRRU  0.25,
+   FFRD  0.000278, FCRD  0.004167, aFRRD  0.0833 /
    
 ;
 *===============================================================================
@@ -533,8 +533,8 @@ EQ_Reserve_UP_limit_chp
 EQ_Reserve_DOWN_limit_chp
 
 *new
-EQ_Reserve_UP_limit_ba
-EQ_Reserve_DOWN_limit_ba
+*EQ_Reserve_UP_limit_sto
+*EQ_Reserve_DOWN_limit_sto
 
 EQ_Storage_minimum
 EQ_Storage_alert
@@ -544,7 +544,8 @@ EQ_Storage_input
 EQ_Storage_MaxDischarge
 EQ_Storage_MaxCharge
 EQ_Storage_balance
-EQ_Storage_Cyclic
+*EQ_Storage_Cyclic
+EQ_Storage_CyclicGlobal
 *EQ_H2_demand
 EQ_Storage_boundaries
 EQ_Boundary_Sector_Storage_MaxDischarge
@@ -884,18 +885,25 @@ EQ_Reserve_DOWN_limit_chp(chp,i)..
          StorageLevel(chp,i) * CHPPowerToHeat(chp)
 ;
 
-*Reserves limits for Batteries
-EQ_Reserve_UP_limit_ba(ba,i)..
-         sum(res_U, ReserveProvision(res_U,ba,i)* ReserveDuration(res_U))
-         =L=
-         (StorageLevel(ba,i) - StorageMinimum(ba)) * StorageDischargeEfficiency(ba) 
-;
+**Reserves limits for Storage
+*EQ_Reserve_UP_limit_sto(au,i)$(StorageCapacity(au)$(s(au)) > 0)..
+*    sum(res_U, ReserveProvision(res_U,au,i)$(s(au)) * ReserveDuration(res_U)  / max(StorageDischargeEfficiency(au)$(s(au)), 1e-6))
+*    =L=
+*      StorageInitial(au)$(s(au))$(ord(i)=1)
+*      + StorageLevel(au,i-1)$(s(au))$(ord(i) > 1)
+*      + StorageInflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
+*      - StorageMinimum(au)$(s(au))*Nunits(au)$(s(au))
+*;
 
-EQ_Reserve_DOWN_limit_ba(ba,i)..
-         sum(res_D, ReserveProvision(res_D,ba,i) * ReserveDuration(res_D))
-         =l=
-         (StorageCapacity(ba) - StorageLevel(ba,i)) * StorageChargingEfficiency(ba)      
-;
+*EQ_Reserve_DOWN_limit_sto(au,i)$(StorageCapacity(au)$(s(au)) > 0)..
+*    sum(res_D, ReserveProvision(res_D,au,i)$(s(au)) * ReserveDuration(res_D)  * StorageChargingEfficiency(au)$(s(au)))
+*    =L=
+*      StorageCapacity(au)$(s(au))*Nunits(au)$(s(au))
+*      - ( StorageInitial(au)$(s(au))$(ord(i)=1)
+*          + StorageLevel(au,i-1)$(s(au))$(ord(i) > 1)
+*          + StorageInflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
+*        )
+*;
 
 *---------------------------------------GENERAL SYSTEM-WIDE RESERVE LIMITS---------------------------------------------------------------
 *System-wide reserve limits upward
@@ -956,6 +964,7 @@ EQ_Power_available(au,i)..
          =L=
          PowerCapacity(au)$(u(au))*LoadMaximum(au,i)$(u(au))*Committed(au,i)$(u(au))
          + ((PowerCapacity(au))*LoadMaximum(au,i)*Nunits(au))$(x2p(au))
+         - sum(res_U, ReserveProvision(res_U,au,i))
          + 0
 ;
 
@@ -1043,6 +1052,7 @@ EQ_Storage_minimum(au,i)..
          StorageMinimum(au)$(s(au))*Nunits(au)$(s(au))
          =L=
          StorageLevel(au,i)$(s(au))
+*         - sum(res_U, ReserveProvision(res_U,au,i)$(s(au)) * ReserveDuration(res_U))
 ;
 
 *Storage level should be above alert level, going below will only be violated to avoid power rationing (110% of most expensive power plant)
@@ -1062,16 +1072,17 @@ EQ_Storage_flood_control(s,i)$(StorageFloodControl(s,i) > StorageAlertLevel(s,i)
 *Storage level must be below storage capacity
 EQ_Storage_level(au,i)..
          StorageLevel(au,i)$(s(au))
+*         + sum(res_D, ReserveProvision(res_D,au,i)$(s(au))* ReserveDuration(res_D))
          =L=
          StorageCapacity(au)$(s(au))*AvailabilityFactor(au,i)$(s(au))*Nunits(au)$(s(au))
 ;
 
 * Storage charging is bounded by the maximum capacity
-EQ_Storage_input(s,i)..
-         StorageInput(s,i)
-         + sum(res_D, ReserveProvision(res_D,s,i))$(s)
+EQ_Storage_input(au,i)..
+         StorageInput(au,i)$(s(au))
+*         + sum(res_D, ReserveProvision(res_D,au,i)$(s(au)) * ReserveDuration(res_D))
          =L=
-         StorageChargingCapacity(s)*(Nunits(s)-Committed(s,i))
+         StorageChargingCapacity(au)$(s(au))*(Nunits(au)$(s(au))-Committed(au,i)$(s(au)))
 ;
 
 *Discharge is limited by the storage level
@@ -1109,7 +1120,7 @@ EQ_Storage_balance(au,i)..
 ;
 
 * Minimum level at the end of the optimization horizon:
-EQ_Storage_boundaries(au,i)$(ord(i) = card(i))..
+EQ_Storage_boundaries(au,i)$(ord(i) = card(i)) ..
          StorageFinalMin(au)$(s(au))
          =L=
          StorageLevel(au,i)$(s(au))
@@ -1117,11 +1128,23 @@ EQ_Storage_boundaries(au,i)$(ord(i) = card(i))..
          + WaterSlack(au)$(s(au))
 ;
 
-EQ_Storage_Cyclic(au)$(StorageHours(au)>=8)..
-         StorageFinalMin(au)
+*EQ_Storage_Cyclic(au)$(StorageHours(au)>=8)..
+*         StorageFinalMin(au)
+*         =E=
+*         StorageInitial(au)
+*;
+
+EQ_Storage_CyclicGlobal(au)..
+         sum(i$(ord(i)=1), StorageLevel(au,i))
          =E=
-         StorageInitial(au)
+         sum(i$(ord(i)=local_kept), StorageLevel(au,i))
 ;
+
+*EQ_Storage_Cyclic(au)$(StorageHours(au)>=8)..
+*    sum(i$(ord(i)=1), StorageLevel(au,i))
+*    =E=
+*    sum(i$(ord(i)=card(i)), StorageLevel(au,i))
+*;
 
 *Total emissions are capped
 EQ_Emission_limits(i,p,n)..
@@ -1366,8 +1389,8 @@ EQ_Reserve_UP_limit_chp,
 EQ_Reserve_DOWN_limit_chp,
 
 *new
-EQ_Reserve_UP_limit_ba
-EQ_Reserve_DOWN_limit_ba
+*EQ_Reserve_UP_limit_sto
+*EQ_Reserve_DOWN_limit_sto
 
 EQ_Storage_minimum,
 EQ_Storage_alert,
@@ -1375,7 +1398,8 @@ EQ_Storage_flood_control,
 EQ_Storage_level,
 EQ_Storage_input,
 EQ_Storage_balance,
-$If %MTS% == 1 EQ_Storage_Cyclic,
+*$If %MTS% == 1 EQ_Storage_Cyclic,
+$If %MTS% == 1 EQ_Storage_CyclicGlobal,
 EQ_Storage_boundaries,
 *EQ_H2_demand,
 EQ_Boundary_Sector_Storage_MaxDischarge,
@@ -1454,6 +1478,12 @@ set days /1,'ndays'/;
 display days,ndays,TimeStep;
 PARAMETER elapsed(days);
 
+scalar LastGlobalOrd_final, LastGlobalOrd_kept;
+parameter
+    SF_local(au)          "StorageFinalMin local (última hora del horizonte actual)",
+    SF_globalFinal(au)    "StorageFinalMin global según hora final del horizonte",
+    SF_globalKept(au)     "StorageFinalMin global según última hora mantenida (LastKeptHour)";
+
 FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("RollingHorizon Length","day"),
          FirstHour = (day-1)*24/TimeStep+1;
          LastHour = min(card(h),FirstHour + (Config("RollingHorizon Length","day")+Config("RollingHorizon LookAhead","day")) * 24/TimeStep - 1);
@@ -1461,10 +1491,21 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          i(h) = no;
          i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
          display day,FirstHour,LastHour,LastKeptHour;
+         
+         LastGlobalOrd_final = FirstHour + card(i) - 1;
+         LastGlobalOrd_kept  = LastKeptHour;
+         local_kept = LastKeptHour - FirstHour + 1;
 
 *        Defining the minimum level at the end of the horizon :
          StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
          StorageFinalMin(chp) =  sum(i$(ord(i)=card(i)),StorageProfile(chp,i)*StorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,i));
+
+*         StorageFinalMin(au) = sum(h$(ord(h) = LastGlobalOrd_kept),StorageProfile(au,h) * StorageCapacity(au) * Nunits(au) * AvailabilityFactor(au,h));
+*         StorageFinalMin(chp) = sum(h$(ord(h) = LastGlobalOrd_kept),StorageProfile(chp,h) * StorageCapacity(chp) * Nunits(chp) * AvailabilityFactor(chp,h));
+
+
+
+
 $If %MTS% == 0     SectorXStorageFinalMin(nx) = sum(i$(ord(i)=card(i)),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 *$If %MTS% == 0     SectorXStorageInitial(nx) = sum(i$(ord(i)=1),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 
@@ -1505,10 +1546,10 @@ OptimizationError.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = Error.L - OptimalityG
 
 
 *Loop variables to display after solving:
-* Display LastKeptHour,PowerInitial,StorageInitial;
+Display LastKeptHour,PowerInitial,StorageInitial, StorageFinalMin;
 );
 
-* Display PowerX.L,Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,CurtailmentReserve.L,CurtailedHeat.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_RampUp.L,LL_RampDown.L;
+Display PowerX.L,Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_RampUp.L,LL_RampDown.L;
 
 *===============================================================================
 *Result export
