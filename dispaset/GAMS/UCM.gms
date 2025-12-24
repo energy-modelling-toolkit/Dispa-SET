@@ -37,6 +37,11 @@ $set InputFileName Inputs.gdx
 * Definition of the equations that will be present in LP or MIP
 * (1 for LP 0 for MIP TC)
 $setglobal LPFormulation 0
+
+* Definition of the type of resolution
+* MTS = 0 => rolling horizon UC and dispatch;
+* MTS =1 => cyclic boundary conditions with MTS activate;
+* MTS = 1 => fixed boundary conditions with MTS activated
 $setglobal MTS 0
 
 * Flag to retrieve status or not
@@ -92,6 +97,7 @@ slx              Boundary sector spillage lines
 *Simulations options
 h                Hours
 i(h)             Subset of simulated hours for one iteration
+i_last(h)        Subset with the last simulated hour
 wat(au)          hydro technologies
 z(h)             Subset of every simulated hour
 ;
@@ -196,7 +202,7 @@ SectorXStorageSelfDischarge(nx)             [%]             Boundary sector stor
 SectorXStorageHours(nx)                     [h]             Boundary sector storage hours
 SectorXStorageMinimum(nx)                   [MWh]           Boundary sector storage minimum
 SectorXStoragePowerMax(nx)                   [MW]            Maximum power capacity of the boundary sector storage
-$If %MTS% == 0 SectorXStorageInitial(nx)    [MWh]           Boundary sector storage initial state of charge
+SectorXStorageInitial(nx)                   [MWh]           Boundary sector storage initial state of charge
 SectorXStorageProfile(nx,h)                 [%]             Boundary sector storage level respected at the end of each horizon
 SectorXAlertLevel(nx,h)                     [MWh]           Storage alert of the boundary sector - Will only be violated to avoid power rationing
 SectorXFloodControl(nx,h)                   [MWh]           Storage flood control of the boundary sector
@@ -219,7 +225,7 @@ CostLoadShedding(n,h)                       [EUR\MW]        Value of lost load
 LoadMaximum(au,h)                           [%]             Maximum load given AF and OF
 PowerMustRun(au,h)                          [MW\u]          Minimum power output
 StorageFinalMin(au)                         [MWh]           Minimum storage level at the end of the optimization horizon
-$If %MTS% == 0 SectorXStorageFinalMin(nx)   [MWh]           Minimum boundary sector storage level at the end of the optimization horizon
+SectorXStorageFinalMin(nx)                  [MWh]           Minimum boundary sector storage level at the end of the optimization horizon
 MaxFlexDemand(n)                            [MW]            Maximum value of the flexible demand parameter
 MaxOverSupply(n,h)                          [MWh]           Maximum flexible demand accumultation
 AccumulatedOverSupply_inital(n)             [MWh]           Initial value of the flexible demand accumulation
@@ -232,7 +238,7 @@ scalar TimeStep;
 
 
 *New
-scalar ConversionFactor, local_kept;
+scalar ConversionFactor;
 ConversionFactor = 1000;
 
 *Threshold values for p2h partecipation to reserve market as spinning/non-spinning reserves (TO BE IMPLEMENTED IN CONFIGFILE)
@@ -357,7 +363,7 @@ $LOAD SectorXStorageHours
 $LOAD SectorXStorageMinimum
 $LOAD SectorXAlertLevel
 $LOAD SectorXFloodControl
-$If %MTS% == 0 $LOAD SectorXStorageInitial
+$LOAD SectorXStorageInitial
 $LOAD SectorXStorageProfile
 $If %RetrieveStatus% == 1 $LOAD CommittedCalc
 $LOAD PTDF
@@ -444,8 +450,6 @@ SectorXStorageLevelViolation(nx)        [MWh]   Unsatisfied boundary sector wate
 SectorXStorageLevelViolation_H(nx,h)    [MWh]   Unsatisfied boundary sector storage level constraint at end of simulation timestep
 SectorXFlexDemand(nx,h)                 [MW]    FLexible boundary sector demand at each time step of each nx node
 SectorXFlexSupply(nx,h)                 [MW]    FLexible boundary sector supply at each time step of each nx node
-$If %MTS% == 1 SectorXStorageInitial(nx)
-$If %MTS% == 1 SectorXStorageFinalMin(nx)
 
 *New
 SystemInertia(h)                        [s]         System Inertia
@@ -544,8 +548,6 @@ EQ_Storage_input
 EQ_Storage_MaxDischarge
 EQ_Storage_MaxCharge
 EQ_Storage_balance
-*EQ_Storage_Cyclic
-EQ_Storage_CyclicGlobal
 *EQ_H2_demand
 EQ_Storage_boundaries
 EQ_Boundary_Sector_Storage_MaxDischarge
@@ -558,7 +560,6 @@ EQ_Boundary_Sector_Flood_Control
 EQ_Boundary_Sector_Storage_level
 EQ_Boundary_Sector_Storage_balance
 EQ_Boundary_Sector_Storage_boundaries
-EQ_Boundary_Sector_Storage_Cyclic
 EQ_SystemCost
 EQ_Emission_limits
 EQ_Flow_limits_lower
@@ -1024,9 +1025,10 @@ EQ_Boundary_Sector_Storage_PowerMin(nx,i)..
         -SectorXStoragePowerMax(nx)
 ;
 
-*Storage balance
+*Storage balance (cfr the usual storage balance equation for explanations)
 EQ_Boundary_Sector_Storage_balance(nx,i)..
-         SectorXStorageInitial(nx)$(ord(i) = 1)
+         SectorXStorageInitial(nx)$(ord(i) = 1 and %MTS% <> 1)
+         + (sum(i_last, SectorXStorageLevel(nx,i_last)))$(ord(i) = 1 and %MTS% = 1)
          + SectorXStorageLevel(nx,i-1)$(ord(i) > 1)
          + SectorXStorageInput(nx,i)*TimeStep
          =E=
@@ -1035,16 +1037,10 @@ EQ_Boundary_Sector_Storage_balance(nx,i)..
 ;
 
 * Minimum level at the end of the optimization horizon:
-EQ_Boundary_Sector_Storage_boundaries(nx,i)$(ord(i) = card(i))..
+EQ_Boundary_Sector_Storage_boundaries(nx,i)$(i.val = LastKeptHour or ord(i)=card(i))..
          SectorXStorageFinalMin(nx)
          =L=
          SectorXStorageLevel(nx,i) + SectorXStorageLevelViolation(nx)
-;
-
-EQ_Boundary_Sector_Storage_Cyclic(nx)$(SectorXStorageHours(nx)>=8)..
-         SectorXStorageFinalMin(nx)
-         =E=
-         SectorXStorageInitial(nx)
 ;
 
 *Storage level must be above a minimum
@@ -1106,8 +1102,12 @@ EQ_Storage_MaxCharge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au)
 ;
 
 *Storage balance
+* if i = 1 and MTS = {1,3} => no cyclic boundary conditions, use the StorageInitial parameter
+* if i = 1 and MTS = 1 => cyclic boundary conditions, use the last StorageLevel value as initial level
+* if i > 1 => standard energy storage equation
 EQ_Storage_balance(au,i)..
-         StorageInitial(au)$(s(au))$(ord(i) = 1)
+         StorageInitial(au)$(s(au))$(ord(i) = 1 and %MTS% <> 1)
+         + (sum(i_last, StorageLevel(au,i_last)))$(ord(i) = 1 and %MTS% = 1)
          +StorageLevel(au,i-1)$(s(au))$(ord(i) > 1)
          +StorageInflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
          +StorageInput(au,i)$(s(au))*StorageChargingEfficiency(au)$(s(au))*TimeStep
@@ -1120,31 +1120,13 @@ EQ_Storage_balance(au,i)..
 ;
 
 * Minimum level at the end of the optimization horizon:
-EQ_Storage_boundaries(au,i)$(ord(i) = card(i)) ..
+EQ_Storage_boundaries(au,i)$(i.val = LastKeptHour or ord(i)=card(i)) ..
          StorageFinalMin(au)$(s(au))
          =L=
          StorageLevel(au,i)$(s(au))
          + StorageLevelViolation(au)$(s(au))
          + WaterSlack(au)$(s(au))
 ;
-
-*EQ_Storage_Cyclic(au)$(StorageHours(au)>=8)..
-*         StorageFinalMin(au)
-*         =E=
-*         StorageInitial(au)
-*;
-
-EQ_Storage_CyclicGlobal(au)..
-         sum(i$(ord(i)=1), StorageLevel(au,i))
-         =E=
-         sum(i$(ord(i)=local_kept), StorageLevel(au,i))
-;
-
-*EQ_Storage_Cyclic(au)$(StorageHours(au)>=8)..
-*    sum(i$(ord(i)=1), StorageLevel(au,i))
-*    =E=
-*    sum(i$(ord(i)=card(i)), StorageLevel(au,i))
-*;
 
 *Total emissions are capped
 EQ_Emission_limits(i,p,n)..
@@ -1398,9 +1380,7 @@ EQ_Storage_flood_control,
 EQ_Storage_level,
 EQ_Storage_input,
 EQ_Storage_balance,
-*$If %MTS% == 1 EQ_Storage_Cyclic,
-$If %MTS% == 1 EQ_Storage_CyclicGlobal,
-EQ_Storage_boundaries,
+$If not %MTS% == 1 EQ_Storage_boundaries,
 *EQ_H2_demand,
 EQ_Boundary_Sector_Storage_MaxDischarge,
 EQ_Boundary_Sector_Storage_MaxCharge,
@@ -1411,8 +1391,7 @@ EQ_Boundary_Sector_Storage_level,
 EQ_Boundary_Sector_Storage_alert,
 EQ_Boundary_Sector_Flood_Control,
 EQ_Boundary_Sector_Storage_balance,
-EQ_Boundary_Sector_Storage_boundaries,
-$If %MTS% == 1 EQ_Boundary_Sector_Storage_Cyclic,
+$If not %MTS% == 1 EQ_Boundary_Sector_Storage_boundaries,
 EQ_Storage_MaxCharge,
 EQ_Storage_MaxDischarge ,
 EQ_SystemCost,
@@ -1477,8 +1456,6 @@ scalar starttime;
 set days /1,'ndays'/;
 display days,ndays,TimeStep;
 PARAMETER elapsed(days);
-
-scalar LastGlobalOrd_final, LastGlobalOrd_kept;
 parameter
     SF_local(au)          "StorageFinalMin local (última hora del horizonte actual)",
     SF_globalFinal(au)    "StorageFinalMin global según hora final del horizonte",
@@ -1490,24 +1467,24 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          LastKeptHour = LastHour - Config("RollingHorizon LookAhead","day") * 24/TimeStep;
          i(h) = no;
          i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
-         display day,FirstHour,LastHour,LastKeptHour;
-         
-         LastGlobalOrd_final = FirstHour + card(i) - 1;
-         LastGlobalOrd_kept  = LastKeptHour;
-         local_kept = LastKeptHour - FirstHour + 1;
+         i_last(h) = no;
+         i_last(h) = yes$(round(h.val) = round(LastKeptHour));
+         display day,FirstHour,LastHour,LastKeptHour,i_last;
 
-*        Defining the minimum level at the end of the horizon :
-         StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
-         StorageFinalMin(chp) =  sum(i$(ord(i)=card(i)),StorageProfile(chp,i)*StorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,i));
+*        Defining the minimum level at the end of the horizon (not-MTS case):
+$If      %MTS% == 0          StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
+$If      %MTS% == 0          StorageFinalMin(chp) =  sum(i$(ord(i)=card(i)),StorageProfile(chp,i)*StorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,i));
+$If      %MTS% == 0          SectorXStorageFinalMin(nx) = sum(i$(ord(i)=card(i)),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 
-*         StorageFinalMin(au) = sum(h$(ord(h) = LastGlobalOrd_kept),StorageProfile(au,h) * StorageCapacity(au) * Nunits(au) * AvailabilityFactor(au,h));
-*         StorageFinalMin(chp) = sum(h$(ord(h) = LastGlobalOrd_kept),StorageProfile(chp,h) * StorageCapacity(chp) * Nunits(chp) * AvailabilityFactor(chp,h));
+*        Defining the minimum level at the end of the horizon (cyclic MTS case):
+$If      %MTS% == 1          StorageFinalMin(s) =  0;
+$If      %MTS% == 1          StorageFinalMin(chp) =  0;
+$If      %MTS% == 1          SectorXStorageFinalMin(nx) = 0;
 
-
-
-
-$If %MTS% == 0     SectorXStorageFinalMin(nx) = sum(i$(ord(i)=card(i)),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
-*$If %MTS% == 0     SectorXStorageInitial(nx) = sum(i$(ord(i)=1),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
+*        Defining the minimum level at the end of the horizon (MTS with non-cyclic boundary conditions):
+$If      %MTS% == 2          StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
+$If      %MTS% == 2          StorageFinalMin(chp) =  sum(i$(ord(i)=card(i)),StorageProfile(chp,i)*StorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,i));
+$If      %MTS% == 2          SectorXStorageFinalMin(nx) = sum(i$(ord(i)=card(i)),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 
 * Display PowerInitial,CommittedInitial,StorageFinalMin;
 
@@ -1524,7 +1501,7 @@ $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCo
          PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
          StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
          StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
-$If %MTS% == 0   SectorXStorageInitial(nx) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),SectorXStorageLevel.L(nx,i));
+         SectorXStorageInitial(nx) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),SectorXStorageLevel.L(nx,i));
          SectorXFlexDemandInputInitial(nx) = sum(i$(ord(i)<LastKeptHour+1), SectorXFlexDemandInput(nx,i) - SectorXFlexDemand.L(nx,i));
          SectorXFlexSupplyInputInitial(nx) = sum(i$(ord(i)<LastKeptHour+1), SectorXFlexSupplyInput(nx,i) - SectorXFlexSupply.L(nx,i));
 $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),AccumulatedOverSupply.L(n,i));
@@ -1549,7 +1526,9 @@ OptimizationError.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = Error.L - OptimalityG
 Display LastKeptHour,PowerInitial,StorageInitial, StorageFinalMin;
 );
 
-Display PowerX.L,Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_RampUp.L,LL_RampDown.L;
+Parameter StorageLevel_all(s,h);
+StorageLevel_all(s,h) = StorageLevel.L(s,h)/max(1,StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,h));
+Display ShedLoad.L,CurtailedPower.L,StorageLevel_all;
 
 *===============================================================================
 *Result export
@@ -1705,8 +1684,6 @@ OutputSectorXStorageLevel(nx,z) = SectorXStorageLevel.L(nx,z)/max(1,SectorXStora
 OutputSectorXSelfDischarge(nx,z) = SectorXStorageSelfDischarge(nx)*SectorXStorageLevel.L(nx,z)*TimeStep;
 OutputSectorXStorageShadowPrice(nx,z) = EQ_Boundary_Sector_Storage_balance.m(nx,z);
 OutputSectorXStorageLevelViolation_H(nx,z) = SectorXStorageLevelViolation_H.l(nx,z);
-$If %MTS% == 1 OutputSectorXStorageFinalMin(nx) = SectorXStorageFinalMin.L(nx)/max(1,SectorXStorageCapacity(nx));
-$If %MTS% == 1 OutputSectorXStorageInitial(nx) = SectorXStorageInitial.L(nx)/max(1,SectorXStorageCapacity(nx));
 OutputSectorXStorageInput(nx,z) = SectorXStorageInput.l(nx,z);
 OutputSectorXWaterNotWithdrawn(nx,z) = SectorXWaterNotWithdrawn.l(nx,z);
 OutputSectorXSpillage(slx,z) = SectorXSpillage.l(slx,z);
@@ -1962,7 +1939,7 @@ UnitHourlyProfit
 ;
 
 *display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L, power.L;
-*$If %MTS%==1 display OutputPowerConsumption, heat.L, powerconsumption.L, power.L, EQ_Storage_Cyclic.L, EQ_Boundary_Sector_Storage_Cyclic.L;
+*$If %MTS%==1 display OutputPowerConsumption, heat.L, powerconsumption.L, power.L;
 
 $onorder
 
