@@ -287,7 +287,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                      fallbacks=['Unit', 'Technology', 'Zone'],
                                      default=0)
 
-    if 'StorageAlertLevels' in config and os.path.isfile(config['StorageAlertLevels']):
+    if 'StorageAlertLevels' and len(config['StorageAlertLevels'])>0:
         StorageAlertLevels = UnitBasedTable(plants_sto, 'StorageAlertLevels', config,
                                             fallbacks=['Unit', 'Technology', 'Zone'],
                                             default=0)
@@ -295,7 +295,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         logging.warning('No Storage Alert Levels will be considered (no valid file provided)')
         StorageAlertLevels = pd.DataFrame(index=config['idx_long'])
 
-    if 'StorageFloodControl' in config and os.path.isfile(config['StorageFloodControl']):
+    if 'StorageFloodControl' and len(config['StorageFloodControl'])>0:
         StorageFloodControl = UnitBasedTable(plants_sto, 'StorageFloodControl', config,
                                              fallbacks=['Unit', 'Technology', 'Zone'],
                                              default=1)
@@ -303,21 +303,21 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         logging.warning('No Storage Flood Control will be considered (no valid file provided)')
         StorageFloodControl = pd.DataFrame(index=config['idx_long'])
 
-    if 'ReservoirScaledInflows' in config and os.path.isfile(config['ReservoirScaledInflows']):
+    if 'ReservoirScaledInflows' and len(config['ReservoirScaledInflows'])>0:
         ReservoirScaledInflows = UnitBasedTable(plants_sto, 'ReservoirScaledInflows', config,
                                                 fallbacks=['Unit', 'Technology', 'Zone'], default=0)
     else:
         logging.warning('No historical Reservoir Scaled Inflows will be considered (no valid file provided)')
         ReservoirScaledInflows = pd.DataFrame(index=config['idx_long'])
 
-    if 'ReservoirScaledOutflows' in config and os.path.isfile(config['ReservoirScaledOutflows']):
+    if 'ReservoirScaledOutflows' and len(config['ReservoirScaledOutflows'])>0:
         ReservoirScaledOutflows = UnitBasedTable(plants_sto, 'ReservoirScaledOutflows', config,
                                                  fallbacks=['Unit', 'Technology', 'Zone'], default=0)
     else:
         logging.warning('No historical outflows will be considered (no valid file provided)')
         ReservoirScaledOutflows = pd.DataFrame(index=config['idx_long'])
     # TODO: Check if plants_sto esta bien para asignar el CostOfSpillage
-    if 'CostOfSpillage' in config and os.path.isfile(config['CostOfSpillage']):
+    if 'CostOfSpillage' and len(config['CostOfSpillage'])>0:
         CostOfSpillage = UnitBasedTable(plants_sto, 'CostOfSpillage', config,
                                         fallbacks=['Unit', 'Technology', 'Zone'],
                                         default=0)
@@ -1367,8 +1367,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
     for u in sets['au']:
         if u not in Plants_res.index:
-            logging.error('Reserve not valid for plant ' + u)
-            sys.exit(1)
+            logging.warning('The following power plants is not providing any reserve: ' + u)
+            continue
     
         i = au_index[u]
         tech = Plants_res.loc[u, 'Technology']
