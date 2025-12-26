@@ -965,13 +965,13 @@
                  <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="afrrdemandU">Automatic Frequency Restoration Reserve Upwards Demand(aFRR Up)<span class="tooltiptext">Table with the upwards secondary reserve requirements (e.g., aFRR up) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute.</span></label>
+                            <label for="afrrdemandU">Automatic Frequency Restoration Reserve Upwards Demand(aFRR Up)<span class="tooltiptext">Table with the upwards secondary reserve requirements (e.g., aFRR up) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute. Use '##' for zone placeholder.</span></label>
                             <input type="text" id="afrrdemandU" placeholder="e.g., aFRRUp_req.csv">
                         </div>
                     </div>
                     <div class="col">
                          <div class="form-group">
-                            <label for="afrrdemandD">Automatic Frequency Restoration Reserve Downwards Demand(aFRR Down)<span class="tooltiptext">Table with the downwards secondary reserve requirements (e.g., aFRR down) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute.</span></label>
+                            <label for="afrrdemandD">Automatic Frequency Restoration Reserve Downwards Demand(aFRR Down)<span class="tooltiptext">Table with the downwards secondary reserve requirements (e.g., aFRR down) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute. Use '##' for zone placeholder.</span></label>
                             <input type="text" id="afrrdemandD" placeholder="e.g., aFRRDown_req.csv">
                         </div>
                     </div>
@@ -1239,6 +1239,7 @@
             // Hydro related
             'reservoirscaledinflows': 'ReservoirScaledInflows',
             'hydroscheduling': 'HydroScheduling',
+            'hydroschedulinghorizon': 'HydroSchedulingHorizon',
             // Technology types
             'renewablesaf': 'RenewablesAF',
             // Power plants
@@ -1552,39 +1553,46 @@
             });
         }
         
-        // Load the default YAML file (ConfigTest.yml)
+        // Load the default YAML file (tries ConfigTest.yml first, then any available)
         function loadDefaultYaml() {
-            // Use the API to fetch the file
-            fetch(`${API_URL}/read-file?filename=../ConfigTest.yml`)
+            // First, get the list of available YAML files
+            fetch(`${API_URL}/list-yaml-files`)
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Failed to load file: ${response.status} ${response.statusText}`);
-                    }
-                    return response.text();
+                    if (!response.ok) throw new Error('Failed to list files');
+                    return response.json();
                 })
-                .then(yamlText => {
-                    // Use our helper function to parse YAML with Python tags
-                    const yamlData = parseYaml(yamlText);
-                    populateForm(yamlData);
-                    updateFileNameLabel('ConfigTest.yml');
-                    showStatusMessage('Default configuration loaded successfully.', 'success');
+                .then(data => {
+                    if (!data.files || data.files.length === 0) {
+                        showStatusMessage('No configuration files found in the directory.', 'info');
+                        return;
+                    }
+
+                    // Decide which file to load: ConfigTest.yml or the first one available
+                    let fileToLoad = 'ConfigTest.yml';
+                    if (!data.files.includes('ConfigTest.yml')) {
+                        fileToLoad = data.files[0];
+                        console.log(`'ConfigTest.yml' not found. Loading '${fileToLoad}' instead.`);
+                    }
+
+                    // Now load the selected file
+                    loadSelectedYaml(fileToLoad);
                 })
                 .catch(error => {
-                    console.error('Error loading default YAML:', error);
-                    showStatusMessage('Error loading default configuration. Please check the console for details.', 'error');
-                    
-                    // Fallback to direct fetch if API fails
-                    fetch('../ConfigTest.yml')
-                        .then(response => response.text())
+                    console.error('Error in initial load sequence:', error);
+                    // Fallback to direct load of ConfigTest.yml if listing fails
+                    fetch(`${API_URL}/read-file?filename=../ConfigTest.yml`)
+                        .then(response => {
+                            if (!response.ok) throw new Error('Direct load failed');
+                            return response.text();
+                        })
                         .then(yamlText => {
-                            // Use our helper function here too
                             const yamlData = parseYaml(yamlText);
                             populateForm(yamlData);
                             updateFileNameLabel('ConfigTest.yml');
-                            showStatusMessage('Default configuration loaded successfully using direct method.', 'success');
+                            showStatusMessage('Default configuration loaded successfully.', 'success');
                         })
-                        .catch(error => {
-                            console.error('Fallback loading also failed:', error);
+                        .catch(fallbackError => {
+                            console.error('All attempts to load configuration failed:', fallbackError);
                             showStatusMessage('All attempts to load configuration failed.', 'error');
                         });
                 });
@@ -1777,19 +1785,7 @@
         
         // Collect form data into YAML
         function collectFormData() {
-            // Start with existing data when available to preserve fields not in the form
             let formData = {};
-
-            // First, load the current file to get all existing fields
-            try {
-                // Try to read the current YAML structure to preserve fields that aren't in the form
-                fetch(`${API_URL}/read-file?filename=../` + currentFilename)
-                    .then(response => response.text())
-                    .catch(() => ''); // Silently handle failures - we'll create a new structure if needed
-            } catch (e) {
-                // Silently ignore any errors
-                console.log('Could not load existing file, creating new structure');
-            }
             
             // Collect all form fields, including empty ones
             const allInputs = document.querySelectorAll('input[type="text"]:not(.default-value-input):not(.zone-code), input[type="number"], select, textarea');
@@ -2180,4 +2176,4 @@
         }
     </script>
 </body>
-</html> 
+</html>
