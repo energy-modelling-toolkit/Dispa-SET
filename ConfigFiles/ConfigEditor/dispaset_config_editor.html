@@ -677,24 +677,21 @@
                 </div>
 
                  <!-- Content from Hydro -->
-                 <h3>Hydro Scheduling</h3>
+                 <h3>Hydro Scheduling (MTS)</h3>
                  <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="hydroScheduling">Hydro Scheduling Method<span class="tooltiptext">Type of mid-term hydro scheduling optimization (Off=none, Zonal=per zone, Regional=per defined region, International/Global=wider scope).</span></label>
+                            <label for="hydroScheduling">MTS Level<span class="tooltiptext">Select the Mid-Term Scheduling level: 
+                                0: No mid-term scheduling (rolling horizon dispatch).
+                                1: Mid-term scheduling with cyclic boundary conditions (initial and final levels equal and optimized). 
+                                2: Mid-term scheduling with fixed initial and final reservoir levels (provided below).
+                                
+                                Note: If MTS is active (1 or 2), a full-year pre-optimization is first run as LP to generate target reservoir profiles. 
+                                These profiles are then passed to the main rolling horizon dispatch, which will run using the selected "Simulation Type" (LP or MILP).</span></label>
                             <select id="hydroScheduling">
-                                <option value="Off">Off</option>
-                                <option value="Zonal">Zonal</option>
-                                <option value="Regional">Regional</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="form-group">
-                            <label for="hydroSchedulingHorizon">Hydro Scheduling Horizon<span class="tooltiptext">Optimization horizon for the mid-term hydro scheduling (determines target reservoir levels).</span></label>
-                            <select id="hydroSchedulingHorizon">
-                                <option value="Annual">Annual</option>
-                                <option value="Stop-date driven">Stop-date driven</option>
+                                <option value="0">0 (Rolling horizon UC and dispatch)</option>
+                                <option value="1">1 (Cyclic boundary conditions)</option>
+                                <option value="2">2 (Fixed boundary conditions)</option>
                             </select>
                         </div>
                     </div>
@@ -703,7 +700,7 @@
                  <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="initialFinalReservoirLevel">Enforce Initial/Final Reservoir Level<span class="tooltiptext">If 1 (True), enforces initial and final reservoir levels based on ReservoirLevelInitial/Final defaults or historical ReservoirLevels file. If 0 (False), these constraints are relaxed.</span></label>
+                            <label for="initialFinalReservoirLevel">Enforce Initial/Final Reservoir Level<span class="tooltiptext">If 1 (True), enforces initial and final reservoir levels based on ReservoirLevelInitial/Final defaults or historical ReservoirLevels file. If 0 (False), these constraints are relaxed. This input is deactivated for MTS Level 1 and 2.</span></label>
                              <select id="initialFinalReservoirLevel">
                                 <option value="1">Yes (1)</option>
                                 <option value="0">No (0)</option>
@@ -720,22 +717,14 @@
                  <div class="row">
                     <div class="col">
                          <div class="form-group">
-                            <label for="reservoirLevelInitial">Default Initial Reservoir Level<span class="tooltiptext">Target initial reservoir level as a fraction of capacity (0 to 1). Used if InitialFinalReservoirLevel=1 and ReservoirLevels file is not provided.</span></label>
-                            <input type="number" id="reservoirLevelInitial" min="0" max="1" step="any">
-                             <div class="default-value" data-default="0.5">
-                                <span>Default:</span>
-                                <input type="text" class="default-value-input" value="0.5" data-param="ReservoirLevelInitial">
-                            </div>
+                            <label for="reservoirLevelInitial">Initial Reservoir Level<span class="tooltiptext">Fixed initial reservoir level as a fraction of capacity (0 to 1). Passed as the StorageInitial parameter in MTS Level 2.</span></label>
+                            <input type="text" id="reservoirLevelInitial" class="default-value-input" data-param="ReservoirLevelInitial" value="0.5">
                         </div>
                     </div>
                      <div class="col">
                         <div class="form-group">
-                            <label for="reservoirLevelFinal">Default Final Reservoir Level<span class="tooltiptext">Target final reservoir level as a fraction of capacity (0 to 1). Used if InitialFinalReservoirLevel=1 and ReservoirLevels file is not provided.</span></label>
-                            <input type="number" id="reservoirLevelFinal" min="0" max="1" step="any">
-                             <div class="default-value" data-default="0.5">
-                                <span>Default:</span>
-                                <input type="text" class="default-value-input" value="0.5" data-param="ReservoirLevelFinal">
-                            </div>
+                            <label for="reservoirLevelFinal">Final Reservoir Level<span class="tooltiptext">Fixed final reservoir level as a fraction of capacity (0 to 1). Defined as the last value of the StorageProfile parameter in MTS Level 2.</span></label>
+                            <input type="text" id="reservoirLevelFinal" class="default-value-input" data-param="ReservoirLevelFinal" value="0.5">
                         </div>
                     </div>
                  </div>
@@ -1250,7 +1239,6 @@
             // Hydro related
             'reservoirscaledinflows': 'ReservoirScaledInflows',
             'hydroscheduling': 'HydroScheduling',
-            'hydroschedulinghorizon': 'HydroSchedulingHorizon',
             // Technology types
             'renewablesaf': 'RenewablesAF',
             // Power plants
@@ -1351,6 +1339,11 @@
             document.getElementById('saveYaml').addEventListener('click', saveYamlFile);
             document.getElementById('addZoneBtn').addEventListener('click', addZone);
             document.getElementById('closeModalBtn').addEventListener('click', closeLoadModal);
+            
+            const hydroScheduling = document.getElementById('hydroScheduling');
+            if (hydroScheduling) {
+                hydroScheduling.addEventListener('change', updateMTSInputs);
+            }
 
             // Close modal if clicked outside content
             window.onclick = function(event) {
@@ -1622,6 +1615,53 @@
         }
         */
         
+        // Update MTS-related inputs visibility and status
+        function updateMTSInputs() {
+            const hydroScheduling = document.getElementById('hydroScheduling');
+            if (!hydroScheduling) return;
+            
+            const mtsLevel = hydroScheduling.value;
+            const initialFinalReservoirLevel = document.getElementById('initialFinalReservoirLevel');
+            const reservoirLevelInitial = document.getElementById('reservoirLevelInitial');
+            const reservoirLevelFinal = document.getElementById('reservoirLevelFinal');
+            const reservoirLevels = document.getElementById('reservoirLevels');
+            
+            // Default resets
+            if (initialFinalReservoirLevel) initialFinalReservoirLevel.disabled = false;
+            if (reservoirLevelInitial) reservoirLevelInitial.closest('.col').style.display = 'block';
+            if (reservoirLevelFinal) reservoirLevelFinal.closest('.col').style.display = 'block';
+            if (reservoirLevels) reservoirLevels.closest('.col').style.display = 'block';
+
+            if (mtsLevel === '1') {
+                // MTS = 1: Cyclic boundary conditions
+                if (initialFinalReservoirLevel) {
+                    initialFinalReservoirLevel.value = '1';
+                    initialFinalReservoirLevel.disabled = true;
+                }
+                // Initial and final values are equal and optimized (cyclic)
+                if (reservoirLevelInitial) reservoirLevelInitial.closest('.col').style.display = 'none';
+                if (reservoirLevelFinal) reservoirLevelFinal.closest('.col').style.display = 'none';
+                // Target profile is not used in cyclic mode
+                if (reservoirLevels) reservoirLevels.closest('.col').style.display = 'none';
+            } else if (mtsLevel === '2') {
+                // MTS = 2: Fixed boundary conditions
+                if (initialFinalReservoirLevel) {
+                    initialFinalReservoirLevel.value = '1';
+                    initialFinalReservoirLevel.disabled = true;
+                }
+                // Target profile is not used in fixed boundary conditions mode
+                if (reservoirLevels) reservoirLevels.closest('.col').style.display = 'none';
+                // reservoirLevelInitial and reservoirLevelFinal stay visible
+            } else {
+                // MTS = 0: Rolling horizon (Dispatch)
+                // Initial and final levels are deactivated as they are defined by the StorageProfile (reservoirLevels)
+                if (reservoirLevelInitial) reservoirLevelInitial.closest('.col').style.display = 'none';
+                if (reservoirLevelFinal) reservoirLevelFinal.closest('.col').style.display = 'none';
+                // Target Reservoir Levels File stays visible
+                if (reservoirLevels) reservoirLevels.closest('.col').style.display = 'block';
+            }
+        }
+
         // Populate form with YAML data
         function populateForm(yamlData) {
             // Clear form first
@@ -1657,15 +1697,6 @@
                     console.log(`Populated hydroScheduling with: ${yamlData.HydroScheduling}`); // Debug log
                 } else {
                     console.error('Element with ID hydroScheduling not found');
-                }
-            }
-            if (yamlData.HydroSchedulingHorizon) {
-                const hydroHorizonSelect = document.getElementById('hydroSchedulingHorizon');
-                if (hydroHorizonSelect) {
-                    hydroHorizonSelect.value = yamlData.HydroSchedulingHorizon;
-                     console.log(`Populated hydroSchedulingHorizon with: ${yamlData.HydroSchedulingHorizon}`); // Debug log
-                 } else {
-                    console.error('Element with ID hydroSchedulingHorizon not found');
                 }
             }
             
@@ -1739,6 +1770,9 @@
                     }
                 }
             }
+            
+            // Update MTS visibility
+            updateMTSInputs();
         }
         
         // Collect form data into YAML
@@ -1781,7 +1815,7 @@
                     // Convert numerical values to actual numbers
                     if (input.type === 'number' || 
                         ['dataTimeStep', 'simulationTimeStep', 'horizonLength', 'lookAhead', 
-                         'initialFinalReservoirLevel', 'allowCurtailment', 'optimalityGap'].includes(input.id)) {
+                         'initialFinalReservoirLevel', 'allowCurtailment', 'optimalityGap', 'hydroScheduling'].includes(input.id)) {
                         // Only convert non-empty values to numbers
                         if (input.value !== '') {
                             const numValue = parseFloat(input.value);

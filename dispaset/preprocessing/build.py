@@ -1001,7 +1001,23 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Storage profile and initial state:
     for i, s in enumerate(sets['asu']):
-        if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(
+        # Determine the initial and final levels (fraction of capacity)
+        # Priority: 
+        # 1. MTS Level 2: use ReservoirLevelInitial/Final from config
+        # 2. MTS Level 1: cyclic (not used here, but we set a profile)
+        # 3. MTS Level 0: use ReservoirLevels file or default initial/final from config
+        
+        mts_level = config.get('HydroScheduling', 0)
+        
+        if mts_level == 2:
+            # Fixed boundary conditions: force initial and final values from config
+            profile_val = np.linspace(config['default']['ReservoirLevelInitial'],
+                                    config['default']['ReservoirLevelFinal'],
+                                    len(idx_sim))
+            parameters['StorageProfile']['val'][i, :] = profile_val
+            logging.info(f'MTS level 2: Unit {s} forced to ReservoirLevelInitial={config["default"]["ReservoirLevelInitial"]} '
+                         f'and ReservoirLevelFinal={config["default"]["ReservoirLevelFinal"]}')
+        elif s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(
                 finalTS['ReservoirLevels'][s] - 1 <= 1e-11):
             # get the time series
             parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
@@ -1010,14 +1026,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
             sys.exit(1)
         else:
-            logging.warning(
-                'Could not find reservoir level data for storage plant ' + s + '. Using the provided default initial '
-                                                                               'and final values')
-            parameters['StorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],
-                                                                    config['default']['ReservoirLevelFinal'],
-                                                                    len(idx_sim))
+            if mts_level == 1:
+                logging.info(f'MTS level 1: Unit {s} will use cyclic boundary conditions. '
+                             f'Setting a flat profile at ReservoirLevelInitial={config["default"]["ReservoirLevelInitial"]}')
+                parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelInitial']
+            else:
+                logging.warning(
+                    'Could not find reservoir level data for storage plant ' + s + '. Using the provided default initial '
+                                                                                   'and final values')
+                parameters['StorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],
+                                                                        config['default']['ReservoirLevelFinal'],
+                                                                        len(idx_sim))
 
-            # Setting the storage alert levels
+        # Setting the storage alert levels
         if len(finalTS['StorageAlertLevels'].columns) != 0:
             if s in plants_sto.index:
                 parameters['StorageAlertLevels']['val'][i, :] = finalTS['StorageAlertLevels'][s][idx_sim].values
@@ -1047,9 +1068,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
                 Plants_sto.loc[s, 'StorageCapacity'] * Plants_sto.loc[s, 'Nunits']
 
-    if len(BoundarySector.index) >0:
+    if len(BoundarySector.index) > 0:
         for i, nx in enumerate(sets['nx']):
-            if nx in finalTS['SectorXReservoirLevels'] and any(finalTS['SectorXReservoirLevels'][nx] > 0) and all(
+            mts_level = config.get('HydroScheduling', 0)
+            
+            if mts_level == 2:
+                # Fixed boundary conditions: force initial and final values from config
+                profile_val = np.linspace(config['default']['ReservoirLevelInitial'],
+                                        config['default']['ReservoirLevelFinal'],
+                                        len(idx_sim))
+                parameters['SectorXStorageProfile']['val'][i, :] = profile_val
+                logging.info(f'MTS level 2: SectorX {nx} forced to ReservoirLevelInitial={config["default"]["ReservoirLevelInitial"]} '
+                             f'and ReservoirLevelFinal={config["default"]["ReservoirLevelFinal"]}')
+            elif nx in finalTS['SectorXReservoirLevels'] and any(finalTS['SectorXReservoirLevels'][nx] > 0) and all(
                     finalTS['SectorXReservoirLevels'][nx] - 1 <= 1e-11):
                 # get the time series
                 parameters['SectorXStorageProfile']['val'][i, :] = finalTS['SectorXReservoirLevels'][nx][idx_sim].values
@@ -1058,13 +1089,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 logging.critical(nx + ': The reservoir level is sometimes higher than its capacity (>1) !')
                 sys.exit(1)
             else:
-                logging.warning(
-                    'Could not find reservoir level data for storage plant ' + nx + '. Using the provided default initial '
-                                                                                    'and final values')
-                parameters['SectorXStorageProfile']['val'][i, :] = np.where(
-                    BoundarySector.loc[nx, 'SectorXStorageCapacity'] == 0, 0,
-                    np.linspace(config['default']['ReservoirLevelInitial'], config['default']['ReservoirLevelFinal'],
-                                len(idx_sim)))
+                if mts_level == 1:
+                    logging.info(f'MTS level 1: SectorX {nx} will use cyclic boundary conditions. '
+                                 f'Setting a flat profile at ReservoirLevelInitial={config["default"]["ReservoirLevelInitial"]}')
+                    parameters['SectorXStorageProfile']['val'][i, :] = config['default']['ReservoirLevelInitial']
+                else:
+                    logging.warning(
+                        'Could not find reservoir level data for storage plant ' + nx + '. Using the provided default initial '
+                                                                                        'and final values')
+                    parameters['SectorXStorageProfile']['val'][i, :] = np.where(
+                        BoundarySector.loc[nx, 'SectorXStorageCapacity'] == 0, 0,
+                        np.linspace(config['default']['ReservoirLevelInitial'], config['default']['ReservoirLevelFinal'],
+                                    len(idx_sim)))
 
             # Setting Storage Alert
             if nx in finalTS['SectorXAlertLevel'] and any(finalTS['SectorXAlertLevel'][nx] > 0) and all(
@@ -1542,7 +1578,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'geo': geo, 'version': dispa_version}
 
     # Determine GDX and Pickle filenames based on MTS flag
-    if MTS:
+    if MTS > 0:
         gdx_in_filename = "Inputs_MTS.gdx" # Use capitalized 'I'
         gdx_out_filename = "Results_MTS.gdx"
         pickle_filename = "Inputs_MTS.p"
@@ -1563,7 +1599,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         os.makedirs(sim)
 
     # Determine target GAMS filename
-    if MTS:
+    if MTS > 0:
         target_gms_filename = 'UCM_MTS.gms'
     else:
         target_gms_filename = 'UCM_h.gms'
@@ -1578,13 +1614,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     gms_modifications[exec_unload_line] = f'EXECUTE_UNLOAD "{gdx_out_filename}"'
     
     # Add specific modifications based on MTS, LP, and grid_flag
-    if MTS:
+    if MTS > 0:
         # MTS requires LP
         if not LP:
-            logging.error('Simulation in MTS must be LP')
+            logging.error(f'Simulation in MTS level {MTS} must be LP')
             sys.exit(1)
         gms_modifications['$setglobal LPFormulation 0'] = '$setglobal LPFormulation 1'
-        gms_modifications['$setglobal MTS 0'] = '$setglobal MTS 1'
+        gms_modifications['$setglobal MTS 0'] = f'$setglobal MTS {MTS}'
     else: # Detailed dispatch run (not MTS)
         if LP:
             gms_modifications['$setglobal LPFormulation 0'] = '$setglobal LPFormulation 1'

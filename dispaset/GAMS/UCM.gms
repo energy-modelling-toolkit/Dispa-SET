@@ -40,8 +40,8 @@ $setglobal LPFormulation 0
 
 * Definition of the type of resolution
 * MTS = 0 => rolling horizon UC and dispatch;
-* MTS =1 => cyclic boundary conditions with MTS activate;
-* MTS = 1 => fixed boundary conditions with MTS activated
+* MTS = 1 => cyclic boundary conditions with MTS activated;
+* MTS = 2 => fixed boundary conditions with MTS activated
 $setglobal MTS 0
 
 * Flag to retrieve status or not

@@ -476,6 +476,73 @@ def load_time_series(config, path, header='infer'):
     return data.reindex(config['idx_long'], method='nearest').bfill().astype(float)
 
 
+def check_config(config):
+    """
+    Function that checks the consistency of the simulation parameters in the config dictionary.
+    Includes rules for MTS (Mid-Term Scheduling) levels and other simulation settings.
+    """
+    logging.info('Checking configuration consistency...')
+
+    # 1. MTS Level check
+    mts_level = config.get('HydroScheduling', 0)
+    # Convert to int if it's a string (from HTML select)
+    try:
+        mts_level = int(mts_level)
+    except (ValueError, TypeError):
+        if mts_level == 'Off':
+            mts_level = 0
+        elif mts_level == 'Zonal' or mts_level == 'Regional':
+            mts_level = 1
+        else:
+            logging.error(f'Invalid HydroScheduling (MTS) level: {mts_level}. Must be 0, 1, or 2.')
+            sys.exit(1)
+    
+    config['HydroScheduling'] = mts_level
+
+    if mts_level not in [0, 1, 2]:
+        logging.error(f'Invalid MTS level {mts_level}. Supported levels are 0, 1, and 2.')
+        sys.exit(1)
+
+    # 2. MTS Level-specific rules
+    if mts_level == 0:
+        logging.info('MTS level 0: Standard dispatch mode.')
+        # Ensure HydroSchedulingHorizon is not used or irrelevant
+        config['HydroSchedulingHorizon'] = 'None'
+    
+    elif mts_level == 1:
+        logging.info('MTS level 1: Mid-Term Scheduling with cyclic boundary conditions.')
+        # Rule: MTS 1 must be Annual horizon (full year)
+        if config.get('HydroSchedulingHorizon') != 'Annual':
+            logging.info('MTS level 1 detected. Forcing HydroSchedulingHorizon to "Annual" for a full year simulation.')
+            config['HydroSchedulingHorizon'] = 'Annual'
+
+        # Note: MTS pre-optimization always runs as LP, but the final dispatch can be MILP.
+        logging.info('MTS pre-optimization will run as LP. Detailed dispatch will use the selected SimulationType.')
+
+    elif mts_level == 2:
+        logging.info('MTS level 2: Mid-Term Scheduling with fixed initial and final reservoir levels.')
+        # Rule: MTS 2 must be Annual horizon (full year)
+        if config.get('HydroSchedulingHorizon') != 'Annual':
+            logging.info('MTS level 2 detected. Forcing HydroSchedulingHorizon to "Annual" for a full year simulation.')
+            config['HydroSchedulingHorizon'] = 'Annual'
+
+        # Note: MTS pre-optimization always runs as LP, but the final dispatch can be MILP.
+        logging.info('MTS pre-optimization will run as LP. Detailed dispatch will use the selected SimulationType.')
+
+        # Ensure initial and final levels are provided
+        if config['default'].get('ReservoirLevelInitial') is None or config['default'].get('ReservoirLevelFinal') is None:
+            logging.error('MTS level 2 requires ReservoirLevelInitial and ReservoirLevelFinal to be defined in config["default"].')
+            sys.exit(1)
+
+    # 3. HydroSchedulingHorizon check (general)
+    if config.get('HydroScheduling') > 0 and config.get('HydroSchedulingHorizon') != 'Annual':
+        logging.warning('HydroScheduling is active but horizon is not Annual. Forcing to Annual as per requirements.')
+        config['HydroSchedulingHorizon'] = 'Annual'
+
+    logging.info('Configuration check completed successfully.')
+    return config
+
+
 def load_config(ConfigFile, AbsPath=True):
     """
     Wrapper function around load_config_excel and load_config_yaml
@@ -487,6 +554,8 @@ def load_config(ConfigFile, AbsPath=True):
     else:
         logging.critical('The extension of the config file should be .xlsx or .yml')
         sys.exit(1)
+    
+    config = check_config(config)
     return config
 
 
