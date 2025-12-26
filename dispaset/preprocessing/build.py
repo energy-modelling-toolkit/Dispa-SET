@@ -1532,10 +1532,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             Plants_merged.update(tmp_units)
 
             if lack_of_power > 0:
-                logging.error('In zone: ' + z + ' there is insufficient conventional + renewable ' +
-                              'generation capacity of: ' + str(lack_of_power) +
-                              '. If NTC + storage is not sufficient ShedLoad in ' + z +
-                              ' is likely to occour. Check the inputs!')
+                logging.warning('In zone: ' + z + ' there is insufficient conventional + renewable ' +
+                                'generation capacity of: ' + str(lack_of_power) +
+                                '. If NTC + storage is not sufficient ShedLoad in ' + z +
+                                ' is likely to occur. Check the inputs!')
 
         Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_renewables']), 'InitialPower'] = 0
     Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_p2bs']), 'InitialPower'] = 0
@@ -1666,41 +1666,42 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         logging.error(f"Error processing GAMS file: {e}")
         sys.exit(1)
 
-    # Create cplex option file
+    # Create solver option files (Cplex and Gurobi)
     if config['OptimalityGap'] == '':
-        cplex_options = {'epgap': 0.0005,
-                         # TODO: For the moment hardcoded, it has to be moved to a config file
-                         'numericalemphasis': 0,
-                         'mipdisplay': 4,
-                         'scaind': 1,
-                         'lpmethod': 0,
-                         'relaxfixedinfeas': 0,
-                         'mipstart': 1,
-                         'mircuts': 1,
-                         'quality': True,
-                         'bardisplay': 2,
-                         'epint': 0,
-                         'lbheur': 1,
-                         }
-        logging.info('Default Cplex setting used')
+        epgap = 0.0005
+        logging.info('Default solver settings used')
     else:
-        cplex_options = {'epgap': float(config['OptimalityGap']),  # TODO: For the moment hardcoded, it has to be moved to a config file
-                         'numericalemphasis': 0,
-                         'mipdisplay': 4,
-                         'scaind': 1,
-                         'lpmethod': 0,
-                         'relaxfixedinfeas': 0,
-                         'mipstart': 1,
-                         'mircuts': 1,
-                         'quality': True,
-                         'bardisplay': 2,
-                         'epint': 0,
-                         'lbheur': 1,
-                         }
+        epgap = float(config['OptimalityGap'])
 
-    lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
+    cplex_options = {'epgap': epgap,
+                     'numericalemphasis': 0,
+                     'mipdisplay': 4,
+                     'scaind': 1,
+                     'lpmethod': 0,
+                     'relaxfixedinfeas': 0,
+                     'mipstart': 1,
+                     'mircuts': 1,
+                     'quality': True,
+                     'bardisplay': 2,
+                     'epint': 0,
+                     'lbheur': 1,
+                     }
+    
+    gurobi_options = {'MipGap': epgap,
+                      'DisplayInterval': 5,
+                      'Method': 2,  # Barrier for LP
+                      }
+
+    # Write Cplex options
+    lines_to_write_cplex = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
     with open(os.path.join(sim, 'cplex.opt'), 'w') as f:
-        for line in lines_to_write:
+        for line in lines_to_write_cplex:
+            f.write(line + '\n')
+
+    # Write Gurobi options
+    lines_to_write_gurobi = ['{} {}'.format(k, v) for k, v in gurobi_options.items()]
+    with open(os.path.join(sim, 'gurobi.opt'), 'w') as f:
+        for line in lines_to_write_gurobi:
             f.write(line + '\n')
 
     logging.debug('Using gams file from ' + GMS_FOLDER)

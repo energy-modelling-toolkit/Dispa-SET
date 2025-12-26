@@ -480,13 +480,13 @@ def check_units(config, plants):
                              str(plantlist))
             sys.exit(1)
 
-    # Checking che compatibility between the selected simulation time and the power plant constraints:
+    # Checking the compatibility between the selected simulation type and the power plant constraints:
     if config['SimulationType'] in ('LP', 'LP clustered'):
         for key in ['NoLoadCost', 'PartLoadMin', 'MinEfficiency', 'StartUpTime']:
-            if (plants[key] > 0).any():
-                logging.error('Non-null value(s) have been found for key ' + key + ' in the power plant list. '
-                              'This cannot be modelled with the ' + config['SimulationType'] + ' formulation and '
-                              'will therefore not be considered.')
+            if key in plants.columns and (plants[key] > 0).any():
+                logging.warning('Non-null value(s) have been found for key ' + key + ' in the power plant list. '
+                                'This cannot be modelled with the ' + config['SimulationType'] + ' formulation and '
+                                'will therefore not be considered.')
     return True
 
 

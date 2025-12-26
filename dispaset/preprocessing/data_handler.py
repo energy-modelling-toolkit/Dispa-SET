@@ -34,10 +34,10 @@ def NodeBasedTable(varname, config, default=None):
     path = config[varname]
     zones = config['zones']
     paths = {}
-    if os.path.isfile(path):
+    if isinstance(path, str) and os.path.isfile(path):
         paths['all'] = path
         SingleFile = True
-    elif '##' in path:
+    elif isinstance(path, str) and '##' in path:
         for z in zones:
             path_c = path.replace('##', str(z))
             if os.path.isfile(path_c):
@@ -48,10 +48,14 @@ def NodeBasedTable(varname, config, default=None):
                     ' does not exist')
                 sys.exit(1)
         SingleFile = False
-    elif path != '':
+    elif isinstance(path, str) and path != '':
         logging.critical(
             'A path has been specified for table ' + varname + ' (' + path + ') but no file has been found')
         sys.exit(1)
+    elif not isinstance(path, str) and path is not None and path != '':
+        # If path is not a string but a constant value, treat it as a default for all zones
+        default = path
+    
     data = pd.DataFrame(index=config['idx_long'])
     if len(paths) == 0:
         logging.info('No data file specified for the table ' + varname + '. Using default value ' + str(default))
@@ -79,15 +83,14 @@ def NodeBasedTable(varname, config, default=None):
                     # data[key] = tmp[key]
                     data = pd.concat([data, tmp[key]], axis=1)
                 else:
-                    logging.error(
-                        'Zone ' + key + ' could not be found in the file ' + path + '. Using default value ' + str(
-                            default))
-                    if default is None:
-                        pass
-                    elif isinstance(default, (float, int)):
+                    if default is not None:
+                        logging.info(
+                            'Zone ' + key + ' could not be found in the file ' + path + '. Using default value ' + str(
+                                default))
                         data[key] = default
                     else:
-                        logging.critical('Default value provided for table ' + varname + ' is not valid')
+                        logging.error(
+                            'Zone ' + key + ' could not be found in the file ' + path + ' and no default value was provided')
                         sys.exit(1)
     else:  # assembling the files in a single dataframe:
         for z in paths:
@@ -123,10 +126,10 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
     path = config[varname]
     zones = config['zones']
     paths = {}
-    if os.path.isfile(path):
+    if isinstance(path, str) and os.path.isfile(path):
         paths['all'] = path
         SingleFile = True
-    elif '##' in path:
+    elif isinstance(path, str) and '##' in path:
         for z in zones:
             path_c = path.replace('##', str(z))
             if os.path.isfile(path_c):
@@ -136,10 +139,13 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
                     'No data file found for the table ' + varname + ' and zone ' + z + '. File ' + path_c +
                     ' does not exist')
         SingleFile = False
-    elif path != '':
+    elif isinstance(path, str) and path != '':
         logging.critical(
             'A path has been specified for table ' + varname + ' (' + path + ') but no file has been found')
         sys.exit(1)
+    elif not isinstance(path, str) and path is not None and path != '':
+        # If path is not a string but a constant value, treat it as a default for all units
+        default = path
 
     data = pd.DataFrame(index=config['idx_long'])
     if len(paths) == 0:
@@ -224,16 +230,19 @@ def GenericTable(headers, varname, config, default=None):
     """
     path = config[varname]
     paths = {}
-    if os.path.isfile(path):
+    if isinstance(path, str) and os.path.isfile(path):
         paths['all'] = path
         SingleFile = True
-    elif '##' in path:
+    elif isinstance(path, str) and '##' in path:
         logging.critical('The table provided for variable ' + varname + 'Must be a single file')
         sys.exit(1)
-    elif path != '':
+    elif isinstance(path, str) and path != '':
         logging.critical('A path has been specified for table ' + varname +
                          ' (' + path + ') but no file has been found')
         sys.exit(1)
+    elif not isinstance(path, str) and path is not None and path != '':
+        # If path is not a string but a constant value, treat it as a default for all columns
+        default = path
 
     data = pd.DataFrame(index=config['idx_long'])
     if len(paths) == 0:
@@ -1013,10 +1022,10 @@ def load_config_yaml(filename, AbsPath=True):
         if not os.path.isabs(config['SimulationDirectory']):
             config['SimulationDirectory'] = os.path.join(basefolder, config['SimulationDirectory'])
         for param in PARAMS:
-            if not os.path.isabs(config[param]):
+            if isinstance(config[param], str) and not os.path.isabs(config[param]):
                 if config[param] == '' or config[param].isspace():
                     config[param] = ''
-                elif not os.path.isabs(config[param]):
+                else:
                     config[param] = os.path.join(basefolder, config[param])
     return config
 
