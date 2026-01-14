@@ -441,6 +441,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
+        # Keeping consistency in profiles columns names
+        profiles.columns = profiles.columns.str.split(" - ").str[-1].str.strip()
+
         plants_sto.set_index(plants_sto.loc[:, 'Unit'], inplace=True, drop=True)
         for key in profiles.columns:
             if key not in ReservoirLevels.columns:
@@ -457,6 +460,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
 
     if profilesSectorX is not None:
+        # Keeping consistency in profiles columns names
+        profilesSectorX.columns = profilesSectorX.columns.str.split(" - ").str[-1].str.strip()
+
         for key in profilesSectorX.columns:
             if key not in SectorXReservoirLevels.columns:
                 logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the '
@@ -686,6 +692,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config, Plants_merged)
+    
+    # Adding noise to efficiency time series for each unit to avoid flat Objective Function:
+    Efficiencies = break_efficiency_ties(Efficiencies)
 
     # Calculating boundary sector efficiencies
     BoundarySectorEfficiencies = BoundarySectorEfficiencyTimeSeries(config, Plants_merged, zones_bs)
@@ -1416,26 +1425,44 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         for r in sets['res']:
             j = res_index[r]
     
+            # eligible = False
+            # if r in sets['res_U']:
+            #     if tech in commons['tech_batteries'] and r in sets['res_U'][:]:     # FFRU, FCRU
+            #         eligible = True
+            #     elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # FCRU, aFRRU, mFRRU
+            #         eligible = True
+            #     elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:   # aFRRU, mFRRU
+            #         eligible = True
+    
+            # elif r in sets['res_D']:
+            #     if tech in commons['tech_batteries'] and r in sets['res_D'][:]:     # FFRD, FCRD
+            #         eligible = True
+            #     elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # FCRD, aFRRD
+            #         eligible = True
+            #     elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:   # aFRRD
+            #         eligible = True
+
+    
             eligible = False
             if r in sets['res_U']:
                 if tech in commons['tech_batteries'] and r in sets['res_U'][:]:     # FFRU, FCRU
                     eligible = True
-                elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # FCRU, aFRRU, mFRRU
+                elif tech in commons['tech_conventional'] and r in sets['res_U'][:]:  # FCRU, aFRRU, mFRRU
                     eligible = True
-                elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:   # aFRRU, mFRRU
+                elif tech in commons['tech_renewables'] and r in sets['res_U'][:]:   # aFRRU, mFRRU
                     eligible = True
     
             elif r in sets['res_D']:
                 if tech in commons['tech_batteries'] and r in sets['res_D'][:]:     # FFRD, FCRD
                     eligible = True
-                elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # FCRD, aFRRD
+                elif tech in commons['tech_conventional'] and r in sets['res_D'][:]:  # FCRD, aFRRD
                     eligible = True
-                elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:   # aFRRD
+                elif tech in commons['tech_renewables'] and r in sets['res_D'][:]:   # aFRRD
                     eligible = True
     
             # If eligible, calculate reserve participation based on physical limits (Droop, RampUpRate, RampDownRate)
             if eligible:
-                if r in ['FCRU', 'FCRD', 'FFRU', 'FFRD'] and droop > 0:
+                if r in ['FFRU', 'FFRD', 'FCRU', 'FCRD'] and droop > 0:
                     factor1 = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
                     values[j, i, :] = factor1
                 # elif r in ['aFRRU'] and rampuprate * constants['FullActivationTime2'] >= partloadmin: #It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.

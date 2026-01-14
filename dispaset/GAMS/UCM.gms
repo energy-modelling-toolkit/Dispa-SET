@@ -918,7 +918,7 @@ EQ_Total_Delivery_Limit_Up(au,i)..
          (PowerCapacity(au) * LoadMaximum(au,i) * Nunits(au))$ba(au)
          
          + // Part 3: All non-committed conventional units
-         (PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)))$(not ba(au))
+         (PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)))$(not ba(au) and (TimeStartUp(au) = 0 or (TimeStartUp(au) > 0 and TimeStartUp(au) <= smax(res_U, FullActivationTime(res_U)) )))
 ;
     
 *System-wide reserve limits downward
@@ -1084,7 +1084,7 @@ EQ_Storage_input(au,i)..
 *Discharge is limited by the storage level
 EQ_Storage_MaxDischarge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep)..
          Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
-         + sum(res_U, ReserveProvision(res_U,au,i)$(s(au)) * ReserveDuration(res_U) / max(StorageDischargeEfficiency(au)$(s(au)), 1e-6))
+         + sum(res_U, ReserveProvision(res_U,au,i)$(s(au)) * ReserveDuration(res_U) * TimeStep / max(StorageDischargeEfficiency(au)$(s(au)), 1e-6))
          =L=
          StorageInitial(au)$(s(au))$(ord(i) = 1)
          + StorageLevel(au,i-1)$(s(au))$(ord(i) > 1)
@@ -1094,7 +1094,7 @@ EQ_Storage_MaxDischarge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(
 *Charging is limited by the remaining storage capacity
 EQ_Storage_MaxCharge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep)..
          StorageInput(au,i)$(s(au))*StorageChargingEfficiency(au)$(s(au))*TimeStep
-         + sum(res_D, ReserveProvision(res_D,au,i)$(s(au)) * ReserveDuration(res_D) * StorageChargingEfficiency(au)$(s(au)))
+         + sum(res_D, ReserveProvision(res_D,au,i)$(s(au)) * ReserveDuration(res_D) * TimeStep * StorageChargingEfficiency(au)$(s(au)))
          =L=
          (Nunits(au)$(s(au)) * StorageCapacity(au)$(s(au))-StorageInitial(au)$(s(au)))$(ord(i) = 1)
          + (Nunits(au)$(s(au)) * StorageCapacity(au)$(s(au))*AvailabilityFactor(au,i-1)$(s(au)) - StorageLevel(au,i-1))$(ord(i) > 1)
@@ -1456,10 +1456,6 @@ scalar starttime;
 set days /1,'ndays'/;
 display days,ndays,TimeStep;
 PARAMETER elapsed(days);
-parameter
-    SF_local(au)          "StorageFinalMin local (última hora del horizonte actual)",
-    SF_globalFinal(au)    "StorageFinalMin global según hora final del horizonte",
-    SF_globalKept(au)     "StorageFinalMin global según última hora mantenida (LastKeptHour)";
 
 FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("RollingHorizon Length","day"),
          FirstHour = (day-1)*24/TimeStep+1;
@@ -1523,8 +1519,10 @@ OptimizationError.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = Error.L - OptimalityG
 
 
 *Loop variables to display after solving:
-Display LastKeptHour,PowerInitial,StorageInitial, StorageFinalMin;
+Display LastKeptHour,PowerInitial,StorageInitial,StorageFinalMin,day,FirstHour,LastHour,LastKeptHour;
 );
+
+Display PowerX.L,Flow.L,Power.L,Committed.L,ShedLoad.L,CurtailedPower.L,StorageLevel.L,StorageInput.L,SystemCost.L,LL_MaxPower.L,LL_MinPower.L,LL_RampUp.L,LL_RampDown.L;
 
 Parameter StorageLevel_all(s,h);
 StorageLevel_all(s,h) = StorageLevel.L(s,h)/max(1,StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,h));
@@ -1663,6 +1661,11 @@ OutputCurtailmentReserve_FCRU(n,h)
 OutputContingencyPerZone(n,h)
 OutputContingency(h)
 
+ShadowPrice_PowerAvailable(au,h)
+ShadowPrice_DeliveryUp(au,h)
+ShadowPrice_DeliveryDown(au,h)
+
+
 ;
 
 OutputCommitted(au,z)=Committed.L(au,z);
@@ -1761,6 +1764,11 @@ OutputDemand_aFRRD(n,z)=ReserveDemand("aFRRD",n,z);
 
 ShadowPrice_RampUp_TC(u,z) = EQ_RampUp_TC.m(u,z);
 ShadowPrice_RampDown_TC(u,z) = EQ_RampDown_TC.m(u,z);
+
+ShadowPrice_PowerAvailable(au,z) = EQ_Power_available.m(au,z);
+ShadowPrice_DeliveryUp(au,z)     = EQ_Total_Delivery_Limit_Up.m(au,z);
+ShadowPrice_DeliveryDown(au,z)   = EQ_Total_Delivery_Limit_Down.m(au,z);
+
 OutputRampRate(u,z) = - Power.L(u,z-1)$(ord(z) > 1) - PowerInitial(u)$(ord(z) = 1) + Power.L(u,z);
 OutputStartUp(au,z) = StartUp.L(au,z);
 OutputShutDown(au,z) = ShutDown.L(au,z);
@@ -1882,6 +1890,11 @@ OutputReserve_aFRRD,
 OutputReserve_mFRRU,
 ShadowPrice_RampUp_TC,
 ShadowPrice_RampDown_TC,
+
+ShadowPrice_PowerAvailable,
+ShadowPrice_DeliveryUp,
+ShadowPrice_DeliveryDown,
+
 OutputRampRate,
 OutputStartUp,
 OutputShutDown,
@@ -1939,7 +1952,7 @@ UnitHourlyProfit
 ;
 
 *display OutputPowerConsumption, heat.L, heatslack.L, powerconsumption.L, power.L;
-*$If %MTS%==1 display OutputPowerConsumption, heat.L, powerconsumption.L, power.L;
+*$If %MTS%==1 display OutputPowerConsumption, heat.L, powerconsumption.L, power.L, EQ_Storage_Cyclic.L, EQ_Boundary_Sector_Storage_Cyclic.L;
 
 $onorder
 
