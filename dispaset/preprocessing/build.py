@@ -1064,7 +1064,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 sys.exit(1)
             else:
                 logging.warning(
-                    'Could not find reservoir level data for storage plant ' + nx + '. Using the provided default initial '
+                    'Could not find reservoir level data for storage plant ' + str(nx) + '. Using the provided default initial '
                                                                                     'and final values')
                 parameters['SectorXStorageProfile']['val'][i, :] = np.where(
                     BoundarySector.loc[nx, 'SectorXStorageCapacity'] == 0, 0,
