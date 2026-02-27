@@ -6,9 +6,9 @@ import dispaset as ds
 
 from dispaset.preprocessing.utils import select_units
 from dispaset.preprocessing.data_check import check_units, check_sto, check_AvailabilityFactors, check_heat_demand, \
-                                              check_temperatures, check_clustering, isStorage, check_chp, check_p2h, \
-                                              check_h2, check_df, check_MinMaxFlows, check_FlexibleDemand, \
-                                              check_reserves, check_PtLDemand
+                                              check_clustering, isStorage, check_chp, check_p2bs, \
+                                              check_df, check_MinMaxFlows, check_FlexibleDemand, \
+                                              check_reserves
 from dispaset.common import commons
 
 TECH = ['NUC', 1.5]
@@ -38,9 +38,9 @@ def plants(config, request):
     # plants = select_units(plants, config)
     plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
-    plants_p2h = plants[plants['Technology'] == 'P2HT']
+    plants_p2bs = plants[plants['Technology'] == 'P2HT']
     plants_h2 = plants[plants['Technology'] == 'P2GS']
-    return config, plants, plants_sto, plants_chp, plants_p2h, plants_h2
+    return config, plants, plants_sto, plants_chp, plants_p2bs, plants_h2
 
 
 def test_bad_keys(keys):
@@ -48,5 +48,5 @@ def test_bad_keys(keys):
         check_units(keys[0], keys[1])
         check_sto(keys[0], keys[2])
         check_chp(keys[0], keys[3])
-        check_p2h(keys[0], keys[4])
-        check_h2(keys[0], keys[5])
+        check_p2bs(keys[0], keys[4])
+        check_p2bs(keys[0], keys[5])

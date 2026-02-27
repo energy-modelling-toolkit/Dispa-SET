@@ -877,7 +877,7 @@ EQ_Residual_Load(n,i)..
         Demand("DA",n,i)
         + Demand("Flex",n,i)
         - DemandModulation(n,i)
-        - InjectedPower(i,n)
+        + InjectedPower(i,n)
         + sum(p2x, PowerConsumption(p2x,i) * Location(p2x,n))
         - sum(u,Power(u,i)$(sum(tr,Technology(u,tr))>=1) * Location(u,n))
         - sum(l_RoW,Flow(l_RoW,i)*LineNode(l_RoW,n))

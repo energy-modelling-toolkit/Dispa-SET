@@ -31,6 +31,9 @@ def solve_high_level(gams_folder, sim_folder, gams_file='UCM_h.gms', result_file
         if filename.startswith("_gams_py"):
             file_path = os.path.join(sim_folder, filename)
             if os.path.isfile(file_path):
-                os.remove(file_path)
+                try:
+                    os.remove(file_path)
+                except PermissionError:
+                    print(f"Warning: Could not delete {file_path} because it is in use.")
     logging.info('Completed simulation in {0:.2f} seconds'.format(time.time() - time0))
     return status

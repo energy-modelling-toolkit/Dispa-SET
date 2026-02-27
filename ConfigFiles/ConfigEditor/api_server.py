@@ -138,35 +138,56 @@ class YAMLHandler(BaseHTTPRequestHandler):
             self._set_response_headers(status_code=404)
             self.wfile.write(json.dumps({'error': 'Endpoint not found'}).encode())
 
-def start_api_server(port=API_PORT):
-    """Start the API server in a separate thread."""
-    try:
-        # Use ThreadingHTTPServer for better handling of concurrent requests
-        class ThreadingHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
-            pass
-        
-        server_address = ('', port)
-        httpd = ThreadingHTTPServer(server_address, YAMLHandler)
-        
-        print(f"Starting API server on http://localhost:{port}")
-        api_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-        api_thread.start()
-        return httpd, api_thread
-    
-    except Exception as e:
-        print(f"Error starting API server: {e}")
-        return None, None
+def start_api_server(port=API_PORT, max_attempts=20):
+    """Start the API server in a separate thread, trying consecutive ports if needed."""
+    httpd = None
+    api_thread = None
+    used_port = None
+
+    # Use ThreadingHTTPServer for better handling of concurrent requests
+    class ThreadingHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
+        pass
+
+    for attempt in range(max_attempts):
+        current_port = port + attempt
+        try:
+            server_address = ('', current_port)
+            httpd = ThreadingHTTPServer(server_address, YAMLHandler)
+            used_port = current_port
+            print(f"Successfully bound API server to port {used_port}.")
+            break # Exit loop if successful
+        except OSError as e:
+            if "Address already in use" in str(e):
+                print(f"Info: API Port {current_port} is busy, trying next...")
+                if attempt == max_attempts - 1: # Last attempt failed
+                    print(f"\nError: Could not find an open API port after {max_attempts} attempts starting from {port}.")
+                    return None, None, None
+            else:
+                print(f"\nError starting API server on port {current_port}: {e}")
+                return None, None, None # Other OS error
+
+    if httpd is None or used_port is None:
+        print(f"\nError: Failed to bind API server to any port between {port} and {port + max_attempts - 1}.")
+        return None, None, None
+
+    print(f"Starting API server on http://localhost:{used_port}")
+    api_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    api_thread.start()
+    return httpd, api_thread, used_port
 
 if __name__ == "__main__":
     # If running this script directly, start the API server
-    httpd, thread = start_api_server()
-    
-    # Keep the main thread running to prevent the daemon thread from exiting
-    try:
-        print("API server is running. Press Ctrl+C to stop.")
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("Stopping API server...")
-        httpd.shutdown()
-        print("API server stopped.") 
+    httpd, thread, used_port = start_api_server()
+
+    if httpd:
+        # Keep the main thread running to prevent the daemon thread from exiting
+        try:
+            print(f"API server is running on port {used_port}. Press Ctrl+C to stop.")
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("Stopping API server...")
+            httpd.shutdown()
+            print("API server stopped.")
+    else:
+        print("API server failed to start.") 

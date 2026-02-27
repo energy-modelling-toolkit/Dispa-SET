@@ -136,7 +136,7 @@ def filter_by_zone(PowerOutput, inputs, z, thermal = None, sector = False):
             else:
                 indices = []
             PowerOutputCopy = PowerOutput.copy()
-            Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if u in indices]]
+            Power = PowerOutputCopy.loc[:, [u for u in PowerOutputCopy.columns if u.startswith(z)]]
             if PowerOutputCopy.empty:
                 Power = pd.DataFrame()
     return Power
@@ -254,12 +254,13 @@ def get_plot_data(inputs, results, z):
     # 4. Process Network Flow Data (FlowIn, FlowOut)
     plotdata['FlowIn'] = 0
     plotdata['FlowOut'] = 0
-    for col in results['OutputFlow']:
-        from_node, to_node = col.split('->')
-        if to_node.strip() == z:
-            plotdata['FlowIn'] = plotdata['FlowIn'] + results['OutputFlow'][col]
-        if from_node.strip() == z:
-            plotdata['FlowOut'] = plotdata['FlowOut'] - results['OutputFlow'][col]
+    if 'OutputFlow' in results: # Check if OutputFlow exists
+        for col in results['OutputFlow']:
+            from_node, to_node = col.split('->')
+            if to_node.strip() == z:
+                plotdata['FlowIn'] = plotdata['FlowIn'] + results['OutputFlow'][col]
+            if from_node.strip() == z:
+                plotdata['FlowOut'] = plotdata['FlowOut'] - results['OutputFlow'][col]
     
     # 5. Reorder Columns for Plotting (Merit Order)
     OrderedColumns = [col for col in commons['MeritOrder'] if col in plotdata.columns]
