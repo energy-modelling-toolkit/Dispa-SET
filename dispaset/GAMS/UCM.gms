@@ -210,11 +210,12 @@ PTDF(l_int,n)                               [p.u.]          Power Transfer Distr
 
 *New
 InertiaConstant(au)                         [s]             Inertia Constant
-SystemInertiaDemand(h)                      [MWs\h]         System Inertia Demand
+InertiaDemand(h)                            [MWs\h]         System Inertia Demand
 Droop(au)                                   [%]             Droop
 ReserveDemand(res,n,h)                      [MW]            Reserve Demand
 
-
+UFLS_Participation(res)                     [n.a.]          fraction of demand to cover UFLS per type of Reserve
+OFDM_Participation(res)                     [n.a.]          fraction of demand to cover OFDM per type of Reserve
 
 ;
 
@@ -370,9 +371,12 @@ $LOAD PTDF
 
 *New
 $LOAD InertiaConstant
-$LOAD SystemInertiaDemand
+$LOAD InertiaDemand
 $LOAD Droop
 $LOAD ReserveDemand
+
+$LOAD UFLS_Participation
+$LOAD OFDM_Participation
 ;
 
 
@@ -398,7 +402,7 @@ StartUp(au,h)        [n.a.]  Unit start up at hour h {1 0}  or integer
 ShutDown(au,h)       [n.a.]  Unit shut down at hour h {1 0} or integer
 ;
 
-$If %LPFormulation% == 1 POSITIVE VARIABLES Committed (au,h); Committed.UP(au,h) = 1 ; 
+$If %LPFormulation% == 1 POSITIVE VARIABLES Committed (au,h); Committed.UP(au,h) = 1; Nunits(au) = 1 ; 
 $If not %LPFormulation% == 1 INTEGER VARIABLES Committed (au,h), StartUp(au,h), ShutDown(au,h); Committed.UP(au,h) = Nunits(au) ;StartUp.UP(au,h) = Nunits(au) ; ShutDown.UP(au,h) = Nunits(au) ;
 
 
@@ -429,7 +433,7 @@ LL_RampDown(au,h)                       [MW]    Deficit in terms of ramping down
 LL_MinPower(n,h)                        [MW]    Power exceeding the demand
 *new
 LL_Reserve(res,n,h)                     [MW]    Deficit in reserves
-LL_SystemInertia(h)                     [GWs]    Deficit in system inertia
+LL_Inertia(h)                           [GWs]    Deficit in system inertia
 LL_StorageAlert(au,h)                   [MWh]   Unsatisfied water level constraint for going below alert level at each hour
 LL_FloodControl(au,h)                   [MWh]   Unsatisfied water level constraint for going above flood level at each hour
 SectorXStorageAlertViolation(nx,h)      [MWh]   Boundary Sector Unsatisfied water level constraint for going below alert level at each hour
@@ -439,7 +443,7 @@ LL_SectorXFlexSupply(nx)                [MWh]   Deficit in flex supply
 spillage(au,h)                          [MWh]   spillage from water reservoirs
 SystemCost(h)                           [EUR]   Hourly system cost
 *new
-ReserveProvision(res,au,h)             [MW]    all reserves up
+ReserveProvision(res,au,h)              [MW]    all reserves up
 Heat(au,h)                              [MW]    Heat output by chp plant
 WaterSlack(au)                          [MWh]   Unsatisfied water level constraint at end of optimization period
 StorageSlack(au,h)                      [MWh]   Unsatisfied storage level constraint at end of simulation timestep
@@ -452,8 +456,11 @@ SectorXFlexDemand(nx,h)                 [MW]    FLexible boundary sector demand 
 SectorXFlexSupply(nx,h)                 [MW]    FLexible boundary sector supply at each time step of each nx node
 
 *New
-SystemInertia(h)                        [s]         System Inertia
-
+InertiaProvision(h)                     [s]     Inertia Provision
+UFLS(res,n,h)                           [MW]    Under Frequency Load Shedding
+OFDM(res,n,h)                           [MW]    Optional Downward Flexibility Management
+HeadRoom(au,h)                          [MW]    It is the power that a unit is not using and that can be used to raise the frequency (upward reserves)
+FootRoom(au,h)                          [MW]    It is the power that a unit has above the minimum operating level and that can be used to lower the frequency (downward reserves)
 ;
 
 free variable
@@ -533,7 +540,7 @@ EQ_Power_Balance_of_X2P_units
 EQ_Max_Power_Consumption_of_BS_units
 EQ_Power_must_run
 EQ_Power_available
-EQ_Reserve_UP_limit_chp
+*EQ_Reserve_UP_limit_chp
 EQ_Reserve_DOWN_limit_chp
 
 *new
@@ -590,8 +597,8 @@ EQ_DC_Power_Flow
 EQ_Total_Injected_Power
 
 *New
-EQ_SystemInertia
-EQ_SystemInertia_Balance
+EQ_Inertia_Delivery_Limit
+EQ_Inertia_Balance
 
 EQ_Reserves_Up_Capability
 EQ_Reserves_Down_Capability
@@ -599,6 +606,13 @@ EQ_UpwardReserves_balance
 EQ_DownwardReserves_balance
 EQ_Total_Delivery_Limit_Up
 EQ_Total_Delivery_Limit_Down
+
+
+EQ_UFLS_Limit
+EQ_OFDM_Limit
+
+EQ_HeadRoom_Limit
+EQ_FootRoom_Limit
 
 ;
 
@@ -626,8 +640,11 @@ EQ_SystemCost(i)..
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
 *new
-         +0.8*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
-         +0.8*Config("ValueOfLostLoad","val")*(LL_SystemInertia(i)*TimeStep)
+         +0.9*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
+         +0.9*Config("ValueOfLostLoad","val")*(LL_Inertia(i)*TimeStep)
+         +0.8*Config("ValueOfLostLoad","val")*(sum((res,n), (UFLS(res,n,i)) * TimeStep))
+         +0.8*Config("ValueOfLostLoad","val")*(sum((res,n), (OFDM(res,n,i)) * TimeStep))
+         
          +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
          +0.7*Config("ValueOfLostLoad","val")*(sum(nx,(SectorXWaterNotWithdrawn(nx,i))*TimeStep))                                                                             
          +sum(s,CostStorageAlert(s,i)*LL_StorageAlert(s,i)*TimeStep)
@@ -655,8 +672,11 @@ EQ_SystemCost(i)..
          +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i)*TimeStep)
          +Config("ValueOfLostLoad","val")*(sum(n,(LL_MaxPower(n,i)+LL_MinPower(n,i))*TimeStep))
 *new
-         +0.8*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
-         +0.8*Config("ValueOfLostLoad","val")*(LL_SystemInertia(i)*TimeStep)
+         +0.9*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
+         +0.9*Config("ValueOfLostLoad","val")*(LL_Inertia(i)*TimeStep)
+         +0.8*Config("ValueOfLostLoad","val")*(sum((res,n), (UFLS(res,n,i)) * TimeStep))
+         +0.8*Config("ValueOfLostLoad","val")*(sum((res,n), (OFDM(res,n,i)) * TimeStep))
+         
          +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
          +15*(sum(nx,(SectorXWaterNotWithdrawn(nx,i))*TimeStep))                                                                                                              
          +sum(s,CostStorageAlert(s,i)*LL_StorageAlert(s,i)*TimeStep)
@@ -823,6 +843,7 @@ EQ_No_Flexible_Demand(n,i)..
 *General formulation for hourly demand balance in the Upward Reserve Services for each node
 EQ_UpwardReserves_balance(res_U,n,i)..
          sum((au),ReserveProvision(res_U,au,i)*Location(au,n))
+         + UFLS (res_U,n,i)
          + LL_Reserve(res_U,n,i)
          =E=
          ReserveDemand(res_U,n,i)
@@ -831,6 +852,7 @@ EQ_UpwardReserves_balance(res_U,n,i)..
 *General formulation for hourly demand balance in the Downward Reserve Services for each node
 EQ_DownwardReserves_balance(res_D,n,i)..
          sum((au),ReserveProvision(res_D,au,i)*Location(au,n))
+         + OFDM (res_D,n,i)
          + LL_Reserve(res_D,n,i)
          =E=
          ReserveDemand(res_D,n,i)
@@ -842,7 +864,7 @@ EQ_Curtailed_Power(n,i)..
          =E=
          sum(au,(Nunits(au)*PowerCapacity(au)*LoadMaximum(au,i)-Power(au,i)- sum(res_U, ReserveProvision(res_U,au,i)))$(sum(tr,Technology(au,tr))>=1) * Location(au,n))
 ;
-*---------------------------------------------------RESERVES CAPABILITIES ------------------------------------------------
+*---------------------------------------------------GENERAL UNIT-LEVEL RESERVES CAPABILITIES ------------------------------------------------
 *Capability for all reserves upward
 EQ_Reserves_Up_Capability(res_U,au,i)..
          ReserveProvision(res_U,au,i)
@@ -854,7 +876,7 @@ EQ_Reserves_Up_Capability(res_U,au,i)..
          (PowerCapacity(au) * LoadMaximum(au,i) * Nunits(au) * ReserveParticipation(res_U,au,i))$ba(au)
 
          + // Part 3: All non-committed conventional units with StartUpTime <= FullActivationTime and StartUpTime > 0
-         (PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)))$(TimeStartUp(au) > 0 and TimeStartUp(au) <= FullActivationTime(res_U) and not ba(au))
+         (PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)) * ReserveParticipation(res_U,au,i))$(not ba(au) and (TimeStartUp(au) = 0 or (TimeStartUp(au) > 0 and TimeStartUp(au) <= FullActivationTime(res_U)) ))
 ;
 
 *Capability for all reserves downward
@@ -865,26 +887,26 @@ EQ_Reserves_Down_Capability(res_D,au,i)..
          (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i) * ReserveParticipation(res_D,au,i))$(not ba(au))
          
          + // Part 2: Committed Batteries only
-         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i) * Nunits(au) * ReserveParticipation(res_D,au,i))$ba(au)
+         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i) * ReserveParticipation(res_D,au,i))$ba(au)
 
          + // Part 3: Non-committed batteries only
-         (StorageChargingCapacity(au) * (Nunits(au)-Committed(au,i)) * ReserveParticipation(res_D,au,i))$ba(au)
+         (StorageChargingCapacity(au) * LoadMaximum(au,i) * (Nunits(au)-Committed(au,i)) * ReserveParticipation(res_D,au,i))$ba(au)
          
 ;
 
 *---------------------------------------TECHNOLOGY ESPECIFIC RESERVE LIMITS---------------------------------------------------------------
-*Reserves limits for CHP units
-EQ_Reserve_UP_limit_chp(chp,i)..
-         sum(res_U, ReserveProvision(res_U,chp,i)* ReserveDuration(res_U))
-         =l=
-         (StorageCapacity(chp) * Nunits(chp) - StorageLevel(chp,i)) * CHPPowerToHeat(chp)
-;
+**Reserves limits for CHP units
+*EQ_Reserve_UP_limit_chp(chp,i)..
+*         sum(res_U, ReserveProvision(res_U,chp,i)* ReserveDuration(res_U))
+*         =l=
+*         (StorageCapacity(chp) * Nunits(chp) - StorageLevel(chp,i)) * CHPPowerToHeat(chp)
+*;
 
-EQ_Reserve_DOWN_limit_chp(chp,i)..
-         sum(res_D, ReserveProvision(res_D,chp,i) * ReserveDuration(res_D))
-         =l=
-         StorageLevel(chp,i) * CHPPowerToHeat(chp)
-;
+*EQ_Reserve_DOWN_limit_chp(chp,i)..
+*         sum(res_D, ReserveProvision(res_D,chp,i) * ReserveDuration(res_D))
+*         =l=
+*         StorageLevel(chp,i) * CHPPowerToHeat(chp)
+*;
 
 **Reserves limits for Storage
 *EQ_Reserve_UP_limit_sto(au,i)$(StorageCapacity(au)$(s(au)) > 0)..
@@ -906,10 +928,10 @@ EQ_Reserve_DOWN_limit_chp(chp,i)..
 *        )
 *;
 
-*---------------------------------------GENERAL SYSTEM-WIDE RESERVE LIMITS---------------------------------------------------------------
+*---------------------------------------CROSS-SERVICE AGGREGATED RESERVE LIMITS---------------------------------------------------------------
 *System-wide reserve limits upward
 EQ_Total_Delivery_Limit_Up(au,i)..
-         Power(au,i) + sum(res_U, ReserveProvision(res_U,au,i))
+         Power(au,i) + HeadRoom(au,i)
          =L=
          // Part 1: All committed conventional units (except batteries)
          (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i))$(not ba(au))
@@ -920,32 +942,60 @@ EQ_Total_Delivery_Limit_Up(au,i)..
          + // Part 3: All non-committed conventional units
          (PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)))$(not ba(au) and (TimeStartUp(au) = 0 or (TimeStartUp(au) > 0 and TimeStartUp(au) <= smax(res_U, FullActivationTime(res_U)) )))
 ;
+
+*HeadRoom limits 
+EQ_HeadRoom_Limit(res_U,au,i)..
+         HeadRoom(au,i)
+         =G=
+         ReserveProvision(res_U,au,i)         
+;
     
 *System-wide reserve limits downward
 EQ_Total_Delivery_Limit_Down(au,i)..
-         Power(au,i) - sum(res_D, ReserveProvision(res_D,au,i))
+         Power(au,i) - FootRoom(au,i)
          =G=
          // Part 1: All committed conventional units (except batteries)
          (PowerCapacity(au) * PartLoadMin(au) * Committed(au,i))$(not ba(au))
          
          + // Part 2: Committed Batteries only
-         (PowerCapacity(au) * PartLoadMin(au) * Committed(au,i) * Nunits(au))$ba(au)
+         (PowerCapacity(au) * PartLoadMin(au) * Committed(au,i))$ba(au)
          
          + // Part 3: Non-committed batteries only (available storage charging capacity)
-         (StorageChargingCapacity(au) * (Committed(au,i)-Nunits(au)))$ba(au)
+         (StorageChargingCapacity(au) * LoadMaximum(au,i) * (Committed(au,i)-Nunits(au)))$ba(au)
+;
+
+*FootRoom limits 
+EQ_FootRoom_Limit(res_D,au,i)..
+         FootRoom(au,i)
+         =G=
+         ReserveProvision(res_D,au,i)         
 ;
 
 *---------------------------------------SYSTEM INERTIA REQUIRED LIMITS---------------------------------------------------------------
-EQ_SystemInertia(i)..
-         SystemInertia(i)
+EQ_Inertia_Delivery_Limit(i)..
+         InertiaProvision(i)
          =E=
          sum(cu,PowerCapacity(cu)*Committed(cu,i)*InertiaConstant(cu))/ConversionFactor
 ;
 
-EQ_SystemInertia_Balance(u,i)$(SystemInertiaDemand(i)>0)..
-         SystemInertiaDemand(i)
+EQ_Inertia_Balance(u,i)$(InertiaDemand(i)>0)..
+         InertiaDemand(i)
          =l=
-         SystemInertia(i) + LL_SystemInertia(i)
+         InertiaProvision(i) + LL_Inertia(i)
+;
+*---------------------------------------------------------------------------------------------------------------------------------
+
+*---------------------------------------EMERGENCY FREQUENCY SERVICES LIMITS---------------------------------------------------------------
+EQ_UFLS_Limit(res_U,n,i)..
+         UFLS(res_U,n,i)
+         =L=
+         UFLS_Participation(res_U) * (Demand("DA",n,i) - ShedLoad(n,i))
+;
+
+EQ_OFDM_Limit(res_D,n,i)..
+         OFDM(res_D,n,i)
+         =L=
+         OFDM_Participation(res_D) * (Demand("DA",n,i) - ShedLoad(n,i))
 ;
 *---------------------------------------------------------------------------------------------------------------------------------
 
@@ -965,7 +1015,7 @@ EQ_Power_available(au,i)..
          =L=
          PowerCapacity(au)$(u(au))*LoadMaximum(au,i)$(u(au))*Committed(au,i)$(u(au))
          + ((PowerCapacity(au))*LoadMaximum(au,i)*Nunits(au))$(x2p(au))
-         - sum(res_U, ReserveProvision(res_U,au,i))
+*         - sum(res_U, ReserveProvision(res_U,au,i))
          + 0
 ;
 
@@ -1084,7 +1134,7 @@ EQ_Storage_input(au,i)..
 *Discharge is limited by the storage level
 EQ_Storage_MaxDischarge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep)..
          Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
-         + sum(res_U, ReserveProvision(res_U,au,i)$(s(au)) * ReserveDuration(res_U) * TimeStep / max(StorageDischargeEfficiency(au)$(s(au)), 1e-6))
+         + sum(res_U, ReserveProvision(res_U,au,i)$(s(au)) * ReserveDuration(res_U) / max(StorageDischargeEfficiency(au)$(s(au)), 1e-6))
          =L=
          StorageInitial(au)$(s(au))$(ord(i) = 1)
          + StorageLevel(au,i-1)$(s(au))$(ord(i) > 1)
@@ -1094,7 +1144,7 @@ EQ_Storage_MaxDischarge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(
 *Charging is limited by the remaining storage capacity
 EQ_Storage_MaxCharge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep)..
          StorageInput(au,i)$(s(au))*StorageChargingEfficiency(au)$(s(au))*TimeStep
-         + sum(res_D, ReserveProvision(res_D,au,i)$(s(au)) * ReserveDuration(res_D) * TimeStep * StorageChargingEfficiency(au)$(s(au)))
+         + sum(res_D, ReserveProvision(res_D,au,i)$(s(au)) * ReserveDuration(res_D) * StorageChargingEfficiency(au)$(s(au)))
          =L=
          (Nunits(au)$(s(au)) * StorageCapacity(au)$(s(au))-StorageInitial(au)$(s(au)))$(ord(i) = 1)
          + (Nunits(au)$(s(au)) * StorageCapacity(au)$(s(au))*AvailabilityFactor(au,i-1)$(s(au)) - StorageLevel(au,i-1))$(ord(i) > 1)
@@ -1367,8 +1417,8 @@ EQ_Power_Balance_of_P2X_units,
 EQ_Power_Balance_of_X2P_units,                                  
 EQ_Max_Power_Consumption_of_BS_units,
 EQ_Power_available,
-EQ_Reserve_UP_limit_chp,
-EQ_Reserve_DOWN_limit_chp,
+*EQ_Reserve_UP_limit_chp,
+*EQ_Reserve_DOWN_limit_chp,
 
 *new
 *EQ_Reserve_UP_limit_sto
@@ -1420,8 +1470,8 @@ EQ_DC_Power_Flow,
 EQ_Total_Injected_Power,
 
 *new
-$If %MTS% == 0 EQ_SystemInertia,
-$If %MTS% == 0 EQ_SystemInertia_Balance,
+EQ_Inertia_Delivery_Limit,
+EQ_Inertia_Balance,
 
 EQ_Reserves_Up_Capability,
 EQ_Reserves_Down_Capability,
@@ -1429,6 +1479,12 @@ EQ_UpwardReserves_balance,
 EQ_DownwardReserves_balance,
 EQ_Total_Delivery_Limit_Up,
 EQ_Total_Delivery_Limit_Down,
+
+EQ_UFLS_Limit,
+EQ_OFDM_Limit,
+
+EQ_HeadRoom_Limit,
+EQ_FootRoom_Limit,
 
 /
 ;
@@ -1511,7 +1567,7 @@ Error.L = sum((i,n), CostLoadShedding(n,i)*ShedLoad.L(n,i)
           +Config("ValueOfLostLoad","val")*(LL_MaxPower.L(n,i)+LL_MinPower.L(n,i))
 *new
           +0.8*Config("ValueOfLostLoad","val")*(sum(res,LL_Reserve.L(res,n,i))))
-          + 0.8*Config("ValueOfLostLoad","val")*sum(i,LL_SystemInertia.L(i))
+          + 0.8*Config("ValueOfLostLoad","val")*sum(i,LL_Inertia.L(i))
           +sum((au,i), 0.7*Config("ValueOfLostLoad","val")*(LL_RampUp.L(au,i)+LL_RampDown.L(au,i)))
 ;
 OptimalityGap.L(i)$(ord(i)=LastKeptHour-FirstHour+1) = UCM_SIMPLE.objVal - UCM_SIMPLE.objEst;
@@ -1582,7 +1638,7 @@ LostLoad_MinPower(n,h)
 LostLoad_aFRRD(n,h)
 LostLoad_aFRRU(n,h)
 LostLoad_mFRRU(n,h)
-LostLoad_SystemInertia(h)
+LostLoad_Inertia(h)
 LostLoad_StorageAlert(au,h)
 LostLoad_FloodControl(au,h)
 $If not %LPFormulation% == 1 LostLoad_RampUp(n,h)
@@ -1645,7 +1701,7 @@ UnitHourlyProductionCost(au,h)
 UnitHourlyProfit(au,h)
 
 *New
-$If %MTS% == 0 OutputSystemInertia(h)
+OutputInertiaProvision(h)
 
 OutputReserveProvision(res,au,h)
 OutputReserve_FFRU(au,h)
@@ -1664,6 +1720,12 @@ OutputContingency(h)
 ShadowPrice_PowerAvailable(au,h)
 ShadowPrice_DeliveryUp(au,h)
 ShadowPrice_DeliveryDown(au,h)
+
+OutputUFLS(res_U,n,h)
+OutputOFDM(res_D,n,h)
+
+OutputHeadRoom(au,h)
+OutputFootRoom(au,h)
 
 
 ;
@@ -1715,7 +1777,7 @@ LostLoad_FFRU(n,z) = LL_Reserve.L('FFRU',n,z);
 LostLoad_FFRD(n,z) = LL_Reserve.L('FFRD',n,z);
 LostLoad_FCRU(n,z) = LL_Reserve.L('FCRU',n,z);
 LostLoad_FCRD(n,z) = LL_Reserve.L('FCRD',n,z);
-LostLoad_SystemInertia(z) = LL_SystemInertia.L(z);
+LostLoad_Inertia(z) = LL_Inertia.L(z);
 
 LostLoad_StorageAlert(au,z) = LL_StorageAlert.L(au,z);
 LostLoad_FloodControl(au,z) = LL_FloodControl.L(au,z);
@@ -1774,14 +1836,25 @@ OutputStartUp(au,z) = StartUp.L(au,z);
 OutputShutDown(au,z) = ShutDown.L(au,z);
 
 *New
-$If %MTS%==0 OutputSystemInertia(z) = SystemInertia.L(z);
+OutputInertiaProvision(z) = InertiaProvision.L(z);
 OutputReserveProvision(res,au,z) = ReserveProvision.L(res,au,z);
 OutputReserve_FFRU(au,z) = ReserveProvision.L('FFRU',au,z);
 OutputReserve_FFRD(au,z) = ReserveProvision.L('FFRD',au,z);
 OutputReserve_FCRU(au,z) = ReserveProvision.L('FCRU',au,z);
 OutputReserve_FCRD(au,z) = ReserveProvision.L('FCRD',au,z);
-OutputContingencyPerZone(n,z) = smax(au$(Location(au,n)), Power.L(au,z));
-OutputContingency(z) = smax(au, Power.L(au,z));
+
+loop((n,z),
+OutputContingencyPerZone(n,z) = smax(au,(min(PowerCapacity(au), Power.L(au,z)))$(Location(au,n) and Committed.L(au,z) > 0));
+);
+loop(z,
+OutputContingency(z) = smax(au,(min(PowerCapacity(au),Power.L(au,z)))$(Committed.L(au,z) > 0));
+);
+
+OutputUFLS(res_U,n,z) = UFLS.L(res_U,n,z);
+OutputOFDM(res_D,n,z) = OFDM.L(res_D,n,z);
+
+OutputHeadRoom(au,z) = HeadRoom.L(au,z);
+OutputFootRoom(au,z) = FootRoom.L(au,z);
 
 OutputEmissions(n,p,z) = sum(u,Power.L(u,z)*EmissionRate(u,p)*Location(u,n));
                         
@@ -1911,7 +1984,7 @@ OutputDemand_mFRRU,
 OutputDemand_aFRRD,
 
 *New
-$If %MTS%==0 OutputSystemInertia,
+OutputInertiaProvision,
 
 OutputReserveProvision,
 OutputReserve_FFRU,
@@ -1930,6 +2003,12 @@ OutputCurtailmentReserve_FFRU,
 OutputCurtailmentReserve_FCRU,
 OutputContingencyPerZone,
 OutputContingency,
+
+OutputUFLS,
+OutputOFDM,
+
+OutputHeadRoom,
+OutputFootRoom,
 
 status,
 UnitHourlyPowerRevenue
