@@ -22,6 +22,9 @@ from ..common import commons
 import time
 import pickle
 
+from scipy.cluster.hierarchy import linkage, fcluster
+from sklearn.cluster import DBSCAN
+
 
 def get_load_data(inputs, z):
     """ 
@@ -337,7 +340,7 @@ def get_result_analysis(inputs, results, units='MWh'):
             print('\nAverage electricity cost (EUR/' + unit_small[1] + '): \n'  + str(Cost_kwh_zone) + '\nEntireRegion ' + str(Cost_kwh))
 
     for key in ['LostLoad_RampUp', 'LostLoad_aFRRD', 'LostLoad_MinPower',
-                'LostLoad_RampDown', 'LostLoad_aFRRU', 'LostLoad_mFRRU', 'LostLoad_SystemInertia', 'LostLoad_MaxPower',
+                'LostLoad_RampDown', 'LostLoad_aFRRU', 'LostLoad_mFRRU', 'LostLoad_Inertia', 'LostLoad_MaxPower',
                 'LostLoad_StorageLevelViolation']:
         if key == 'LostLoad_StorageLevelViolation':
             if isinstance(results[key], pd.Series):
@@ -532,9 +535,10 @@ def CostExPost(inputs, results):
              +sum(chp, CostHeatSlack(chp,i) * HeatSlack(chp,i))
              +sum(chp, CostVariable(chp,i) * CHPPowerLossFactor(chp) * Heat(chp,i))
              +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
-             +0.8*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
-             +0.8*Config("ValueOfLostLoad","val")*(LL_SystemInertia(i)*TimeStep)
-             +0.8*Config("ValueOfLostLoad","val")*(LL_SystemInertia(i))
+             +0.9*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
+             +0.9*Config("ValueOfLostLoad","val")*(LL_Inertia(i)*TimeStep)
+             +0.8*Config("ValueOfLostLoad","val")*(sum(res,n, UFLS(res,n,i) * TimeStep))
+             +0.8*Config("ValueOfLostLoad","val")*(sum(res,n, OFDM(res,n,i) * TimeStep))
              +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
              +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
 
@@ -633,7 +637,7 @@ def CostExPost(inputs, results):
     costs['LostLoad'] = 80e3 * (results['LostLoad_aFRRD'].reindex(timeindex).sum(axis=1).fillna(0) +
                                 results['LostLoad_aFRRU'].reindex(timeindex).sum(axis=1).fillna(0) +
                                 results['LostLoad_mFRRU'].reindex(timeindex).sum(axis=1).fillna(0) + 
-                                results['LostLoad_SystemInertia'].reindex(timeindex).sum(axis=1).fillna(0)) +\
+                                results['LostLoad_Inertia'].reindex(timeindex).sum(axis=1).fillna(0)) +\
                         100e3 * (results['LostLoad_MaxPower'].reindex(timeindex).sum(axis=1).fillna(0) +
                                  results['LostLoad_MinPower'].reindex(timeindex).sum(axis=1).fillna(0)) + \
                         70e3 * (results['LostLoad_RampDown'].reindex(timeindex).sum(axis=1).fillna(0) +
@@ -1291,7 +1295,7 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
     data = pd.concat([Contingency, Damping], axis=1)
     
     # Build reduced DataFrame 
-    data_grouped = group_contingencies_data(data, "Contingency", "Damping", tol_max=10.0, tol_min=50.0)
+    data_grouped = group_contingencies_data(data, "Contingency", "Damping", method="hierarchical", tol_max=1.0)
     group_cols = ["Contingency_group", "Damping_group"]
     data_reduced = (
         data_grouped.groupby(group_cols)
@@ -1461,8 +1465,8 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
         how="left"
     )
     # We convert the 'index' column into the DataFrame's index.
-    summary_reserves = summary_reserves.set_index('index').sort_index()
-    data_grouped = data_grouped.set_index('index').sort_index()
+    summary_reserves = summary_reserves.reset_index(drop=True)
+    summary_reserves.index = data_grouped.index
     
     # Save the results of the swing equation solutions for each contingency
     with pd.ExcelWriter(path +'results_frecuency_response.xlsx', engine='xlsxwriter') as writer:
@@ -1485,44 +1489,122 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
     return results_frequency_response, summary_reserves, data_grouped
 
 #%%
-def group_contingencies_data(df, col_max, col_min, tol_max=1.0, tol_min=0.02):
+def group_contingencies_data(
+        df,
+        col_max,
+        col_min,
+        method="dbscan",
+        tol_max=5.0,
+        tol_min=5.0,
+        precision_max=1.0,
+        precision_min=1.0
+    ):
     """
-    Group values upwards with tolerances for multiple columns.
-    Always assigns group representative as the maximum of each group.
-    
-    Parameters
-    ----------
-    df : DataFrame
-        Original DataFrame
-    cols : list of str
-        Column names to group on
-    tolerances : dict
-        Tolerance per column, e.g. {"Contingency": 1.0, "Damping": 1.0}
+    Groups instantaneous values of contingencies to replace the original N-1 contingency 
+    set with a reduced surrogate grouped list to perform the stability analysis. 
+    The function supports four grouping methods:
+        
+    method = "hierarchical" | "dbscan" | "greedy" | "round"
+    Always returns df_sorted, just like your original function.
     """
-    df_sorted = df.sort_values([col_max, col_min]).reset_index(drop=False)
-    
-    grouped_max, grouped_min = [], []
-    current_group = []
-    current_max = df_sorted.loc[0, col_max]
-    current_min = df_sorted.loc[0, col_min]
-    
-    for _, row in df_sorted.iterrows():
-        val_max, val_min = row[col_max], row[col_min]
-        if (current_max - val_max <= tol_max) and (val_min - current_min <= tol_min):
-            current_group.append((val_max, val_min))
-            current_max = max([x[0] for x in current_group])
-            current_min = min([x[1] for x in current_group])
-        else:
-            grouped_max.extend([current_max]*len(current_group))
-            grouped_min.extend([current_min]*len(current_group))
-            current_group = [(val_max, val_min)]
-            current_max, current_min = val_max, val_min
-    
-    # último grupo
-    grouped_max.extend([current_max]*len(current_group))
-    grouped_min.extend([current_min]*len(current_group))
-    
-    df_sorted[col_max + "_group"] = grouped_max
-    df_sorted[col_min + "_group"] = grouped_min
-    
+
+    df_sorted = df.copy()  # fixed name so it doesn't break your code
+
+    # ============================================================
+    # METHOD 1 — HIERARCHICAL COMPLETE LINKAGE
+    # ============================================================
+    if method == "hierarchical":
+
+        # --- col_max ---
+        vals_max = df_sorted[col_max].to_numpy().reshape(-1, 1)
+        Zmax = linkage(vals_max, method='complete')
+        labels_max = fcluster(Zmax, t=tol_max, criterion='distance')
+        rep_max = df_sorted.groupby(labels_max)[col_max].max().rename(col_max + "_group")
+        df_sorted[col_max + "_group"] = rep_max.loc[labels_max].to_numpy()
+
+        # --- col_min ---
+        vals_min = df_sorted[col_min].to_numpy().reshape(-1, 1)
+        Zmin = linkage(vals_min, method='complete')
+        labels_min = fcluster(Zmin, t=tol_min, criterion='distance')
+        rep_min = df_sorted.groupby(labels_min)[col_min].min().rename(col_min + "_group")
+        df_sorted[col_min + "_group"] = rep_min.loc[labels_min].to_numpy()
+
+    # ============================================================
+    # METHOD 2 — DBSCAN (density)
+    # ============================================================
+    elif method == "dbscan":
+
+        # --- col_max ---
+        vals_max = df_sorted[col_max].to_numpy().reshape(-1, 1)
+        labels_max = DBSCAN(eps=tol_max, min_samples=1).fit(vals_max).labels_
+        rep_max = df_sorted.groupby(labels_max)[col_max].max().rename(col_max + "_group")
+        df_sorted[col_max + "_group"] = rep_max.loc[labels_max].to_numpy()
+
+        # --- col_min ---
+        vals_min = df_sorted[col_min].to_numpy().reshape(-1, 1)
+        labels_min = DBSCAN(eps=tol_min, min_samples=1).fit(vals_min).labels_
+        rep_min = df_sorted.groupby(labels_min)[col_min].min().rename(col_min + "_group")
+        df_sorted[col_min + "_group"] = rep_min.loc[labels_min].to_numpy()
+
+    # ============================================================
+    # METHOD 3 — GREEDY TOP-DOWN 
+    # ============================================================
+    elif method == "greedy":
+
+        # --- Group by col_max ---
+        df_aux = df_sorted.sort_values(col_max, ascending=False).reset_index()
+        reps_max = {}
+        current_rep = None
+        current_group = []
+
+        for idx, val in zip(df_aux["index"], df_aux[col_max]):
+            if current_rep is None:
+                current_rep = val
+                current_group = [idx]
+            else:
+                if current_rep - val <= tol_max:
+                    current_group.append(idx)
+                else:
+                    for i in current_group:
+                        reps_max[i] = current_rep
+                    current_rep = val
+                    current_group = [idx]
+        for i in current_group:
+            reps_max[i] = current_rep
+
+        # --- Group by col_min ---
+        df_aux = df_sorted.sort_values(col_min, ascending=True).reset_index()
+        reps_min = {}
+        current_rep = None
+        current_group = []
+
+        for idx, val in zip(df_aux["index"], df_aux[col_min]):
+            if current_rep is None:
+                current_rep = val
+                current_group = [idx]
+            else:
+                if val - current_rep <= tol_min:
+                    current_group.append(idx)
+                else:
+                    for i in current_group:
+                        reps_min[i] = current_rep
+                    current_rep = val
+                    current_group = [idx]
+        for i in current_group:
+            reps_min[i] = current_rep
+
+        df_sorted[col_max + "_group"] = df_sorted.index.map(reps_max)
+        df_sorted[col_min + "_group"] = df_sorted.index.map(reps_min)
+
+    # ============================================================
+    # METHOD 4 — ROUNDING / BINNING
+    # ============================================================
+    elif method == "round":
+
+        df_sorted[col_max + "_group"] = (df_sorted[col_max] / precision_max).round() * precision_max
+        df_sorted[col_min + "_group"] = (df_sorted[col_min] / precision_min).round() * precision_min
+
+    else:
+        raise ValueError("Unrecognized method: use hierarchical | dbscan | greedy | round")
+
     return df_sorted
