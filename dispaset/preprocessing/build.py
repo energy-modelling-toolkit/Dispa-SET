@@ -139,11 +139,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             GridData = pd.DataFrame()
 
     # Inertia Demand:
-    if 'SystemInertiaDemand' in config and os.path.isfile(config['SystemInertiaDemand']):
-        SystemInertiaDemand = load_time_series(config, config['SystemInertiaDemand']).fillna(0)
+    if 'InertiaDemand' in config and os.path.isfile(config['InertiaDemand']):
+        InertiaDemand = load_time_series(config, config['InertiaDemand']).fillna(0)
     else:
-        logging.warning('No System Inertia Demand will be considered (no valid file provided)')
-        SystemInertiaDemand = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
+        logging.warning('No Inertia Demand will be considered (no valid file provided)')
+        InertiaDemand = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
 
     # Boundary Sector Interconnections:
     if 'BoundarySectorInterconnections' in config and os.path.isfile(config['BoundarySectorInterconnections']):
@@ -441,24 +441,38 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
-        # Keeping consistency in profiles columns names
-        profiles.columns = profiles.columns.str.split(" - ").str[-1].str.strip()
-
+        
+        # Solved: Profile names and ReservoirLevels consistency, their column names now match 
+        # Save original names (the ones you want at the end)
+        original_profile_names = profiles.columns.copy()
+    
+        # Create short names ONLY for matching
+        profiles_short = profiles.rename(columns=lambda c: c.split(" - ")[-1].strip())
+    
         plants_sto.set_index(plants_sto.loc[:, 'Unit'], inplace=True, drop=True)
-        for key in profiles.columns:
-            if key not in ReservoirLevels.columns:
-                logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the '
-                                                                  'ReservoirLevels table')
-            elif key in list(ReservoirLevels.loc[:, plants_sto['Technology'] == 'SCSP'].columns):
-                ReservoirLevels[key] = config['default']['ReservoirLevelInitial']
-                logging.info('The reservoir profile "' + key + '" can not be seleceted for MTS, instead, default value '
-                                                               'of: ' + str(
-                                                                   config['default']['ReservoirLevelInitial']) + ' will be used')
-            else:
-                ReservoirLevels.loc[:, key] = profiles[key]
-                logging.info(
-                    'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
-
+    
+        rename_map = {}
+    
+        for full_name in original_profile_names:
+    
+            short_name = full_name.split(" - ")[-1].strip()
+    
+            if short_name not in ReservoirLevels.columns:
+                logging.warning( f'The reservoir profile "{full_name}" provided by the MTS is not found in the ReservoirLevels table')
+    
+            elif short_name in list(ReservoirLevels.loc[:, plants_sto['Technology'] == 'SCSP'].columns):   
+                ReservoirLevels[short_name] = config['default']['ReservoirLevelInitial']
+                logging.info(f'The reservoir profile "{full_name}" can not be selected for MTS, 'f'instead default value {config["default"]["ReservoirLevelInitial"]} will be used')
+                rename_map[short_name] = full_name
+    
+            else:   
+                ReservoirLevels.loc[:, short_name] = profiles_short[short_name]
+                logging.info(f'The reservoir profile "{full_name}" provided by the MTS is used as target reservoir level')
+                rename_map[short_name] = full_name
+    
+        # Final Column names
+        ReservoirLevels.rename(columns=rename_map, inplace=True)
+        
     if profilesSectorX is not None:
         # Keeping consistency in profiles columns names
         profilesSectorX.columns = profilesSectorX.columns.str.split(" - ").str[-1].str.strip()
@@ -493,7 +507,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # data checks:
     check_AvailabilityFactors(plants, AF)
     check_FlexibleDemand(ShareOfFlexibleDemand)
-    check_reserves(aFRRDDemand, aFRRUDemand, Load)
+    # check_reserves(aFRRDDemand, aFRRUDemand, Load)
     check_FFRDemand(FFRDemand, Load)
     check_FCRDemand(FCRDemand, Load)
 
@@ -693,9 +707,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config, Plants_merged)
     
-    # Adding noise to efficiency time series for each unit to avoid flat Objective Function:
-    Efficiencies = break_efficiency_ties(Efficiencies)
-
     # Calculating boundary sector efficiencies
     BoundarySectorEfficiencies = BoundarySectorEfficiencyTimeSeries(config, Plants_merged, zones_bs)
 
@@ -751,7 +762,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel,
                'SectorXFloodControl': SectorXFloodControl,
                'CostOfSpillage': CostOfSpillage, 'CostXSpillage': CostXSpillage,
-               'SystemInertiaDemand': SystemInertiaDemand, 'FFRU': FFRDemand_allocated, 'FFRD': FFRDemand_allocated, 
+               'InertiaDemand': InertiaDemand, 'FFRU': FFRDemand_allocated, 'FFRD': FFRDemand_allocated, 
                'FCRU': FCRDemand_allocated, 'FCRD': FCRDemand_allocated}
 
     # Merge the following time series with weighted averages
@@ -762,9 +773,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     for key in ['CostOfSpillage']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
 
-    # Merge the following time series by weighted average based on storage capacity
-    for key in ['ReservoirLevels', 'StorageAlertLevels', 'StorageFloodControl']:
-        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
+    # TODO: CHECK BUG WHEN MERGE KEYS BECOME 0
+    # # Merge the following time series by weighted average based on storage capacity
+    # for key in ['ReservoirLevels', 'StorageAlertLevels', 'StorageFloodControl']:
+    #     finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
 
     # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:
@@ -932,11 +944,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXStorageProfile'] = ['nx', 'h']
     sets_param['SectorXAlertLevel'] = ['nx', 'h']
     sets_param['SectorXFloodControl'] = ['nx', 'h']
-    # if MTS == 0:
+    # New parameters
     sets_param['InertiaConstant'] = ['au']
-    sets_param['SystemInertiaDemand'] = ['h']
+    sets_param['InertiaDemand'] = ['h']
     sets_param['Droop'] = ['au']
     sets_param['PTDF'] = ['l_int', 'n']
+    sets_param['UFLS_Participation'] = ['res']
+    sets_param['OFDM_Participation'] = ['res']
+    
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -1016,9 +1031,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # 2. MTS Level 1: cyclic (not used here, but we set a profile)
         # 3. MTS Level 0: use ReservoirLevels file or default initial/final from config
         
-        mts_level = config.get('HydroScheduling', 0)
-        
-        if mts_level == 2:
+        if MTS == 2:
             # Fixed boundary conditions: force initial and final values from config
             profile_val = np.linspace(config['default']['ReservoirLevelInitial'],
                                     config['default']['ReservoirLevelFinal'],
@@ -1035,7 +1048,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
             sys.exit(1)
         else:
-            if mts_level == 1:
+            if MTS == 1:
                 logging.info(f'MTS level 1: Unit {s} will use cyclic boundary conditions. '
                              f'Setting a flat profile at ReservoirLevelInitial={config["default"]["ReservoirLevelInitial"]}')
                 parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelInitial']
@@ -1066,6 +1079,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             else:
                 logging.warning('Cost Of Spillage not found for unit ' + s + '. Assuming no Cost Of Spillage')
 
+        # TODO: CHECK WHY THIS WAS COMMENTED
         # if s in plants_sto.index:
         #     parameters['StorageAlertLevels']['val'][i, :] = finalTS['StorageAlertLevels'][s][idx_sim].values
         #     parameters['StorageFloodControl']['val'][i, :] = finalTS['StorageFloodControl'][s][idx_sim].values
@@ -1079,9 +1093,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     if len(BoundarySector.index) > 0:
         for i, nx in enumerate(sets['nx']):
-            mts_level = config.get('HydroScheduling', 0)
             
-            if mts_level == 2:
+            if MTS == 2:
                 # Fixed boundary conditions: force initial and final values from config
                 profile_val = np.linspace(config['default']['ReservoirLevelInitial'],
                                         config['default']['ReservoirLevelFinal'],
@@ -1098,7 +1111,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 logging.critical(nx + ': The reservoir level is sometimes higher than its capacity (>1) !')
                 sys.exit(1)
             else:
-                if mts_level == 1:
+                if MTS == 1:
                     logging.info(f'MTS level 1: SectorX {nx} will use cyclic boundary conditions. '
                                  f'Setting a flat profile at ReservoirLevelInitial={config["default"]["ReservoirLevelInitial"]}')
                     parameters['SectorXStorageProfile']['val'][i, :] = config['default']['ReservoirLevelInitial']
@@ -1320,9 +1333,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             parameters['CostXFloodControl']['val'][unit, :] = 0
 
     # %%###############################################################################################################
-    # SystemInertiaDemand to parameters dict
-    if len(finalTS['SystemInertiaDemand'].columns) != 0:
-        parameters['SystemInertiaDemand']['val'] = finalTS['SystemInertiaDemand'].iloc[:, 0].values
+    # InertiaDemand to parameters dict
+    if len(finalTS['InertiaDemand'].columns) != 0:
+        parameters['InertiaDemand']['val'] = finalTS['InertiaDemand'].iloc[:, 0].values
 
     # Maximum Line Capacity
     for i, l in enumerate(sets['l_int']):
@@ -1382,6 +1395,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             else:
                 logging.warning('Outages factors not found for unit ' + u + '. Assuming no outages')
 
+    # TODO: IMPROVE RESERVE, UFLS, OFDM TABLES FROM CONFING YAML AND CHECK PARTICIPATION OF CHP IN RESERVES
     # Participation to the reserve market
     # list_of_participating_units = []  # new list
     # for unit in Plants_merged.index:
@@ -1401,9 +1415,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # TODO: suggestion is to create commons by type of reserve instead of technologies?
     constants = {
         'SystemFrequency': 50,
-        'DeltaFrequencyMax': 0.8,
-        'FullActivationTime2':5, # time in minutes () 
-        'FullActivationTime3':15 # time in minutes ()
+        'DeltaFrequencyMax': 0.8
         }
     values = np.zeros((len(sets['res']), len(sets['au']), len(sets['h'])))
     
@@ -1424,40 +1436,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
         for r in sets['res']:
             j = res_index[r]
-    
-            # eligible = False
-            # if r in sets['res_U']:
-            #     if tech in commons['tech_batteries'] and r in sets['res_U'][:]:     # FFRU, FCRU
-            #         eligible = True
-            #     elif tech in commons['tech_conventional'] and r in sets['res_U'][1:]:  # FCRU, aFRRU, mFRRU
-            #         eligible = True
-            #     elif tech in commons['tech_renewables'] and r in sets['res_U'][2:]:   # aFRRU, mFRRU
-            #         eligible = True
-    
-            # elif r in sets['res_D']:
-            #     if tech in commons['tech_batteries'] and r in sets['res_D'][:]:     # FFRD, FCRD
-            #         eligible = True
-            #     elif tech in commons['tech_conventional'] and r in sets['res_D'][1:]:  # FCRD, aFRRD
-            #         eligible = True
-            #     elif tech in commons['tech_renewables'] and r in sets['res_D'][2:]:   # aFRRD
-            #         eligible = True
-
-    
+            
             eligible = False
-            if r in sets['res_U']:
-                if tech in commons['tech_batteries'] and r in sets['res_U'][:]:     # FFRU, FCRU
+
+            # Fast Frequency Response: solo baterías
+            if r in ['FFRU', 'FFRD']:
+                if tech in commons['tech_batteries']:
                     eligible = True
-                elif tech in commons['tech_conventional'] and r in sets['res_U'][:]:  # FCRU, aFRRU, mFRRU
-                    eligible = True
-                elif tech in commons['tech_renewables'] and r in sets['res_U'][:]:   # aFRRU, mFRRU
-                    eligible = True
-    
-            elif r in sets['res_D']:
-                if tech in commons['tech_batteries'] and r in sets['res_D'][:]:     # FFRD, FCRD
-                    eligible = True
-                elif tech in commons['tech_conventional'] and r in sets['res_D'][:]:  # FCRD, aFRRD
-                    eligible = True
-                elif tech in commons['tech_renewables'] and r in sets['res_D'][:]:   # aFRRD
+
+            # Frequency Containment Reserve y Frequency Restoration Reserves
+            elif r in ['FCRU', 'FCRD', 'aFRRU', 'aFRRD', 'mFRRU', 'mFRRD']:
+                if (tech in commons['tech_batteries'] or
+                    tech in commons['tech_conventional'] or
+                    tech in commons['tech_renewables']):
                     eligible = True
     
             # If eligible, calculate reserve participation based on physical limits (Droop, RampUpRate, RampDownRate)
@@ -1465,20 +1456,40 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 if r in ['FFRU', 'FFRD', 'FCRU', 'FCRD'] and droop > 0:
                     factor1 = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
                     values[j, i, :] = factor1
-                # elif r in ['aFRRU'] and rampuprate * constants['FullActivationTime2'] >= partloadmin: #It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.
-                #     factor2 = rampuprate * constants['FullActivationTime2']
-                #     values[j, i, :] = factor2
-                # elif r in ['aFRRD'] and rampdownrate * constants['FullActivationTime2'] >= partloadmin:#It is the minimum ramp-up rate required to reach the PartLoadMin in 2.5 minutes.
-                #     factor3 = rampdownrate * constants['FullActivationTime2']
-                #     values[j, i, :] = factor3  
-                # elif r in ['mFRRU'] and rampuprate * constants['FullActivationTime3'] >= partloadmin:#It is the minimum ramp-up rate required to reach the PartLoadMin in 7 minutes.
-                #     factor4 = rampuprate * constants['FullActivationTime3']
-                #     values[j, i, :] = factor4
+
                 else:
                     values[j, i, :] = 1  # Participación binaria para otras reservas
         
     parameters['ReserveParticipation'] = {'sets': sets_param['ReserveParticipation'], 'val': values}
-         
+ 
+    # UFLS_Participation table (emergency upward action)
+    UFLS_values = np.zeros(len(sets['res']))
+    
+    for r in sets['res']:
+        j = res_index[r]
+        if r == 'FFRU':
+            UFLS_values[j] = 0.1  
+        elif r =='FCRU':
+            UFLS_values[j] = 0.2
+        elif r =='aFRRU':
+            UFLS_values[j] = 0.2
+        elif r =='mFRRU':
+            UFLS_values[j] = 0
+    parameters['UFLS_Participation'] = {'sets': sets_param['UFLS_Participation'], 'val': UFLS_values}
+    
+    # OFDM_Participation table (emergency downward action)
+    OFDM_values = np.zeros(len(sets['res']))
+    
+    for r in sets['res']:
+        j = res_index[r]
+        if r == 'FFRD':
+            OFDM_values[j] = 0.1  
+        elif r =='FCRD':
+            OFDM_values[j] = 0.2
+        elif r =='aFRRD':
+            OFDM_values[j] = 0.2
+    parameters['OFDM_Participation'] = {'sets': sets_param['OFDM_Participation'], 'val': OFDM_values}
+        
                       
     # Technologies
     for unit in range(Nunits):
