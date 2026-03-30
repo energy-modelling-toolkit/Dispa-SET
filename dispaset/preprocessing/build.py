@@ -139,8 +139,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             GridData = pd.DataFrame()
 
     # Inertia Demand:
-    if 'InertiaDemand' in config and os.path.isfile(config['InertiaDemand']):
-        InertiaDemand = load_time_series(config, config['InertiaDemand']).fillna(0)
+    if 'SystemInertiaDemand' in config and os.path.isfile(config['SystemInertiaDemand']):
+        InertiaDemand = load_time_series(config, config['SystemInertiaDemand']).fillna(0)
     else:
         logging.warning('No Inertia Demand will be considered (no valid file provided)')
         InertiaDemand = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
@@ -170,24 +170,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand', config,
                                            default=config['default']['ShareOfFlexibleDemand'])
     
-    # Secondary Reserves Required
-    aFRRDDemand = NodeBasedTable('aFRRDDemand', config, default=None)
-    aFRRUDemand = NodeBasedTable('aFRRUDemand', config, default=None)
-
-    # FFR Required:
-    if 'FFRDemand' in config and os.path.isfile(config['FFRDemand']):
-        FFRDemand = load_time_series(config, config['FFRDemand']).fillna(0)
-    else:
-        logging.warning('No FFR requirement will be considered (no valid file provided)')
-        FFRDemand = pd.DataFrame(index=config['idx_long'], data={'FFRDemand': 0})
-
-    # Primary Reserve Required:
-    if 'FCRDemand' in config and os.path.isfile(config['FCRDemand']):
-        FCRDemand = load_time_series(config, config['FCRDemand']).fillna(0)
-    else:
-        logging.warning('No FCR requirement will be considered (no valid file provided)')
-        FCRDemand = pd.DataFrame(index=config['idx_long'], data={'FCRDemand': 0})
-
     # Curtailment:
     CostCurtailment = NodeBasedTable('CostCurtailment', config, default=config['default']['CostCurtailment'])
 
@@ -507,9 +489,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # data checks:
     check_AvailabilityFactors(plants, AF)
     check_FlexibleDemand(ShareOfFlexibleDemand)
-    # check_reserves(aFRRDDemand, aFRRUDemand, Load)
-    check_FFRDemand(FFRDemand, Load)
-    check_FCRDemand(FCRDemand, Load)
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2',
@@ -710,23 +689,62 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Calculating boundary sector efficiencies
     BoundarySectorEfficiencies = BoundarySectorEfficiencyTimeSeries(config, Plants_merged, zones_bs)
 
+    # New Reserves calculation
+    # Calculate the percentage that each zone represents of the total load in each hour
+    Load_shares = Load.div(Load.sum(axis=1), axis=0)  
+    
     # Reserve calculation
+    FFRDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
+    FCRDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     aFRRUDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     aFRRDDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     for z in Load.columns:
         if config['ReserveCalculation'] == 'Exogenous':
-            if z in aFRRUDemand and z in aFRRDDemand:
-                aFRRUDemand_tot[z] = aFRRUDemand[z]
-                aFRRDDemand_tot[z] = aFRRDDemand[z]
+            logging.info('Using exogenous reserve data')
+            # FFR Required:
+            if 'FFRDemand' in config and os.path.isfile(config['FFRDemand']):
+                FFRDemand = load_time_series(config, config['FFRDemand']).fillna(0)
             else:
-                logging.critical('Exogenous reserve requirements (aFRRD and aFRRU) not found for zone ' + z)
-                sys.exit(1)
+                logging.warning('No FFR requirement will be considered (no valid file provided)')
+                FFRDemand = pd.DataFrame(index=config['idx_long'], data={'FFRDemand': 0})
+
+            # Primary Reserve Required:
+            if 'FCRDemand' in config and os.path.isfile(config['FCRDemand']):
+                FCRDemand = load_time_series(config, config['FCRDemand']).fillna(0)
+            else:
+                logging.warning('No FCR requirement will be considered (no valid file provided)')
+                FCRDemand = pd.DataFrame(index=config['idx_long'], data={'FCRDemand': 0})
+
+            # aFRRU Required:
+            if 'aFRRUDemand' in config and os.path.isfile(config['aFRRUDemand']):
+                aFRRUDemand = load_time_series(config, config['aFRRUDemand']).fillna(0)
+            else:
+                logging.warning('No aFRRU requirement will be considered (no valid file provided)')
+                aFRRUDemand = pd.DataFrame(index=config['idx_long'], data={'aFRRUDemand': 0})
+                
+            # aFRRD Required:
+            if 'aFRRDDemand' in config and os.path.isfile(config['aFRRDDemand']):
+                aFRRDDemand = load_time_series(config, config['aFRRDDemand']).fillna(0)
+            else:
+                logging.warning('No aFRR requirement will be considered (no valid file provided)')
+                aFRRDDemand = pd.DataFrame(index=config['idx_long'], data={'aFRRDDemand': 0})  
+            
+
+            # Distribute the total FFR value proportionally based on each zone's percentage share.
+            FFRDemand_tot[z] = FFRDemand.iloc[:, 0] * Load_shares[z]
+            FCRDemand_tot[z] = FCRDemand.iloc[:, 0] * Load_shares[z]
+            aFRRUDemand_tot[z] = aFRRUDemand.iloc[:, 0] * Load_shares[z]
+            aFRRDDemand_tot[z] = aFRRDDemand.iloc[:, 0] * Load_shares[z]
+            check_FFRDemand(FFRDemand, Load)
+            check_FCRDemand(FCRDemand, Load)
+            check_reserves(aFRRDDemand, aFRRUDemand, Load)
+
         else:
-            if z in aFRRUDemand and z in aFRRDDemand:
-                logging.info('Using exogenous reserve data for zone ' + z)
-                aFRRUDemand_tot[z] = aFRRUDemand[z]
-                aFRRDDemand_tot[z] = aFRRDDemand[z]
-            elif config['ReserveCalculation'] == 'Percentage':
+            logging.warning('No FFR requirement will be considered (no valid file provided)')
+            FFRDemand_tot = FFRDemand_tot.fillna(0)
+            logging.warning('No FCR requirement will be considered (no valid file provided)')
+            FCRDemand_tot = FCRDemand_tot.fillna(0)
+            if config['ReserveCalculation'] == 'Percentage':
                 logging.info('Using percentage-based reserve sizing for zone ' + z)
                 aFRRUDemand_tot[z], aFRRDDemand_tot[z] = percentage_reserve(config, plants, Load, AF, z)
             elif config['ReserveCalculation'] == 'Probabilistic':
@@ -734,15 +752,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 aFRRUDemand_tot[z], aFRRDDemand_tot[z] = probabilistic_reserve(config, plants, Load, AF, z)
             else:
                 logging.info('Using generic reserve calculation for zone ' + z)
-                aFRRUDemand_tot[z], aFRRDDemand_tot[z] = generic_reserve(Load[z])
-    
-                
-    # New Reserves calculation
-    # Calculate the percentage that each zone represents of the total load in each hour
-    Load_shares = Load.div(Load.sum(axis=1), axis=0)    
-    # Distribute the total FFR value proportionally based on each zone's percentage share.
-    FFRDemand_allocated = Load_shares.mul(FFRDemand.iloc[:, 0], axis=0)
-    FCRDemand_allocated = Load_shares.mul(FCRDemand.iloc[:, 0], axis=0)
+                aFRRUDemand_tot[z], aFRRDDemand_tot[z] = generic_reserve(Load[z])                       
+
 
     # %% Store all times series and format
 
@@ -762,8 +773,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel,
                'SectorXFloodControl': SectorXFloodControl,
                'CostOfSpillage': CostOfSpillage, 'CostXSpillage': CostXSpillage,
-               'InertiaDemand': InertiaDemand, 'FFRU': FFRDemand_allocated, 'FFRD': FFRDemand_allocated, 
-               'FCRU': FCRDemand_allocated, 'FCRD': FCRDemand_allocated}
+               'InertiaDemand': InertiaDemand, 'FFRU': FFRDemand_tot, 'FFRD': FFRDemand_tot, 
+               'FCRU': FCRDemand_tot, 'FCRD': FCRDemand_tot}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
@@ -951,6 +962,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['PTDF'] = ['l_int', 'n']
     sets_param['UFLS_Participation'] = ['res']
     sets_param['OFDM_Participation'] = ['res']
+    sets_param['VirtualInertia_Participation'] = ['au']
+    
     
 
     # Define all the parameters and set a default value of zero:
@@ -1415,7 +1428,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # TODO: suggestion is to create commons by type of reserve instead of technologies?
     constants = {
         'SystemFrequency': 50,
-        'DeltaFrequencyMax': 0.8
+        'DeltaFrequencyMax': 0.8,
+        'RoCoF_max': 0.5
         }
     values = np.zeros((len(sets['res']), len(sets['au']), len(sets['h'])))
     
@@ -1424,7 +1438,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
     for u in sets['au']:
         if u not in Plants_res.index:
-            logging.warning('The following power plants is not providing any reserve: ' + u)
+            logging.warning('The following power plant is not providing any reserve: ' + u)
             continue
     
         i = au_index[u]
@@ -1461,7 +1475,29 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     values[j, i, :] = 1  # Participación binaria para otras reservas
         
     parameters['ReserveParticipation'] = {'sets': sets_param['ReserveParticipation'], 'val': values}
- 
+
+    # VirtualInertia_Participation table
+    VI_values = np.zeros(len(sets['au']))
+    for u in sets['au']:
+        if u not in Plants_res.index:
+            logging.warning('The following power plant is not providing any virtual inertia: ' + u)
+            continue
+        
+        i = au_index[u]
+        tech = Plants_res.loc[u, 'Technology']
+        
+        # Solo IBR (no convencionales)
+        if tech in commons['tech_renewables'] or tech in commons['tech_batteries']:
+    
+            H = Plants_merged.loc[u, 'InertiaConstant']  # [s]
+    
+            factor_vi = (2 * H / constants['SystemFrequency']) * constants['RoCoF_max']
+            VI_values[i] = factor_vi
+        else:
+            VI_values[i] = 0
+        
+    parameters['VirtualInertia_Participation'] = {'sets': sets_param['VirtualInertia_Participation'], 'val': VI_values}
+                     
     # UFLS_Participation table (emergency upward action)
     UFLS_values = np.zeros(len(sets['res']))
     

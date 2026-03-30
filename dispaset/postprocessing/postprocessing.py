@@ -537,8 +537,8 @@ def CostExPost(inputs, results):
              +Config("ValueOfLostLoad","val")*(sum(n,LL_MaxPower(n,i)+LL_MinPower(n,i)))
              +0.9*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
              +0.9*Config("ValueOfLostLoad","val")*(LL_Inertia(i)*TimeStep)
-             +0.8*Config("ValueOfLostLoad","val")*(sum(res,n, UFLS(res,n,i) * TimeStep))
-             +0.8*Config("ValueOfLostLoad","val")*(sum(res,n, OFDM(res,n,i) * TimeStep))
+             +(sum((res,n), 0.9*CostLoadShedding(n,i)*(UFLS(res,n,i)) * TimeStep))
+             +(sum((res,n), 0.9*CostLoadShedding(n,i)*(OFDM(res,n,i)) * TimeStep))
              +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
              +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
 
@@ -1493,7 +1493,7 @@ def group_contingencies_data(
         df,
         col_max,
         col_min,
-        method="dbscan",
+        method="hierarchical",
         tol_max=5.0,
         tol_min=5.0,
         precision_max=1.0,
