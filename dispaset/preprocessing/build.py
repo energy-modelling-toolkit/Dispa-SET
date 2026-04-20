@@ -423,13 +423,16 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
-        
-        # Solved: Profile names and ReservoirLevels consistency, their column names now match 
-        # Save original names (the ones you want at the end)
+    
+        # Robust Function
+        def get_short_name(c):
+            return c.split(" - ")[-1].strip() if c.count(" - ") == 1 else c
+    
+        # Save original names
         original_profile_names = profiles.columns.copy()
     
         # Create short names ONLY for matching
-        profiles_short = profiles.rename(columns=lambda c: c.split(" - ")[-1].strip())
+        profiles_short = profiles.rename(columns=get_short_name)
     
         plants_sto.set_index(plants_sto.loc[:, 'Unit'], inplace=True, drop=True)
     
@@ -437,10 +440,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
         for full_name in original_profile_names:
     
-            short_name = full_name.split(" - ")[-1].strip()
+            short_name = get_short_name(full_name)
     
             if short_name not in ReservoirLevels.columns:
-                logging.warning( f'The reservoir profile "{full_name}" provided by the MTS is not found in the ReservoirLevels table')
+                logging.warning(f'The reservoir profile "{full_name}" provided by the MTS is not found in the ReservoirLevels table')
     
             elif short_name in list(ReservoirLevels.loc[:, plants_sto['Technology'] == 'SCSP'].columns):   
                 ReservoirLevels[short_name] = config['default']['ReservoirLevelInitial']
@@ -453,7 +456,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 rename_map[short_name] = full_name
     
         # Final Column names
-        ReservoirLevels.rename(columns=rename_map, inplace=True)
+        # ReservoirLevels.rename(columns=rename_map, inplace=True)
         
     if profilesSectorX is not None:
         # Keeping consistency in profiles columns names
@@ -785,9 +788,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
 
     # TODO: CHECK BUG WHEN MERGE KEYS BECOME 0
-    # # Merge the following time series by weighted average based on storage capacity
-    # for key in ['ReservoirLevels', 'StorageAlertLevels', 'StorageFloodControl']:
-    #     finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
+    # Merge the following time series by weighted average based on storage capacity
+    for key in ['ReservoirLevels', 'StorageAlertLevels', 'StorageFloodControl']:
+        finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
 
     # Check that all times series data is available with the specified data time step:
     for key in FuelPrices:
@@ -1510,7 +1513,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         elif r =='aFRRU':
             UFLS_values[j] = 0.2
         elif r =='mFRRU':
-            UFLS_values[j] = 0
+            UFLS_values[j] = 0.2
     parameters['UFLS_Participation'] = {'sets': sets_param['UFLS_Participation'], 'val': UFLS_values}
     
     # OFDM_Participation table (emergency downward action)
