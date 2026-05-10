@@ -4,6 +4,15 @@ This file defines a dictionary with global variables to be used in Dispa-SET suc
 """
 import datetime
 
+
+class DispaSETValidationError(Exception):
+    """Raised when Dispa-SET input data or configuration fails validation.
+
+    Replaces the previous pattern of ``logging.critical(...); sys.exit(1)``
+    so that the error can be caught programmatically (e.g. in Jupyter or
+    in tests) rather than killing the interpreter.
+    """
+
 commons = {}
 # Timestep
 commons['TimeStep'] = '1h'

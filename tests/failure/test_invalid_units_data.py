@@ -6,7 +6,7 @@ Failure tests: invalid power-plant data
 What this test does
 -------------------
 Checks that ``dispaset.preprocessing.data_check.check_units`` rejects
-malformed power-plant tables and aborts the run via ``sys.exit``:
+malformed power-plant tables and raises ``DispaSETValidationError``:
 
 * Missing mandatory column (e.g. ``PowerCapacity``).
 * Negative value where a positive value is required.
@@ -39,7 +39,7 @@ from dispaset.preprocessing.data_check import (  # noqa: E402
     check_units,
     check_chp,
 )
-from dispaset.common import commons  # noqa: E402
+from dispaset.common import commons, DispaSETValidationError  # noqa: E402
 
 
 def _minimal_clean_units():
@@ -70,21 +70,21 @@ def _config():
 
 def test_missing_powercapacity_aborts():
     plants = _minimal_clean_units().drop(columns=["PowerCapacity"])
-    with pytest.raises(SystemExit):
+    with pytest.raises(DispaSETValidationError):
         check_units(_config(), plants)
 
 
 def test_negative_capacity_aborts():
     plants = _minimal_clean_units()
     plants.loc[0, "PowerCapacity"] = -10.0
-    with pytest.raises(SystemExit):
+    with pytest.raises(DispaSETValidationError):
         check_units(_config(), plants)
 
 
 def test_efficiency_above_one_aborts():
     plants = _minimal_clean_units()
     plants.loc[0, "Efficiency"] = 1.5
-    with pytest.raises(SystemExit):
+    with pytest.raises(DispaSETValidationError):
         check_units(_config(), plants)
 
 
@@ -92,7 +92,7 @@ def test_minuptime_above_horizon_aborts():
     plants = _minimal_clean_units()
     plants.loc[0, "MinUpTime"] = 48
     cfg = _config()  # HorizonLength = 1 day
-    with pytest.raises(SystemExit):
+    with pytest.raises(DispaSETValidationError):
         check_units(cfg, plants)
 
 
@@ -102,10 +102,11 @@ def test_invalid_chp_type_aborts():
     plants.loc["U1", "CHPType"] = "not_a_valid_type"
     plants.loc["U1", "CHPPowerToHeat"] = 1.0
     plants.loc["U1", "CHPMaxHeat"] = 50.0
-    # Either a clean SystemExit (preferred) or a TypeError raised by the
-    # logging line is accepted: the goal is simply to verify that the
-    # invalid value does not silently pass through.
-    with pytest.raises((SystemExit, TypeError, Exception)):
+    # DispaSETValidationError is now raised cleanly for invalid CHPType.
+    # The CHPType string concatenation bug (using `u` instead of `unitname`)
+    # has also been fixed: `unitname` (a str) is now used instead of the
+    # loop variable `u` (which could be an int with default RangeIndex).
+    with pytest.raises(DispaSETValidationError):
         check_chp(_config(), plants)
 
 

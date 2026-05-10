@@ -17,6 +17,9 @@ Usage
     # Or with a tighter top-level timeout (seconds):
     python tests/run_all.py --timeout 300
 
+    # With per-test wall-clock timing recorded in the report:
+    python tests/run_all.py --profile
+
 The runner uses pytest under the hood. It enables ``--tb=short`` and
 captures stdout/stderr to keep the output digestible. The resulting
 Markdown report can be committed as part of the development workflow
@@ -29,6 +32,7 @@ import json
 import subprocess
 import sys
 import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -47,15 +51,51 @@ GROUPS = [
 ]
 
 
-def run_pytest(target: Path, timeout: int) -> dict:
-    """Run pytest on ``target`` and return a dict with the outcome."""
-    json_report = OUTPUT_DIR / f"_pytest_{target.name}.json"
+def _parse_junit_xml(xml_path: Path) -> list[dict]:
+    """Parse a JUnit XML file and return a list of per-test timing dicts.
+
+    Each dict has keys: ``id`` (str), ``time`` (float), ``status`` (str).
+    """
+    records: list[dict] = []
+    if not xml_path.exists():
+        return records
+    try:
+        tree = ET.parse(xml_path)
+    except ET.ParseError:
+        return records
+    root = tree.getroot()
+    # JUnit XML can have <testsuites><testsuite>…</testsuite></testsuites>
+    # or a bare <testsuite> at the root.
+    testsuites = root.findall(".//testcase")
+    for tc in testsuites:
+        classname = tc.get("classname", "")
+        name = tc.get("name", "")
+        test_id = f"{classname}::{name}" if classname else name
+        elapsed = float(tc.get("time", 0.0))
+        if tc.find("failure") is not None or tc.find("error") is not None:
+            status = "FAILED"
+        elif tc.find("skipped") is not None:
+            status = "SKIPPED"
+        else:
+            status = "PASSED"
+        records.append({"id": test_id, "time": elapsed, "status": status})
+    return records
+
+def run_pytest(target: Path, timeout: int, profile: bool = False) -> dict:
+    """Run pytest on ``target`` and return a dict with the outcome.
+
+    When *profile* is True a JUnit XML file is generated alongside the run
+    and per-test wall-clock times are parsed from it.
+    """
+    junit_path = OUTPUT_DIR / f"_junit_{target.name}.xml"
     cmd = [
         sys.executable, "-m", "pytest", str(target),
         "--tb=short", "-q",
         "--maxfail=200",
         f"--timeout={timeout}",
     ]
+    if profile:
+        cmd += [f"--junit-xml={junit_path}"]
     t0 = time.time()
     try:
         proc = subprocess.run(
@@ -79,6 +119,8 @@ def run_pytest(target: Path, timeout: int) -> dict:
         stdout=stdout,
         stderr=stderr,
     )
+    if profile:
+        summary["per_test_times"] = _parse_junit_xml(junit_path)
     return summary
 
 
@@ -124,7 +166,8 @@ def parse_pytest_summary(stdout: str) -> dict:
 
 
 def render_md(group_results: list[tuple[str, str, dict]],
-              total_elapsed: float) -> str:
+              total_elapsed: float,
+              profile: bool = False) -> str:
     lines: list[str] = []
     lines.append("# Dispa-SET test-suite report\n")
     lines.append(f"_Total wall-clock runtime: **{total_elapsed:.1f} s**._\n")
@@ -146,6 +189,24 @@ def render_md(group_results: list[tuple[str, str, dict]],
             f"| {res['elapsed']:.1f} | {status_icon} |"
         )
     lines.append("")
+
+    # Per-test timing table (only when --profile is used)
+    if profile:
+        all_timings: list[dict] = []
+        for label, target, res in group_results:
+            for rec in res.get("per_test_times", []):
+                all_timings.append({**rec, "group": label})
+        if all_timings:
+            all_timings.sort(key=lambda r: r["time"], reverse=True)
+            lines.append("## Per-test wall-clock times (slowest first)\n")
+            lines.append("| Group | Test | Time (s) | Status |")
+            lines.append("|---|---|---:|---|")
+            for rec in all_timings:
+                lines.append(
+                    f"| {rec['group']} | `{rec['id']}` "
+                    f"| {rec['time']:.3f} | {rec['status']} |"
+                )
+            lines.append("")
 
     lines.append("## Details by test group\n")
     for label, target, res in group_results:
@@ -183,6 +244,14 @@ def main():
         "--only", nargs="+", default=None,
         help="Run only the named groups (e.g. unit integration)."
     )
+    parser.add_argument(
+        "--profile", action="store_true", default=False,
+        help=(
+            "Record the wall-clock time of each individual test and include "
+            "a per-test timing table in the Markdown report. Useful for "
+            "detecting regressions in test cost."
+        ),
+    )
     args = parser.parse_args()
 
     t0 = time.time()
@@ -194,7 +263,7 @@ def main():
         if not target.exists():
             continue
         print(f"\n=== Running {label} ({target.relative_to(REPO_ROOT)}) ===")
-        res = run_pytest(target, timeout=args.timeout)
+        res = run_pytest(target, timeout=args.timeout, profile=args.profile)
         print(
             f"   passed={res['passed']} failed={res['failed']} "
             f"skipped={res['skipped']} errors={res['errors']} "
@@ -203,7 +272,7 @@ def main():
         group_results.append((label, str(target), res))
     total_elapsed = time.time() - t0
 
-    md = render_md(group_results, total_elapsed)
+    md = render_md(group_results, total_elapsed, profile=args.profile)
     REPORT_PATH.write_text(md, encoding="utf-8")
     JSON_PATH.write_text(
         json.dumps(

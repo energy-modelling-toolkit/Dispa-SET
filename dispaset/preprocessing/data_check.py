@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 
-from ..common import commons  # Load fuel types, technologies, timestep, etc
+from ..common import commons, DispaSETValidationError  # Load fuel types, technologies, timestep, etc
 
 
 def isVRE(tech):
@@ -67,11 +67,13 @@ def check_FlexibleDemand(flex):
     Function that checks the validity of the provided flexibility demand time series
     """
     if (flex.dropna().values < 0).any():
-        logging.error('Some flexibility demand values are negative. They must be comprised between 0 and 1')
-        sys.exit(1)
+        msg = 'Some flexibility demand values are negative. They must be comprised between 0 and 1'
+        logging.error(msg)
+        raise DispaSETValidationError(msg)
     if (flex.dropna().values > 1).any():
-        logging.error('Some flexibility demand values are more than 1. They must be comprised between 0 and 1')
-        sys.exit(1)
+        msg = 'Some flexibility demand values are more than 1. They must be comprised between 0 and 1'
+        logging.error(msg)
+        raise DispaSETValidationError(msg)
 
 
 def check_clustering(plants, plants_merged):
@@ -91,10 +93,11 @@ def check_clustering(plants, plants_merged):
         P_old = (units_old.PowerCapacity * units_old.Nunits).sum()
         P_new = (units_new.PowerCapacity * units_new.Nunits).sum()
         if np.abs(P_old - P_new) / (P_old + 0.0001) > 0.01:
-            logging.error('The installed capacity for technology "' + tech[0] + '" and fuel "' + tech[1] +
-                          '" is not equal between the original units table (P = ' + str(P_old) +
-                          ') and the clustered table (P = ' + str(P_new) + ')')
-            sys.exit(1)
+            msg = ('The installed capacity for technology "' + tech[0] + '" and fuel "' + tech[1] +
+                   '" is not equal between the original units table (P = ' + str(P_old) +
+                   ') and the clustered table (P = ' + str(P_new) + ')')
+            logging.error(msg)
+            raise DispaSETValidationError(msg)
     # Check the overall installed storage capacity:
     List_tech_storage = commons['tech_storage']
     isstorage = pd.Series(index=plants.index, dtype='bool')
@@ -118,9 +121,10 @@ def check_MinMaxFlows(df_min, df_max):
     """
     if (df_min > df_max).any():
         pos = np.where(df_min > df_max)
-        logging.error('At least one minimum flow is higher than the maximum flow, for example in line number ' +
-                         str(pos[0][0]) + ' and time step ' + str(pos[1][0]))
-        sys.exit(1)
+        msg = ('At least one minimum flow is higher than the maximum flow, for example in line number ' +
+               str(pos[0][0]) + ' and time step ' + str(pos[1][0]))
+        logging.error(msg)
+        raise DispaSETValidationError(msg)
 
     return True
 
@@ -139,13 +143,13 @@ def check_NonNaNKeys(plants, NonNaNKeys):
             else:
                 unitname = str(u)
             if isinstance(plants.loc[u, key], str):
-                logging.critical('A non numeric value was detected in the power plants inputs for parameter "' + key +
-                                 '"')
-                sys.exit(1)
+                msg = 'A non numeric value was detected in the power plants inputs for parameter "' + key + '"'
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
             if np.isnan(plants.loc[u, key]):
-                logging.critical('The power plants data is missing for unit ' + unitname + ' and parameter "' + key +
-                                 '"')
-                sys.exit(1)
+                msg = 'The power plants data is missing for unit ' + unitname + ' and parameter "' + key + '"'
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
 
 
 def check_StrKeys(plants, StrKeys):
@@ -162,13 +166,15 @@ def check_StrKeys(plants, StrKeys):
             else:
                 unitname = str(u)
             if not isinstance(plants.loc[u, key], str):
-                logging.critical('A numeric value was detected in the power plants inputs for parameter "' + key +
-                                 '". This column should contain strings only.')
-                sys.exit(1)
+                msg = ('A numeric value was detected in the power plants inputs for parameter "' + key +
+                       '". This column should contain strings only.')
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
             elif plants.loc[u, key] == '':
-                logging.critical('An empty value was detected in the power plants inputs for unit "' + unitname +
-                                 '" and parameter "' + key + '"')
-                sys.exit(1)
+                msg = ('An empty value was detected in the power plants inputs for unit "' + unitname +
+                       '" and parameter "' + key + '"')
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
 
 
 def check_keys(plants, keys, unit):
@@ -181,9 +187,10 @@ def check_keys(plants, keys, unit):
     """
     for key in keys:
         if key not in plants:
-            logging.critical('The power plants data does not contain the field "' + key +
-                             '", which is mandatory for ' + unit + ' units')
-            sys.exit(1)
+            msg = ('The power plants data does not contain the field "' + key +
+                   '", which is mandatory for ' + unit + ' units')
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
 
 
 def check_sto(config, plants, raw_data=True):
@@ -290,9 +297,10 @@ def check_boundary_sector(config, plants, BoundarySector=None):
                 # Check each sector value
                 for sector in sectors:
                     if sector not in valid_sectors:
-                        logging.critical('Boundary sector "{}" found in {} column of plants table is not defined in the BoundarySector table. Valid sectors are: {}'.format(
-                            sector, col, valid_sectors))
-                        sys.exit(1)
+                        msg = 'Boundary sector "{}" found in {} column of plants table is not defined in the BoundarySector table. Valid sectors are: {}'.format(
+                            sector, col, valid_sectors)
+                        logging.critical(msg)
+                        raise DispaSETValidationError(msg)
 
     return True
 
@@ -322,21 +330,25 @@ def check_chp(config, plants):
         plant_powerlossfactor = plants.loc[u, 'CHPPowerLossFactor']
 
         if plants.loc[u, 'CHPType'].lower() not in ['extraction', 'back-pressure', 'p2h']:
-            logging.critical('The value of CHPType should be "extraction", "back-pressure" or "p2h". '
-                             'The type of unit ' + u + ' is "' + str(plants.loc[u, 'CHPType'] + '"'))
-            sys.exit(1)
+            msg = ('The value of CHPType should be "extraction", "back-pressure" or "p2h". '
+                   'The type of unit ' + str(unitname) + ' is "' + str(plants.loc[u, 'CHPType']) + '"')
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
         if 0 > plant_powertoheat > 10:
-            logging.critical('The value of CHPPowerToHeat should be higher or equal to zero and lower than 10. '
-                             'Unit ' + u + ' has a value of ' + str(plant_powertoheat))
-            sys.exit(1)
+            msg = ('The value of CHPPowerToHeat should be higher or equal to zero and lower than 10. '
+                   'Unit ' + str(unitname) + ' has a value of ' + str(plant_powertoheat))
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
         if 0 > plant_powerlossfactor > 1 and plants.loc[u, 'CHPType'].lower() != 'p2h':
-            logging.critical('The value of CHPPowerLossFactor should be higher or equal to zero and lower than 1. '
-                             'Unit ' + u + ' has a value of ' + str(plant_powerlossfactor))
-            sys.exit(1)
+            msg = ('The value of CHPPowerLossFactor should be higher or equal to zero and lower than 1. '
+                   'Unit ' + str(unitname) + ' has a value of ' + str(plant_powerlossfactor))
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
         if plants.loc[u, 'CHPType'].lower() == 'back-pressure' and plant_powerlossfactor != 0:
-            logging.critical('The value of CHPPowerLossFactor must be zero if the CHP types is "back-pressure". '
-                             'Unit ' + u + ' has a value of ' + str(plant_powerlossfactor))
-            sys.exit(1)
+            msg = ('The value of CHPPowerLossFactor must be zero if the CHP types is "back-pressure". '
+                   'Unit ' + str(unitname) + ' has a value of ' + str(plant_powerlossfactor))
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
         if plants.loc[u, 'CHPType'].lower() == 'extraction':
             intersection_MaxHeat = plant_PowerCapacity / plant_powertoheat
             if not pd.isnull(plant_MaxHeat):
@@ -355,9 +367,10 @@ def check_chp(config, plants):
             TotalEfficiency = (plant_PowerCapacity + plant_MaxHeat) / Fuel  # eta_tot = (P + Q) / F
             logging.debug('Highest overall efficiency of CHP plant {} is {:.2f}'.format(u, TotalEfficiency))
             if TotalEfficiency < 0 or TotalEfficiency > 1.14:
-                logging.critical('The calculated value of the total CHP efficiency for unit ' + unitname + ' is ' +
-                                 str(TotalEfficiency) + ', which is unrealistic!')
-                sys.exit(1)
+                msg = ('The calculated value of the total CHP efficiency for unit ' + unitname + ' is ' +
+                       str(TotalEfficiency) + ', which is unrealistic!')
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
             if TotalEfficiency > 0.95:
                 logging.warning('The calculated value of the total CHP efficiency for unit ' + unitname + ' is ' +
                                 str(TotalEfficiency) + ', which is very high!')
@@ -386,16 +399,18 @@ def check_chp(config, plants):
     if 'STOSelfDischarge' in plants:
         for u in plants.index:
             if plants.loc[u, 'STOSelfDischarge'] < 0:
-                logging.error('Unit ' + unitname + ': The value of the thermal storage self-discharge (' +
-                              str(plants.loc[u, 'STOSelfDischarge'] * 100) + '%/day) cannot be negative')
-                sys.exit(1)
+                msg = ('Unit ' + unitname + ': The value of the thermal storage self-discharge (' +
+                       str(plants.loc[u, 'STOSelfDischarge'] * 100) + '%/day) cannot be negative')
+                logging.error(msg)
+                raise DispaSETValidationError(msg)
             elif plants.loc[u, 'STOSelfDischarge'] > 1:
                 logging.warning('Unit ' + unitname + ': The value of the thermal storage self-discharge (' +
                                 str(plants.loc[u, 'STOSelfDischarge'] * 100) + '%/day) seems very high')
             elif plants.loc[u, 'STOSelfDischarge'] > 24:
-                logging.error('Unit ' + unitname + ': The value of the thermal storage self-discharge (' +
-                              str(plants.loc[u, 'STOSelfDischarge'] * 100) + '%/day) is too high')
-                sys.exit(1)
+                msg = ('Unit ' + unitname + ': The value of the thermal storage self-discharge (' +
+                       str(plants.loc[u, 'STOSelfDischarge'] * 100) + '%/day) is too high')
+                logging.error(msg)
+                raise DispaSETValidationError(msg)
 
     return True
 
@@ -417,8 +432,9 @@ def check_units(config, plants):
         keys.append('Nunits')
         NonNaNKeys.append('Nunits')
         if any([not float(x).is_integer() for x in plants['Nunits']]):
-            logging.error('Some values are not integers in the "Nunits" column of the plant database')
-            sys.exit(1)
+            msg = 'Some values are not integers in the "Nunits" column of the plant database'
+            logging.error(msg)
+            raise DispaSETValidationError(msg)
     else:
         logging.info('The columns "Nunits" is not present in the power plant database. '
                      'A value of one will be assumed by default')
@@ -440,26 +456,29 @@ def check_units(config, plants):
 
     if len(plants['Unit'].unique()) != len(plants['Unit']):
         duplicates = plants['Unit'][plants['Unit'].duplicated()].tolist()
-        logging.error('The names of the power plants are not unique. The following names are duplicates: ' +
-                      str(duplicates) + '. "' + str(duplicates[0] + '" appears for example in the following zones: ' +
-                      str(plants.Zone[plants['Unit'] == duplicates[0]].tolist())))
-        sys.exit(1)
+        msg = ('The names of the power plants are not unique. The following names are duplicates: ' +
+               str(duplicates) + '. "' + str(duplicates[0]) + '" appears for example in the following zones: ' +
+               str(plants.Zone[plants['Unit'] == duplicates[0]].tolist()))
+        logging.error(msg)
+        raise DispaSETValidationError(msg)
 
     for key in lower:
         if any(plants[key] < lower[key]):
             plantlist = plants[plants[key] < lower[key]]
             plantlist = plantlist['Unit'].tolist()
-            logging.critical('The value of ' + key + ' should be higher or equal to zero. A negative value has been '
-                             'found for units ' + str(plantlist))
-            sys.exit(1)
+            msg = ('The value of ' + key + ' should be higher or equal to zero. A negative value has been '
+                   'found for units ' + str(plantlist))
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
 
     for key in strictly_lower:
         if any(plants[key] <= strictly_lower[key]):
             plantlist = plants[plants[key] <= strictly_lower[key]]
             plantlist = plantlist['Unit'].tolist()
-            logging.critical('The value of ' + key + ' should be strictly higher than zero. '
-                             'A null or negative value has been found for units ' + str(plantlist))
-            sys.exit(1)
+            msg = ('The value of ' + key + ' should be strictly higher than zero. '
+                   'A null or negative value has been found for units ' + str(plantlist))
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
 
     for key in higher:
         if any(plants[key] > higher[key]):
@@ -467,18 +486,20 @@ def check_units(config, plants):
             plantlist = plantlist[~plantlist['Technology'].str.contains("ABHP")]
             if not plantlist.empty:
                 plantlist = plantlist['Unit'].tolist()
-                logging.critical('The value of ' + key + ' should be lower or equal to one. '
-                                 'A higher value has been found for units ' + str(plantlist))
-                sys.exit(1)
+                msg = ('The value of ' + key + ' should be lower or equal to one. '
+                       'A higher value has been found for units ' + str(plantlist))
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
 
     for key in higher_time:
         if any(plants[key] >= config['HorizonLength'] * 24):
             plantlist = plants[plants[key] >= config['HorizonLength'] * 24]
             plantlist = plantlist['Unit'].tolist()
-            logging.critical('The value of ' + key + ' should be lower than the horizon length (' +
-                             str(config['HorizonLength'] * 24) + ' hours). A higher value has been found for units ' +
-                             str(plantlist))
-            sys.exit(1)
+            msg = ('The value of ' + key + ' should be lower than the horizon length (' +
+                   str(config['HorizonLength'] * 24) + ' hours). A higher value has been found for units ' +
+                   str(plantlist))
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
 
     # Checking che compatibility between the selected simulation time and the power plant constraints:
     if config['SimulationType'] in ('LP', 'LP clustered'):
@@ -529,9 +550,9 @@ def check_heat_demand(plants, data, zones_th):
             else:
                 logging.error('The CHP type for unit ' + u + ' is not valid.')
             if np.isnan(Qmax) and plant_CHP_type != 'p2h':
-                logging.error(
-                    'CHPPowerToHeat is not defined for unit ' + str(u) + ' appearing in the heat demand profiles')
-                sys.exit(1)
+                msg = 'CHPPowerToHeat is not defined for unit ' + str(u) + ' appearing in the heat demand profiles'
+                logging.error(msg)
+                raise DispaSETValidationError(msg)
             elif data[u].max() > Qmax:
                 logging.warning('The maximum thermal demand for unit ' + str(u) + ' (' + str(
                     data[u].max()) + ') is higher than its thermal capacity (' + str(
@@ -543,8 +564,9 @@ def check_heat_demand(plants, data, zones_th):
     # check that a heating demand has been provided for all heating zones
     for z in zones_th:
         if z not in data:
-            logging.critical('No heat demand data was found for thermal zone ' + z)
-            sys.exit(1)
+            msg = 'No heat demand data was found for thermal zone ' + z
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
 
     return True
 
@@ -559,21 +581,25 @@ def check_reserves(Reserve2D, Reserve2U, Load):
     for z in Load.columns:
         if z in Reserve2U:
             if (Reserve2U[z] < 0).any():
-                logging.critical('The reserve 2U table contains negative values for zone ' + z)
-                sys.exit(1)
+                msg = 'The reserve 2U table contains negative values for zone ' + z
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
             if (Load[z] - Reserve2U[z] < 0).any():
-                logging.critical('The reserve 2U table contains negative values higher than demand for zone ' + z)
-                sys.exit(1)
+                msg = 'The reserve 2U table contains negative values higher than demand for zone ' + z
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
         else:
             logging.warning('No 2U reserve requirement data has been found for zone ' + z +
                             '. Using the standard formula')
         if z in Reserve2D:
             if (Reserve2D[z] < 0).any():
-                logging.critical('The reserve 2D table contains negative values for zone ' + z)
-                sys.exit(1)
+                msg = 'The reserve 2D table contains negative values for zone ' + z
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
             if (Load[z] - Reserve2D[z] < 0).any():
-                logging.critical('The reserve 2D table contains values higher than demand for zone ' + z)
-                sys.exit(1)
+                msg = 'The reserve 2D table contains values higher than demand for zone ' + z
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
         else:
             logging.warning('No 2D reserve requirement data has been found for zone ' + z +
                             '. Using the standard formula')
@@ -585,11 +611,13 @@ def check_FFRLimit(FFRLimit, Load):
     :param Load:        DataFrame of Loads
     """
     if (FFRLimit.sum(axis=1) < 0).any():
-        logging.critical('The FFR Limit table contains negative values')
-        sys.exit(1)
+        msg = 'The FFR Limit table contains negative values'
+        logging.critical(msg)
+        raise DispaSETValidationError(msg)
     if (Load.sum(axis=1) - FFRLimit.sum(axis=1) < 0).any():
-        logging.critical('The FFR Limit table contains values higher than demand')
-        sys.exit(1)
+        msg = 'The FFR Limit table contains values higher than demand'
+        logging.critical(msg)
+        raise DispaSETValidationError(msg)
     else:
         logging.warning('No FFR Limit requirement data has been found')
         
@@ -600,11 +628,13 @@ def check_PrimaryReserveLimit(PrimaryReserveLimit, Load):
     :param Load:        DataFrame of Loads
     """
     if (PrimaryReserveLimit.sum(axis=1) < 0).any():
-        logging.critical('The Primary Reserve Limit table contains negative values')
-        sys.exit(1)
+        msg = 'The Primary Reserve Limit table contains negative values'
+        logging.critical(msg)
+        raise DispaSETValidationError(msg)
     if (Load.sum(axis=1) - PrimaryReserveLimit.sum(axis=1) < 0).any():
-        logging.critical('The Primary Reserve Limit table contains values higher than demand')
-        sys.exit(1)
+        msg = 'The Primary Reserve Limit table contains values higher than demand'
+        logging.critical(msg)
+        raise DispaSETValidationError(msg)
     else:
         logging.warning('No Primary Reserve Limit requirement data has been found')
 
@@ -628,10 +658,10 @@ def check_df(df, StartDate=None, StopDate=None, name=''):
                 logging.warning('There are ' + str(missing) + ' missing entries in the column ' + key +
                                 ' of the dataframe ' + name)
     if not df.columns.is_unique:
-        logging.error('The column headers of table "' + name + '" are not unique!. '
-                      'The following headers are duplicated: ' + str(
-                df.columns.get_duplicates()))
-        sys.exit(1)
+        msg = ('The column headers of table "' + name + '" are not unique!. '
+               'The following headers are duplicated: ' + str(df.columns.get_duplicates()))
+        logging.error(msg)
+        raise DispaSETValidationError(msg)
     return True
 
 
@@ -644,8 +674,9 @@ def check_BSFlexMaxCapacity(parameters, config, sets):
         avg_demand = parameters['SectorXFlexDemandInput']['val'][i, :].mean()
         # Check if max capacity is sufficient
         if parameters['SectorXFlexMaxCapacity']['val'][i] < avg_demand:
-            logging.critical(f'Boundary sector {nx}: SectorXFlexMaxCapacity ({parameters["SectorXFlexMaxCapacity"]["val"][i]}) is lower than average flexible demand ({avg_demand})')
-            sys.exit(1)
+            msg = f'Boundary sector {nx}: SectorXFlexMaxCapacity ({parameters["SectorXFlexMaxCapacity"]["val"][i]}) is lower than average flexible demand ({avg_demand})'
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
 
 
 def check_BSFlexMaxSupply(parameters, config, sets):
@@ -657,8 +688,9 @@ def check_BSFlexMaxSupply(parameters, config, sets):
         avg_supply = parameters['SectorXFlexSupplyInput']['val'][i, :].mean()
         # Check if max supply is sufficient
         if parameters['SectorXFlexMaxSupply']['val'][i] < avg_supply:
-            logging.critical(f'Boundary sector {nx}: SectorXFlexMaxSupply ({parameters["SectorXFlexMaxSupply"]["val"][i]}) is lower than average flexible supply ({avg_supply})')
-            sys.exit(1)
+            msg = f'Boundary sector {nx}: SectorXFlexMaxSupply ({parameters["SectorXFlexMaxSupply"]["val"][i]}) is lower than average flexible supply ({avg_supply})'
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
 
 def check_simulation_environment(SimulationPath, store_type='pickle', firstline=7):
     """
@@ -735,11 +767,13 @@ def check_simulation_environment(SimulationPath, store_type='pickle', firstline=
             SimulationPath_vars = [SimulationPath[i]['name'] for i in range(len(SimulationPath))]
             for var in list_sets + list_param:
                 if var not in SimulationPath_vars:
-                    logging.critical('The variable "' + var + '" has not been found in the list of input variables')
-                    sys.exit(1)
+                    msg = 'The variable "' + var + '" has not been found in the list of input variables'
+                    logging.critical(msg)
+                    raise DispaSETValidationError(msg)
         else:
-            logging.critical('The argument must a list. Please correct or change the "type" argument')
-            sys.exit(1)
+            msg = 'The argument must a list. Please correct or change the "type" argument'
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
 
     elif store_type == 'pickle':
         if os.path.exists(SimulationPath):
@@ -748,35 +782,41 @@ def check_simulation_environment(SimulationPath, store_type='pickle', firstline=
                 arg_vars = [variables[i]['name'] for i in range(len(variables))]
                 for var in list_sets + list_param:
                     if var not in arg_vars:
-                        logging.critical('Found Pickle file but does not contain valid DispaSET input (' + var +
-                                         ' missing)')
-                        sys.exit(1)
+                        msg = ('Found Pickle file but does not contain valid DispaSET input (' + var + ' missing)')
+                        logging.critical(msg)
+                        raise DispaSETValidationError(msg)
             else:
-                logging.critical('Could not find the Inputs.p file in the specified directory')
-                sys.exit(1)
+                msg = 'Could not find the Inputs.p file in the specified directory'
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
         else:
-            logging.critical('The function argument is not a valid directory')
-            sys.exit(1)
+            msg = 'The function argument is not a valid directory'
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
 
     elif store_type == 'excel':
         if os.path.exists(SimulationPath):
             if not os.path.isfile(os.path.join(SimulationPath, 'InputDispa-SET - Sets.xlsx')):
-                logging.critical("Could not find the file 'InputDispa-SET - Sets.xlsx'")
-                sys.exit(1)
+                msg = "Could not find the file 'InputDispa-SET - Sets.xlsx'"
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
             for var in list_param:
                 if os.path.isfile(os.path.join(SimulationPath, 'InputDispa-SET - ' + var + '.xlsx')):
                     a = 1
                 else:
-                    logging.critical("Could not find the file 'InputDispa-SET - " + var + ".xlsx'")
-                    sys.exit(1)
+                    msg = "Could not find the file 'InputDispa-SET - " + var + ".xlsx'"
+                    logging.critical(msg)
+                    raise DispaSETValidationError(msg)
 
         else:
-            logging.critical('The function argument is not a valid directory')
-            sys.exit(1)
+            msg = 'The function argument is not a valid directory'
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
 
     else:
-        logging.critical('The "type" parameter must be one of the following : "list", "excel", "pickle"')
-        sys.exit(1)
+        msg = 'The "type" parameter must be one of the following : "list", "excel", "pickle"'
+        logging.critical(msg)
+        raise DispaSETValidationError(msg)
 
 def check_CostXNotServed(config, CostXNotServed, zones_bs):
     """
@@ -787,16 +827,19 @@ def check_CostXNotServed(config, CostXNotServed, zones_bs):
     :param zones_bs:          List of boundary sector zones
     """
     if CostXNotServed.empty:
-        logging.critical('CostXNotServed is not defined for any boundary sector')
-        sys.exit(1)
+        msg = 'CostXNotServed is not defined for any boundary sector'
+        logging.critical(msg)
+        raise DispaSETValidationError(msg)
     
     for zone in zones_bs:
         if zone not in CostXNotServed.columns:
-            logging.critical('CostXNotServed is not defined for boundary sector ' + zone)
-            sys.exit(1)
+            msg = 'CostXNotServed is not defined for boundary sector ' + zone
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
         if CostXNotServed[zone].isna().all():
-            logging.critical('CostXNotServed is not defined for boundary sector ' + zone)
-            sys.exit(1)
+            msg = 'CostXNotServed is not defined for boundary sector ' + zone
+            logging.critical(msg)
+            raise DispaSETValidationError(msg)
         if (CostXNotServed[zone] == 0).all():
             logging.warning('CostXNotServed is zero for boundary sector ' + zone + '. This may lead to unrealistic results.')
 
@@ -817,15 +860,17 @@ def check_grid_data(lines, PTDF, config):
     for key in lines:
         if key not in PTDF.index:
             logging.warning(f'The transmission line {key} defined in the data is not in the provided PTDF matrix index.')
-            logging.error('The PTDF Matrix provided is not valid or inconsistent with NTC data.')
-            sys.exit(1)
+            msg = 'The PTDF Matrix provided is not valid or inconsistent with NTC data.'
+            logging.error(msg)
+            raise DispaSETValidationError(msg)
 
     # Check that all configured zones exist in PTDF columns
     for key in config['zones']:
         if key not in PTDF.columns:
             logging.warning(f'The configured zone {key} is not in the provided PTDF matrix columns.')
-            logging.error('The PTDF Matrix provided is not valid or inconsistent with configured zones.')
-            sys.exit(1)
+            msg = 'The PTDF Matrix provided is not valid or inconsistent with configured zones.'
+            logging.error(msg)
+            raise DispaSETValidationError(msg)
 
     logging.debug("Grid data consistency check passed (NTC lines vs PTDF rows, Config zones vs PTDF columns).")
     return True

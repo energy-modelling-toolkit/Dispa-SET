@@ -12,12 +12,12 @@ They are critical for surfacing user errors early and they all rely on
 
 We test the most important paths:
 
-* `check_units` raises ``SystemExit`` when:
+* `check_units` raises ``DispaSETValidationError`` when:
     - the unit names contain duplicate keys.
     - a NonNaN key contains a string instead of a number.
     - a NonNaN key is missing.
 * `check_AvailabilityFactors` does not raise on a clean dataset.
-* `check_FlexibleDemand` raises if the values are outside [0, 1].
+* `check_FlexibleDemand` raises ``DispaSETValidationError`` if the values are outside [0, 1].
 * `check_clustering` accepts identical capacity totals.
 
 How to run
@@ -43,7 +43,7 @@ from dispaset.preprocessing.data_check import (  # noqa: E402
     check_units, check_AvailabilityFactors, check_FlexibleDemand,
     check_clustering,
 )
-from dispaset.common import commons  # noqa: E402
+from dispaset.common import commons, DispaSETValidationError  # noqa: E402
 
 
 BUGGY_DIR = Path(__file__).resolve().parents[1] / "data" / "buggy"
@@ -68,11 +68,11 @@ def _config_with_horizon(h: int = 7):
     "Units_bugKeys.csv",
 ])
 def test_check_units_buggy_inputs_exit(buggy_csv):
-    """A buggy power plant CSV must trigger SystemExit in check_units."""
+    """A buggy power plant CSV must trigger DispaSETValidationError in check_units."""
     plants = pd.read_csv(BUGGY_DIR / buggy_csv)
     plants.set_index("Unit", drop=False, inplace=True)
     config = _config_with_horizon(7)
-    with pytest.raises(SystemExit):
+    with pytest.raises(DispaSETValidationError):
         check_units(config, plants)
 
 
@@ -137,9 +137,9 @@ def test_check_flexible_demand_within_bounds():
 
 @pytest.mark.parametrize("bad_value", [-0.1, 1.1])
 def test_check_flexible_demand_outside_bounds_exits(bad_value):
-    """A value outside [0, 1] should trigger SystemExit."""
+    """A value outside [0, 1] should trigger DispaSETValidationError."""
     flex = pd.DataFrame({"Z1": [0.0, bad_value, 0.5]})
-    with pytest.raises(SystemExit):
+    with pytest.raises(DispaSETValidationError):
         check_FlexibleDemand(flex)
 
 

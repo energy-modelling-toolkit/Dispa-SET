@@ -80,6 +80,7 @@ coverage (the feature is exercised but not strictly asserted on).
 | `commons` constants consistency      |  F  |            |         |          |
 | `str_handler` (GDX safe names)       |  F  |            |         |          |
 | `preprocessing.utils` helpers        |  F  |            |         |          |
+| `preprocessing.utils` property tests |  F  |            |         |          |
 | `data_check.check_units`             |  F  |            |   F     |    S     |
 | `data_check.check_chp`               |  F  |            |   F     |    S     |
 | `data_check.check_clustering`        |  F  |            |         |    S     |
@@ -103,23 +104,28 @@ coverage (the feature is exercised but not strictly asserted on).
 
 ## 4. Step-by-step roadmap
 
-The current state is "all 100 tests pass under 60 s". The roadmap
-below lists the next blocks in suggested execution order.
+The current state is "all 123 tests pass under 60 s" (as of the latest run).
+The roadmap below lists the next blocks in suggested execution order.
 
-### 4.1 Short-term (low effort, high value)
+### 4.1 Short-term (low effort, high value) — COMPLETED
 
-1. **Tighten the failure tests.** Most `data_check.*` paths abort
-   via `sys.exit(1)`; we currently allow `(SystemExit, Exception)`.
-   Once `sys.exit` calls are replaced with raising a dedicated
-   `DispaSETValidationError`, narrow the `pytest.raises(...)` to the
-   new exception class.
-2. **Add property-based checks** (e.g. with Hypothesis) for
-   `_mylogspace`, `_split_list`, `_merge_two_dicts`, `select_units`.
-3. **Add a `--profile` option to `tests/run_all.py`** that records
-   the wall-clock time of each test and writes it to the report so
-   regressions in test cost are immediately visible.
-4. **Test the Linopy backend.** `dispaset.solve_linopy` is exposed
-   alongside `solve_GAMS` but currently untested.
+1. **[DONE] Tighten the failure tests.** All `data_check.*` paths that
+   previously aborted via `sys.exit(1)` now raise a dedicated
+   `DispaSETValidationError` (defined in `dispaset/common.py`). All
+   `pytest.raises(SystemExit)` / `pytest.raises((SystemExit, Exception))`
+   calls in `tests/unit/test_data_check.py` and
+   `tests/failure/test_invalid_units_data.py` have been narrowed to
+   `pytest.raises(DispaSETValidationError)`. A latent `TypeError` in the
+   CHPType validation (int index concatenated into a string) was also fixed.
+2. **[DONE] Add property-based checks** with Hypothesis for
+   `_mylogspace`, `_split_list`, `_merge_two_dicts`, and `select_units`.
+   Twelve property tests live in `tests/unit/test_utils_property.py`.
+   The tests document the actual semantics of `_mylogspace` (first element
+   equals `-low`, not `low`) and the duplicate-element edge case in
+   `_split_list` (detected via `assume`).
+3. **[DONE] Add a `--profile` option to `tests/run_all.py`** that records
+   the wall-clock time of each test via JUnit XML and writes a
+   "slowest first" table to `TEST_REPORT.md`.
 
 ### 4.2 Medium-term
 
@@ -158,19 +164,15 @@ The test-suite work surfaced a number of small frictions in the
 codebase. None are urgent but each would make future testing
 significantly easier:
 
-1. **Replace `sys.exit(1)` with raising a custom exception.**
-   `data_check.py`, `data_handler.py`, and `build.py` all bail out
-   via `sys.exit`. Tests have to use `pytest.raises(SystemExit)`,
-   which is a blunt instrument and conflicts with the IPython /
-   Jupyter ergonomics. A single `class DispaSETValidationError`
-   raised everywhere would be cleaner. Same for `logging.critical`
-   followed by `sys.exit`: a custom exception subclass that includes
-   a `message` attribute would be much more useful.
-2. **Fix the latent string concatenation bug at
-   `data_check.py:325` (CHPType validation).** The unit index `u`
-   is an `int` and is concatenated to a `str`, producing a
-   `TypeError` instead of the intended critical log line. The
-   failure test `test_invalid_chp_type_aborts` documents this.
+1. **[DONE] Replace `sys.exit(1)` with raising a custom exception.**
+   `DispaSETValidationError` is now defined in `dispaset/common.py` and
+   raised throughout `data_check.py`. `data_handler.py` and `build.py`
+   still use `sys.exit` and are candidates for a follow-up pass.
+2. **[DONE] Fix the latent string concatenation bug at
+   `data_check.py` (CHPType validation).** The unit index `u` was an
+   `int` concatenated into a `str`, producing a `TypeError` instead of
+   the intended critical log line. Fixed to use `str(unitname)` and
+   `str(plants.loc[u, 'CHPType'])` separately.
 3. **Make path resolution explicit.** Currently
    `data_handler.load_config_yaml` calculates `basefolder` as the
    directory of the YAML file and resolves relative paths against
