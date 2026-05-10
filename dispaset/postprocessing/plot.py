@@ -47,6 +47,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     if colors == None:
         colors = commons['colors']
 
+    # Plotting Range (rng) Handling:
     if rng is None:
         pdrng = plotdata.index[:min(len(plotdata) - 1, 7 * 24)]
     elif not type(rng) == type(demand.index):
@@ -59,6 +60,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     else:
         pdrng = rng
 
+    # Plot Lines Decision:
     if (pdrng[-1] - pdrng[0]) > datetime.timedelta(days=32):  # if the range is too big, don't plot the lines
         plot_lines = False
         logging.warning('The plotting range for the dispatch plot is too big to plot the lines')
@@ -66,6 +68,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         plot_lines = True
 
     # NTC plot data
+    # NTC Data Assignment:
     if (ntc is not None) and ('FlowIn' in plotdata) and ('FlowOut' in plotdata):
         ntc['FlowIn'], ntc['FlowOut'], ntc['ZeroLine'] = plotdata['FlowIn'], plotdata['FlowOut'], 0
         plotdata['FlowOut'], plotdata['FlowIn'] = (np.minimum(0, ntc['FlowIn'] + ntc['FlowOut']),
@@ -81,6 +84,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         plotdata['FlowOut'], plotdata['FlowIn'] = (np.minimum(0, ntc['FlowIn'] + ntc['FlowOut']),
                                                    np.maximum(0, ntc['FlowOut'] + ntc['FlowIn']))
 
+    # Dispatch Data Processing (Negative and Positive Contributions)
     # find the zero line position:
     cols = plotdata.columns.tolist()
     idx_zero = 0
@@ -93,6 +97,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         idx_zero += 1
         tmp = plotdata.iloc[:, idx_zero].mean()
 
+    # Processing Negative Values (sumplot_neg): 
     tmp = plotdata[cols[:idx_zero]].sum(axis=1)
     sumplot_neg = pd.DataFrame()
     sumplot_neg['sum'] = tmp
@@ -101,15 +106,21 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         sumplot_neg[col] = - tmp2[col]
     sumplot_neg = sumplot_neg.cumsum(axis=1)
 
+    # Processing Positive Values (sumplot_pos):
     sumplot_pos = plotdata[cols[idx_zero:]].cumsum(axis=1)
     sumplot_pos['zero'] = 0
     sumplot_pos = sumplot_pos[['zero'] + sumplot_pos.columns[:-1].tolist()]
+    
+    # Figure and Axes Creation
+    # Determine Number of Subplots (n) and Height Ratios:
     if level is not None and not level.empty:
         n = 3
         height_ratio = [2.7, .8, .8]
     else:
         n = 2
         height_ratio = [2.3, .8]
+        
+    # Create Subplots (fig, axes):
     if ntc is not None:
         fig, axes = plt.subplots(nrows=n, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
                                  gridspec_kw={'height_ratios': height_ratio, 'hspace': 0.04})
@@ -130,6 +141,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         fig, axes = plt.subplots(nrows=n, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
                                  gridspec_kw={'height_ratios': height_ratio, 'hspace': 0.04})
 
+    # Main Dispatch Plot Setup:
     # Create left axis:
     if plot_lines:
         axes[0].plot(pdrng, demand[pdrng], color='k')
@@ -177,7 +189,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         col1 = sumplot_neg.columns[j]
         col2 = sumplot_neg.columns[j + 1]
         color = colors[col2]
-        if plot_lines:
+        if plot_lines and col2 in commons['hatches']:
             hatch = commons['hatches'][col2]
         else:
             hatch = ''
@@ -202,6 +214,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         labels.append(col2)
         patches.append(mpatches.Patch(facecolor=color, alpha=alpha, hatch=hatch, label=col2))
         colorlist.append(color)
+        
     # Plot curtailment:
     if isinstance(curtailment, pd.Series):
         if not curtailment.index.equals(demand.index):
@@ -594,6 +607,7 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
     :param rug_plot:    Rug plot on/off
     """
     
+    # 1. Input & Zone Handling
     if colors is None:
         colors = commons['colors']
     if colors is not None:
@@ -610,8 +624,10 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
         z = inputs['sets']['n'][np.random.randint(Nzones)]
         logging.critical('Randomly selected zone: ' + z)
 
+    # 2. Get Plot Data
     plotdata = get_plot_data(inputs, results, z) / 1000  # GW
 
+    # 3. Storage Level Calculation
     aggregation = False
     if 'OutputStorageLevel' in results or 'OutputSectorXStorageLevel' in results:
         if 'OutputStorageLevel' in results:
@@ -658,6 +674,7 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
         level = None
         minlevel = None
 
+    # 4. Demand Calculation        
     if 'OutputPowerConsumption' in results:
         demand_p2x = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1000  # GW
         demand_p2x = demand_p2x.sum(axis=1)
@@ -671,9 +688,10 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
         demand_flex = pd.Series(0, index=results['OutputPower'].index)
 
     demand_da = inputs['param_df']['Demand'][('DA', z)] / 1000  # GW
-    demand = pd.DataFrame(demand_da + demand_p2x + demand_flex, columns=[('DA', z)])
+    demand = pd.DataFrame(demand_da + demand_flex, columns=[('DA', z)])
     demand = demand[('DA', z)]
 
+    # 5. Shed Load, Shifted Load & Energy Balance Check
     sum_generation = plotdata.sum(axis=1)
     # if 'OutputShedLoad' in results:
     if 'OutputShedLoad' in results and z in results['OutputShedLoad']:
@@ -686,7 +704,7 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
         shifted_load = pd.Series(shifted_load, index=demand.index).fillna(0)
     else:
         shifted_load = pd.Series(0, index=demand.index) / 1000  # GW
-    diff = (sum_generation - demand + shifted_load + shed_load).abs()
+    diff = (sum_generation - demand -demand_p2x + shifted_load + shed_load).abs()
 
     if (diff.max() > 0.01 * demand.max()) and (demand.max() != 0):
         logging.critical('There is up to ' + str(
@@ -700,6 +718,7 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
     else:
         curtailment = None
 
+    # 6. Curtailment & NTC Assignment
     # Assign NTC
     ntc = pd.DataFrame(0, columns=['NTCIn', 'NTCOut'], index=plotdata.index)
     for col in inputs['param_df']['FlowMaximum']:
@@ -714,6 +733,7 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
     else:
         ntc = None
 
+    # 7. Prepare for plot_dispatch Call
     # Plot power dispatch
     demand.rename(z, inplace=True)
     if hide_storage_plot:
@@ -738,6 +758,7 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
                       storage_limits=storage_limits, ntc_limits=ntc_limits, units=units, figsize=figsize, colors=colors)
 
 
+    # 9. Generation Rug Plot (Optional) & Return
     # Generation plot:
     if rug_plot:
         ZoneGeneration = filter_by_zone(results['OutputPower'], inputs, z)
@@ -904,116 +925,6 @@ def plot_ElyserCap_vs_Utilization(inputs, results):
     return True
 
 
-def plot_H2_and_demand(inputs, results):
-    # TODO: Check this function adn decide if necessary
-    """
-    This function plots the demand and the electrolyser demand as bar chart
-
-    :param inputs:      Dispa-SET inputs
-    :param results:     Dispa-SET results
-    """
-
-    # Get demand
-    def get_demand(inputs, results):
-        Demand = pd.DataFrame(index=['0'], columns=inputs['sets']['n'])
-        for z in inputs['sets']['n']:
-            plotdata = get_plot_data(inputs, results, z) / 1000  # GW
-
-            aggregation = False
-            if 'OutputStorageLevel' in results:
-                lev = filter_by_zone(results['OutputStorageLevel'], inputs, z)
-                lev = lev * inputs['units']['StorageCapacity'].loc[lev.columns] / 1e3  # GWh of storage
-                for col in lev.columns:
-                    if 'BEVS' in col:
-                        lev[col] = lev[col] * inputs['param_df']['AvailabilityFactor'][col]
-                level = filter_by_storage(lev, inputs, StorageSubset='s')
-                levels = pd.DataFrame(index=results['OutputStorageLevel'].index, columns=inputs['sets']['t'])
-                for t in ['HDAM', 'HPHS', 'BEVS', 'BATS', 'SCSP', 'P2GS']:
-                    temp = filter_by_tech(level, inputs, t)
-                    levels[t] = temp.sum(axis=1)
-                levels.dropna(axis=1, inplace=True)
-                for col in levels.columns:
-                    if levels[col].max() == 0 and levels[col].min() == 0:
-                        del levels[col]
-                if aggregation is True:
-                    level = level.sum(axis=1)
-                else:
-                    level = levels
-            else:
-                level = pd.Series(0, index=results['OutputPower'].index)
-
-            if 'OutputPowerConsumption' in results:
-                demand_p2x = filter_by_zone(results['OutputPowerConsumption'], inputs, z) / 1e6  # TWh
-                demand_p2x = demand_p2x.sum(axis=1)
-            else:
-                demand_p2x = pd.Series(0, index=results['OutputPower'].index)
-            if ('Flex', z) in inputs['param_df']['Demand']:
-                demand_flex = inputs['param_df']['Demand'][('Flex', z)] / 1e6
-            else:
-                demand_flex = pd.Series(0, index=results['OutputPower'].index)
-
-            demand_da = inputs['param_df']['Demand'][('DA', z)] / 1e6  # TWh
-            demand = pd.DataFrame(demand_da + demand_p2x + demand_flex, columns=[('DA', z)])
-            demand = demand[('DA', z)]
-            Demand[z] = demand.sum()
-            # Get elyser consumption
-        Elyser_consumption = pd.DataFrame(index=['0'], columns=inputs['sets']['n'])
-        for u in results['OutputStorageInput'].columns:
-            if 'P2GS' in u:
-                c = u.split()[2].split('_')[0]
-                Elyser_consumption[c] = results['OutputStorageInput'][u].sum() / 1e6  # TWh
-                Elyser_consumption[c].fillna(0)
-
-        return Demand, Elyser_consumption
-
-    Demand = {}
-    Elyser_consumption = {}
-    scenarios = list(inputs.keys())  # TODO Remove scenarios
-    for s in scenarios:
-        Demand[s], Elyser_consumption[s] = get_demand(inputs[s], results[s])
-
-    labels = inputs[scenarios[0]]['sets']['n']
-
-    x = np.arange(len(labels))  # the label locations
-    if len(scenarios) == 2:
-        width = 0.3
-    else:
-        width = 0.2
-
-    fig, ax = plt.subplots(figsize=(13, 5))
-    plt.rcParams.update({'font.size': 15})
-    for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
-                 ax.get_xticklabels() + ax.get_yticklabels()):
-        item.set_fontsize(15)
-    if len(scenarios) == 2:
-        ax.bar(x - width / 2 - 0.03, Demand[scenarios[0]].iloc[0, :] + Elyser_consumption[scenarios[0]].iloc[0, :],
-               width, color=(1, 0.5, 0, 0.7))
-        ax.bar(x - width / 2 - 0.03, Demand[scenarios[0]].iloc[0, :], width, color=(1, 0.5, 0, 1),
-               label=str(scenarios[0]))
-        ax.bar(x + width / 2 + 0.03, Demand[scenarios[1]].iloc[0, :] + Elyser_consumption[scenarios[1]].iloc[0, :],
-               width, color=(0.192, 0.549, 0.905, 0.7))
-        ax.bar(x + width / 2 + 0.03, Demand[scenarios[1]].iloc[0, :], width, color=(0.192, 0.549, 0.905),
-               label=str(scenarios[1]))
-    elif len(scenarios) == 3:
-        ax.bar(x - 0.22, Demand[scenarios[0]].iloc[0, :] + Elyser_consumption[scenarios[0]].iloc[0, :], width,
-               label=str(scenarios[0]), color=(1, 0.5, 0, 0.7))
-        ax.bar(x - 0.22, Demand[scenarios[0]].iloc[0, :], width, color=(1, 0.5, 0, 1))
-        ax.bar(x, Demand[scenarios[1]].iloc[0, :] + Elyser_consumption[scenarios[1]].iloc[0, :], width,
-               label=str(scenarios[1]), color=(0.192, 0.549, 0.905, 0.7))
-        ax.bar(x, Demand[scenarios[1]].iloc[0, :], width, color=(0.192, 0.549, 0.905))
-        ax.bar(x + 0.22, Demand[scenarios[2]].iloc[0, :] + Elyser_consumption[scenarios[2]].iloc[0, :], width,
-               label=str(scenarios[2]), color=(0.192, 0.549, 0.3, 0.7))
-        ax.bar(x + 0.22, Demand[scenarios[2]].iloc[0, :], width, color=(0.192, 0.549, 0.3))
-
-    # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel('[GWh]')
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.legend()
-
-    plt.show()
-
-    return True
 
 
 def plot_tech_cap(inputs, plot=True, figsize=(10, 7), alpha=0.8, width=0.5):
@@ -1334,7 +1245,9 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
     # Get storage level for the lower subplot
     storage_level = None
     if 'OutputSectorXStorageLevel' in results and z in results['OutputSectorXStorageLevel'].columns:
-        storage_level = results['OutputSectorXStorageLevel'][z] / 1000  # Convert to GWh
+        # storage_level = results['OutputSectorXStorageLevel'][z] / 1000  # Convert to GWh
+        storageXcapacity = inputs['parameters']['SectorXStorageCapacity']['val'].item()
+        storage_level = results['OutputSectorXStorageLevel'][z] * storageXcapacity / 1000  # Convert to GWh
         logging.info(f'Storage level data processed for sector {z}')
 
     # Process PowerX data
@@ -1415,6 +1328,7 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
         logging.info(f'Flow data processed for sector {z}')
     
     # Process OutputXNotServed data if present
+    x_not_served = None                                  #### Ray eventual change... needs revission
     if 'OutputXNotServed' in results and z in results['OutputXNotServed'].columns:
         x_not_served = results['OutputXNotServed'][z] / 1000  # Convert to GW
         if x_not_served.sum() > 0:

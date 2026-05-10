@@ -14,7 +14,7 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, \
     check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_FFRLimit, check_PrimaryReserveLimit, check_CostXNotServed,\
     check_grid_data
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
-    load_geo_data, GenericTable
+    load_geo_data, GenericTable, load_config
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, \
     BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep, PTDF_matrix, merge_lines
@@ -48,11 +48,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Checking the config first:
     if isinstance(config, str):
         config = load_config(config)
+        
+    # cheking a logical simularion time period:::::RAY
+    startdate = config['StartDate']
+    stopdate = config['StopDate']
+
+    if startdate > stopdate:
+        logging.critical("Illogical starting and ending dates in the simulation period. StartDate is later than StopDate. Please check the config file.")
+        sys.exit(1) # Exit the script as this is a critical error
 
     # Boolean variable to check wether it is milp or lp:
     LP = config['SimulationType'] == 'LP' or config['SimulationType'] == 'LP clustered'
 
-    # Boolean variable to check wether it is NTC or DC-POWERFLOW:
+    # Boolean vvariable to check wether it is NTC or DC-POWERFLOW:
     grid_flag = config.get('TransmissionGridType', '')  # If key does not exist it returns ""
 
     # Remove SectorCoupling_flag declaration since it's always 'On' in the next version
@@ -982,7 +990,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 if u in BoundarySector.index:
                     parameters['SectorXFlexMaxCapacity']['val'][i] = BoundarySector.loc[u, 'MaxFlexDemand']
 
-        # Particular treatment of SectorXFlexMaxCapacity that is not a time-series and that is given from the BS Inputs database
+        # Particular treatment of SectorXFlexMaxSupply that is not a time-series and that is given from the BS Inputs database
         if 'SectorXFlexibleSupply' in config and config['SectorXFlexibleSupply'] != '':
             for i, u in enumerate(sets['nx']):
                 if u in BoundarySector.index:
@@ -991,10 +999,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # Particular treatment of SectorXStorageMinimum:
         for i, u in enumerate(sets['nx']):
             if u in BoundarySector.index:
-                parameters['SectorXStorageMinimum']['val'][i] = BoundarySector.loc[
-                    u, 'SectorXStorageMinimum'] * \
-                    BoundarySector.loc[
-                                                                    u, 'SectorXStorageCapacity']
+                    parameters['SectorXStorageMinimum']['val'][i] = (
+                    BoundarySector.loc[u, 'SectorXStorageMinimum'] *
+                    BoundarySector.loc[u, 'SectorXStorageCapacity'])
 
     # Storage profile and initial state:
     for i, s in enumerate(sets['asu']):

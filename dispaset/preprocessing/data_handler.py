@@ -31,6 +31,7 @@ def NodeBasedTable(varname, config, default=None):
     :return:           Dataframe with the time series for each unit
     """
 
+    # Section 1: Path Handling
     path = config[varname]
     zones = config['zones']
     paths = {}
@@ -55,6 +56,8 @@ def NodeBasedTable(varname, config, default=None):
         logging.critical(
             'A path has been specified for table ' + varname + ' (' + path + ') but no file has been found')
         sys.exit(1)
+        
+    # Section 2: Data Initialization
     data = pd.DataFrame(index=config['idx_long'])
     if len(paths) == 0:
         logging.info('No data file specified for the table ' + varname + '. Using default value ' + str(default))
@@ -65,6 +68,8 @@ def NodeBasedTable(varname, config, default=None):
         else:
             logging.critical('Default value provided for table ' + varname + ' is not valid')
             sys.exit(1)
+            
+    # Section 3: Data Loading from Single File
     elif SingleFile:
         # If it is only one file, there is a header with the zone code
         tmp = load_time_series(config, paths['all'])
@@ -92,6 +97,8 @@ def NodeBasedTable(varname, config, default=None):
                     else:
                         logging.critical('Default value provided for table ' + varname + ' is not valid')
                         sys.exit(1)
+                        
+    # Section 4: Data Loading from Multiple Files
     else:  # assembling the files in a single dataframe:
         for z in paths:
             # In case of separated files for each zone, there is no header
@@ -123,6 +130,8 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
 
     :return:           Dataframe with the time series for each unit
     """
+    
+    # Section 1: Path Handling
     path = config[varname]
     zones = config['zones']
     paths = {}
@@ -144,6 +153,7 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
             'A path has been specified for table ' + varname + ' (' + path + ') but no file has been found')
         sys.exit(1)
 
+    # Section 2: Data Initialization
     data = pd.DataFrame(index=config['idx_long'])
     if len(paths) == 0:
         logging.info('No data file specified for the table ' + varname + '. Using default value ' + str(default))
@@ -155,6 +165,8 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
             logging.critical('Default value provided for table ' + varname + ' is not valid')
             sys.exit(1)
     else:  # assembling the files in a single dataframe:
+        
+        # Section 3: Data Loading and Processing
         columns = []
         for z in paths:
             tmp = load_time_series(config, paths[z])
@@ -205,6 +217,8 @@ def UnitBasedTable(plants, varname, config, fallbacks=['Unit'], default=None, Re
                     out = pd.concat([out, pd.DataFrame(index=out.index, columns=[u], dtype=float).fillna(default)], axis=1)
                     new_header.append(u)
         out.columns = new_header
+        
+    # Section 4: Validation
     if not out.columns.is_unique:
         logging.critical(
             'The column headers of table "' + varname + '" are not unique!. The following headers are duplicated: ' +
@@ -225,6 +239,8 @@ def GenericTable(headers, varname, config, default=None):
 
     :return:           Dataframe with the time series for each unit
     """
+    
+    # Section 1: Path Handling
     path = config[varname]
     paths = {}
     if os.path.isfile(path):
@@ -237,7 +253,8 @@ def GenericTable(headers, varname, config, default=None):
         logging.critical('A path has been specified for table ' + varname +
                          ' (' + path + ') but no file has been found')
         sys.exit(1)
-
+        
+    # Section 2: Data Initialization
     data = pd.DataFrame(index=config['idx_long'])
     if len(paths) == 0:
         logging.info('No data file specified for the table ' + varname + '. Using default value ' + str(default))
@@ -249,6 +266,8 @@ def GenericTable(headers, varname, config, default=None):
             logging.critical('Default value provided for table ' + varname + ' is not valid')
             sys.exit(1)
     else:  # assembling the files in a single dataframe:
+        
+        # Section 3: Data Loading and Processing
         data = load_time_series(config, paths['all'])
         # For each plant and each fallback key, try to find the corresponding column in the data
         out = pd.DataFrame(index=config['idx_long'], dtype=float)
@@ -258,6 +277,7 @@ def GenericTable(headers, varname, config, default=None):
             else:
                 logging.info('No specific information was found for header ' + header + ' in table ' + varname +
                              '. Using default value ' + str(default))
+    # Section 4: Validation
     if not out.columns.is_unique:
         logging.critical('The column headers of table "' + varname +
                          '" are not unique!. The following headers are duplicated: ' +
@@ -278,7 +298,8 @@ def merge_series(plants, oldplants, data, method='WeightedAverage', tablename=''
 
     :return merged:     Pandas dataframe with the merged time series when necessary
     """
-    # backward compatibility:
+    
+    # Section 1: Backward Compatibility and Initialization
     if not "Nunits" in plants:
         plants['Nunits'] = 1
 
@@ -288,12 +309,14 @@ def merge_series(plants, oldplants, data, method='WeightedAverage', tablename=''
 
     merged = pd.DataFrame(index=data.index)
 
+    # Section 2: Create Unit Mapping
     # Create a dictionary relating the former units to the new (clustered) ones:
     units = {}
     for u in plants.index:
         for uu in plants.loc[u, 'FormerUnits']:
             units[uu] = u
-
+            
+    # Section 3: Data Validation
     # First check the data:
     if not isinstance(data, pd.DataFrame):
         logging.critical('The input "' + tablename + '" to the merge_series function must be a dataframe')
@@ -302,6 +325,8 @@ def merge_series(plants, oldplants, data, method='WeightedAverage', tablename=''
         if str(data[key].dtype) not in ['bool', 'int', 'float', 'float16', 'float32', 'float64', 'float128', 'int8',
                                         'int16', 'int32', 'int64']:
             logging.critical('The column "' + str(key) + '" of table + "' + tablename + '" is not numeric!')
+            
+    # Section 4: Data Processing
     for key in data:
         if key in units:
             newunit = units[key]
@@ -388,11 +413,12 @@ def load_time_series(config, path, header='infer'):
     :param: header      list of header names
     :return:            reindexed timeseries
     """
-
+    # Section 1: Load Data
     data = pd.read_csv(path, index_col=0, parse_dates=True, header=header, keep_default_na=False)
     # Replace empty strings with NaN before converting to float
     data = data.replace('', np.nan).astype(float)
-
+    
+    # Section 2: Check Index Uniqueness and Monotonicity
     if not data.index.is_unique:
         logging.critical('The index of data file ' + path + ' is not unique. Please check the data')
         sys.exit(1)
@@ -407,6 +433,7 @@ def load_time_series(config, path, header='infer'):
                                                                   'you use the proper american date format (yyyy-mm-dd hh:mm:ss)')
             sys.exit(1)
 
+    # Section 3: Handle Numerical Indexes
     # First convert numerical indexes into datetimeindex:
     if str(data.index.dtype).startswith(('int', 'float')):
         if len(data) == len(config['idx']):  # The data has the same length as the provided index range
@@ -424,6 +451,7 @@ def load_time_series(config, path, header='infer'):
                                                                                    'allow guessing its timestamps. Please use a 8760 elements time series')
             sys.exit(1)
 
+    # Section 4: Process Datetime Index
     if data.index.inferred_type == 'datetime64':
         data.index = data.index.tz_localize(None)  # removing locational data
         main_year = data.groupby(data.index.year).size()
@@ -474,6 +502,7 @@ def load_time_series(config, path, header='infer'):
         logging.critical('Index for file ' + path + ' is not valid')
         sys.exit(1)
 
+    # Section 5: Re-indexing and Return
     # re-indexing with the longer index (including look-ahead) and filling possibly missing data at the beginning and
     # at the end:
     return data.reindex(config['idx_long'], method='nearest').bfill().astype(float)
@@ -531,6 +560,8 @@ def load_config_excel(ConfigFile, AbsPath=True):
     :param ConfigFile: String with (relative) path to the DispaSET excel configuration file
     :param AbsPath:    If true, relative paths are automatically changed into absolute paths (recommended)
     """
+    
+    # Section 1: Initial Setup
     import xlrd
     xlrd.xlsx.ensure_elementtree_imported(False, None)
     xlrd.xlsx.Element_has_iter = True
@@ -539,6 +570,7 @@ def load_config_excel(ConfigFile, AbsPath=True):
     sheet = wb.sheet_by_name('main')
     config = {}
 
+    # Section 2: Configuration for Version 20.01
     if sheet.cell_value(0, 0) == 'Dispa-SET Configuration File (v20.01)':
         config['Description'] = sheet.cell_value(5, 1)
         config['StartDate'] = xlrd.xldate_as_tuple(sheet.cell_value(56, 2), wb.datemode)
@@ -897,6 +929,8 @@ def load_config_excel(ConfigFile, AbsPath=True):
 def load_config_yaml(filename, AbsPath=True):
     """ Loads YAML file to dictionary"""
     import yaml
+    
+    # Section 1: Load YAML File
     with open(filename, 'r') as f:
         try:
             config = yaml.full_load(f)
@@ -904,15 +938,16 @@ def load_config_yaml(filename, AbsPath=True):
             logging.error('Cannot parse config file: {}'.format(filename))
             raise exc
 
+    # Section 2: Add Default Parameters for Backward Compatibility
     # List of parameters to be added with a default value if not present (for backward compatibility):
-
     params_to_be_added = {'DataTimeStep': 1, 'SimulationTimeStep': 1, 'HydroScheduling': 'Off',
                           'HydroSchedulingHorizon': 'Annual', 'InitialFinalReservoirLevel': True,
                           'ReserveParticipation_CHP': [], 'OptimalityGap': 0.005, 'CplexSetting': 'Default'}
     for param in params_to_be_added:
         if param not in config:
             config[param] = params_to_be_added[param]
-
+            
+    # Section 3: Set Non-Empty Default Values
     # Set default values (for backward compatibility):
     NonEmptyDefaultss = {'ReservoirLevelInitial': 0.5, 'ReservoirLevelFinal': 0.5, 'ValueOfLostLoad': 1E5,
                          'CostXSpillage': 1, 'WaterValue': 100, 'ShareOfQuickStartUnits': 0.5, 'CostCurtailment': 0}
@@ -920,6 +955,7 @@ def load_config_yaml(filename, AbsPath=True):
         if param not in config['default']:
             config['default'][param] = NonEmptyDefaultss[param]
 
+    # Section 4: Define Missing Parameters
     # Define missing parameters if they were not provided in the config file
     PARAMS = ['Demand', 'Outages', 'PowerPlantData', 'RenewablesAF', 'LoadShedding', 'NTC', 'Interconnections',
               'ReservoirScaledInflows', 'ReservoirScaledOutflows','PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas',
@@ -933,11 +969,14 @@ def load_config_yaml(filename, AbsPath=True):
     for param in PARAMS:
         if param not in config:
             config[param] = ''
+            
+    # Section 5: Set Global Defaults
     global DEFAULTS
     for key in DEFAULTS:
         if key not in config['default']:
             config['default'][key] = DEFAULTS[key]
-
+            
+    # Section 6: Convert Relative Paths to Absolute Paths
     if AbsPath:
         # Changing all relative paths to absolute paths. Relative paths must be defined
         # relative to the parent folder of the config file.
