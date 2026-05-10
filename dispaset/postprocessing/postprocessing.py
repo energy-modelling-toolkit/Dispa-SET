@@ -299,6 +299,74 @@ def get_imports(flows, z):
     return NetImports
 
 
+def check_energy_balance(inputs, results, z=None, threshold=0.01):
+    """
+    Check the instantaneous power balance for all simulated zones (or a
+    specific zone) and log a CRITICAL message for each zone that exceeds
+    the relative imbalance threshold.
+
+    The GAMS power-balance constraint guarantees:
+        generation + net_imports + shed_load + demand_modulation
+        = demand + storage_charging + p2x_consumption
+
+    ``get_plot_data`` already incorporates *all* supply-side and
+    consumption-side terms (generation, storage charging as negative,
+    P2X as negative, FlowIn as positive, FlowOut as negative), so the
+    net sum ``plotdata.sum(axis=1)`` satisfies:
+
+        plotdata_sum + shed_load + demand_modulation == demand
+
+    :param inputs:      DispaSET inputs dict (output of get_sim_results)
+    :param results:     DispaSET results dict (output of get_sim_results)
+    :param z:           Zone to check; if None all zones in inputs['sets']['n']
+                        are checked.
+    :param threshold:   Relative imbalance threshold (fraction of peak demand).
+                        A CRITICAL message is logged for any zone above this.
+    :returns:           Dict mapping zone name -> max relative imbalance
+                        (0.01 means 1 %).
+    """
+    zones = [z] if z is not None else list(inputs['sets']['n'])
+    balance_errors = {}
+
+    for zone in zones:
+        plotdata = get_plot_data(inputs, results, zone) / 1000  # GW
+        sum_generation = plotdata.sum(axis=1)
+
+        demand = inputs['param_df']['Demand'][('DA', zone)] / 1000  # GW
+        if ('Flex', zone) in inputs['param_df']['Demand']:
+            demand = demand + inputs['param_df']['Demand'][('Flex', zone)] / 1000
+
+        if 'OutputShedLoad' in results and zone in results['OutputShedLoad']:
+            shed_load = results['OutputShedLoad'][zone] / 1000
+            shed_load = pd.Series(shed_load, index=demand.index).fillna(0)
+        else:
+            shed_load = pd.Series(0.0, index=demand.index)
+
+        if 'OutputDemandModulation' in results and zone in results['OutputDemandModulation']:
+            shifted_load = results['OutputDemandModulation'][zone] / 1000
+            shifted_load = pd.Series(shifted_load, index=demand.index).fillna(0)
+        else:
+            shifted_load = pd.Series(0.0, index=demand.index)
+
+        diff = (sum_generation + shed_load - shifted_load - demand).abs()
+        max_demand = demand.max()
+        rel_error = float(diff.max() / max_demand) if max_demand != 0 else 0.0
+        balance_errors[zone] = rel_error
+
+        if rel_error > threshold:
+            logging.critical(
+                'There is up to %.4f%% difference in the instantaneous '
+                'energy balance of zone %s' % (rel_error * 100, zone)
+            )
+        else:
+            logging.info(
+                'Energy balance OK for zone %s (max deviation %.4f%%)' %
+                (zone, rel_error * 100)
+            )
+
+    return balance_errors
+
+
 # %%
 def get_result_analysis(inputs, results, units='MWh'):
     """

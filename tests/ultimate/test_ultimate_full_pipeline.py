@@ -96,6 +96,13 @@ def test_ultimate_pipeline():
         assert key in results, f"Missing expected output {key}"
         assert not results[key].empty
 
+    # ---- Energy balance (all zones) ------------------------------------
+    balance = ds.check_energy_balance(inputs, results)
+    for zone, rel_err in balance.items():
+        assert rel_err <= 0.01, (
+            f"Energy balance exceeds 1 % for zone {zone}: {rel_err * 100:.3f}%"
+        )
+
     # ---- Plotting (all off-screen) ---------------------------------------
     ds.plot_zone(inputs, results)
     _save_current_fig("plot_zone")

@@ -72,6 +72,13 @@ def test_postprocess_after_solve():
     indi = ds.get_indicators_powerplant(inputs, results)
     assert "Generation" in indi.columns
 
+    # --- energy balance check (all zones) ---
+    balance = ds.check_energy_balance(inputs, results)
+    for zone, rel_err in balance.items():
+        assert rel_err <= 0.01, (
+            f"Energy balance exceeds 1 % for zone {zone}: {rel_err * 100:.3f}%"
+        )
+
     analysis = ds.get_result_analysis(inputs, results)
     assert isinstance(analysis, dict)
 

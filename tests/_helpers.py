@@ -112,4 +112,11 @@ def build_solve(config: dict, *, mts: bool = False) -> dict:
     out["read_time"] = time.time() - t0
     out["inputs"] = inputs
     out["results"] = results
+
+    # Systematic energy-balance check for every simulated zone.
+    # check_energy_balance logs CRITICAL for any zone with > 1 % imbalance,
+    # which will be caught by the fail_on_critical_log fixture in
+    # tests/integration/ and tests/ultimate/.
+    out["energy_balance"] = ds.check_energy_balance(inputs, results)
+
     return out

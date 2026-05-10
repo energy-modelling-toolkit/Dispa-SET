@@ -704,13 +704,13 @@ def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatc
         shifted_load = pd.Series(shifted_load, index=demand.index).fillna(0)
     else:
         shifted_load = pd.Series(0, index=demand.index) / 1000  # GW
-    diff = (sum_generation - demand -demand_p2x + shifted_load + shed_load).abs()
+    # Note: P2X consumption is already included as a *negative* term in
+    # plotdata (via get_plot_data), so it must NOT be subtracted again here.
+    diff = (sum_generation + shed_load - shifted_load - demand).abs()
 
     if (diff.max() > 0.01 * demand.max()) and (demand.max() != 0):
         logging.critical('There is up to ' + str(
             diff.max() / demand.max() * 100) + '% difference in the instantaneous energy balance of zone ' + z)
-    else:
-        logging.critical('There is up to ' + str(0) + '% difference in the instantaneous energy balance of zone ' + z)
     # ********************************************************
 
     if 'OutputCurtailedPower' in results and z in results['OutputCurtailedPower']:

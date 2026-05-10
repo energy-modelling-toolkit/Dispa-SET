@@ -29,7 +29,7 @@ Outages: data/Outages.csv
 ShareOfFlexibleDemand: data/ShareFlex.csv
 DemandFlexibility: ''
 LoadShedding: ''
-PowerPlantData: data/Units_testcase.csv
+PowerPlantData: data/Units_ultimate.csv
 NTC: data/NTCs.csv
 Interconnections: data/CrossBorderFlows.csv
 TransmissionGridType: NTC
@@ -38,7 +38,7 @@ GeoData: data/Geo_Coordinates.csv
 
 HydroScheduling: 'Off'
 HydroSchedulingHorizon: 'Annual'
-InitialFinalReservoirLevel: 1
+InitialFinalReservoirLevel: 0
 ReservoirLevels: data/ReservoirLevels.csv
 ReservoirLevelInitial: ''
 ReservoirLevelFinal: ''
@@ -112,6 +112,7 @@ ReserveParticipation:
   - CAES
   - BATS
   - BEVS
+  - STUR   # coal steam units (needed for Z2 downward reserve)
   - P2HT
   - ABHP
   - ASHP
@@ -120,6 +121,7 @@ ReserveParticipation:
   - WSHP
   - REHE
 ReserveParticipation_CHP:
+  - COMC   # gas CHP units (needed for Z2 downward reserve)
   - GTUR
   - ICEN
 
@@ -128,7 +130,7 @@ default:
   DemandFlexibility: 4
   LoadShedding: 0.05
   ReservoirLevelInitial: 0.5
-  ReservoirLevelFinal: 0.5
+  ReservoirLevelFinal: 0.0
   WaterValue: 400
   CostLoadShedding: 1500
   CostCurtailment: 20
