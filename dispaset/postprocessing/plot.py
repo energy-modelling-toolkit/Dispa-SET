@@ -1245,8 +1245,16 @@ def plot_dispatchX(inputs, results, z='', rng=None, alpha=0.5, figsize=(13, 7), 
     # Get storage level for the lower subplot
     storage_level = None
     if 'OutputSectorXStorageLevel' in results and z in results['OutputSectorXStorageLevel'].columns:
-        # storage_level = results['OutputSectorXStorageLevel'][z] / 1000  # Convert to GWh
-        storageXcapacity = inputs['parameters']['SectorXStorageCapacity']['val'].item()
+        # Look up the storage capacity for this specific boundary sector zone.
+        # SectorXStorageCapacity['val'] is indexed by sets['nx'], so we find
+        # the position of z in that set rather than calling .item() (which only
+        # works when there is exactly one boundary sector).
+        nx_zones = inputs['sets'].get('nx', [])
+        if z in nx_zones:
+            z_idx = nx_zones.index(z)
+            storageXcapacity = float(inputs['parameters']['SectorXStorageCapacity']['val'][z_idx])
+        else:
+            storageXcapacity = float(inputs['parameters']['SectorXStorageCapacity']['val'][0])
         storage_level = results['OutputSectorXStorageLevel'][z] * storageXcapacity / 1000  # Convert to GWh
         logging.info(f'Storage level data processed for sector {z}')
 

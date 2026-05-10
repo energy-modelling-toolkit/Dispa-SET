@@ -213,6 +213,76 @@ def test_plot_dispatchX_storage_capacity_gwh_scaling():
     assert out.exists() and out.stat().st_size > 0
 
 
+def test_plot_dispatchX_multi_zone_storage_capacity():
+    """Regression test: plot_dispatchX must not raise ValueError when there
+    are *multiple* boundary sector zones (i.e. SectorXStorageCapacity['val']
+    has more than one element).
+
+    Bug: the original code called ``.item()`` on the full capacity array, which
+    raises ``ValueError: can only convert an array of size 1 to a Python scalar``
+    as soon as there are ≥2 boundary sector zones.  The fix looks up the zone's
+    index in ``sets['nx']`` and reads only that element.
+    """
+    idx = pd.date_range("2023-01-01", periods=24, freq="h")
+
+    # Three boundary-sector zones; the zone under test is the *second* one
+    # so that any regression that defaults to index-0 would pick the wrong
+    # capacity and the zone-lookup logic is exercised.
+    nx_zones = ["Z1_h2", "Z1_th", "Z2_th"]
+    capacities = np.array([5000.0, 300.0, 150.0])   # MWh
+
+    inputs = {
+        "param_df": {
+            "Demand": pd.DataFrame(
+                {("DA", "Z1"): np.full(24, 1000.0)}, index=idx
+            ),
+            "SectorXDemand": pd.DataFrame(
+                {"Z1_th": np.full(24, 80.0)}, index=idx
+            ),
+            "SectorXStorageCapacity": pd.DataFrame(
+                {"StorageCapacity": capacities},
+                index=[z + " - BATS" for z in nx_zones],
+            ),
+        },
+        "parameters": {
+            "SectorXStorageCapacity": {"val": capacities},
+        },
+        "sets": {"n": ["Z1", "Z2"], "nx": nx_zones, "f": ["GAS"]},
+        "units": pd.DataFrame({
+            "Zone":  ["Z1"],
+            "Technology": ["GTUR"],
+            "Fuel": ["GAS"],
+            "Unit": ["Z1 - GTUR"],
+            "Sector1": ["Z1"],
+            "PowerCapacity": [1000], "PartLoadMin": [0.3],
+            "RampUp": [100], "RampDown": [100],
+            "StartUpCost": [0], "NoLoadCost": [0],
+            "MinUpTime": [1], "MinDownTime": [1],
+        }, index=["Z1 - GTUR"]),
+    }
+    results = {
+        "OutputPowerX": pd.DataFrame(
+            {"Z1_th - GTUR": np.full(24, 40.0)}, index=idx,
+        ),
+        "OutputSectorXStorageLevel": pd.DataFrame(
+            {"Z1_th": np.full(24, 0.5)}, index=idx,   # p.u. → 0.5*300/1000 GWh
+        ),
+        "OutputSectorXStorageInput": pd.DataFrame(
+            {"Z1_th - BATS": np.full(24, 2.0)}, index=idx,
+        ),
+        "OutputSectorXFlow": pd.DataFrame(
+            {"Z1->Z1_th": np.full(24, 5.0)}, index=idx,
+        ),
+        "OutputXNotServed": pd.DataFrame(
+            {"Z1_th": np.zeros(24)}, index=idx,
+        ),
+    }
+    # Must not raise ValueError even though len(capacities) == 3
+    fig = plot_dispatchX(inputs, results, z="Z1_th")
+    out = _save_current_figure("plot_dispatchX_multi_zone")
+    assert out.exists() and out.stat().st_size > 0
+
+
 # --------------------------------------------------------------------------- #
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
