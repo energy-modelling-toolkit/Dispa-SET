@@ -20,7 +20,7 @@ from .utils import select_units, interconnections, clustering, EfficiencyTimeSer
     BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep, PTDF_matrix, merge_lines
 from .boundary_sector import zone_to_bs_mapping
 from .. import __version__
-from ..common import commons
+from ..common import commons, DispaSETValidationError
 from ..misc.gdx_handler import write_variables
 from difflib import SequenceMatcher
 
@@ -55,10 +55,17 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     if startdate > stopdate:
         logging.critical("Illogical starting and ending dates in the simulation period. StartDate is later than StopDate. Please check the config file.")
-        sys.exit(1) # Exit the script as this is a critical error
+        raise DispaSETValidationError("Illogical starting and ending dates in the simulation period. StartDate is later than StopDate. Please check the config file.")
 
     # Boolean variable to check wether it is milp or lp:
     LP = config['SimulationType'] == 'LP' or config['SimulationType'] == 'LP clustered'
+
+    _valid_simulation_types = ('Standard', 'MILP', 'LP', 'LP clustered', 'Integer clustering', 'No clustering')
+    if config['SimulationType'] not in _valid_simulation_types:
+        msg = (f"Unknown SimulationType '{config['SimulationType']}'. "
+               f"Valid values are: {', '.join(_valid_simulation_types)}")
+        logging.critical(msg)
+        raise DispaSETValidationError(msg)
 
     # Boolean vvariable to check wether it is NTC or DC-POWERFLOW:
     grid_flag = config.get('TransmissionGridType', '')  # If key does not exist it returns ""
@@ -67,14 +74,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # check time steps:
     if config['DataTimeStep'] != 1:
-        logging.critical('The data time step can only be 1 hour in this version of Dispa-SET. A value of ' + str(
-            config['DataTimeStep']) + ' hours was provided')
-        sys.exit(1)
+        msg = 'The data time step can only be 1 hour in this version of Dispa-SET. A value of ' + str(
+            config['DataTimeStep']) + ' hours was provided'
+        logging.critical(msg)
+        raise DispaSETValidationError(msg)
     if config['SimulationTimeStep'] not in (1, 24):
-        logging.critical(
-            'The simulation time step can only be 1 or 24 hour in this version of Dispa-SET. A value of ' + str(
-                config['DataTimeStep']) + ' hours was provided')
-        sys.exit(1)
+        msg = 'The simulation time step can only be 1 or 24 hour in this version of Dispa-SET. A value of ' + str(
+            config['SimulationTimeStep']) + ' hours was provided'
+        logging.critical(msg)
+        raise DispaSETValidationError(msg)
     # Day/hour corresponding to the first and last days of the simulation:
     __, m_start, d_start, __, __, __ = config['StartDate']
     y_end, m_end, d_end, _, _, _ = config['StopDate']
@@ -390,7 +398,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     CostXNotServed[zone] = BoundarySector.loc[zone, 'CostXNotServed']
                 else:
                     logging.critical(f'CostXNotServed is not defined for boundary sector {zone} in the boundary sector data table')
-                    sys.exit(1)
+                    raise DispaSETValidationError(f'CostXNotServed is not defined for boundary sector {zone} in the boundary sector data table')
             check_CostXNotServed(config, CostXNotServed, zones_bs)
         BoundarySector = BoundarySector[BoundarySector.index.isin(zones_bs)]
         BoundarySector.fillna(0, inplace=True)
@@ -611,7 +619,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     if not len(Plants_merged.index.unique()) == len(Plants_merged):
         # Very unlikely case:
         logging.error('plant indexes not unique!')
-        sys.exit(1)
+        raise DispaSETValidationError('plant indexes not unique!')
 
     # Apply scaling factors:
     if config['modifiers']['Solar'] != 1:
@@ -715,7 +723,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 reserve_2D_tot[z] = Reserve2D[z]
             else:
                 logging.critical('Exogenous reserve requirements (2D and 2U) not found for zone ' + z)
-                sys.exit(1)
+                raise DispaSETValidationError('Exogenous reserve requirements (2D and 2U) not found for zone ' + z)
         else:
             if z in Reserve2U and z in Reserve2D:
                 logging.info('Using exogenous reserve data for zone ' + z)
@@ -1012,7 +1020,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         elif s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and any(
                 finalTS['ReservoirLevels'][s] - 1 > 1e-11):
             logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
-            sys.exit(1)
+            raise DispaSETValidationError(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
         else:
             logging.warning(
                 'Could not find reservoir level data for storage plant ' + s + '. Using the provided default initial '
@@ -1060,7 +1068,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             elif nx in finalTS['SectorXReservoirLevels'] and any(finalTS['SectorXReservoirLevels'][nx] > 0) and any(
                     finalTS['SectorXReservoirLevels'][nx] - 1 > 1e-11):
                 logging.critical(nx + ': The reservoir level is sometimes higher than its capacity (>1) !')
-                sys.exit(1)
+                raise DispaSETValidationError(nx + ': The reservoir level is sometimes higher than its capacity (>1) !')
             else:
                 logging.warning(
                     'Could not find reservoir level data for storage plant ' + nx + '. Using the provided default initial '
@@ -1396,7 +1404,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 parameters['CHPType']['val'][i, 2] = 1
             else:
                 logging.error('CHPType not valid for plant ' + u)
-                sys.exit(1)
+                raise DispaSETValidationError('CHPType not valid for plant ' + u)
 
     # Initial Power
     if 'InitialPower' in Plants_merged.columns and Plants_merged['InitialPower'].notna().any():
@@ -1498,7 +1506,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # if the sim variable was not defined:
     if 'sim' not in locals():
         logging.error('Please provide a path where to store the DispaSET inputs (in the "sim" variable)')
-        sys.exit(1)
+        raise DispaSETValidationError('Please provide a path where to store the DispaSET inputs (in the "sim" variable)')
 
     if not os.path.exists(sim):
         os.makedirs(sim)
@@ -1523,7 +1531,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # MTS requires LP
         if not LP:
             logging.error('Simulation in MTS must be LP')
-            sys.exit(1)
+            raise DispaSETValidationError('Simulation in MTS must be LP')
         gms_modifications['$setglobal LPFormulation 0'] = '$setglobal LPFormulation 1'
         gms_modifications['$setglobal MTS 0'] = '$setglobal MTS 1'
     else: # Detailed dispatch run (not MTS)
@@ -1566,10 +1574,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     fout.write(line)
     except FileNotFoundError:
         logging.error(f"Source GAMS file not found at {source_gms_path}")
-        sys.exit(1)
+        raise DispaSETValidationError(f"Source GAMS file not found at {source_gms_path}")
     except Exception as e:
         logging.error(f"Error processing GAMS file: {e}")
-        sys.exit(1)
+        raise DispaSETValidationError(f"Error processing GAMS file: {e}") from e
 
     # Create cplex option file
     if config['OptimalityGap'] == '':

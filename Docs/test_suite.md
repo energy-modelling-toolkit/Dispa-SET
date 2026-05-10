@@ -104,7 +104,7 @@ coverage (the feature is exercised but not strictly asserted on).
 
 ## 4. Step-by-step roadmap
 
-The current state is "all 123 tests pass under 60 s" (as of the latest run).
+The current state is "all 125 tests pass under 60 s" (as of the latest run).
 The roadmap below lists the next blocks in suggested execution order.
 
 ### 4.1 Short-term (low effort, high value) — COMPLETED
@@ -165,9 +165,23 @@ codebase. None are urgent but each would make future testing
 significantly easier:
 
 1. **[DONE] Replace `sys.exit(1)` with raising a custom exception.**
-   `DispaSETValidationError` is now defined in `dispaset/common.py` and
-   raised throughout `data_check.py`. `data_handler.py` and `build.py`
-   still use `sys.exit` and are candidates for a follow-up pass.
+   `DispaSETValidationError` is now raised throughout the entire Dispa-SET
+   preprocessing and postprocessing pipeline:
+   - `dispaset/preprocessing/data_check.py` — original replacement
+   - `dispaset/preprocessing/build.py` — date range, time step, SimulationType,
+     reservoir levels, CHPType, missing sim path, GAMS file errors
+   - `dispaset/preprocessing/preprocessing.py` — MTS result validation
+   - `dispaset/postprocessing/data_handler.py` — GAMS status type, index length,
+     parameter dimensionality
+   - `dispaset/postprocessing/postprocessing.py` — invalid Inputs type
+   - `dispaset/postprocessing/plot.py` — mismatched time-series indices
+   - `dispaset/misc/str_handler.py` — unsupported argument types
+   - `dispaset/misc/gdx_handler.py` — GAMS not found, GDX file missing,
+     variable shape mismatches
+   Only commented-out `sys.exit` lines and CLI/entry-point uses remain.
+   A `SimulationType` validation guard was also added to `build.py` so that
+   unknown values (e.g. `"Banana clustered"`) immediately raise
+   `DispaSETValidationError` rather than silently defaulting to MILP.
 2. **[DONE] Fix the latent string concatenation bug at
    `data_check.py` (CHPType validation).** The unit index `u` was an
    `int` concatenated into a `str`, producing a `TypeError` instead of

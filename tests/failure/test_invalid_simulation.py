@@ -37,31 +37,26 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from _helpers import load_test_config  # noqa: E402
 
 import dispaset as ds  # noqa: E402
+from dispaset.common import DispaSETValidationError  # noqa: E402
 
 
 def test_stopdate_before_startdate_fails():
     cfg = load_test_config("tiny.yml", "fail_stopdate")
     cfg["StartDate"] = (2015, 1, 5, 0, 0, 0)
     cfg["StopDate"] = (2015, 1, 1, 0, 0, 0)
-    with pytest.raises((SystemExit, Exception)):
+    with pytest.raises(DispaSETValidationError):
         ds.build_simulation(cfg)
 
 
 def test_stopdate_before_startdate_exits_with_code_1():
-    """The new validation added in future_proof explicitly calls sys.exit(1).
-
-    This test verifies that build_simulation raises SystemExit with code 1
-    (not a different exit code or a generic Exception) when StartDate is
-    strictly later than StopDate.
+    """build_simulation raises DispaSETValidationError when StartDate is strictly
+    later than StopDate.
     """
     cfg = load_test_config("tiny.yml", "fail_stopdate_code")
     cfg["StartDate"] = (2015, 12, 31, 0, 0, 0)
     cfg["StopDate"]  = (2015,  1,  1, 0, 0, 0)
-    with pytest.raises(SystemExit) as exc_info:
+    with pytest.raises(DispaSETValidationError):
         ds.build_simulation(cfg)
-    assert exc_info.value.code == 1, (
-        f"Expected SystemExit(1), got SystemExit({exc_info.value.code})"
-    )
 
 
 def test_startdate_equal_stopdate_does_not_fail():
@@ -78,24 +73,41 @@ def test_startdate_equal_stopdate_does_not_fail():
     cfg["StopDate"]  = same
     try:
         ds.build_simulation(cfg)
-    except SystemExit as exc:
-        # Exit code 1 would mean the date guard fired – that is wrong.
-        assert exc.code != 1, "Date guard must not fire when StartDate == StopDate"
+    except DispaSETValidationError as exc:
+        # If the date guard fired, that is wrong.
+        pytest.fail(f"Date guard must not fire when StartDate == StopDate: {exc}")
     except Exception:
         pass  # Any other error is fine (horizon too short, etc.)
 
 
 def test_unknown_simulation_type_fails():
+    """An unrecognised SimulationType must raise DispaSETValidationError."""
     cfg = load_test_config("tiny.yml", "fail_simtype")
     cfg["SimulationType"] = "Banana clustered"
-    with pytest.raises((SystemExit, Exception)):
+    with pytest.raises(DispaSETValidationError):
         ds.build_simulation(cfg)
 
 
 def test_empty_zones_list_fails():
     cfg = load_test_config("tiny.yml", "fail_emptyzones")
     cfg["zones"] = []
-    with pytest.raises((SystemExit, Exception)):
+    with pytest.raises((DispaSETValidationError, Exception)):
+        ds.build_simulation(cfg)
+
+
+def test_invalid_data_time_step_raises():
+    """DataTimeStep != 1 must raise DispaSETValidationError."""
+    cfg = load_test_config("tiny.yml", "fail_datatimestep")
+    cfg["DataTimeStep"] = 2
+    with pytest.raises(DispaSETValidationError):
+        ds.build_simulation(cfg)
+
+
+def test_invalid_simulation_time_step_raises():
+    """SimulationTimeStep not in (1, 24) must raise DispaSETValidationError."""
+    cfg = load_test_config("tiny.yml", "fail_simtimestep")
+    cfg["SimulationTimeStep"] = 6
+    with pytest.raises(DispaSETValidationError):
         ds.build_simulation(cfg)
 
 

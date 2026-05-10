@@ -1,6 +1,8 @@
 import logging
 import sys
 
+from ..common import DispaSETValidationError
+
 
 def shrink_to_64(x, N=64):
     """
@@ -24,7 +26,7 @@ def shrink_to_64(x, N=64):
         return [shrink_singlestring(xx, N) for xx in x]
     else:
         logging.critical('Argument type not supported')
-        sys.exit(1)
+        raise DispaSETValidationError('shrink_to_64: argument type not supported (must be str or list)')
 
 
 def clean_strings(x, exclude_digits=False, exclude_punctuation=False):
@@ -46,7 +48,7 @@ def clean_strings(x, exclude_digits=False, exclude_punctuation=False):
             return [xx.strip() for xx in x]
         else:
             logging.error('Argument type not supported')
-            sys.exit(1)
+            raise DispaSETValidationError('clean_strings: argument type not supported (must be str or list)')
     import unicodedata
     import string
     def clean_singlestring(x):
@@ -79,7 +81,8 @@ def clean_strings(x, exclude_digits=False, exclude_punctuation=False):
         return [clean_singlestring(xx) for xx in x]
     else:
         logging.error('Argument type not supported')
-        sys.exit(1)
+        raise DispaSETValidationError('clean_strings: argument type not supported (must be str or list)')
+
 
 def force_str(x):
     """ Used to get a str object both in python 2 and 3 although they represent different objects (byte vs unicode)

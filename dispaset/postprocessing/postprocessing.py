@@ -17,7 +17,7 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
 
-from ..common import commons
+from ..common import commons, DispaSETValidationError
 
 
 def get_load_data(inputs, z):
@@ -71,7 +71,7 @@ def aggregate_by_fuel(PowerOutput, Inputs, SpecifyFuels=None):
             fuels = Inputs['sets']['f']
         else:
             logging.error('Inputs variable no valid')
-            sys.exit(1)
+            raise DispaSETValidationError('Inputs variable not valid')
     else:
         fuels = SpecifyFuels
     PowerByFuel = pd.DataFrame(0, index=PowerOutput.index, columns=fuels)

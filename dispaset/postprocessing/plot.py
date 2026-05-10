@@ -14,7 +14,7 @@ from matplotlib.patches import Patch
 
 from .postprocessing import get_imports, get_plot_data, filter_by_zone, filter_by_tech, filter_by_storage, \
     get_power_flow_tracing, get_EFOH, filter_by_tech_list, filter_sector
-from ..common import commons
+from ..common import commons, DispaSETValidationError
 
 
 def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailment=None, shedload=None,
@@ -219,7 +219,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     if isinstance(curtailment, pd.Series):
         if not curtailment.index.equals(demand.index):
             logging.error('The curtailment time series must have the same index as the demand')
-            sys.exit(1)
+            raise DispaSETValidationError('The curtailment time series must have the same index as the demand')
         axes[0].fill_between(pdrng, sumplot_neg.loc[pdrng, 'sum'] - curtailment[pdrng], sumplot_neg.loc[pdrng, 'sum'],
                              facecolor=colors['curtailment'])
         labels.append('Curtailment')
@@ -235,13 +235,13 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
     if isinstance(shedload, pd.Series):
         if not shedload.index.equals(demand.index):
             logging.critical('The shedload time series must have the same index as the demand')
-            sys.exit(1)
+            raise DispaSETValidationError('The shedload time series must have the same index as the demand')
         load_change += -shedload
         load_changed = True
     if isinstance(shiftedload, pd.Series):
         if not shiftedload.index.equals(demand.index):
             logging.critical('The shiftedload time series must have the same index as the demand')
-            sys.exit(1)
+            raise DispaSETValidationError('The shiftedload time series must have the same index as the demand')
         load_change += +shiftedload
         load_changed = True
     reduced_demand = demand + load_change

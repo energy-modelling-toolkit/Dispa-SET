@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from .postprocessing import filter_by_zone
+from ..common import DispaSETValidationError
 from ..misc.gdx_handler import get_gams_path, gdx_to_dataframe, gdx_to_list
 from ..misc.str_handler import clean_strings
 
@@ -109,7 +110,7 @@ def GAMSstatus(statustype, num):
         
     # Section 3: Handle Incorrect Status Type
     else:
-        sys.exit('Incorrect GAMS status type')
+        raise DispaSETValidationError('Incorrect GAMS status type')
         
     # Section 4: Return Status Message
     return str(msg[num])
@@ -440,7 +441,7 @@ def ds_to_df(inputs):
     if len(dates) > len(sets['h']):
         logging.error('The provided index has a length of ' + str(len(dates)) + ' while the data only comprises ' + str(
             len(sets['h'])) + ' time elements')
-        sys.exit(1)
+        raise DispaSETValidationError('The provided index has a length of ' + str(len(dates)) + ' while the data only comprises ' + str(len(sets['h'])) + ' time elements')
     elif len(dates) > len(sets['z']):
         logging.warning(
             'The provided index has a length of ' + str(len(dates)) + ' while the simulation was designed for ' + str(
@@ -495,7 +496,7 @@ def ds_to_df(inputs):
         else:
             logging.error(
                 'Only three dimensions currently supported. Parameter ' + p + ' has ' + str(dim) + ' dimensions.')
-            sys.exit(1)
+            raise DispaSETValidationError('Only three dimensions currently supported. Parameter ' + p + ' has ' + str(dim) + ' dimensions.')
     return out
 
 
