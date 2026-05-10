@@ -94,7 +94,9 @@ ReserveParticipation:
   - BATS
 ReserveParticipation_CHP: []
 
-modifiers: {Demand: 0.05, Solar: 1.0, Wind: 1.0, Storage: 1.0}
+# Demand: 0.015 keeps peak load below firm capacity in both zones so
+# the MTS + dispatch solve completes without involuntary load shedding.
+modifiers: {Demand: 0.015, Solar: 1.0, Wind: 1.0, Storage: 1.0}
 default:
   ShareOfFlexibleDemand: 0
   DemandFlexibility:     0

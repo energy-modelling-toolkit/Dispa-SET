@@ -106,7 +106,9 @@ ReserveParticipation:
 ReserveParticipation_CHP: []
 
 # --- Default values (used when path is empty) ---
-modifiers: {Demand: 0.05, Solar: 1.0, Wind: 1.0, Storage: 1.0}
+# Demand: 0.015 keeps peak load (≈ 205 MW) below the firm gas CC capacity
+# (300 MW) so the model always solves without involuntary load shedding.
+modifiers: {Demand: 0.015, Solar: 1.0, Wind: 1.0, Storage: 1.0}
 default:
   ShareOfFlexibleDemand: 0
   DemandFlexibility:     0

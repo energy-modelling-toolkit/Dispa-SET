@@ -99,7 +99,9 @@ ReserveParticipation_CHP:
   - GTUR
   - ICEN
 
-modifiers: {Demand: 1.0, Solar: 1.0, Wind: 1.0, Storage: 1.0}
+# Demand: 0.05 keeps peak electricity load (≈ 682 MW Z1, ≈ 814 MW Z2)
+# well below firm thermal capacity (Z1 ≈ 1479 MW, Z2 ≈ 3900 MW).
+modifiers: {Demand: 0.05, Solar: 1.0, Wind: 1.0, Storage: 1.0}
 default:
   ShareOfFlexibleDemand: 0
   DemandFlexibility:     0
