@@ -26,10 +26,14 @@ tests/
 │   ├── tiny_bs.yml       # H2 boundary sector + electrolyser/fuel-cell
 │   ├── tiny_mts.yml      # MTS preprocessing
 │   ├── tiny_curtailment.yml  # over-sized VRE -> curtailment
+│   ├── tiny_dcpf.yml     # 3-zone triangle, DC-Power-Flow transmission
+│   ├── tiny_ntc_3zones.yml   # same topology with NTC (comparison partner)
 │   └── ultimate.yml      # 3-day "everything" config (Units_testcase.csv)
 ├── data/                 # all CSVs the configs above read from
 │   ├── Units_tiny.csv    # minimal plant set (no complex constraints)
+│   ├── Units_dcpf.csv    # single gas unit in Z1 (DC-PF / NTC-3zone tests)
 │   ├── Units_testcase.csv# fuller plant set (CHP, BS, hydro)
+│   ├── GridData_tiny.csv # 3-line triangle network for DC-PF tests
 │   ├── boundary_sector/  # BS_*.csv used by tiny_bs.yml & ultimate.yml
 │   ├── AvailabilityFactors/, Load_RealTime/, ...
 │   └── reference/        # pre-baked simulation outputs for unit tests
@@ -101,10 +105,14 @@ coverage (the feature is exercised but not strictly asserted on).
 | `plot_zone` / `plot_zone_capacities` |  F  |    F       |         |    F     |
 | `plot_dispatch` / `plot_dispatchX`   |  F  |    F       |         |    F     |
 | Off-screen rendering of plots        |  F  |    F       |         |    F     |
+| `PTDF_matrix` (DC-Power-Flow)        |  F  |    F       |         |          |
+| NTC transmission (multi-zone)        |     |    F       |         |    S     |
+| DC-Power-Flow transmission           |  F  |    F       |         |          |
+| NTC vs DC-PF loop-flow comparison    |     |    F       |         |          |
 
 ## 4. Step-by-step roadmap
 
-The current state is "all 125 tests pass under 60 s" (as of the latest run).
+The current state is "all 132 tests pass under 60 s" (as of the latest run).
 The roadmap below lists the next blocks in suggested execution order.
 
 ### 4.1 Short-term (low effort, high value) — COMPLETED
@@ -138,8 +146,18 @@ The roadmap below lists the next blocks in suggested execution order.
    `FFRLimit`, `PrimaryReserveLimit`, `InertiaLimit`,
    `FrequencyStability`). Each currently has dedicated paths in
    `data_check` but no tests.
-7. **Cover all transmission-grid types** (`NTC`, `DC-Power-Flow`,
-   etc.). Currently only `NTC` is tested.
+7. **[DONE] Cover all transmission-grid types** (`NTC`, `DC-Power-Flow`).
+   Five new tests cover both modes on an identical 3-zone triangle topology:
+   - `tests/unit/test_ptdf.py` — 5 GAMS-free unit tests: PTDF matrix shape,
+     hand-calculated values (tol=1e-4), loop-flow prediction, and build-time
+     PTDF/NaN assertions for both grid types.
+   - `tests/integration/test_solve_dcpf.py` — 2 GAMS integration tests:
+     `test_solve_dcpf_3zones` (DC-PF builds and solves, PTDF non-zero) and
+     `test_ntc_vs_dcpf_loop_flows` (loop flow on ZZ3→Z2 is ≥ 5 MW larger
+     under DC-PF than NTC, confirming Kirchhoff constraints are active).
+   New data: `tests/data/GridData_tiny.csv` (asymmetric-reactance triangle),
+   `tests/data/Units_dcpf.csv` (single gas unit in Z1),
+   `tests/configs/tiny_dcpf.yml`, `tests/configs/tiny_ntc_3zones.yml`.
 8. **Add multi-period MTS variants** (rolling vs. annual horizons,
    regional vs. zonal scope).
 9. **Add `solve_succeeded`-style assertions on solver KPIs**
