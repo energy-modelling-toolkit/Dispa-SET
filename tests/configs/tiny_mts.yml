@@ -1,0 +1,120 @@
+# --------------------------------------------------------------------------- #
+# Mid-Term Scheduling (MTS) test configuration. Uses Regional MTS with a
+# 24-hour MTS time step over a few days. Required to exercise the MTS
+# preprocessing / hydro reservoir scheduling path.
+# --------------------------------------------------------------------------- #
+SimulationDirectory: 'output/sim_tiny_mts'
+WriteExcel: 0
+WriteGDX: 1
+WritePickle: 1
+
+GAMS_folder: ''
+cplex_path: ''
+
+StartDate: !!python/tuple [2015, 1, 1, 0, 0, 0]
+StopDate:  !!python/tuple [2015, 1, 5, 0, 0, 0]      # 4 days (kept short)
+HorizonLength: 3
+LookAhead: 0
+DataTimeStep: 1
+SimulationTimeStep: 1
+
+SimulationType: 'LP clustered'
+ReserveCalculation: 'Generic'
+AllowCurtailment: 1
+OptimalityGap: 0.01
+
+Demand:                 'data/Load_RealTime/##/2015.csv'
+RenewablesAF:           'data/AvailabilityFactors/##/2015.csv'
+Outages:                ''
+ShareOfFlexibleDemand:  ''
+DemandFlexibility:      ''
+LoadShedding:           ''
+PowerPlantData:         'data/Units_tiny.csv'
+NTC:                    'data/NTCs.csv'
+Interconnections:       ''
+TransmissionGridType:   'NTC'
+GridData:               ''
+GeoData:                'data/Geo_Coordinates.csv'
+
+HydroScheduling:            'Regional'
+HydroSchedulingHorizon:     'StopDateDriven'
+InitialFinalReservoirLevel: 1
+ReservoirLevels:            'data/ReservoirLevels.csv'
+ReservoirLevelInitial:      ''
+ReservoirLevelFinal:        ''
+ReservoirScaledInflows:     'data/ScaledInflows.csv'
+StorageAlertLevels:         ''
+StorageFloodControl:        ''
+WaterValue:                 ''
+CostLoadShedding:           ''
+CostCurtailment:            ''
+CostOfSpillage:             ''
+ValueOfLostLoad:            ''
+PriceTransmission:          ''
+
+PriceOfGas:        '../Database/FuelPrices/Gas/2015.csv'
+PriceOfBlackCoal:  '../Database/FuelPrices/Coal/2015.csv'
+PriceOfLignite:    ''
+PriceOfCO2:        ''
+PriceOfBiomass:    '../Database/FuelPrices/Biomass/2015.csv'
+PriceOfFuelOil:    '../Database/FuelPrices/Oil/2015.csv'
+PriceOfNuclear:    ''
+PriceOfPeat:       ''
+PriceOfAmmonia:    ''
+
+ShareOfQuickStartUnits: ''
+Reserve2U:              ''
+Reserve2D:              ''
+PrimaryReserveLimit:    ''
+InertiaLimit:           ''
+FFRLimit:               ''
+FFRGainLimit:           ''
+FrequencyStability:     ''
+SystemGainLimit:        ''
+
+BoundarySectorData:             ''
+BoundarySectorNTC:              ''
+BoundarySectorInterconnections: ''
+SectorXDemand:                  ''
+SectorXFlexibleDemand:          ''
+SectorXFlexibleSupply:          ''
+SectorXReservoirLevels:         ''
+SectorXFloodControl:            ''
+BoundarySectorMaxSpillage:      ''
+
+zones: ['Z1', 'Z2']
+mts_zones: ['Z1']
+all_zones: ['Z1', 'Z2']
+
+ReserveParticipation:
+  - GTUR
+  - HDAM
+  - HPHS
+  - ICEN
+  - BATS
+ReserveParticipation_CHP: []
+
+modifiers: {Demand: 0.05, Solar: 1.0, Wind: 1.0, Storage: 1.0}
+default:
+  ShareOfFlexibleDemand: 0
+  DemandFlexibility:     0
+  LoadShedding:          0.05
+  ReservoirLevelInitial: 0.5
+  ReservoirLevelFinal:   0.5
+  WaterValue:            100
+  CostLoadShedding:      1500
+  CostCurtailment:       20
+  CostOfSpillage:        1
+  ValueOfLostLoad:       100000
+  PriceTransmission:     0
+  PriceOfGas:            44
+  PriceOfBlackCoal:      18
+  PriceOfLignite:        15
+  PriceOfCO2:            90
+  PriceOfBiomass:        33
+  PriceOfFuelOil:        60
+  PriceOfNuclear:        4
+  PriceOfPeat:           33
+  PriceOfAmmonia:        76
+  ShareOfQuickStartUnits: 0.5
+  CostHeatSlack:         70

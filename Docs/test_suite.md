@@ -1,0 +1,239 @@
+# Dispa-SET test-suite roadmap
+
+This document complements the high-level summary in the project
+`README.md`. It describes the layout and intent of the new test
+suite, the gaps that remain, and a list of structural improvements
+to the Dispa-SET codebase that would make future testing easier.
+
+The audience is twofold:
+
+* developers working on Dispa-SET itself;
+* automation tools / LLMs iterating on the codebase to fix or add
+  tests, who need a clear map of what already exists and what is
+  worth adding next.
+
+## 1. Suite layout
+
+```
+tests/
+├── conftest.py           # global pytest fixtures (Agg backend, GAMS)
+├── _helpers.py           # shared helpers (skip_if_no_gams, build_solve, ...)
+├── run_all.py            # standalone runner -> tests/output/TEST_REPORT.md
+├── configs/              # YAML configs used by the test cases
+│   ├── tiny.yml          # 1 zone, 3 days, LP clustered (Units_tiny.csv)
+│   ├── tiny_2zones.yml   # 2 zones with NTC
+│   ├── tiny_milp.yml     # Integer clustering (unit commitment)
+│   ├── tiny_bs.yml       # H2 boundary sector + electrolyser/fuel-cell
+│   ├── tiny_mts.yml      # MTS preprocessing
+│   ├── tiny_curtailment.yml  # over-sized VRE -> curtailment
+│   └── ultimate.yml      # 3-day "everything" config (Units_testcase.csv)
+├── data/                 # all CSVs the configs above read from
+│   ├── Units_tiny.csv    # minimal plant set (no complex constraints)
+│   ├── Units_testcase.csv# fuller plant set (CHP, BS, hydro)
+│   ├── boundary_sector/  # BS_*.csv used by tiny_bs.yml & ultimate.yml
+│   ├── AvailabilityFactors/, Load_RealTime/, ...
+│   └── reference/        # pre-baked simulation outputs for unit tests
+├── output/               # all artifacts written by the test runs
+├── unit/                 # fast, GAMS-free tests
+├── integration/          # build / solve / read on tiny mock systems
+├── failure/              # invalid config / data -> error checks
+└── ultimate/             # full pipeline on ultimate.yml
+```
+
+Every test file:
+
+* starts with a header docstring (`What this test does`, `How to run`);
+* can be executed both via `pytest <path/to/file.py>` and as a script
+  with `python <path/to/file.py>` (each file ends with
+  `pytest.main([__file__, "-q"])`);
+* uses the `Agg` matplotlib backend so plots never block;
+* respects the time budgets discussed below.
+
+## 2. Time budget
+
+| Group       | Per-test target | Group target | Notes                              |
+|-------------|-----------------|--------------|------------------------------------|
+| Unit        | < 0.1 s         | < 5 s        | No GAMS solve, only Python logic.  |
+| Integration | < 5 s           | < 60 s       | Tiny configs, 3-day horizons.      |
+| Failure     | < 1 s           | < 5 s        | Mostly preprocessing-level checks. |
+| Ultimate    | < 30 s          | < 30 s       | One run, 3 days, 3 zones.          |
+| **Total**   | -               | **< 5 min**  | Enforced by pytest-timeout.        |
+
+A current run on a recent laptop with `dispaset2` finishes in
+**~20 seconds total** for the full suite, well within budget.
+
+## 3. Coverage matrix
+
+Below is a map between Dispa-SET features and the tests that
+currently exercise them. "F" = first-order coverage (the test would
+fail if the feature was completely broken), "S" = secondary
+coverage (the feature is exercised but not strictly asserted on).
+
+| Feature                              | Unit | Integration | Failure | Ultimate |
+|--------------------------------------|:---:|:----------:|:-------:|:--------:|
+| GAMS Python API present              |     |    F       |         |    S     |
+| `package_exists` / `get_gams_path`   |     |    F       |         |          |
+| GDX round-trip                       |     |    F       |         |          |
+| YAML config loader                   |  F  |            |   F     |    S     |
+| Excel config loader                  |  F  |            |   F     |          |
+| Path resolution (relative -> abs)    |  F  |            |         |    S     |
+| `commons` constants consistency      |  F  |            |         |          |
+| `str_handler` (GDX safe names)       |  F  |            |         |          |
+| `preprocessing.utils` helpers        |  F  |            |         |          |
+| `data_check.check_units`             |  F  |            |   F     |    S     |
+| `data_check.check_chp`               |  F  |            |   F     |    S     |
+| `data_check.check_clustering`        |  F  |            |         |    S     |
+| `data_handler.NodeBasedTable`        |  F  |            |         |    S     |
+| `data_handler.UnitBasedTable`        |  F  |            |         |    S     |
+| `boundary_sector` preprocessing      |  F  |    F       |         |    S     |
+| `build_simulation` artifacts         |     |    F       |         |    F     |
+| LP clustered solve (single zone)     |     |    F       |         |    S     |
+| LP clustered solve (multi-zone NTC)  |     |    F       |         |    S     |
+| MILP / unit commitment               |     |    F       |         |    F     |
+| Boundary sector (H2) solve           |     |    F       |         |    F     |
+| CHP via boundary sector              |     |    F       |         |    F     |
+| Curtailment of VRE                   |     |    F       |         |          |
+| Mid-Term Scheduling (MTS)            |     |    F       |         |          |
+| `get_sim_results`                    |     |    F       |         |    F     |
+| `get_indicators_powerplant`          |  F  |    F       |         |    F     |
+| `get_result_analysis`                |  F  |    F       |         |    F     |
+| `plot_zone` / `plot_zone_capacities` |  F  |    F       |         |    F     |
+| `plot_dispatch` / `plot_dispatchX`   |  F  |    F       |         |    F     |
+| Off-screen rendering of plots        |  F  |    F       |         |    F     |
+
+## 4. Step-by-step roadmap
+
+The current state is "all 100 tests pass under 60 s". The roadmap
+below lists the next blocks in suggested execution order.
+
+### 4.1 Short-term (low effort, high value)
+
+1. **Tighten the failure tests.** Most `data_check.*` paths abort
+   via `sys.exit(1)`; we currently allow `(SystemExit, Exception)`.
+   Once `sys.exit` calls are replaced with raising a dedicated
+   `DispaSETValidationError`, narrow the `pytest.raises(...)` to the
+   new exception class.
+2. **Add property-based checks** (e.g. with Hypothesis) for
+   `_mylogspace`, `_split_list`, `_merge_two_dicts`, `select_units`.
+3. **Add a `--profile` option to `tests/run_all.py`** that records
+   the wall-clock time of each test and writes it to the report so
+   regressions in test cost are immediately visible.
+4. **Test the Linopy backend.** `dispaset.solve_linopy` is exposed
+   alongside `solve_GAMS` but currently untested.
+
+### 4.2 Medium-term
+
+5. **Pre-compute reference outputs.** Bake a single tiny simulation
+   into `tests/data/reference/` once and use it for the
+   postprocessing/plot tests. This removes the need to solve from
+   the unit tests, eliminates the GAMS dependency for them, and
+   makes the suite reproducible on machines without a GAMS license.
+6. **Cover all reserve-related options** (`Reserve2U`, `Reserve2D`,
+   `FFRLimit`, `PrimaryReserveLimit`, `InertiaLimit`,
+   `FrequencyStability`). Each currently has dedicated paths in
+   `data_check` but no tests.
+7. **Cover all transmission-grid types** (`NTC`, `DC-Power-Flow`,
+   etc.). Currently only `NTC` is tested.
+8. **Add multi-period MTS variants** (rolling vs. annual horizons,
+   regional vs. zonal scope).
+9. **Add `solve_succeeded`-style assertions on solver KPIs**
+   (objective value bounded, no spurious lost load on a feasible
+   case).
+
+### 4.3 Long-term
+
+10. **Snapshot tests for build outputs.** Compare `Inputs.gdx`
+    against a reference produced by a known-good commit. This makes
+    refactors much safer.
+11. **Schema-validate every YAML config** with `pydantic` or
+    `voluptuous` so the user gets a clean error before the
+    optimization is built.
+12. **Document each feature with a "minimum reproducer" config** in
+    `Docs/feature_examples/`. Each reproducer becomes both a doc
+    snippet and an integration test.
+
+## 5. Suggestions to clean up the Dispa-SET codebase
+
+The test-suite work surfaced a number of small frictions in the
+codebase. None are urgent but each would make future testing
+significantly easier:
+
+1. **Replace `sys.exit(1)` with raising a custom exception.**
+   `data_check.py`, `data_handler.py`, and `build.py` all bail out
+   via `sys.exit`. Tests have to use `pytest.raises(SystemExit)`,
+   which is a blunt instrument and conflicts with the IPython /
+   Jupyter ergonomics. A single `class DispaSETValidationError`
+   raised everywhere would be cleaner. Same for `logging.critical`
+   followed by `sys.exit`: a custom exception subclass that includes
+   a `message` attribute would be much more useful.
+2. **Fix the latent string concatenation bug at
+   `data_check.py:325` (CHPType validation).** The unit index `u`
+   is an `int` and is concatenated to a `str`, producing a
+   `TypeError` instead of the intended critical log line. The
+   failure test `test_invalid_chp_type_aborts` documents this.
+3. **Make path resolution explicit.** Currently
+   `data_handler.load_config_yaml` calculates `basefolder` as the
+   directory of the YAML file and resolves relative paths against
+   it. The convention is fine but the implementation is undocumented
+   and made the test configs trickier than needed (paths in the
+   tests must be relative to `tests/`, but fuel prices live in
+   `../Database/`). A `paths_basefolder` field in the YAML, or a
+   helper API `resolve_path(cfg, key)`, would remove the foot-gun.
+4. **Split `dispaset/preprocessing/build.py`.** It mixes
+   set-building, parameter-building, derived-quantity computation
+   and per-feature glue. Splitting into smaller modules
+   (`build_sets`, `build_parameters`, `build_boundary_sector`, ...)
+   would let unit tests target specific concerns without running
+   the whole pipeline.
+5. **Remove the legacy `heat` / `h2` formulations.** They have been
+   replaced by the boundary-sector abstraction but still leave
+   traces in column names (`CHPMaxHeat`, `STOHours`, the `nx_CC`
+   set) and in default values
+   (`default.CostHeatSlack`). Deleting the dead code would shrink
+   the surface area to test.
+6. **Provide a tiny built-in dataset.** `tests/data/Units_tiny.csv`
+   is a good starting point - exposing it via
+   `dispaset.examples.load_tiny()` would let users prototype without
+   ever copying CSVs around, and would give the test suite a
+   well-defined "official" toy system.
+7. **Add a `dispaset.api.solve(config)` one-shot entry point.**
+   The integration tests have to call `build_simulation` and
+   `solve_GAMS` separately, then `get_sim_results`. A single
+   `solve(config)` returning `(inputs, results)` would simplify
+   both the tests and the documentation examples.
+8. **Modernize matplotlib calls.** Many `plot_*` helpers call
+   `plt.show()` unconditionally. They should accept a
+   `show: bool = True` flag (or return the `Figure`) so that
+   automation can disable display without juggling backends.
+9. **Adopt `pyproject.toml`-only configuration.** A single
+   `pyproject.toml` (with `[tool.pytest.ini_options]`,
+   `[tool.ruff]`, ...) would replace `setup.py`, `setup.cfg`, and
+   any ad-hoc `tests/conftest.py` settings.
+10. **Pin numerical dependencies.** A handful of tests trigger
+    `DeprecationWarning`s from the pandas / numpy versions installed
+    by `environment.yml`. Bumping to recent compatible versions and
+    pinning them would silence the noise and prevent surprise
+    failures on fresh installs.
+
+## 6. How to extend the suite
+
+Adding a new test should usually follow this three-step pattern:
+
+1. **Pick the right tier**:
+   * unit (`tests/unit/`) if the test does not require GAMS;
+   * integration (`tests/integration/`) for build / solve / read;
+   * failure (`tests/failure/`) for "wrong inputs -> clear error";
+   * ultimate (`tests/ultimate/`) for end-to-end checks.
+2. **Reuse existing fixtures.** `tests/_helpers.py` exposes
+   `skip_if_no_gams`, `load_test_config`, `fresh_simdir`,
+   `build_solve`, `solve_succeeded`. Avoid duplicating GAMS path
+   detection in new files.
+3. **Keep it short.** A new integration test should solve at most
+   3 days, on at most 2 zones, with at most a handful of units.
+   If you find yourself loading a yearly profile, you are probably
+   in the wrong tier.
+
+When the test exposes a real bug, leave a TODO comment with a clear
+explanation rather than skipping the test. The test report
+generated by `tests/run_all.py` will surface the failure on each
+run.

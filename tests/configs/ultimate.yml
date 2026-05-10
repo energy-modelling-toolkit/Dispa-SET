@@ -1,0 +1,153 @@
+# --------------------------------------------------------------------------- #
+# "Ultimate" Dispa-SET integration test. Three fictitious zones (Z1, Z2, ZZ3)
+# with a CHP unit, hydro storage, batteries, an electrolyzer and a fuel-cell
+# all coupled through a hydrogen boundary sector. Limited to 3 days to keep
+# the test fast (was originally 1 year in scripts/test_build_solve_display.py).
+#
+# Used by tests/ultimate/test_full_pipeline.py to exercise the full chain
+# (build -> solve -> postprocess -> plot) with most features enabled.
+# --------------------------------------------------------------------------- #
+Description: Tiny end-to-end integration test, 3 days, 3 zones, boundary sector + CHP.
+SimulationType: Integer clustering
+SimulationDirectory: output/sim_ultimate
+
+StartDate: !!python/tuple [2015, 1, 1, 0, 0, 0]
+StopDate:  !!python/tuple [2015, 1, 4, 0, 0, 0]      # 3 days
+DataTimeStep: 1
+SimulationTimeStep: 1
+HorizonLength: 3
+LookAhead: 1
+AllowCurtailment: 1
+GAMS_folder: ''
+WriteGDX: 1
+WritePickle: 1
+
+# --- Path-based inputs ---
+Demand: data/Load_RealTime/##/2015.csv
+RenewablesAF: data/AvailabilityFactors/##/2015.csv
+Outages: data/Outages.csv
+ShareOfFlexibleDemand: data/ShareFlex.csv
+DemandFlexibility: ''
+LoadShedding: ''
+PowerPlantData: data/Units_testcase.csv
+NTC: data/NTCs.csv
+Interconnections: data/CrossBorderFlows.csv
+TransmissionGridType: NTC
+GridData: data/GridData.csv
+GeoData: data/Geo_Coordinates.csv
+
+HydroScheduling: 'Off'
+HydroSchedulingHorizon: 'Annual'
+InitialFinalReservoirLevel: 1
+ReservoirLevels: data/ReservoirLevels.csv
+ReservoirLevelInitial: ''
+ReservoirLevelFinal: ''
+ReservoirScaledInflows: data/ScaledInflows.csv
+StorageAlertLevels: ''
+StorageFloodControl: ''
+WaterValue: ''
+CostLoadShedding: ''
+CostCurtailment: ''
+CostOfSpillage: data/boundary_sector/BS_Spillage_cost.csv
+ValueOfLostLoad: ''
+PriceTransmission: ''
+
+PriceOfGas: ../Database/FuelPrices/Gas/2015.csv
+PriceOfBlackCoal: ../Database/FuelPrices/Coal/2015.csv
+PriceOfLignite: ''
+PriceOfCO2: ''
+PriceOfBiomass: ../Database/FuelPrices/Biomass/2015.csv
+PriceOfFuelOil: ../Database/FuelPrices/Oil/2015.csv
+PriceOfNuclear: ''
+PriceOfPeat: ''
+PriceOfAmmonia: ''
+
+ReserveCalculation: Generic
+ShareOfQuickStartUnits: ''
+Reserve2U: ''
+Reserve2D: ''
+PrimaryReserveLimit: ''
+InertiaLimit: ''
+FFRLimit: ''
+FFRGainLimit: ''
+FrequencyStability: ''
+SystemGainLimit: ''
+
+BoundarySectorData: data/boundary_sector/BS_Inputs.csv
+BoundarySectorNTC: data/boundary_sector/BS_NTCs.csv
+BoundarySectorInterconnections: data/boundary_sector/BS_NTCs.csv
+SectorXDemand: data/boundary_sector/BS_Demand.csv
+SectorXFlexibleDemand: data/boundary_sector/BS_FlexibleDemand.csv
+SectorXFlexibleSupply: data/boundary_sector/BS_FlexibleSupply.csv
+SectorXReservoirLevels: ''
+SectorXFloodControl: data/boundary_sector/BS_Flood_control.csv
+BoundarySectorMaxSpillage: data/boundary_sector/BS_Spillage_Capacity.csv
+OptimalityGap: 0.005
+
+modifiers:
+  Demand: 0.17
+  Solar: 5
+  Wind: 5
+  Storage: 1
+
+zones:
+  - Z1
+  - Z2
+  - ZZ3
+mts_zones:
+  - Z1
+  - Z2
+  - ZZ3
+all_zones:
+  - Z1
+  - Z2
+  - ZZ3
+
+ReserveParticipation:
+  - COMC
+  - GTUR
+  - HDAM
+  - HPHS
+  - ICEN
+  - CAES
+  - BATS
+  - BEVS
+  - P2HT
+  - ABHP
+  - ASHP
+  - GSHP
+  - HYHP
+  - WSHP
+  - REHE
+ReserveParticipation_CHP:
+  - GTUR
+  - ICEN
+
+default:
+  ShareOfFlexibleDemand: 0.03
+  DemandFlexibility: 4
+  LoadShedding: 0.05
+  ReservoirLevelInitial: 0.5
+  ReservoirLevelFinal: 0.5
+  WaterValue: 400
+  CostLoadShedding: 1500
+  CostCurtailment: 20
+  CostOfSpillage: 401
+  ValueOfLostLoad: 100000
+  PriceTransmission: 0
+  PriceOfGas: 44
+  PriceOfBlackCoal: 18
+  PriceOfLignite: 15
+  PriceOfCO2: 90
+  PriceOfBiomass: 33
+  PriceOfFuelOil: 60
+  PriceOfNuclear: 4
+  PriceOfPeat: 33
+  PriceOfAmmonia: 76
+  ShareOfQuickStartUnits: 0.5
+  CostHeatSlack: 70
+  PrimaryReserveLimit: ''
+  InertiaLimit: ''
+  FFRLimit: ''
+  FFRGainLimit: ''
+  SystemGainLimit: ''

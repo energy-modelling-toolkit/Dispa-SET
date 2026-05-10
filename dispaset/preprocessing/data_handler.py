@@ -34,6 +34,9 @@ def NodeBasedTable(varname, config, default=None):
     path = config[varname]
     zones = config['zones']
     paths = {}
+    if isinstance(path, (int, float)):
+        # Numeric value in config: treat as a constant default override
+        return pd.DataFrame(path, index=config['idx_long'], columns=zones)
     if os.path.isfile(path):
         paths['all'] = path
         SingleFile = True
@@ -943,11 +946,11 @@ def load_config_yaml(filename, AbsPath=True):
         if not os.path.isabs(config['SimulationDirectory']):
             config['SimulationDirectory'] = os.path.join(basefolder, config['SimulationDirectory'])
         for param in PARAMS:
-            if not os.path.isabs(config[param]):
-                if config[param] == '' or config[param].isspace():
-                    config[param] = ''
-                elif not os.path.isabs(config[param]):
-                    config[param] = os.path.join(basefolder, config[param])
+            val = config[param]
+            if isinstance(val, str) and val and not val.isspace() and not os.path.isabs(val):
+                config[param] = os.path.join(basefolder, val)
+            elif not isinstance(val, str):
+                pass  # numeric override values (e.g. CostCurtailment: 20) are kept as-is
     return config
 
 
