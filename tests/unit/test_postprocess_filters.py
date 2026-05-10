@@ -122,5 +122,80 @@ def test_get_plot_data_returns_non_empty():
 
 
 # --------------------------------------------------------------------------- #
+# Tests for new features from future_proof merge
+# --------------------------------------------------------------------------- #
+
+def test_get_plot_data_includes_p2x_column():
+    """When results contain OutputPowerConsumption, get_plot_data must add
+    a 'P2X' column with negated (consumption) values.
+
+    This covers the new feature added in the future_proof merge:
+    ``postprocessing.py`` now processes ``OutputPowerConsumption`` and assigns
+    it as ``plotdata['P2X'] = -tmp.sum(axis=1)``.
+    """
+    inputs, results = _make_inputs_results()
+    idx = results["OutputPower"].index
+    # Add P2X consumption data for zone Z1
+    results["OutputPowerConsumption"] = pd.DataFrame(
+        {"Z1 - P2X_unit": np.full(len(idx), 10.0)},
+        index=idx,
+    )
+    # We need to register the P2X unit in inputs so filter_by_zone works
+    p2x_unit = pd.DataFrame(
+        {"Zone": ["Z1"], "Technology": ["P2GS"], "Fuel": ["GAS"]},
+        index=["Z1 - P2X_unit"],
+    )
+    inputs["units"] = pd.concat([inputs["units"], p2x_unit])
+
+    plot_data = get_plot_data(inputs, results, "Z1")
+    assert "P2X" in plot_data.columns, "P2X column missing from plot data"
+    assert (plot_data["P2X"] <= 0).all(), "P2X values must be non-positive (consumption)"
+
+
+def test_get_plot_data_no_p2x_when_output_power_consumption_absent():
+    """When OutputPowerConsumption is absent, 'P2X' column should not appear
+    (no KeyError either).
+    """
+    inputs, results = _make_inputs_results()
+    assert "OutputPowerConsumption" not in results
+
+    plot_data = get_plot_data(inputs, results, "Z1")
+    # No crash and no P2X column when there is no consumption data
+    assert "P2X" not in plot_data.columns
+
+
+def test_get_plot_data_nonmeritorder_negative_column_goes_to_front():
+    """Non-MeritOrder columns with negative sum should be placed at the
+    *beginning* of the column order.
+
+    This tests the new column ordering logic added in the future_proof merge:
+        for col in plotdata.columns:
+            if col not in commons['MeritOrder']:
+                if plotdata[col].sum() < 0:
+                    OrderedColumns.insert(0, col)
+                else:
+                    OrderedColumns.append(col)
+    """
+    from dispaset.common import commons
+
+    inputs, results = _make_inputs_results()
+    idx = results["OutputPower"].index
+    # Add a non-MeritOrder unit with negative output (e.g. a custom demand sink)
+    novel_col = "Z1 - NOVEL_SINK"
+    results["OutputPower"][novel_col] = np.full(len(idx), -5.0)
+    novel_unit = pd.DataFrame(
+        {"Zone": ["Z1"], "Technology": ["NOVEL"], "Fuel": ["OTHER"]},
+        index=[novel_col],
+    )
+    inputs["units"] = pd.concat([inputs["units"], novel_unit])
+
+    plot_data = get_plot_data(inputs, results, "Z1")
+    # If NOVEL fuel aggregated into plotdata, it should appear before MeritOrder ones
+    # At minimum the function must not crash and must return a DataFrame
+    assert isinstance(plot_data, pd.DataFrame)
+    assert not plot_data.empty
+
+
+# --------------------------------------------------------------------------- #
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

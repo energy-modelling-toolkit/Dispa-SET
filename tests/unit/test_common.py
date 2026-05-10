@@ -75,7 +75,10 @@ def test_tech_subsets():
 def test_fuel_consistency():
     """Fuel codes referenced from MeritOrder should be known fuels or tags."""
     fuels = set(commons["Fuels"]) | {"FlowIn", "FlowOut"} | set(commons["tech_storage"])
-    extra = {"P2GS"}  # boundary-sector tech that is allowed in the merit order
+    # Boundary-sector / P2X technology codes that are allowed in the merit order:
+    # - P2GS: Power-to-gas storage (original)
+    # - P2X:  Power-to-X (added in future_proof merge to represent generic P2X dispatch)
+    extra = {"P2GS", "P2X"}
     fuels |= extra
     unknown = [f for f in commons["MeritOrder"] if f not in fuels]
     assert not unknown, f"Unknown items in MeritOrder: {unknown}"

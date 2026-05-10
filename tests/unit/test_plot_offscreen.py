@@ -109,6 +109,11 @@ def test_plot_dispatchX_with_minimal_inputs():
                 {"StorageCapacity": [1000]}, index=["BE_h2 - BATS"],
             ),
         },
+        # plot_dispatchX now reads SectorXStorageCapacity from inputs['parameters']
+        # (changed in the future_proof merge to support GWh scaling)
+        "parameters": {
+            "SectorXStorageCapacity": {"val": np.array([1000.0])},
+        },
         "sets": {"n": ["BE"], "nx": ["BE_h2"], "f": ["GAS"]},
         "units": pd.DataFrame({
             "Zone": ["BE"], "Technology": ["GTUR"], "Fuel": ["GAS"],
@@ -138,6 +143,73 @@ def test_plot_dispatchX_with_minimal_inputs():
     }
     fig = plot_dispatchX(inputs, results, z="BE_h2")
     out = _save_current_figure("plot_dispatchX")
+    assert out.exists() and out.stat().st_size > 0
+
+
+def test_plot_dispatchX_storage_capacity_gwh_scaling():
+    """Verify that plot_dispatchX correctly scales the storage level by
+    SectorXStorageCapacity to convert from p.u. to GWh.
+
+    New behaviour from the future_proof merge:
+        storageXcapacity = inputs['parameters']['SectorXStorageCapacity']['val'].item()
+        storage_level = results['OutputSectorXStorageLevel'][z] * storageXcapacity / 1000
+
+    We use a known capacity (2000 MWh = 2 GWh) and a storage level of 0.5 p.u.
+    and verify the function runs without errors (the actual GWh values are
+    rendered in the figure, not returned, so we can only assert no crash).
+    """
+    idx = pd.date_range("2023-01-01", periods=24, freq="h")
+    storage_capacity_mwh = 2000.0  # MWh → 2 GWh when /1000
+
+    inputs = {
+        "param_df": {
+            "Demand": pd.DataFrame(
+                {("DA", "BE"): np.full(24, 1000.0)}, index=idx
+            ),
+            "SectorXDemand": pd.DataFrame(
+                {"BE_h2": np.full(24, 100.0)}, index=idx
+            ),
+            "SectorXStorageCapacity": pd.DataFrame(
+                {"StorageCapacity": [storage_capacity_mwh]},
+                index=["BE_h2 - BATS"],
+            ),
+        },
+        # The new code reads from inputs['parameters']['SectorXStorageCapacity']
+        "parameters": {
+            "SectorXStorageCapacity": {
+                "val": np.array([storage_capacity_mwh]),
+            },
+        },
+        "sets": {"n": ["BE"], "nx": ["BE_h2"], "f": ["GAS"]},
+        "units": pd.DataFrame({
+            "Zone": ["BE"], "Technology": ["GTUR"], "Fuel": ["GAS"],
+            "Unit": ["BE - GTUR"], "Sector1": ["BE"],
+            "PowerCapacity": [1000], "PartLoadMin": [0.3],
+            "RampUp": [100], "RampDown": [100],
+            "StartUpCost": [0], "NoLoadCost": [0],
+            "MinUpTime": [1], "MinDownTime": [1],
+        }, index=["BE - GTUR"]),
+    }
+    results = {
+        "OutputPowerX": pd.DataFrame(
+            {"BE_h2 - GTUR": np.full(24, 50.0)}, index=idx,
+        ),
+        # Storage level in p.u. (0.5 → 0.5 * 2000 / 1000 = 1 GWh)
+        "OutputSectorXStorageLevel": pd.DataFrame(
+            {"BE_h2": np.full(24, 0.5)}, index=idx,
+        ),
+        "OutputSectorXStorageInput": pd.DataFrame(
+            {"BE_h2 - BATS": np.full(24, 5.0)}, index=idx,
+        ),
+        "OutputSectorXFlow": pd.DataFrame(
+            {"BE->BE_h2": np.full(24, 10.0)}, index=idx,
+        ),
+        "OutputXNotServed": pd.DataFrame(
+            {"BE_h2": np.zeros(24)}, index=idx,
+        ),
+    }
+    fig = plot_dispatchX(inputs, results, z="BE_h2")
+    out = _save_current_figure("plot_dispatchX_gwh_scaling")
     assert out.exists() and out.stat().st_size > 0
 
 
