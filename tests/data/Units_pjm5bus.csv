@@ -1,0 +1,6 @@
+,Unit,PowerCapacity,Nunits,Zone,Zone_th,Zone_h2,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost,NoLoadCost_pu,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,CHPPowerLossFactor,CHPMaxHeat,COP,Tnominal,coef_COP_a,coef_COP_b,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency,WaterWithdrawal,WaterConsumption,Sector1,EfficiencySector1,Sector2,EfficiencySector2
+0,PJM_Alta,40,1,PJM_B1,,,COMC,GAS,0.7143,0,0,1,1,0,0,0,0,,0,0.2,,,,,,,,,,,,,0,0,,,,
+1,PJM_ParkCity,170,1,PJM_B1,,,COMC,GAS,0.6667,0,0,1,1,0,0,0,0,,0,0.2,,,,,,,,,,,,,0,0,,,,
+2,PJM_Solitude,520,1,PJM_B3,,,COMC,GAS,0.3333,0,0,1,1,0,0,0,0,,0,0.2,,,,,,,,,,,,,0,0,,,,
+3,PJM_Sundance,200,1,PJM_B4,,,COMC,GAS,0.25,0,0,1,1,0,0,0,0,,0,0.2,,,,,,,,,,,,,0,0,,,,
+4,PJM_Brighton,600,1,PJM_B5,,,COMC,GAS,1.0,0,0,1,1,0,0,0,0,,0,0.2,,,,,,,,,,,,,0,0,,,,

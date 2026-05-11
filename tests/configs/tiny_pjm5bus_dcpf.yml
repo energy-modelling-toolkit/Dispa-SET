@@ -1,0 +1,144 @@
+# --------------------------------------------------------------------------- #
+# DC Power Flow test configuration: 5-bus PJM test system
+#
+# This config replicates the well-known PJM 5-bus academic test case from:
+#   F. Li and R. Bo, "Small test systems for power system economic studies,"
+#   IEEE PES General Meeting, Minneapolis, MN, 2010, pp. 1-4.
+#   doi: 10.1109/PES.2010.5589973
+#
+# The DC-OPF formulation is based on:
+#   A. Soroudi, "DC Optimal Power Flow (OPF) model", GitHub repository
+#   https://github.com/OptimizationExpert/GAMS-DC--OPF-
+#   Contributed by Dr. Alireza Soroudi, University College Dublin, Ireland.
+#
+# Network topology (GridData_pjm5bus.csv):
+#   PJM_B1 (slack, Alta+ParkCity generators)
+#     |── X=0.0281, Fmax=400 MW ──► PJM_B2 (300 MW load)
+#     |── X=0.0304, Fmax=1000 MW ─► PJM_B4 (400 MW load + Sundance gen)
+#     └── X=0.0064, Fmax=1000 MW ─► PJM_B5 (Brighton generator)
+#   PJM_B2 ── X=0.0108, Fmax=1000 MW ─► PJM_B3 (300 MW load + Solitude gen)
+#   PJM_B3 ── X=0.0297, Fmax=1000 MW ─► PJM_B4
+#   PJM_B4 ── X=0.0297, Fmax=240 MW ──► PJM_B5
+#
+# Generator merit order (marginal cost in $/MWh):
+#   Brighton   (PJM_B5): eff=1.000 →  10 $/MWh   (cheapest)
+#   Alta       (PJM_B1): eff=0.714 →  14 $/MWh
+#   ParkCity   (PJM_B1): eff=0.667 →  15 $/MWh
+#   Solitude   (PJM_B3): eff=0.333 →  30 $/MWh
+#   Sundance   (PJM_B4): eff=0.250 →  40 $/MWh   (most expensive)
+#   (Gas price = 10 $/MWh; eff calibrated so cost = GasPrice/eff)
+#
+# Key expected DC-OPF behavior:
+#   - Line PJM_B1→PJM_B2 congests at its 400 MW limit
+#   - Line PJM_B4→PJM_B5 congests at its 240 MW limit
+#   - Brighton (cheapest) is limited to ~518 MW instead of its 600 MW cap
+#   - More expensive Solitude and Sundance are committed to compensate
+#   Total demand: 1 + 300 + 300 + 400 + 1 = 1002 MW (PJM_B1 and PJM_B5 carry
+#   a 1 MW placeholder load; effective demand ≈ 1000 MW as in the reference)
+#
+# TransmissionGridType: 'DC-Power Flow' → PTDF-based line-flow constraints
+# --------------------------------------------------------------------------- #
+SimulationDirectory: 'output/sim_pjm5bus_dcpf'
+WriteExcel: 0
+WriteGDX: 1
+WritePickle: 1
+
+GAMS_folder: ''
+cplex_path: ''
+
+StartDate: !!python/tuple [2015, 1, 1, 0, 0, 0]
+StopDate:  !!python/tuple [2015, 1, 2, 0, 0, 0]      # 1 day (fast)
+HorizonLength: 3
+LookAhead: 0
+DataTimeStep: 1
+SimulationTimeStep: 1
+
+SimulationType: 'LP clustered'
+ReserveCalculation: 'Generic'
+AllowCurtailment: 1
+OptimalityGap: 0.001
+
+Demand:                 'data/Load_RealTime/##/2015.csv'
+RenewablesAF:           ''
+Outages:                ''
+ShareOfFlexibleDemand:  ''
+DemandFlexibility:      ''
+LoadShedding:           ''
+PowerPlantData:         'data/Units_pjm5bus.csv'
+NTC:                    ''
+Interconnections:       ''
+TransmissionGridType:   'DC-Power Flow'
+GridData:               'data/GridData_pjm5bus.csv'
+GeoData:                ''
+
+HydroScheduling:            'Off'
+HydroSchedulingHorizon:     'Annual'
+InitialFinalReservoirLevel: 1
+ReservoirLevels:            ''
+ReservoirLevelInitial:      ''
+ReservoirLevelFinal:        ''
+ReservoirScaledInflows:     ''
+StorageAlertLevels:         ''
+StorageFloodControl:        ''
+WaterValue:                 ''
+CostLoadShedding:           ''
+CostCurtailment:            ''
+CostOfSpillage:             ''
+ValueOfLostLoad:            ''
+PriceTransmission:          ''
+
+# Gas price set to 10 $/MWh (constant). Efficiencies in Units_pjm5bus.csv
+# are calibrated so that CostVariable = GasPrice / Efficiency matches the
+# DC-OPF.gms merit-order costs exactly.
+PriceOfGas:        'data/FuelPrice_GAS_pjm.csv'
+PriceOfBlackCoal:  ''
+PriceOfLignite:    ''
+PriceOfCO2:        ''
+PriceOfBiomass:    ''
+PriceOfFuelOil:    ''
+PriceOfNuclear:    ''
+PriceOfPeat:       ''
+PriceOfAmmonia:    ''
+
+ShareOfQuickStartUnits: ''
+Reserve2U:              ''
+Reserve2D:              ''
+PrimaryReserveLimit:    ''
+InertiaLimit:           ''
+FFRLimit:               ''
+FFRGainLimit:           ''
+FrequencyStability:     ''
+SystemGainLimit:        ''
+
+BoundarySectorData:             ''
+BoundarySectorNTC:              ''
+BoundarySectorInterconnections: ''
+SectorXDemand:                  ''
+SectorXFlexibleDemand:          ''
+SectorXFlexibleSupply:          ''
+SectorXReservoirLevels:         ''
+SectorXFloodControl:            ''
+BoundarySectorMaxSpillage:      ''
+
+zones: ['PJM_B1', 'PJM_B2', 'PJM_B3', 'PJM_B4', 'PJM_B5']
+mts_zones: ['PJM_B1', 'PJM_B2', 'PJM_B3', 'PJM_B4', 'PJM_B5']
+all_zones: ['PJM_B1', 'PJM_B2', 'PJM_B3', 'PJM_B4', 'PJM_B5']
+
+ReserveParticipation:
+  - COMC
+ReserveParticipation_CHP: []
+
+modifiers: {Demand: 1.0, Solar: 1.0, Wind: 1.0, Storage: 1.0}
+default:
+  ShareOfFlexibleDemand: 0
+  DemandFlexibility:     0
+  LoadShedding:          0.05
+  ReservoirLevelInitial: 0.5
+  ReservoirLevelFinal:   0.5
+  WaterValue:            100
+  CostLoadShedding:      1500
+  CostCurtailment:       20
+  CostOfSpillage:        1
+  ValueOfLostLoad:       100000
+  PriceTransmission:     0
+  PriceOfGas:            10
