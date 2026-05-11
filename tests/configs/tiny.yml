@@ -80,6 +80,11 @@ FFRLimit:               ''
 FFRGainLimit:           ''
 FrequencyStability:     ''
 SystemGainLimit:        ''
+aFRRUDemand:            ''
+aFRRDDemand:            ''
+mFRRUDemand:            ''
+FFRDemand:              ''
+FCRDemand:              ''
 
 # --- Boundary sector (fully empty here) ---
 BoundarySectorData:             ''
@@ -98,12 +103,14 @@ mts_zones: ['Z1']
 all_zones: ['Z1']
 
 ReserveParticipation:
-  - GTUR
-  - HDAM
-  - HPHS
-  - ICEN
-  - BATS
-ReserveParticipation_CHP: []
+  aFRRU: {GTUR: 1.0, HDAM: 1.0, HPHS: 1.0, ICEN: 1.0, BATS: 1.0}
+  aFRRD: {GTUR: 1.0, HDAM: 1.0, HPHS: 1.0, ICEN: 1.0, BATS: 1.0}
+  mFRRU: {GTUR: 1.0, HDAM: 1.0, HPHS: 1.0, ICEN: 1.0, BATS: 1.0}
+  FFRU: {BATS: 1.0}
+  FFRD: {BATS: 1.0}
+  FCRU: {GTUR: 1.0, HDAM: 1.0, ICEN: 1.0, BATS: 1.0}
+  FCRD: {GTUR: 1.0, HDAM: 1.0, ICEN: 1.0, BATS: 1.0}
+ReserveParticipation_CHP: {}
 
 # --- Default values (used when path is empty) ---
 # Demand: 0.015 keeps peak load (≈ 205 MW) below the firm gas CC capacity

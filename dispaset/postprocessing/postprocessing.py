@@ -438,6 +438,7 @@ def get_result_analysis(inputs, results, units='MWh'):
 
     for key in ['LostLoad_RampUp', 'LostLoad_aFRRD', 'LostLoad_MinPower',
                 'LostLoad_RampDown', 'LostLoad_aFRRU', 'LostLoad_mFRRU', 'LostLoad_Inertia', 'LostLoad_MaxPower',
+                'LostLoad_FFRU', 'LostLoad_FFRD', 'LostLoad_FCRU', 'LostLoad_FCRD',
                 'LostLoad_StorageLevelViolation']:
         if key == 'LostLoad_StorageLevelViolation':
             if isinstance(results[key], pd.Series):
@@ -733,7 +734,11 @@ def CostExPost(inputs, results):
 
     costs['LostLoad'] = 80e3 * (results['LostLoad_aFRRD'].reindex(timeindex).sum(axis=1).fillna(0) +
                                 results['LostLoad_aFRRU'].reindex(timeindex).sum(axis=1).fillna(0) +
-                                results['LostLoad_mFRRU'].reindex(timeindex).sum(axis=1).fillna(0) + 
+                                results['LostLoad_mFRRU'].reindex(timeindex).sum(axis=1).fillna(0) +
+                                results['LostLoad_FFRU'].reindex(timeindex).sum(axis=1).fillna(0) +
+                                results['LostLoad_FFRD'].reindex(timeindex).sum(axis=1).fillna(0) +
+                                results['LostLoad_FCRU'].reindex(timeindex).sum(axis=1).fillna(0) +
+                                results['LostLoad_FCRD'].reindex(timeindex).sum(axis=1).fillna(0) +
                                 results['LostLoad_Inertia'].reindex(timeindex).sum(axis=1).fillna(0)) +\
                         100e3 * (results['LostLoad_MaxPower'].reindex(timeindex).sum(axis=1).fillna(0) +
                                  results['LostLoad_MinPower'].reindex(timeindex).sum(axis=1).fillna(0)) + \
@@ -1075,61 +1080,99 @@ def Cashflows(inputs,results,unit):
     cashflows.fillna(0,inplace = True)
     return cashflows
 #%%
-def reserve_availability_demand(inputs,results):
+def reserve_availability_demand(inputs, results):
     """
-    this function evaluates the reserve demand and availability of all units
-    returns: hourly_availability : hourly availability over the corresponding hourly reserve demand in [%]
-    returns: availability        : the mean of hourly availability,
-                                   total hourly availability over total corresponding hourly reserve demand in [%]
-    returns: reserve_demand        mean demand over peak load
+    Evaluates reserve demand and availability for all reserve types.
+
+    Returns
+    -------
+    hourly_availability : dict
+        Keys = reserve type (e.g. 'aFRRU', 'mFRRU', 'FFRU', 'FCRU', 'aFRRD', 'FFRD', 'FCRD')
+        and aggregate keys 'Up' / 'Down'.
+        Values = DataFrame [unit × hour] in %.
+    availability : dict
+        Same keys; values = DataFrame [unit × ['mean','total']] in %.
+    reserve_demand : DataFrame
+        [zone × ['upwards','downwards']] — mean demand / peak load.
     """
-    
+    from dispaset.common import commons
+
     hourly_availability = {}
-    hourly_availability['aFRRU'] = pd.DataFrame()
-    hourly_availability['mFRRU'] = pd.DataFrame()
-    hourly_availability['Down'] = pd.DataFrame()
-    hourly_availability['Up'] = pd.DataFrame()
-    
-
-    total_up_reserves = pd.concat([results['OutputReserve_aFRRU'],results['OutputReserve_mFRRU']],axis=1)
-    total_up_reserves = total_up_reserves.groupby(level=0, axis=1).sum()
-
     availability = {}
-    availability['aFRRU'] = pd.DataFrame(0.0,index = results['OutputReserve_aFRRU'].columns, columns = ['mean','total'])
-    availability['mFRRU'] = pd.DataFrame(0.0,index = results['OutputReserve_mFRRU'].columns, columns = ['mean','total'])
-    availability['Down'] = pd.DataFrame(0.0,index = results['OutputReserve_aFRRD'].columns, columns = ['mean','total'])
-    availability['Up'] = pd.DataFrame(0.0,index = total_up_reserves.columns, columns = ['mean','total'])
-    
-    
-    for unit in results['OutputReserve_aFRRU'].columns:
-        zone = inputs['units'].at[unit,'Zone']
-        hourly_availability['aFRRU'][unit] = results['OutputReserve_aFRRU'][unit]/(inputs['param_df']['Demand']['aFRRU',zone]/2)*100
-        availability['aFRRU'].at[unit,'mean'] = hourly_availability['aFRRU'][unit].mean()
-        availability['aFRRU'].at[unit,'total'] = results['OutputReserve_aFRRU'][unit].sum()/(inputs['param_df']['Demand']['aFRRU',zone].sum()/2)*100
-        
-    for unit in results['OutputReserve_mFRRU'].columns:
-        zone = inputs['units'].at[unit,'Zone']
-        hourly_availability['mFRRU'][unit] = results['OutputReserve_mFRRU'][unit]/(inputs['param_df']['Demand']['mFRRU',zone]/2)*100
-        availability['mFRRU'].at[unit,'mean'] = hourly_availability['mFRRU'][unit].mean()
-        availability['mFRRU'].at[unit,'total'] = results['OutputReserve_mFRRU'][unit].sum()/(inputs['param_df']['Demand']['mFRRU',zone].sum()/2)*100
 
-    for unit in results['OutputReserve_aFRRD'].columns:
-        zone = inputs['units'].at[unit,'Zone']
-        hourly_availability['Down'][unit] = results['OutputReserve_aFRRD'][unit]/inputs['param_df']['Demand']['aFRRD',zone]*100
-        availability['Down'].at[unit,'mean'] = hourly_availability['Down'][unit].mean()
-        availability['Down'].at[unit,'total'] = results['OutputReserve_aFRRD'][unit].sum()/inputs['param_df']['Demand']['aFRRD',zone].sum()*100
+    res_up = commons.get('res_up', ['FFRU', 'FCRU', 'aFRRU', 'mFRRU'])
+    res_down = commons.get('res_down', ['FFRD', 'FCRD', 'aFRRD'])
+    all_types = res_up + res_down
 
-    for unit in total_up_reserves.columns:
-        zone = inputs['units'].at[unit,'Zone']
-        hourly_availability['Up'][unit] = total_up_reserves[unit]/inputs['param_df']['Demand']['aFRRU',zone]*100
-        availability['Up'].at[unit,'mean'] = hourly_availability['Up'][unit].mean()
-        availability['Up'].at[unit,'total'] = total_up_reserves[unit].sum()/inputs['param_df']['Demand']['aFRRU',zone].sum()*100
-    
-    reserve_demand = pd.DataFrame(0.0,index = inputs['config']['zones'], columns = ['upwards','downwards'])
+    for rt in all_types:
+        out_key = 'OutputReserve_' + rt
+        if out_key not in results or results[out_key] is None or results[out_key].empty:
+            continue
+        hourly_availability[rt] = pd.DataFrame()
+        availability[rt] = pd.DataFrame(0.0, index=results[out_key].columns,
+                                        columns=['mean', 'total'])
+        is_up = rt in res_up
+        for unit in results[out_key].columns:
+            zone = inputs['units'].at[unit, 'Zone']
+            try:
+                dem = inputs['param_df']['Demand'][rt, zone]
+            except KeyError:
+                continue
+            if dem.sum() == 0:
+                continue
+            # Upward reserves: normalise against demand/2 (legacy convention)
+            divisor = (dem / 2) if is_up else dem
+            hourly_availability[rt][unit] = results[out_key][unit] / divisor * 100
+            availability[rt].at[unit, 'mean'] = hourly_availability[rt][unit].mean()
+            availability[rt].at[unit, 'total'] = (
+                results[out_key][unit].sum() / divisor.sum() * 100
+            )
+
+    # Aggregate 'Up' (aFRRU + mFRRU combined, legacy)
+    up_keys = [k for k in ('aFRRU', 'mFRRU') if 'OutputReserve_' + k in results
+               and not results['OutputReserve_' + k].empty]
+    if up_keys:
+        total_up_reserves = pd.concat(
+            [results['OutputReserve_' + k] for k in up_keys], axis=1
+        )
+        total_up_reserves = total_up_reserves.T.groupby(level=0).sum().T
+        hourly_availability['Up'] = pd.DataFrame()
+        availability['Up'] = pd.DataFrame(0.0, index=total_up_reserves.columns,
+                                          columns=['mean', 'total'])
+        for unit in total_up_reserves.columns:
+            zone = inputs['units'].at[unit, 'Zone']
+            try:
+                dem = inputs['param_df']['Demand']['aFRRU', zone]
+            except KeyError:
+                continue
+            if dem.sum() == 0:
+                continue
+            hourly_availability['Up'][unit] = total_up_reserves[unit] / dem * 100
+            availability['Up'].at[unit, 'mean'] = hourly_availability['Up'][unit].mean()
+            availability['Up'].at[unit, 'total'] = (
+                total_up_reserves[unit].sum() / dem.sum() * 100
+            )
+
+    # Aggregate 'Down' (aFRRD legacy alias)
+    if 'aFRRD' in hourly_availability:
+        hourly_availability['Down'] = hourly_availability['aFRRD']
+        availability['Down'] = availability['aFRRD']
+
+    reserve_demand = pd.DataFrame(0.0, index=inputs['config']['zones'],
+                                  columns=['upwards', 'downwards'])
     for zone in inputs['config']['zones']:
-        reserve_demand.at[zone,'upwards'] = inputs['param_df']['Demand']['aFRRU',zone].mean()/inputs['param_df']['Demand']['DA',zone].max()
-        reserve_demand.at[zone,'downwards'] = inputs['param_df']['Demand']['aFRRD',zone].mean()/inputs['param_df']['Demand']['DA',zone].max()
-        
+        try:
+            peak = inputs['param_df']['Demand']['DA', zone].max()
+            if peak > 0:
+                reserve_demand.at[zone, 'upwards'] = (
+                    inputs['param_df']['Demand']['aFRRU', zone].mean() / peak
+                )
+                reserve_demand.at[zone, 'downwards'] = (
+                    inputs['param_df']['Demand']['aFRRD', zone].mean() / peak
+                )
+        except KeyError:
+            pass
+
     return hourly_availability, availability, reserve_demand
 
 #%%
@@ -1705,3 +1748,118 @@ def group_contingencies_data(
         raise ValueError("Unrecognized method: use hierarchical | dbscan | greedy | round")
 
     return df_sorted
+
+
+# ============================================================
+# Reserve summary helpers (Phase 5)
+# ============================================================
+
+def get_reserve_summary(inputs, results):
+    """
+    Returns a per-zone summary of reserve provision, demand and lost-load for
+    all 7 reserve types.
+
+    Parameters
+    ----------
+    inputs  : dict  (output of build_simulation)
+    results : dict  (output of get_result_analysis)
+
+    Returns
+    -------
+    summary : dict  {reserve_type: DataFrame[zone × ['provision_MWh','demand_MWh','lostload_MWh']]}
+    """
+    from dispaset.common import commons
+    res_types = commons.get('types_Reserves', ['FFRU', 'FCRU', 'aFRRU', 'mFRRU', 'FFRD', 'FCRD', 'aFRRD'])
+    zones = inputs['config']['zones']
+    units = inputs['units']
+
+    summary = {}
+    for rt in res_types:
+        out_key = 'OutputReserve_' + rt
+        ll_key = 'LostLoad_' + rt
+        row = pd.DataFrame(0.0, index=zones, columns=['provision_MWh', 'demand_MWh', 'lostload_MWh'])
+
+        for zone in zones:
+            zone_units = units[units['Zone'] == zone].index
+
+            # Provision
+            if out_key in results and results[out_key] is not None and not results[out_key].empty:
+                cols = [u for u in results[out_key].columns if u in zone_units]
+                if cols:
+                    row.at[zone, 'provision_MWh'] = results[out_key][cols].values.sum()
+
+            # Demand
+            try:
+                row.at[zone, 'demand_MWh'] = inputs['param_df']['Demand'][rt, zone].sum()
+            except (KeyError, TypeError):
+                pass
+
+            # Lost load
+            if ll_key in results and results[ll_key] is not None and not results[ll_key].empty:
+                if zone in results[ll_key].columns:
+                    row.at[zone, 'lostload_MWh'] = results[ll_key][zone].sum()
+
+        summary[rt] = row
+
+    return summary
+
+
+def plot_reserve_provision(inputs, results, zone=None):
+    """
+    Returns hourly reserve provision and demand per reserve type, suitable for
+    stacked-bar visualisation in Streamlit / Plotly.
+
+    Parameters
+    ----------
+    inputs  : dict
+    results : dict
+    zone    : str or None  — filter to a specific zone; None = system-wide total.
+
+    Returns
+    -------
+    provision_df : DataFrame  [hour × reserve_type]  (MWh)
+    demand_df    : DataFrame  [hour × reserve_type]  (MWh)
+    """
+    from dispaset.common import commons
+    res_types = commons.get('types_Reserves', ['FFRU', 'FCRU', 'aFRRU', 'mFRRU', 'FFRD', 'FCRD', 'aFRRD'])
+    units = inputs['units']
+
+    provision_parts = {}
+    demand_parts = {}
+
+    for rt in res_types:
+        out_key = 'OutputReserve_' + rt
+        if out_key not in results or results[out_key] is None or results[out_key].empty:
+            continue
+
+        if zone is not None:
+            zone_units = units[units['Zone'] == zone].index
+            cols = [u for u in results[out_key].columns if u in zone_units]
+        else:
+            cols = list(results[out_key].columns)
+
+        if cols:
+            provision_parts[rt] = results[out_key][cols].sum(axis=1)
+        else:
+            provision_parts[rt] = pd.Series(0.0, index=results[out_key].index)
+
+        # Demand
+        try:
+            if zone is not None:
+                demand_parts[rt] = inputs['param_df']['Demand'][rt, zone]
+            else:
+                series_list = []
+                for z in inputs['config']['zones']:
+                    try:
+                        series_list.append(inputs['param_df']['Demand'][rt, z])
+                    except KeyError:
+                        pass
+                if series_list:
+                    demand_parts[rt] = sum(series_list)
+        except (KeyError, TypeError):
+            pass
+
+    provision_df = pd.DataFrame(provision_parts) if provision_parts else pd.DataFrame()
+    demand_df = pd.DataFrame(demand_parts) if demand_parts else pd.DataFrame()
+
+    return provision_df, demand_df

@@ -9,7 +9,8 @@ import logging # Added for logging potential issues
 from .postprocessing import (
     filter_by_zone, get_imports, filter_by_tech_list,
     get_result_analysis, filter_by_storage,
-    filter_sector # Added filter_sector potentially needed
+    filter_sector, # Added filter_sector potentially needed
+    get_reserve_summary, plot_reserve_provision
 )
 from .plot import (
     plot_rug, plot_dispatchX, plot_power_flow_tracing_matrix,
@@ -489,6 +490,135 @@ def build_data_explorer_tab(inputs, results):
 def run_and_get_analysis(_inputs, _results):
      return get_result_analysis(_inputs, _results)
 
+def build_reserves_tab(inputs, results):
+    """Displays reserve provision, demand and shortfall for all 7 reserve types."""
+    import plotly.graph_objects as go
+
+    st.header("Reserve Analysis")
+
+    # Zone selector
+    all_zones = sorted(inputs['sets']['n'])
+    zone = st.selectbox("Select zone (or 'All' for system-wide totals)",
+                        ['All'] + all_zones, key='reserves_zone')
+    selected_zone = None if zone == 'All' else zone
+
+    # Date range slider (reuse index from any OutputReserve key)
+    index = None
+    for k, v in results.items():
+        if k.startswith('OutputReserve_') and hasattr(v, 'index') and len(v.index) > 0:
+            index = v.index
+            break
+    if index is not None and len(index) > 1:
+        min_d = index[0].date() if hasattr(index[0], 'date') else index[0]
+        max_d = index[-1].date() if hasattr(index[-1], 'date') else index[-1]
+        date_range = st.date_input("Date range", value=(min_d, max_d),
+                                   min_value=min_d, max_value=max_d,
+                                   key='reserves_date_range')
+        if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
+            start_d, end_d = pd.Timestamp(date_range[0]), pd.Timestamp(date_range[1])
+        else:
+            start_d, end_d = index[0], index[-1]
+    else:
+        start_d, end_d = None, None
+
+    # --- Provision vs Demand stacked bar (daily resolution) ---
+    st.subheader("Hourly Reserve Provision vs Demand")
+    try:
+        provision_df, demand_df = plot_reserve_provision(inputs, results, zone=selected_zone)
+        if start_d is not None and not provision_df.empty:
+            provision_df = provision_df.loc[start_d:end_d]
+            demand_df = demand_df.loc[start_d:end_d] if not demand_df.empty else demand_df
+
+        if not provision_df.empty:
+            fig_prov = go.Figure()
+            colors_cycle = px.colors.qualitative.Plotly
+            for i, col in enumerate(provision_df.columns):
+                fig_prov.add_trace(go.Bar(
+                    x=provision_df.index, y=provision_df[col],
+                    name=col + ' (provision)',
+                    marker_color=colors_cycle[i % len(colors_cycle)]
+                ))
+            if not demand_df.empty:
+                for i, col in enumerate(demand_df.columns):
+                    if col in provision_df.columns:
+                        fig_prov.add_trace(go.Scatter(
+                            x=demand_df.index, y=demand_df[col],
+                            name=col + ' (demand)', mode='lines',
+                            line=dict(color=colors_cycle[i % len(colors_cycle)], dash='dash')
+                        ))
+            fig_prov.update_layout(
+                barmode='stack', height=450,
+                xaxis_title='Hour', yaxis_title='MW',
+                legend=dict(orientation='h', yanchor='bottom', y=1.02)
+            )
+            st.plotly_chart(fig_prov, use_container_width=True)
+        else:
+            st.info("No reserve provision data available for the selected scope.")
+    except Exception as exc:
+        st.error(f"Could not build provision chart: {exc}")
+        logging.exception("build_reserves_tab provision chart error")
+
+    # --- Summary table ---
+    st.subheader("Reserve Summary (MWh totals per zone)")
+    try:
+        summary = get_reserve_summary(inputs, results)
+        if summary:
+            all_rows = []
+            for rt, df in summary.items():
+                df_tmp = df.copy()
+                df_tmp.insert(0, 'Reserve Type', rt)
+                df_tmp.index.name = 'Zone'
+                all_rows.append(df_tmp.reset_index())
+            if all_rows:
+                summary_df = pd.concat(all_rows, ignore_index=True)
+                summary_df = summary_df.set_index(['Reserve Type', 'Zone'])
+                st.dataframe(summary_df.style.format('{:.0f}'), use_container_width=True)
+            else:
+                st.info("No reserve summary data available.")
+        else:
+            st.info("No reserve summary data available.")
+    except Exception as exc:
+        st.error(f"Could not build summary table: {exc}")
+        logging.exception("build_reserves_tab summary error")
+
+    # --- Lost-load bar per reserve type ---
+    st.subheader("Reserve Lost-Load per Zone")
+    try:
+        from dispaset.common import commons as _commons
+        res_types = _commons.get('types_Reserves', [])
+        ll_data = {}
+        zones_to_show = [selected_zone] if selected_zone else all_zones
+        for rt in res_types:
+            ll_key = 'LostLoad_' + rt
+            if ll_key not in results or results[ll_key] is None or results[ll_key].empty:
+                continue
+            row = {}
+            for z in zones_to_show:
+                if z in results[ll_key].columns:
+                    row[z] = results[ll_key][z].sum()
+                else:
+                    row[z] = 0.0
+            ll_data[rt] = row
+        if ll_data:
+            ll_df = pd.DataFrame(ll_data).T  # reserve_type × zone
+            ll_df = ll_df[ll_df.sum(axis=1) > 0]  # only types with shortfall
+            if not ll_df.empty:
+                fig_ll = px.bar(ll_df.T.reset_index().melt(id_vars='index',
+                                                            var_name='Reserve Type',
+                                                            value_name='Lost Load (MWh)'),
+                                x='index', y='Lost Load (MWh)', color='Reserve Type',
+                                barmode='group', labels={'index': 'Zone'},
+                                title='Reserve Lost Load per Zone and Type')
+                st.plotly_chart(fig_ll, use_container_width=True)
+            else:
+                st.success("No reserve shortfall detected.")
+        else:
+            st.success("No reserve shortfall detected.")
+    except Exception as exc:
+        st.error(f"Could not build lost-load chart: {exc}")
+        logging.exception("build_reserves_tab lostload error")
+
+
 def build_streamlit_app(inputs, results, indicators):
     """Builds the main Streamlit application UI using tabs."""
 
@@ -500,9 +630,9 @@ def build_streamlit_app(inputs, results, indicators):
     analysis_results = run_and_get_analysis(inputs, results) # Use cached wrapper
 
     # Define Tabs
-    tab_overview, tab_zone, tab_network, tab_unit, tab_explorer = st.tabs([
+    tab_overview, tab_zone, tab_network, tab_unit, tab_explorer, tab_reserves = st.tabs([
         "Overview", "Zone Analysis", "Network Analysis", "Unit Analysis",
-        "Data Explorer"
+        "Data Explorer", "Reserves"
     ])
 
     # Build Tabs
@@ -523,4 +653,7 @@ def build_streamlit_app(inputs, results, indicators):
         build_unit_analysis_tab(inputs, results, indicators, analysis_results)
 
     with tab_explorer:
-        build_data_explorer_tab(inputs, results) 
+        build_data_explorer_tab(inputs, results)
+
+    with tab_reserves:
+        build_reserves_tab(inputs, results)

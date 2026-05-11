@@ -571,38 +571,40 @@ def check_heat_demand(plants, data, zones_th):
     return True
 
 
+def check_reserve_demand(demand_df, reserve_type, Load):
+    """
+    Check validity of a reserve requirement time series for a single reserve type.
+
+    :param demand_df:     DataFrame with the reserve demand (columns = zones)
+    :param reserve_type:  String label of the reserve type (e.g. 'aFRRU', 'mFRRU')
+    :param Load:          DataFrame of zone load time series
+    """
+    for z in Load.columns:
+        if z in demand_df.columns:
+            if (demand_df[z] < 0).any():
+                msg = f'The reserve {reserve_type} table contains negative values for zone {z}'
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
+            if (Load[z] - demand_df[z] < 0).any():
+                msg = f'The reserve {reserve_type} table contains values higher than demand for zone {z}'
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
+        else:
+            logging.warning(f'No {reserve_type} reserve requirement data has been found for zone {z}. '
+                            f'Using the standard formula')
+
+
 def check_reserves(aFRRDDemand, aFRRUDemand, Load):
     """
-    Function that checks the validity of the reserve requirement time series
+    Function that checks the validity of the reserve requirement time series.
+    Kept for backward compatibility; delegates to check_reserve_demand().
+
     :param aFRRDDemand:   DataFrame of reserves aFRRD
     :param aFRRUDemand:   DataFrame of reserves aFRRU
     :param Load:        DataFrame of Loads
     """
-    for z in Load.columns:
-        if z in aFRRUDemand:
-            if (aFRRUDemand[z] < 0).any():
-                msg = 'The reserve aFRRU table contains negative values for zone ' + z
-                logging.critical(msg)
-                raise DispaSETValidationError(msg)
-            if (Load[z] - aFRRUDemand[z] < 0).any():
-                msg = 'The reserve aFRRU table contains values higher than demand for zone ' + z
-                logging.critical(msg)
-                raise DispaSETValidationError(msg)
-        else:
-            logging.warning('No aFRRU reserve requirement data has been found for zone ' + z +
-                            '. Using the standard formula')
-        if z in aFRRDDemand:
-            if (aFRRDDemand[z] < 0).any():
-                msg = 'The reserve aFRRD table contains negative values for zone ' + z
-                logging.critical(msg)
-                raise DispaSETValidationError(msg)
-            if (Load[z] - aFRRDDemand[z] < 0).any():
-                msg = 'The reserve aFRRD table contains values higher than demand for zone ' + z
-                logging.critical(msg)
-                raise DispaSETValidationError(msg)
-        else:
-            logging.warning('No aFRRD reserve requirement data has been found for zone ' + z +
-                            '. Using the standard formula')
+    check_reserve_demand(aFRRUDemand, 'aFRRU', Load)
+    check_reserve_demand(aFRRDDemand, 'aFRRD', Load)
 
 def check_FFRDemand(FFRDemand, Load):
     """

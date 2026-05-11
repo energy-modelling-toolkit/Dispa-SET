@@ -60,8 +60,13 @@ commons['tech_bs2p'] = ['BSPG']
 commons['tech_boundary_sector'] = ['BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP', 'HOBOX', 'P2BS']#MARCO , 'HDAMC', 'HRORC'
 # List of CHP types:
 commons['types_CHP'] = ['extraction', 'back-pressure', 'p2h']
-# List of Reserve types:
-commons['types_Reserves'] = ['PFR', 'FFR', 'aFRRU', 'aFRRD', 'mFRRU', 'RR']
+# List of Reserve types (must match GAMS sets res_U + res_D in UCM.gms):
+commons['types_Reserves'] = ['FFRU', 'FCRU', 'aFRRU', 'mFRRU', 'FFRD', 'FCRD', 'aFRRD']
+# Reserve types sub-sets
+commons['res_up'] = ['FFRU', 'FCRU', 'aFRRU', 'mFRRU']
+commons['res_down'] = ['FFRD', 'FCRD', 'aFRRD']
+# Reserve types that default to the aFRR demand calculation when using non-Exogenous ReserveCalculation:
+commons['res_afrr_default'] = ['aFRRU', 'aFRRD', 'mFRRU']
 # DispaSET fuels:
 commons['Fuels'] = ['AIR', 'AMO', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH',
                     'GEO', 'HYD', 'WHT', 'ELE', 'THE']

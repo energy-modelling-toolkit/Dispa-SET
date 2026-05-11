@@ -340,6 +340,46 @@
         }
         .checkbox-group label .tooltiptext { display: none; } /* Hide tooltip */
 
+        /* Reserve participation matrix table */
+        .reserve-matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+            margin-top: 8px;
+        }
+        .reserve-matrix-table th {
+            background: var(--primary-color, #4a90d9);
+            color: #fff;
+            padding: 6px 4px;
+            text-align: center;
+            white-space: nowrap;
+            font-size: 0.82em;
+        }
+        .reserve-matrix-table th:first-child {
+            text-align: left;
+            padding-left: 8px;
+        }
+        .reserve-matrix-table td {
+            padding: 3px 4px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+        .reserve-matrix-table td:first-child {
+            text-align: left;
+            padding-left: 8px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .reserve-matrix-table tr:hover td { background: #f5f8ff; }
+        .reserve-matrix-table input[type=number] {
+            width: 56px;
+            padding: 2px 4px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+
         .radio-item,
         .checkbox-item {
             display: inline-flex;
@@ -989,6 +1029,14 @@
                     </div>
                     <div class="col">
                          <div class="form-group">
+                            <label for="mfrrudemand">Manual Frequency Restoration Reserve Upwards Demand (mFRRU)<span class="tooltiptext">Table with the manual FRR upward requirements for each zone. Used if ReserveCalculation=Exogenous. Defaults to aFRRU demand if not provided. Use '##' for zone placeholder.</span></label>
+                            <input type="text" id="mfrrudemand" placeholder="e.g., mFRRU_req.csv">
+                        </div>
+                    </div>
+                 </div>
+                <div class="row">
+                    <div class="col">
+                         <div class="form-group">
                             <label for="systeminertiademand">System Inertia Demand<span class="tooltiptext">Minimum system inertia requirement. Can be a file path (time series) or a single value if default is used.</span></label>
                             <input type="text" id="systeminertiademand" placeholder="e.g., SystemInertia_req.csv">
                             <div class="default-value" data-default="">
@@ -997,6 +1045,7 @@
                             </div>
                         </div>
                     </div>
+                    <div class="col"></div>
                  </div>
                 <h3><h3>System Frequency Stability</h3></h3>
                  <div class="row">
@@ -1019,25 +1068,25 @@
                         </div>
                     </div>
                  </div>
-                <h3>Reserve Participation</h3>
-                 <div class="row">
-                     <div class="col">
-                        <div class="form-group">
-                            <label>Conventional/Storage Unit Participation<span class="tooltiptext">List of conventional/storage unit technologies participating in secondary reserves.</span></label>
-                            <div id="reserveParticipation" class="checkbox-group">
-                                <!-- Reserve participation options will be added here -->
-                            </div>
-                        </div>
+                <h3>Reserve Participation<span class="tooltiptext">For each technology, enter a participation factor between 0 and 1 for each reserve type (empty = 0, i.e. not participating). Renewables participate by default at factor 1.0 for non-FFR types.</span></h3>
+                <div class="form-group">
+                    <label>Conventional &amp; Storage Technologies</label>
+                    <div style="overflow-x:auto;">
+                        <table class="reserve-matrix-table" id="reserveParticipationTable">
+                            <thead><tr id="reserveParticipationHeader"></tr></thead>
+                            <tbody id="reserveParticipationBody"></tbody>
+                        </table>
                     </div>
-                     <div class="col">
-                         <div class="form-group">
-                            <label>CHP Unit Participation<span class="tooltiptext">List of CHP unit technologies participating in secondary reserves.</span></label>
-                            <div id="reserveParticipation_CHP" class="checkbox-group">
-                                <!-- CHP Reserve participation options will be added here -->
-                            </div>
-                        </div>
+                </div>
+                <div class="form-group" style="margin-top:16px;">
+                    <label>CHP Technologies</label>
+                    <div style="overflow-x:auto;">
+                        <table class="reserve-matrix-table" id="reserveParticipationCHPTable">
+                            <thead><tr id="reserveParticipationCHPHeader"></tr></thead>
+                            <tbody id="reserveParticipationCHPBody"></tbody>
+                        </table>
                     </div>
-                 </div>
+                </div>
             </div>
 
             <!-- Sector Coupling Tab -->
@@ -1220,6 +1269,7 @@
             'afrrdemandu': 'aFRRUDemand',  // aFRR Up
             'afrrdemandd': 'aFRRDDemand',  // aFRR Down
             'fcrdemand': 'FCRDemand',  // FCR
+            'mfrrudemand': 'mFRRUDemand',  // mFRR Up
             // Boundary Sector
             'costxnotserved': 'CostXNotServed',
             'boundarysectordata': 'BoundarySectorData',
@@ -1286,7 +1336,18 @@
             'loadshedding': 'LoadShedding'
         };
 
-        // Reserve participation options
+        // Reserve types (column headers for participation matrix)
+        const RESERVE_TYPES = ['FFRU', 'FFRD', 'FCRU', 'FCRD', 'aFRRU', 'aFRRD', 'mFRRU'];
+        const RESERVE_TYPE_TITLES = {
+            'FFRU': 'Fast Frequency Reserve Up',
+            'FFRD': 'Fast Frequency Reserve Down',
+            'FCRU': 'Frequency Containment Reserve Up',
+            'FCRD': 'Frequency Containment Reserve Down',
+            'aFRRU': 'Automatic Frequency Restoration Reserve Up',
+            'aFRRD': 'Automatic Frequency Restoration Reserve Down',
+            'mFRRU': 'Manual Frequency Restoration Reserve Up'
+        };
+        // Reserve participation options (rows)
         const reserveOptions = [
             'COMC', 'GTUR', 'HDAM', 'HPHS', 'ICEN', 'CAES', 'BATS', 'BEVS', 
             'P2HT', 'ABHP', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE', 'STUR'
@@ -1331,8 +1392,8 @@
             });
 
             setupTabs();
-            initializeReserveOptions('reserveParticipation', reserveOptions);
-            initializeReserveOptions('reserveParticipation_CHP', reserveOptionsCHP);
+            initializeReserveMatrix('reserveParticipationHeader', 'reserveParticipationBody', reserveOptions);
+            initializeReserveMatrix('reserveParticipationCHPHeader', 'reserveParticipationCHPBody', reserveOptionsCHP);
             initializeZones(); // Initialize with defaults before loading
 
             // Event Listeners
@@ -1529,27 +1590,47 @@
             }
         }
         
-        // Initialize reserve participation options
-        function initializeReserveOptions(containerId, options) {
-            const container = document.getElementById(containerId);
-            
-            options.forEach(option => {
-                const checkboxItem = document.createElement('div');
-                checkboxItem.className = 'checkbox-item';
-                
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = 'reserve_' + option;
-                checkbox.value = option;
-                
-                const label = document.createElement('label');
-                label.htmlFor = 'reserve_' + option;
-                label.textContent = option;
-                
-                checkboxItem.appendChild(checkbox);
-                checkboxItem.appendChild(label);
-                
-                container.appendChild(checkboxItem);
+        // Initialize a reserve participation matrix table (header + body)
+        function initializeReserveMatrix(headerId, bodyId, techOptions) {
+            const headerRow = document.getElementById(headerId);
+            const tbody = document.getElementById(bodyId);
+            if (!headerRow || !tbody) return;
+
+            // Build header
+            headerRow.innerHTML = '';
+            const thTech = document.createElement('th');
+            thTech.textContent = 'Technology';
+            headerRow.appendChild(thTech);
+            RESERVE_TYPES.forEach(rt => {
+                const th = document.createElement('th');
+                th.textContent = rt;
+                th.title = RESERVE_TYPE_TITLES[rt] || rt;
+                headerRow.appendChild(th);
+            });
+
+            // Build rows
+            tbody.innerHTML = '';
+            techOptions.forEach(tech => {
+                const tr = document.createElement('tr');
+                const tdTech = document.createElement('td');
+                tdTech.textContent = tech;
+                tr.appendChild(tdTech);
+                RESERVE_TYPES.forEach(rt => {
+                    const td = document.createElement('td');
+                    const inp = document.createElement('input');
+                    inp.type = 'number';
+                    inp.min = 0;
+                    inp.max = 1;
+                    inp.step = 0.05;
+                    inp.placeholder = '-';
+                    inp.dataset.tech = tech;
+                    inp.dataset.resType = rt;
+                    // Distinguish CHP vs conventional via bodyId
+                    inp.dataset.rpKey = bodyId.includes('CHP') ? 'ReserveParticipation_CHP' : 'ReserveParticipation';
+                    td.appendChild(inp);
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
             });
         }
         
@@ -1742,15 +1823,32 @@
                 addZoneEntry(zonesContainer, zone, isActive, isMTS);
             });
             
-            // Handle reserve participation
-            if (yamlData.ReserveParticipation && Array.isArray(yamlData.ReserveParticipation)) {
-                yamlData.ReserveParticipation.forEach(item => {
-                    const checkbox = document.getElementById(`reserve_${item}`);
-                    if (checkbox) {
-                        checkbox.checked = true;
+            // Handle reserve participation (nested dict or legacy flat list)
+            function _populateReserveMatrix(rpData, rpKey) {
+                if (!rpData) return;
+                let nestedDict = rpData;
+                // Legacy flat list: treat as aFRRU + aFRRD + mFRRU at factor 1.0
+                if (Array.isArray(rpData)) {
+                    nestedDict = {};
+                    ['aFRRU', 'aFRRD', 'mFRRU'].forEach(rt => {
+                        nestedDict[rt] = {};
+                        rpData.forEach(tech => { nestedDict[rt][tech] = 1.0; });
+                    });
+                }
+                if (typeof nestedDict !== 'object') return;
+                for (const [rt, techFactors] of Object.entries(nestedDict)) {
+                    if (typeof techFactors !== 'object' || Array.isArray(techFactors)) continue;
+                    for (const [tech, factor] of Object.entries(techFactors)) {
+                        const inputs = document.querySelectorAll(
+                            `input[data-rp-key='${rpKey}'][data-tech='${tech}'][data-res-type='${rt}']`);
+                        inputs.forEach(inp => {
+                            inp.value = factor;
+                        });
                     }
-                });
+                }
             }
+            _populateReserveMatrix(yamlData.ReserveParticipation, 'ReserveParticipation');
+            _populateReserveMatrix(yamlData.ReserveParticipation_CHP, 'ReserveParticipation_CHP');
             
             // Handle default values
             if (yamlData.default && typeof yamlData.default === 'object') {
@@ -1919,29 +2017,23 @@
                 formData.all_zones = allZones;
             }
             
-            // Collect reserve participation
-            const selectedReserves = [];
-            document.querySelectorAll('input[id^="reserve_"]:checked').forEach(checkbox => {
-                selectedReserves.push(checkbox.value);
-            });
-            if (selectedReserves.length > 0) {
-                formData.ReserveParticipation = selectedReserves;
-            } else {
-                // Keep an empty array even if no reserves are selected
-                formData.ReserveParticipation = [];
+            // Collect reserve participation matrices into nested dicts
+            function _collectReserveMatrix(rpKey) {
+                const result = {};
+                document.querySelectorAll(`input[data-rp-key='${rpKey}']`).forEach(inp => {
+                    const val = inp.value.trim();
+                    if (val === '' || val === null) return;
+                    const factor = parseFloat(val);
+                    if (isNaN(factor) || factor === 0) return;
+                    const rt = inp.dataset.resType;
+                    const tech = inp.dataset.tech;
+                    if (!result[rt]) result[rt] = {};
+                    result[rt][tech] = factor;
+                });
+                return result;
             }
-            
-            // Collect CHP reserve participation
-            const selectedCHPReserves = [];
-            document.querySelectorAll('#reserveParticipation_CHP input[type="checkbox"]:checked').forEach(checkbox => {
-                selectedCHPReserves.push(checkbox.value);
-            });
-            if (selectedCHPReserves.length > 0) {
-                formData.ReserveParticipation_CHP = selectedCHPReserves;
-            } else {
-                // Keep an empty array even if no CHP reserves are selected
-                formData.ReserveParticipation_CHP = [];
-            }
+            formData.ReserveParticipation = _collectReserveMatrix('ReserveParticipation');
+            formData.ReserveParticipation_CHP = _collectReserveMatrix('ReserveParticipation_CHP');
             
             // Collect default values
             const defaultValues = {};

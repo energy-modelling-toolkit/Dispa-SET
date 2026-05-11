@@ -89,6 +89,7 @@ def test_recursive_reserve_demands_affect_dispatch_with_battery():
         "aFRRDDemand": _write_reserve_profile(demand_dir / "aFRRDDemand.csv", base_index, 2.0),
         "FFRDemand": _write_reserve_profile(demand_dir / "FFRDemand.csv", base_index, 1.0),
         "FCRDemand": _write_reserve_profile(demand_dir / "FCRDemand.csv", base_index, 1.5),
+        "mFRRUDemand": _write_reserve_profile(demand_dir / "mFRRUDemand.csv", base_index, 1.0),
     }
 
     cumulative_steps = [
@@ -97,13 +98,14 @@ def test_recursive_reserve_demands_affect_dispatch_with_battery():
         ["aFRRUDemand", "aFRRDDemand"],
         ["aFRRUDemand", "aFRRDDemand", "FFRDemand"],
         ["aFRRUDemand", "aFRRDDemand", "FFRDemand", "FCRDemand"],
+        ["aFRRUDemand", "aFRRDDemand", "FFRDemand", "FCRDemand", "mFRRUDemand"],
     ]
 
     run_data = []
     for i, enabled in enumerate(cumulative_steps):
         cfg = load_test_config("tiny.yml", f"reserves_recursive_{i}")
         cfg["ReserveCalculation"] = "Exogenous"
-        for k in ("aFRRUDemand", "aFRRDDemand", "FFRDemand", "FCRDemand"):
+        for k in ("aFRRUDemand", "aFRRDDemand", "FFRDemand", "FCRDemand", "mFRRUDemand"):
             cfg[k] = files[k] if k in enabled else ""
 
         out = build_solve(cfg)
@@ -138,6 +140,51 @@ def test_recursive_reserve_demands_affect_dispatch_with_battery():
         assert len(schema) == len(set(schema)), "OutputReserveProvision has duplicate columns"
         assert all(col.startswith("(") and col.endswith(")") for col in schema), (
             "OutputReserveProvision columns are not in the expected tuple-like format"
+        )
+
+
+@pytest.mark.timeout(240)
+def test_nested_dict_participation_config():
+    """
+    Verify that the nested-dict ReserveParticipation format is correctly parsed
+    and that only BATS units participate in FFRU when configured that way.
+    """
+    skip_if_no_gams()
+
+    cfg = load_test_config("tiny.yml", "reserves_nested_dict")
+    cfg["ReserveCalculation"] = "Exogenous"
+    cfg["ReserveParticipation"] = {
+        "aFRRU": {"GTUR": 1.0, "BATS": 1.0},
+        "aFRRD": {"GTUR": 1.0, "BATS": 1.0},
+        "mFRRU": {"GTUR": 1.0, "BATS": 1.0},
+        "FFRU":  {"BATS": 1.0},
+        "FFRD":  {"BATS": 1.0},
+    }
+
+    demand_dir = Path(cfg["SimulationDirectory"]).parent / "reserve_demands_nested"
+    demand_dir.mkdir(parents=True, exist_ok=True)
+    base_index = pd.date_range(
+        start=pd.Timestamp(*cfg["StartDate"]),
+        end=pd.Timestamp(*cfg["StopDate"]) + pd.Timedelta(hours=23) + pd.Timedelta(days=cfg["LookAhead"]),
+        freq="h",
+    )
+    cfg["aFRRUDemand"] = _write_reserve_profile(demand_dir / "aFRRUDemand.csv", base_index, 2.0)
+    cfg["FFRDemand"] = _write_reserve_profile(demand_dir / "FFRDemand.csv", base_index, 0.5)
+
+    out = build_solve(cfg)
+    results = out["results"]
+
+    # Model should solve without error
+    assert "OutputPower" in results, "OutputPower not in results — build/solve failed"
+
+    # FFRU reserve provision should come only from BATS units
+    if "OutputReserve_FFRU" in results and not results["OutputReserve_FFRU"].empty:
+        ffru_df = results["OutputReserve_FFRU"]
+        non_bats_cols = [c for c in ffru_df.columns if "BATS" not in str(c)]
+        non_bats_provision = ffru_df[non_bats_cols].sum().sum() if non_bats_cols else 0.0
+        assert non_bats_provision < 1e-3, (
+            f"Non-BATS units providing FFRU: {non_bats_provision:.2f} MWh. "
+            "Only BATS should participate in FFRU with this config."
         )
 
 

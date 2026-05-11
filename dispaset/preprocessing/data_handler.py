@@ -604,17 +604,40 @@ def load_config(ConfigFile, AbsPath=True):
     return config
 
 
+VALID_RESERVE_TYPES = ['FFRU', 'FCRU', 'aFRRU', 'mFRRU', 'FFRD', 'FCRD', 'aFRRD']
+# Reserve types used as fallback for the old flat-list backward-compat conversion
+_RESERVE_FLATLIST_DEFAULT_TYPES = ['aFRRU', 'aFRRD', 'mFRRU']
+
+
+def _flatlist_to_reserve_dict(tech_list, factor=1.0):
+    """Convert a flat list of technology names to a nested reserve participation dict.
+
+    The old flat list assigned all listed technologies to the aFRR and mFRRU
+    reserve types (the ones computed by the non-Exogenous reserve sizing
+    formulas).  A factor of 1.0 (binary participation) is applied.
+    """
+    if not tech_list:
+        return {}
+    return {res_type: {tech: factor for tech in tech_list}
+            for res_type in _RESERVE_FLATLIST_DEFAULT_TYPES}
+
+
 def normalize_reserve_config(config):
     """
     Normalize legacy reserve-related config keys to the current naming.
 
-    Legacy aliases are kept for backward compatibility:
+    Legacy aliases kept for backward compatibility:
     - Reserve2U -> aFRRUDemand
     - Reserve2D -> aFRRDDemand
     - PrimaryReserveLimit -> FCRDemand
     - FFRLimit -> FFRDemand
     - InertiaLimit -> SystemInertiaDemand
+
+    Additionally, old flat-list ``ReserveParticipation`` / ``ReserveParticipation_CHP``
+    formats are converted to the new nested-dict format:
+        {<reserve_type>: {<technology>: <factor_0_to_1>}, ...}
     """
+    # --- legacy demand aliases ---
     aliases = {
         'aFRRUDemand': 'Reserve2U',
         'aFRRDDemand': 'Reserve2D',
@@ -622,7 +645,6 @@ def normalize_reserve_config(config):
         'FFRDemand': 'FFRLimit',
         'SystemInertiaDemand': 'InertiaLimit',
     }
-
     for new_key, old_key in aliases.items():
         new_val = config.get(new_key, '')
         old_val = config.get(old_key, '')
@@ -635,6 +657,60 @@ def normalize_reserve_config(config):
             logging.warning(
                 f'Both "{new_key}" and legacy "{old_key}" are set. Using "{new_key}" and ignoring "{old_key}"'
             )
+
+    # --- ReserveParticipation flat-list -> nested-dict conversion ---
+    for key in ('ReserveParticipation', 'ReserveParticipation_CHP'):
+        val = config.get(key)
+        if val is None:
+            config[key] = {}
+            continue
+        if isinstance(val, list):
+            if val:
+                logging.warning(
+                    f'Config key "{key}" is a flat list (legacy format). '
+                    f'Converting to nested dict: participation applies to {_RESERVE_FLATLIST_DEFAULT_TYPES}. '
+                    f'Use the nested dict format to specify per-reserve-type participation.'
+                )
+            config[key] = _flatlist_to_reserve_dict(val)
+
+    # --- validate nested-dict format ---
+    for key in ('ReserveParticipation', 'ReserveParticipation_CHP'):
+        val = config.get(key, {})
+        if not isinstance(val, dict):
+            logging.critical(f'Config key "{key}" must be a dict or a list, got {type(val).__name__}')
+            raise ValueError(f'Config key "{key}" must be a dict or a list')
+        invalid_types = [r for r in val if r not in VALID_RESERVE_TYPES]
+        if invalid_types:
+            logging.warning(
+                f'Config key "{key}" contains unknown reserve types: {invalid_types}. '
+                f'Valid types are: {VALID_RESERVE_TYPES}'
+            )
+        for res_type, tech_factors in val.items():
+            if not isinstance(tech_factors, dict):
+                logging.critical(
+                    f'Config key "{key}[{res_type}]" must be a dict mapping technology -> factor, '
+                    f'got {type(tech_factors).__name__}'
+                )
+                raise ValueError(f'Config key "{key}[{res_type}]" must be a dict')
+            for tech, factor in tech_factors.items():
+                if not isinstance(factor, (int, float)) or not (0.0 <= float(factor) <= 1.0):
+                    logging.warning(
+                        f'Config key "{key}[{res_type}][{tech}]" has factor {factor!r} outside [0, 1]. '
+                        f'Values outside [0, 1] may cause unexpected behaviour.'
+                    )
+
+    # --- warn for reserve types without any participant ---
+    participation_all = {}
+    for key in ('ReserveParticipation', 'ReserveParticipation_CHP'):
+        for res_type, tech_factors in config.get(key, {}).items():
+            participation_all.setdefault(res_type, {}).update(tech_factors)
+    for res_type in VALID_RESERVE_TYPES:
+        if res_type not in participation_all or not participation_all[res_type]:
+            logging.debug(
+                f'Reserve type "{res_type}" has no technology participants configured. '
+                f'No reserve provision will be possible for this type.'
+            )
+
     return config
 
 
@@ -1058,7 +1134,8 @@ def load_config_yaml(filename, AbsPath=True):
     # List of parameters to be added with a default value if not present (for backward compatibility):
     params_to_be_added = {'DataTimeStep': 1, 'SimulationTimeStep': 1, 'HydroScheduling': 'Off',
                           'HydroSchedulingHorizon': 'Annual', 'InitialFinalReservoirLevel': True,
-                          'ReserveParticipation_CHP': [], 'OptimalityGap': 0.005, 'CplexSetting': 'Default'}
+                          'ReserveParticipation': [], 'ReserveParticipation_CHP': [],
+                          'OptimalityGap': 0.005, 'CplexSetting': 'Default'}
     for param in params_to_be_added:
         if param not in config:
             config[param] = params_to_be_added[param]
@@ -1082,7 +1159,7 @@ def load_config_yaml(filename, AbsPath=True):
               'BoundarySectorNTC', 'BoundarySectorInterconnections', 'SectorXFlexibleDemand', 'SectorXFlexibleSupply',
               'BoundarySectorMaxSpillage', 'SectorXReservoirLevels', 'SectorXAlertLevel', 'SectorXFloodControl',
               'CostOfSpillage', 'CostXNotServed', 'CostCurtailment', 'GridData',
-              'SystemInertiaDemand', 'FFRDemand', 'FCRDemand',
+              'SystemInertiaDemand', 'FFRDemand', 'FCRDemand', 'mFRRUDemand',
               # Legacy reserve aliases (kept for backward compatibility)
               'Reserve2U', 'Reserve2D', 'PrimaryReserveLimit', 'FFRLimit', 'InertiaLimit']
     for param in PARAMS:

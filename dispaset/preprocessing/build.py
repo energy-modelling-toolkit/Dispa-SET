@@ -10,7 +10,7 @@ import pandas as pd
 
 from .data_check import check_units, check_sto, check_AvailabilityFactors, \
     check_clustering, isStorage, check_chp, check_df, check_MinMaxFlows, \
-    check_FlexibleDemand, check_reserves, check_p2bs, check_boundary_sector, \
+    check_FlexibleDemand, check_reserves, check_reserve_demand, check_p2bs, check_boundary_sector, \
     check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_FFRDemand, check_FCRDemand, check_CostXNotServed,\
     check_grid_data
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
@@ -265,8 +265,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     check_chp(config, plants_chp)
     
     # Defining the reserves:
-    # TODO: add list of VRE to the Reserve participation in config and remove from here
-    plants_res = plants[[u in config['ReserveParticipation'] or u in config['ReserveParticipation_CHP'] or u in commons['tech_renewables'] for u in plants['Technology']]]
+    # Collect all participating technologies across all reserve types from the nested dict config
+    _all_res_techs = set()
+    for _rp_key in ('ReserveParticipation', 'ReserveParticipation_CHP'):
+        for _res_type, _tech_factors in config.get(_rp_key, {}).items():
+            _all_res_techs.update(_tech_factors.keys())
+    plants_res = plants[[u in _all_res_techs or u in commons['tech_renewables'] for u in plants['Technology']]]
  
 
     # Defining the P2BS units:
@@ -683,8 +687,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     Plants_batteries = Plants_merged[[u in commons['tech_batteries'] for u in Plants_merged['Technology']]].copy()
 
     # Defining the reserves:
-    # TODO: add list of VRE to the Reserve participation in config and remove from here
-    Plants_res = Plants_merged[[u in config['ReserveParticipation'] or u in config['ReserveParticipation_CHP']  or u in commons['tech_renewables'] for u in Plants_merged['Technology']]]
+    # Collect all technologies mentioned in ReserveParticipation (nested dict or flat list)
+    _all_res_techs_merged = set()
+    for _rp_key in ('ReserveParticipation', 'ReserveParticipation_CHP'):
+        _rp = config.get(_rp_key, {})
+        if isinstance(_rp, dict):
+            for _tech_factors in _rp.values():
+                if isinstance(_tech_factors, dict):
+                    _all_res_techs_merged.update(_tech_factors.keys())
+        elif isinstance(_rp, list):
+            _all_res_techs_merged.update(_rp)
+    Plants_res = Plants_merged[[u in _all_res_techs_merged or u in commons['tech_renewables']
+                                for u in Plants_merged['Technology']]]
 
     # Filter boundary sector only plants
     Plants_boundary_sector_only = Plants_merged[
@@ -718,6 +732,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     FCRDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     aFRRUDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     aFRRDDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
+    mFRRUDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     for z in Load.columns:
         if config['ReserveCalculation'] == 'Exogenous':
             logging.info('Using exogenous reserve data')
@@ -747,17 +762,26 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 aFRRDDemand = load_time_series(config, config['aFRRDDemand']).fillna(0)
             else:
                 logging.warning('No aFRR requirement will be considered (no valid file provided)')
-                aFRRDDemand = pd.DataFrame(index=config['idx_long'], data={'aFRRDDemand': 0})  
-            
+                aFRRDDemand = pd.DataFrame(index=config['idx_long'], data={'aFRRDDemand': 0})
+
+            # mFRRU Required:
+            if 'mFRRUDemand' in config and os.path.isfile(str(config['mFRRUDemand'])):
+                mFRRUDemand = load_time_series(config, config['mFRRUDemand']).fillna(0)
+            else:
+                logging.warning('No mFRRU requirement will be considered; using aFRRU demand as proxy')
+                mFRRUDemand = aFRRUDemand.copy()
+                mFRRUDemand.columns = ['mFRRUDemand']
 
             # Distribute the total FFR value proportionally based on each zone's percentage share.
             FFRDemand_tot[z] = FFRDemand.iloc[:, 0] * Load_shares[z]
             FCRDemand_tot[z] = FCRDemand.iloc[:, 0] * Load_shares[z]
             aFRRUDemand_tot[z] = aFRRUDemand.iloc[:, 0] * Load_shares[z]
             aFRRDDemand_tot[z] = aFRRDDemand.iloc[:, 0] * Load_shares[z]
+            mFRRUDemand_tot[z] = mFRRUDemand.iloc[:, 0] * Load_shares[z]
             check_FFRDemand(FFRDemand, Load)
             check_FCRDemand(FCRDemand, Load)
             check_reserves(aFRRDDemand, aFRRUDemand, Load)
+            check_reserve_demand(mFRRUDemand, 'mFRRU', Load)
         else:
             logging.warning('No FFR requirement will be considered (no valid file provided)')
             FFRDemand_tot = FFRDemand_tot.fillna(0)
@@ -771,13 +795,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 aFRRUDemand_tot[z], aFRRDDemand_tot[z] = probabilistic_reserve(config, plants, Load, AF, z)
             else:
                 logging.info('Using generic reserve calculation for zone ' + z)
-                aFRRUDemand_tot[z], aFRRDDemand_tot[z] = generic_reserve(Load[z])                       
+                aFRRUDemand_tot[z], aFRRDDemand_tot[z] = generic_reserve(Load[z])
+            # mFRRU falls back to aFRRU demand for non-Exogenous calculations
+            mFRRUDemand_tot[z] = aFRRUDemand_tot[z]                       
 
 
     # %% Store all times series and format
 
     # Formatting all time series (merging, resempling) and store in the FinalTS dict
-    finalTS = {'Load': Load, 'aFRRD': aFRRDDemand_tot, 'aFRRU': aFRRUDemand_tot, 'mFRRU': aFRRUDemand_tot,
+    finalTS = {'Load': Load, 'aFRRD': aFRRDDemand_tot, 'aFRRU': aFRRUDemand_tot, 'mFRRU': mFRRUDemand_tot,
                'Efficiencies': Efficiencies,
                'NTCs': NTCs, 'Inter_RoW': Inter_RoW,'PriceTransmission': PriceTransmission,
                'BS_NTCs': BS_NTCs, 'BS_Inter_RoW': BS_Inter_RoW,
@@ -1448,56 +1474,56 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
     
     # ReserveParticipation table for the reserves market
-    # TODO: suggestion is to create commons by type of reserve instead of technologies?
-    constants = {
-        'SystemFrequency': 50,
-        'DeltaFrequencyMax': 0.8,
-        'RoCoF_max': 0.5
-        }
+    # Each (reserve_type, unit) cell holds the participation factor [0-1] as configured.
+    # Configuration is read from the nested-dict format:
+    #   config['ReserveParticipation']     = {res_type: {technology: factor}, ...}
+    #   config['ReserveParticipation_CHP'] = {res_type: {technology: factor}, ...}
+    # Renewables always participate (at factor 1.0) for FCR and slower reserves.
     values = np.zeros((len(sets['res']), len(sets['au']), len(sets['h'])))
-    
+
     res_index = {r: idx for idx, r in enumerate(sets['res'])}
     au_index = {u: idx for idx, u in enumerate(sets['au'])}
-    
+
+    # Build a merged lookup: res_type -> technology -> factor (CHP overrides conventional if both present)
+    _participation_lookup = {}
+    for rp_key in ('ReserveParticipation', 'ReserveParticipation_CHP'):
+        for res_type, tech_factors in config.get(rp_key, {}).items():
+            if res_type not in _participation_lookup:
+                _participation_lookup[res_type] = {}
+            _participation_lookup[res_type].update(tech_factors)
+
+    # Renewables participate at factor 1.0 for all reserve types except FFR (too slow for FFR)
+    _vre_non_ffr = [r for r in sets['res'] if r not in ('FFRU', 'FFRD')]
+
     for u in sets['au']:
         if u not in Plants_res.index:
             logging.warning('The following power plant is not providing any reserve: ' + u)
             continue
-    
+
         i = au_index[u]
         tech = Plants_res.loc[u, 'Technology']
-        droop = Plants_merged.loc[u, 'Droop']
-        partloadmin = Plants_merged.loc[u, 'PartLoadMin']
-        rampuprate = Plants_merged.loc[u, 'RampUpRate']
-        rampdownrate = Plants_merged.loc[u, 'RampDownRate']
-    
+
         for r in sets['res']:
             j = res_index[r]
-            
-            eligible = False
+            factor = 0.0
 
-            # Fast Frequency Response: solo baterías
-            if r in ['FFRU', 'FFRD']:
-                if tech in commons['tech_batteries']:
-                    eligible = True
+            # Renewables: participate for non-FFR reserves at factor 1.0
+            if tech in commons['tech_renewables'] and r in _vre_non_ffr:
+                factor = 1.0
 
-            # Frequency Containment Reserve y Frequency Restoration Reserves
-            elif r in ['FCRU', 'FCRD', 'aFRRU', 'aFRRD', 'mFRRU', 'mFRRD']:
-                if (tech in commons['tech_batteries'] or
-                    tech in commons['tech_conventional'] or
-                    tech in commons['tech_renewables']):
-                    eligible = True
-    
-            # If eligible, calculate reserve participation based on physical limits (Droop, RampUpRate, RampDownRate)
-            if eligible:
-                if r in ['FFRU', 'FFRD', 'FCRU', 'FCRD'] and droop > 0:
-                    factor1 = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
-                    values[j, i, :] = factor1
+            # Config-driven participation: overrides renewable default if explicitly specified
+            if r in _participation_lookup and tech in _participation_lookup[r]:
+                factor = float(_participation_lookup[r][tech])
 
-                else:
-                    values[j, i, :] = 1  # Participación binaria para otras reservas
-        
+            values[j, i, :] = factor
+
     parameters['ReserveParticipation'] = {'sets': sets_param['ReserveParticipation'], 'val': values}
+
+    # Physical constants used for virtual inertia calculation
+    constants = {
+        'SystemFrequency': 50.0,   # Hz (European synchronous grid)
+        'RoCoF_max': 0.5,          # Hz/s (maximum rate of change of frequency)
+    }
 
     # VirtualInertia_Participation table
     VI_values = np.zeros(len(sets['au']))

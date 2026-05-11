@@ -99,7 +99,8 @@ from .postprocessing.data_handler import get_sim_results, ds_to_df
 
 from .postprocessing.postprocessing import get_result_analysis, get_indicators_powerplant, aggregate_by_fuel, \
     CostExPost, get_EFOH, get_units_operation_cost, get_power_flow_tracing, filter_by_tech, filter_by_tech_list, \
-    check_energy_balance, get_frequency_stability_reserves
+    check_energy_balance, get_frequency_stability_reserves, reserve_availability_demand, \
+    get_reserve_summary, plot_reserve_provision
 
 from .postprocessing.plot import plot_energy_zone_fuel, plot_zone_capacities, plot_zone, storage_levels, \
     plot_storage_levels, plot_EFOH, plot_tech_cap, \
