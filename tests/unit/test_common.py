@@ -103,6 +103,23 @@ def test_logfile_naming():
     assert commons["logfile"].endswith(".dispa.log")
 
 
+def test_hatches_colors_key_parity():
+    """Every key in commons['colors'] must also exist in commons['hatches'].
+
+    This prevents KeyError crashes in plot_dispatch when iterating over
+    plotdata columns and looking up a hatch for a fuel code that is in the
+    color table but missing from the hatches table.
+    """
+    colors_keys = set(commons["colors"].keys())
+    hatches_keys = set(commons["hatches"].keys())
+    missing_from_hatches = colors_keys - hatches_keys
+    assert not missing_from_hatches, (
+        f"Keys present in commons['colors'] but missing from commons['hatches']: "
+        f"{sorted(missing_from_hatches)}.  "
+        f"Add them to commons['hatches'] (empty string is fine)."
+    )
+
+
 def test_dispaset_version_string():
     """The dispaset package exposes a non-empty version string."""
     assert isinstance(ds.__version__, str) and len(ds.__version__) > 0
@@ -115,7 +132,8 @@ if __name__ == "__main__":
     failures = 0
     for fn in [test_required_keys_present, test_tech_subsets,
                test_fuel_consistency, test_colour_table,
-               test_logfile_naming, test_dispaset_version_string]:
+               test_logfile_naming, test_hatches_colors_key_parity,
+               test_dispaset_version_string]:
         try:
             fn()
             print(f"PASS  {fn.__name__}")

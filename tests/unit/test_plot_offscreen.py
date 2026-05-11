@@ -283,6 +283,53 @@ def test_plot_dispatchX_multi_zone_storage_capacity():
     assert out.exists() and out.stat().st_size > 0
 
 
+def test_plot_dispatch_hatch_guard_unknown_positive_column():
+    """Regression test: plot_dispatch must NOT raise KeyError when a plotdata
+    column is present in commons['colors'] but was previously absent from
+    commons['hatches'].
+
+    Before the fix, the positive-values loop used:
+        hatch = commons['hatches'][col2]          # KeyError if col2 absent
+    The fix applies the same guard used in the negative-values loop:
+        if plot_lines and col2 in commons['hatches']:
+
+    We use 'HeatSlack' as the offending column because it was in colors but
+    not in hatches prior to the patch (and is a positive generation-side
+    entry typical in coupled heat/power runs).
+    """
+    periods = 24
+    idx = pd.date_range("2015-01-01", periods=periods, freq="h")
+    # HeatSlack appears as a positive (generation-side) column
+    plotdata = pd.DataFrame({
+        "GAS": np.full(periods, 50.0),
+        "HeatSlack": np.full(periods, 10.0),
+    }, index=idx)
+    demand = pd.Series(plotdata.sum(axis=1), index=idx, name="Demand")
+    # plot_lines is set automatically when rng < 32 days (our 24-h window qualifies)
+    plot_dispatch(demand, plotdata)
+    out = _save_current_figure("plot_dispatch_hatch_guard")
+    assert out.exists() and out.stat().st_size > 0
+
+
+def test_plot_dispatch_hatch_guard_unknown_negative_column():
+    """Regression: negative-values loop must also not KeyError for unknown
+    hatch keys (this was already correct but we verify it stays so).
+
+    ShedLoad is a negative-side entry present in colors but previously
+    absent from hatches.
+    """
+    periods = 24
+    idx = pd.date_range("2015-01-01", periods=periods, freq="h")
+    plotdata = pd.DataFrame({
+        "GAS": np.full(periods, 60.0),
+        "ShedLoad": np.full(periods, -10.0),
+    }, index=idx)
+    demand = pd.Series(np.full(periods, 60.0), index=idx, name="Demand")
+    plot_dispatch(demand, plotdata)
+    out = _save_current_figure("plot_dispatch_hatch_guard_neg")
+    assert out.exists() and out.stat().st_size > 0
+
+
 # --------------------------------------------------------------------------- #
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

@@ -204,7 +204,7 @@ def plot_dispatch(demand, plotdata, y_ax='', level=None, minlevel=None, curtailm
         col1 = sumplot_pos.columns[j]
         col2 = sumplot_pos.columns[j + 1]
         color = colors[col2]
-        if plot_lines:
+        if plot_lines and col2 in commons['hatches']:
             hatch = commons['hatches'][col2]
         else:
             hatch = ''
@@ -592,6 +592,12 @@ def update_colors(inputs, colors, new_colors=None, random_seed=42):
     cmap = cm.get_cmap("tab20")  # You can choose any color map you like
     missing_colors = {key: cmap(random.random()) for key, value in colors.items() if value is None}
     colors.update(missing_colors)
+
+    # Keep commons['hatches'] in sync: any key added to colors must also exist
+    # in hatches to prevent KeyError in plot_dispatch hatch lookup.
+    for key in colors:
+        if key not in commons['hatches']:
+            commons['hatches'][key] = ''
 
 
 def plot_zone(inputs, results, z='', z_th=None, rng=None, rug_plot=True, dispatch_limits=None, storage_limits=None,

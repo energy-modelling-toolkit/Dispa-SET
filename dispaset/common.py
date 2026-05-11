@@ -131,7 +131,9 @@ commons['colors']['reserves'] = 'black'
 commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '', 'GAS': '', 'NUC': '', 'SUN': '', 'WIN': '', 'WAT': '',
                       'BIO': '', 'AMO': '', 'GEO': '', 'Storage': '', 'WST': '', 'OTH': '', 'HYD': '',
                       'FlowIn': '', 'FlowOut': '', 'HDAM': '', 'HPHS': '', 'SCSP': '', 'THMS': '', 'BATS': '',
-                      'BEVS': '', 'P2X': '', 'X2P': '','AIR': '', 'WHT': '', 'ELE': '', 'THE': ''
+                      'BEVS': '', 'P2X': '', 'X2P': '', 'AIR': '', 'WHT': '', 'ELE': '', 'THE': '',
+                      'HeatSlack': '', 'reserves': '', 'ShedLoad': '', 'HDAMC': '', 'curtailment': '',
+                      'shed load': ''
                       }
 
 commons['logfile'] = str(datetime.datetime.now()).replace(':', '-').replace(' ', '_') + '.dispa.log'
