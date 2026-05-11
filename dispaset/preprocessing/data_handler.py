@@ -599,7 +599,42 @@ def load_config(ConfigFile, AbsPath=True):
         logging.critical('The extension of the config file should be .xlsx or .yml')
         sys.exit(1)
     
+    config = normalize_reserve_config(config)
     config = check_config(config)
+    return config
+
+
+def normalize_reserve_config(config):
+    """
+    Normalize legacy reserve-related config keys to the current naming.
+
+    Legacy aliases are kept for backward compatibility:
+    - Reserve2U -> aFRRUDemand
+    - Reserve2D -> aFRRDDemand
+    - PrimaryReserveLimit -> FCRDemand
+    - FFRLimit -> FFRDemand
+    - InertiaLimit -> SystemInertiaDemand
+    """
+    aliases = {
+        'aFRRUDemand': 'Reserve2U',
+        'aFRRDDemand': 'Reserve2D',
+        'FCRDemand': 'PrimaryReserveLimit',
+        'FFRDemand': 'FFRLimit',
+        'SystemInertiaDemand': 'InertiaLimit',
+    }
+
+    for new_key, old_key in aliases.items():
+        new_val = config.get(new_key, '')
+        old_val = config.get(old_key, '')
+        new_empty = new_val in ('', None)
+        old_non_empty = old_val not in ('', None)
+        if new_empty and old_non_empty:
+            config[new_key] = old_val
+            logging.info(f'Using legacy config key "{old_key}" as "{new_key}"')
+        elif (not new_empty) and old_non_empty and new_val != old_val:
+            logging.warning(
+                f'Both "{new_key}" and legacy "{old_key}" are set. Using "{new_key}" and ignoring "{old_key}"'
+            )
     return config
 
 
@@ -1047,7 +1082,9 @@ def load_config_yaml(filename, AbsPath=True):
               'BoundarySectorNTC', 'BoundarySectorInterconnections', 'SectorXFlexibleDemand', 'SectorXFlexibleSupply',
               'BoundarySectorMaxSpillage', 'SectorXReservoirLevels', 'SectorXAlertLevel', 'SectorXFloodControl',
               'CostOfSpillage', 'CostXNotServed', 'CostCurtailment', 'GridData',
-              'SystemInertiaDemand', 'FFRDemand', 'FCRDemand']
+              'SystemInertiaDemand', 'FFRDemand', 'FCRDemand',
+              # Legacy reserve aliases (kept for backward compatibility)
+              'Reserve2U', 'Reserve2D', 'PrimaryReserveLimit', 'FFRLimit', 'InertiaLimit']
     for param in PARAMS:
         if param not in config:
             config[param] = ''

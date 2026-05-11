@@ -33,6 +33,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -77,6 +78,31 @@ def test_legacy_xlsx_config_loads():
     cfg = ds.load_config(str(xlsx))
     assert isinstance(cfg, dict)
     assert "zones" in cfg
+
+
+def test_legacy_reserve_aliases_map_to_new_keys(tmp_path):
+    """Legacy reserve keys must populate the new reserve config keys."""
+    cfg = ds.load_config(str(CONFIG_DIR / "tiny.yml"))
+
+    cfg["Reserve2U"] = "legacy/reserve2u.csv"
+    cfg["Reserve2D"] = "legacy/reserve2d.csv"
+    cfg["PrimaryReserveLimit"] = "legacy/fcr.csv"
+    cfg["FFRLimit"] = "legacy/ffr.csv"
+    cfg["InertiaLimit"] = "legacy/inertia.csv"
+    cfg["aFRRUDemand"] = ""
+    cfg["aFRRDDemand"] = ""
+    cfg["FCRDemand"] = ""
+    cfg["FFRDemand"] = ""
+    cfg["SystemInertiaDemand"] = ""
+
+    cfg_path = tmp_path / "legacy_aliases.yml"
+    with cfg_path.open("w", encoding="utf-8") as fh:
+        yaml.safe_dump(cfg, fh)
+
+    loaded = ds.load_config(str(cfg_path))
+    for key in ("aFRRUDemand", "aFRRDDemand", "FCRDemand", "FFRDemand", "SystemInertiaDemand"):
+        assert loaded[key], f"Expected {key} to be filled from legacy alias"
+        assert os.path.isabs(loaded[key]), f"Expected absolute path for {key}, got {loaded[key]!r}"
 
 
 # --------------------------------------------------------------------------- #

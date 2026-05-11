@@ -18,11 +18,11 @@ what remains to make the full data/config pipeline robust.
 
 ## Short-Term Stabilization (Next)
 
-- Validate exogenous reserve input compatibility for:
+- [x] Validate exogenous reserve input compatibility for:
   - `aFRRUDemand`, `aFRRDDemand`, `FFRDemand`, `FCRDemand`
-- Verify backward compatibility of old reserve names/fields in configs and docs.
-- Check `OutputReserveProvision` schema stability in postprocessing and plotting.
-- Confirm MTS + reserve paths work together in at least one tiny case.
+- [x] Verify backward compatibility of old reserve names/fields in configs and docs.
+- [x] Check `OutputReserveProvision` schema stability in postprocessing and plotting.
+- [x] Confirm MTS + reserve paths work together in at least one tiny case.
 
 ## Data + Config Pipeline To Complete
 

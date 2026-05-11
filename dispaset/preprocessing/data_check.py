@@ -618,8 +618,6 @@ def check_FFRDemand(FFRDemand, Load):
         msg = 'The FFR Demand table contains values higher than demand'
         logging.critical(msg)
         raise DispaSETValidationError(msg)
-    else:
-        logging.warning('No FFR Demand requirement data has been found')
         
 def check_FCRDemand(FCRDemand, Load):
     """
@@ -635,8 +633,6 @@ def check_FCRDemand(FCRDemand, Load):
         msg = 'The FCR Demand table contains values higher than demand'
         logging.critical(msg)
         raise DispaSETValidationError(msg)
-    else:
-        logging.warning('No FCR Demand requirement data has been found')
 
 
 def check_df(df, StartDate=None, StopDate=None, name=''):

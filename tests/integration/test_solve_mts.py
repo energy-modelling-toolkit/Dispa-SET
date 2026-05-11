@@ -35,6 +35,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 if __package__ is None or __package__ == "":
@@ -42,6 +43,11 @@ if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from _helpers import build_solve, load_test_config, skip_if_no_gams  # noqa: E402
+
+
+def _write_constant_profile(path: Path, index: pd.DatetimeIndex, value: float) -> str:
+    pd.DataFrame({"Z1": value}, index=index).to_csv(path)
+    return str(path)
 
 
 @pytest.mark.timeout(120)
@@ -57,6 +63,36 @@ def test_solve_mts_regional():
     out = build_solve(cfg)
     assert "OutputPower" in out["results"]
     print(f"MTS build {out['build_time']:.2f}s  solve {out['solve_time']:.2f}s")
+
+
+@pytest.mark.timeout(180)
+def test_solve_mts_with_exogenous_reserve_aliases():
+    """MTS path should also work with exogenous reserve inputs and legacy keys."""
+    skip_if_no_gams()
+    cfg = load_test_config("tiny_mts.yml", "solve_mts_reserve_aliases")
+    cfg["ReserveCalculation"] = "Exogenous"
+
+    reserve_idx = pd.date_range(
+        start=pd.Timestamp(cfg["StartDate"][0], 1, 1, 0, 0),
+        end=pd.Timestamp(cfg["StartDate"][0], 12, 31, 23, 0),
+        freq="h",
+    )
+    reserve_dir = Path(cfg["SimulationDirectory"]).parent / "mts_reserve_demands"
+    reserve_dir.mkdir(parents=True, exist_ok=True)
+
+    # Populate only legacy keys: loader normalization must map them.
+    cfg["Reserve2U"] = _write_constant_profile(reserve_dir / "reserve2u.csv", reserve_idx, 2.0)
+    cfg["Reserve2D"] = _write_constant_profile(reserve_dir / "reserve2d.csv", reserve_idx, 1.5)
+    cfg["FFRLimit"] = _write_constant_profile(reserve_dir / "ffr.csv", reserve_idx, 1.0)
+    cfg["PrimaryReserveLimit"] = _write_constant_profile(reserve_dir / "fcr.csv", reserve_idx, 0.8)
+    cfg["aFRRUDemand"] = ""
+    cfg["aFRRDDemand"] = ""
+    cfg["FFRDemand"] = ""
+    cfg["FCRDemand"] = ""
+
+    out = build_solve(cfg)
+    assert "OutputPower" in out["results"]
+    assert "OutputReserveProvision" in out["results"]
 
 
 # --------------------------------------------------------------------------- #

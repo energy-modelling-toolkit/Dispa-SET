@@ -63,6 +63,13 @@ def _battery_reserve_total(results: dict) -> float:
     return float(reserve_df[cols].sum().sum())
 
 
+def _reserve_schema_signature(results: dict) -> tuple[str, ...]:
+    reserve_df = results.get("OutputReserveProvision")
+    if reserve_df is None or reserve_df.empty:
+        return tuple()
+    return tuple(str(c) for c in reserve_df.columns)
+
+
 @pytest.mark.timeout(240)
 def test_recursive_reserve_demands_affect_dispatch_with_battery():
     skip_if_no_gams()
@@ -108,6 +115,7 @@ def test_recursive_reserve_demands_affect_dispatch_with_battery():
                 "system_cost": float(results["OutputSystemCost"].sum().sum()),
                 "battery_power": _battery_power_series(results),
                 "battery_reserve_total": _battery_reserve_total(results),
+                "reserve_schema": _reserve_schema_signature(results),
             }
         )
 
@@ -122,6 +130,15 @@ def test_recursive_reserve_demands_affect_dispatch_with_battery():
     assert final["battery_reserve_total"] > base["battery_reserve_total"] + 1e-6, (
         "Battery reserve provision did not increase versus base scenario"
     )
+
+    # OutputReserveProvision schema should stay well-formed across cumulative runs.
+    non_empty_schemas = [d["reserve_schema"] for d in run_data if d["reserve_schema"]]
+    assert non_empty_schemas, "OutputReserveProvision schema missing in all runs"
+    for schema in non_empty_schemas:
+        assert len(schema) == len(set(schema)), "OutputReserveProvision has duplicate columns"
+        assert all(col.startswith("(") and col.endswith(")") for col in schema), (
+            "OutputReserveProvision columns are not in the expected tuple-like format"
+        )
 
 
 if __name__ == "__main__":
