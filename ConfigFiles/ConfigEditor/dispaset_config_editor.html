@@ -677,24 +677,21 @@
                 </div>
 
                  <!-- Content from Hydro -->
-                 <h3>Hydro Scheduling</h3>
+                 <h3>Hydro Scheduling (MTS)</h3>
                  <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="hydroScheduling">Hydro Scheduling Method<span class="tooltiptext">Type of mid-term hydro scheduling optimization (Off=none, Zonal=per zone, Regional=per defined region, International/Global=wider scope).</span></label>
+                            <label for="hydroScheduling">MTS Level<span class="tooltiptext">Select the Mid-Term Scheduling level: 
+                                0: No mid-term scheduling (rolling horizon dispatch).
+                                1: Mid-term scheduling with cyclic boundary conditions (initial and final levels equal and optimized). 
+                                2: Mid-term scheduling with fixed initial and final reservoir levels (provided below).
+                                
+                                Note: If MTS is active (1 or 2), a full-year pre-optimization is first run as LP to generate target reservoir profiles. 
+                                These profiles are then passed to the main rolling horizon dispatch, which will run using the selected "Simulation Type" (LP or MILP).</span></label>
                             <select id="hydroScheduling">
-                                <option value="Off">Off</option>
-                                <option value="Zonal">Zonal</option>
-                                <option value="Regional">Regional</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="form-group">
-                            <label for="hydroSchedulingHorizon">Hydro Scheduling Horizon<span class="tooltiptext">Optimization horizon for the mid-term hydro scheduling (determines target reservoir levels).</span></label>
-                            <select id="hydroSchedulingHorizon">
-                                <option value="Annual">Annual</option>
-                                <option value="Stop-date driven">Stop-date driven</option>
+                                <option value="0">0 (Rolling horizon UC and dispatch)</option>
+                                <option value="1">1 (Cyclic boundary conditions)</option>
+                                <option value="2">2 (Fixed boundary conditions)</option>
                             </select>
                         </div>
                     </div>
@@ -703,7 +700,7 @@
                  <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="initialFinalReservoirLevel">Enforce Initial/Final Reservoir Level<span class="tooltiptext">If 1 (True), enforces initial and final reservoir levels based on ReservoirLevelInitial/Final defaults or historical ReservoirLevels file. If 0 (False), these constraints are relaxed.</span></label>
+                            <label for="initialFinalReservoirLevel">Enforce Initial/Final Reservoir Level<span class="tooltiptext">If 1 (True), enforces initial and final reservoir levels based on ReservoirLevelInitial/Final defaults or historical ReservoirLevels file. If 0 (False), these constraints are relaxed. This input is deactivated for MTS Level 1 and 2.</span></label>
                              <select id="initialFinalReservoirLevel">
                                 <option value="1">Yes (1)</option>
                                 <option value="0">No (0)</option>
@@ -720,22 +717,14 @@
                  <div class="row">
                     <div class="col">
                          <div class="form-group">
-                            <label for="reservoirLevelInitial">Default Initial Reservoir Level<span class="tooltiptext">Target initial reservoir level as a fraction of capacity (0 to 1). Used if InitialFinalReservoirLevel=1 and ReservoirLevels file is not provided.</span></label>
-                            <input type="number" id="reservoirLevelInitial" min="0" max="1" step="any">
-                             <div class="default-value" data-default="0.5">
-                                <span>Default:</span>
-                                <input type="text" class="default-value-input" value="0.5" data-param="ReservoirLevelInitial">
-                            </div>
+                            <label for="reservoirLevelInitial">Initial Reservoir Level<span class="tooltiptext">Fixed initial reservoir level as a fraction of capacity (0 to 1). Passed as the StorageInitial parameter in MTS Level 2.</span></label>
+                            <input type="text" id="reservoirLevelInitial" class="default-value-input" data-param="ReservoirLevelInitial" value="0.5">
                         </div>
                     </div>
                      <div class="col">
                         <div class="form-group">
-                            <label for="reservoirLevelFinal">Default Final Reservoir Level<span class="tooltiptext">Target final reservoir level as a fraction of capacity (0 to 1). Used if InitialFinalReservoirLevel=1 and ReservoirLevels file is not provided.</span></label>
-                            <input type="number" id="reservoirLevelFinal" min="0" max="1" step="any">
-                             <div class="default-value" data-default="0.5">
-                                <span>Default:</span>
-                                <input type="text" class="default-value-input" value="0.5" data-param="ReservoirLevelFinal">
-                            </div>
+                            <label for="reservoirLevelFinal">Final Reservoir Level<span class="tooltiptext">Fixed final reservoir level as a fraction of capacity (0 to 1). Defined as the last value of the StorageProfile parameter in MTS Level 2.</span></label>
+                            <input type="text" id="reservoirLevelFinal" class="default-value-input" data-param="ReservoirLevelFinal" value="0.5">
                         </div>
                     </div>
                  </div>
@@ -976,78 +965,57 @@
                  <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="reserve2U">Upwards Secondary Reserve (aFRR Up)<span class="tooltiptext">Table with the upwards secondary reserve requirements (e.g., aFRR up) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute.</span></label>
-                            <input type="text" id="reserve2U" placeholder="e.g., ReserveUp.csv">
+                            <label for="afrrdemandU">Automatic Frequency Restoration Reserve Upwards Demand(aFRR Up)<span class="tooltiptext">Table with the upwards secondary reserve requirements (e.g., aFRR up) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute. Use '##' for zone placeholder.</span></label>
+                            <input type="text" id="afrrdemandU" placeholder="e.g., aFRRUp_req.csv">
                         </div>
                     </div>
                     <div class="col">
                          <div class="form-group">
-                            <label for="reserve2D">Downwards Secondary Reserve (aFRR Down)<span class="tooltiptext">Table with the downwards secondary reserve requirements (e.g., aFRR down) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute.</span></label>
-                            <input type="text" id="reserve2D" placeholder="e.g., ReserveDown.csv">
+                            <label for="afrrdemandD">Automatic Frequency Restoration Reserve Downwards Demand(aFRR Down)<span class="tooltiptext">Table with the downwards secondary reserve requirements (e.g., aFRR down) for each zone. Used if ReserveCalculation=Exogenous. Path relative to Database directory or absolute. Use '##' for zone placeholder.</span></label>
+                            <input type="text" id="afrrdemandD" placeholder="e.g., aFRRDown_req.csv">
                         </div>
                     </div>
                  </div>
                 <div class="row">
                     <div class="col">
                          <div class="form-group">
-                            <label for="primaryReserveLimit">Primary Reserve (FCR)<span class="tooltiptext">Primary reserve requirement (e.g., FCR). Can be a file path (time series per zone) or a single value if default is used.</span></label>
-                            <input type="text" id="primaryReserveLimit" placeholder="e.g., FCR_req.csv">
+                            <label for="fcrdemand">Frequency Containment Reserve Demand (FCR)<span class="tooltiptext">Frequency containment reserve requirement (e.g., FCR). Can be a file path (time series per zone) or a single value if default is used.</span></label>
+                            <input type="text" id="fcrdemand" placeholder="e.g., FCR_req.csv">
                             <div class="default-value" data-default="">
                                 <span>Default:</span>
-                                <input type="text" class="default-value-input" value="" data-param="PrimaryReserveLimit">
+                                <input type="text" class="default-value-input" value="" data-param="FCRDemand">
                             </div>
                         </div>
                     </div>
                     <div class="col">
                          <div class="form-group">
-                            <label for="inertiaLimit">Inertia Limit<span class="tooltiptext">Minimum system inertia requirement. Can be a file path (time series) or a single value if default is used.</span></label>
-                            <input type="text" id="inertiaLimit" placeholder="e.g., Inertia_req.csv">
+                            <label for="systeminertiademand">System Inertia Demand<span class="tooltiptext">Minimum system inertia requirement. Can be a file path (time series) or a single value if default is used.</span></label>
+                            <input type="text" id="systeminertiademand" placeholder="e.g., SystemInertia_req.csv">
                             <div class="default-value" data-default="">
                                 <span>Default:</span>
-                                <input type="text" class="default-value-input" value="" data-param="InertiaLimit">
+                                <input type="text" class="default-value-input" value="" data-param="SystemInertiaDemand">
                             </div>
                         </div>
                     </div>
                  </div>
-                <h3>Fast Frequency Response (FFR)</h3>
+                <h3><h3>System Frequency Stability</h3></h3>
                  <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <label for="ffrLimit">FFR Limit<span class="tooltiptext">Limit for Fast Frequency Response (aFFR). Can be a file path or a single value if default is used.</span></label>
-                            <input type="text" id="ffrLimit" placeholder="e.g., FFR_limit.csv">
+                            <label for="ffrDemand">Fast Frequency Reserve Demand (FFR) <span class="tooltiptext">Fast Frequency Reserve requirement (FFR). Can be a file path or a single value if default is used.</span></label>
+                            <input type="text" id="ffrDemand" placeholder="e.g., FFR_req.csv">
                              <div class="default-value" data-default="">
                                 <span>Default:</span>
-                                <input type="text" class="default-value-input" value="" data-param="FFRLimit">
+                                <input type="text" class="default-value-input" value="" data-param="FFRDemand">
                             </div>
                         </div>
-                    </div>
-                     <div class="col">
-                        <div class="form-group">
-                            <label for="ffrGainLimit">FFR Gain Limit<span class="tooltiptext">Maximum gain for Fast Frequency Response (aFFR). Can be a file path or a single value if default is used.</span></label>
-                            <input type="text" id="ffrGainLimit" placeholder="e.g., FFR_gain.csv">
-                             <div class="default-value" data-default="">
-                                <span>Default:</span>
-                                <input type="text" class="default-value-input" value="" data-param="FFRGainLimit">
-                            </div>
-                        </div>
-                    </div>
+                    </div>   
                  </div>
-                 <h3>System Stability</h3>
                  <div class="row">
                     <div class="col">
                         <div class="form-group">
                             <label for="frequencyStability">Frequency Stability<span class="tooltiptext">Method or parameters for frequency stability constraints (currently placeholder).</span></label>
                             <input type="text" id="frequencyStability">
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="form-group">
-                            <label for="systemGainLimit">System Gain Limit<span class="tooltiptext">Limit on system gain (related to frequency control/reserves). Can be a file path or a single value if default is used.</span></label>
-                            <input type="text" id="systemGainLimit">
-                            <div class="default-value" data-default="">
-                                <span>Default:</span>
-                                <input type="text" class="default-value-input" value="" data-param="SystemGainLimit">
-                            </div>
                         </div>
                     </div>
                  </div>
@@ -1247,12 +1215,11 @@
             // Parameters with CO2
             'priceofco2': 'PriceOfCO2',
             // FFR related
-            'ffrlimit': 'FFRLimit',
-            'ffrgainlimit': 'FFRGainLimit',
+            'ffrdemand': 'FFRDemand',
             // Reserve parameters
-            'reserve2u': 'Reserve2U',  // aFRR Up
-            'reserve2d': 'Reserve2D',  // aFRR Down
-            'primaryreservelimit': 'PrimaryReserveLimit',  // FCR
+            'afrrdemandu': 'aFRRUDemand',  // aFRR Up
+            'afrrdemandd': 'aFRRDDemand',  // aFRR Down
+            'fcrdemand': 'FCRDemand',  // FCR
             // Boundary Sector
             'costxnotserved': 'CostXNotServed',
             'boundarysectordata': 'BoundarySectorData',
@@ -1280,8 +1247,7 @@
             // Geographical data
             'geodata': 'GeoData',
             // Other acronyms in IDs
-            'systemgainlimit': 'SystemGainLimit',
-            'inertialimit': 'InertiaLimit',
+            'systeminertiademand': 'SystemInertiaDemand',
             'frequencystability': 'FrequencyStability',
             'initialfinalreservoirlevel': 'InitialFinalReservoirLevel',
             'shareofquickstartunits': 'ShareOfQuickStartUnits',
@@ -1374,6 +1340,11 @@
             document.getElementById('saveYaml').addEventListener('click', saveYamlFile);
             document.getElementById('addZoneBtn').addEventListener('click', addZone);
             document.getElementById('closeModalBtn').addEventListener('click', closeLoadModal);
+            
+            const hydroScheduling = document.getElementById('hydroScheduling');
+            if (hydroScheduling) {
+                hydroScheduling.addEventListener('change', updateMTSInputs);
+            }
 
             // Close modal if clicked outside content
             window.onclick = function(event) {
@@ -1582,39 +1553,46 @@
             });
         }
         
-        // Load the default YAML file (ConfigTest.yml)
+        // Load the default YAML file (tries ConfigTest.yml first, then any available)
         function loadDefaultYaml() {
-            // Use the API to fetch the file
-            fetch(`${API_URL}/read-file?filename=../ConfigTest.yml`)
+            // First, get the list of available YAML files
+            fetch(`${API_URL}/list-yaml-files`)
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Failed to load file: ${response.status} ${response.statusText}`);
-                    }
-                    return response.text();
+                    if (!response.ok) throw new Error('Failed to list files');
+                    return response.json();
                 })
-                .then(yamlText => {
-                    // Use our helper function to parse YAML with Python tags
-                    const yamlData = parseYaml(yamlText);
-                    populateForm(yamlData);
-                    updateFileNameLabel('ConfigTest.yml');
-                    showStatusMessage('Default configuration loaded successfully.', 'success');
+                .then(data => {
+                    if (!data.files || data.files.length === 0) {
+                        showStatusMessage('No configuration files found in the directory.', 'info');
+                        return;
+                    }
+
+                    // Decide which file to load: ConfigTest.yml or the first one available
+                    let fileToLoad = 'ConfigTest.yml';
+                    if (!data.files.includes('ConfigTest.yml')) {
+                        fileToLoad = data.files[0];
+                        console.log(`'ConfigTest.yml' not found. Loading '${fileToLoad}' instead.`);
+                    }
+
+                    // Now load the selected file
+                    loadSelectedYaml(fileToLoad);
                 })
                 .catch(error => {
-                    console.error('Error loading default YAML:', error);
-                    showStatusMessage('Error loading default configuration. Please check the console for details.', 'error');
-                    
-                    // Fallback to direct fetch if API fails
-                    fetch('../ConfigTest.yml')
-                        .then(response => response.text())
+                    console.error('Error in initial load sequence:', error);
+                    // Fallback to direct load of ConfigTest.yml if listing fails
+                    fetch(`${API_URL}/read-file?filename=../ConfigTest.yml`)
+                        .then(response => {
+                            if (!response.ok) throw new Error('Direct load failed');
+                            return response.text();
+                        })
                         .then(yamlText => {
-                            // Use our helper function here too
                             const yamlData = parseYaml(yamlText);
                             populateForm(yamlData);
                             updateFileNameLabel('ConfigTest.yml');
-                            showStatusMessage('Default configuration loaded successfully using direct method.', 'success');
+                            showStatusMessage('Default configuration loaded successfully.', 'success');
                         })
-                        .catch(error => {
-                            console.error('Fallback loading also failed:', error);
+                        .catch(fallbackError => {
+                            console.error('All attempts to load configuration failed:', fallbackError);
                             showStatusMessage('All attempts to load configuration failed.', 'error');
                         });
                 });
@@ -1645,6 +1623,53 @@
         }
         */
         
+        // Update MTS-related inputs visibility and status
+        function updateMTSInputs() {
+            const hydroScheduling = document.getElementById('hydroScheduling');
+            if (!hydroScheduling) return;
+            
+            const mtsLevel = hydroScheduling.value;
+            const initialFinalReservoirLevel = document.getElementById('initialFinalReservoirLevel');
+            const reservoirLevelInitial = document.getElementById('reservoirLevelInitial');
+            const reservoirLevelFinal = document.getElementById('reservoirLevelFinal');
+            const reservoirLevels = document.getElementById('reservoirLevels');
+            
+            // Default resets
+            if (initialFinalReservoirLevel) initialFinalReservoirLevel.disabled = false;
+            if (reservoirLevelInitial) reservoirLevelInitial.closest('.col').style.display = 'block';
+            if (reservoirLevelFinal) reservoirLevelFinal.closest('.col').style.display = 'block';
+            if (reservoirLevels) reservoirLevels.closest('.col').style.display = 'block';
+
+            if (mtsLevel === '1') {
+                // MTS = 1: Cyclic boundary conditions
+                if (initialFinalReservoirLevel) {
+                    initialFinalReservoirLevel.value = '1';
+                    initialFinalReservoirLevel.disabled = true;
+                }
+                // Initial and final values are equal and optimized (cyclic)
+                if (reservoirLevelInitial) reservoirLevelInitial.closest('.col').style.display = 'none';
+                if (reservoirLevelFinal) reservoirLevelFinal.closest('.col').style.display = 'none';
+                // Target profile is not used in cyclic mode
+                if (reservoirLevels) reservoirLevels.closest('.col').style.display = 'none';
+            } else if (mtsLevel === '2') {
+                // MTS = 2: Fixed boundary conditions
+                if (initialFinalReservoirLevel) {
+                    initialFinalReservoirLevel.value = '1';
+                    initialFinalReservoirLevel.disabled = true;
+                }
+                // Target profile is not used in fixed boundary conditions mode
+                if (reservoirLevels) reservoirLevels.closest('.col').style.display = 'none';
+                // reservoirLevelInitial and reservoirLevelFinal stay visible
+            } else {
+                // MTS = 0: Rolling horizon (Dispatch)
+                // Initial and final levels are deactivated as they are defined by the StorageProfile (reservoirLevels)
+                if (reservoirLevelInitial) reservoirLevelInitial.closest('.col').style.display = 'none';
+                if (reservoirLevelFinal) reservoirLevelFinal.closest('.col').style.display = 'none';
+                // Target Reservoir Levels File stays visible
+                if (reservoirLevels) reservoirLevels.closest('.col').style.display = 'block';
+            }
+        }
+
         // Populate form with YAML data
         function populateForm(yamlData) {
             // Clear form first
@@ -1680,15 +1705,6 @@
                     console.log(`Populated hydroScheduling with: ${yamlData.HydroScheduling}`); // Debug log
                 } else {
                     console.error('Element with ID hydroScheduling not found');
-                }
-            }
-            if (yamlData.HydroSchedulingHorizon) {
-                const hydroHorizonSelect = document.getElementById('hydroSchedulingHorizon');
-                if (hydroHorizonSelect) {
-                    hydroHorizonSelect.value = yamlData.HydroSchedulingHorizon;
-                     console.log(`Populated hydroSchedulingHorizon with: ${yamlData.HydroSchedulingHorizon}`); // Debug log
-                 } else {
-                    console.error('Element with ID hydroSchedulingHorizon not found');
                 }
             }
             
@@ -1762,23 +1778,14 @@
                     }
                 }
             }
+            
+            // Update MTS visibility
+            updateMTSInputs();
         }
         
         // Collect form data into YAML
         function collectFormData() {
-            // Start with existing data when available to preserve fields not in the form
             let formData = {};
-
-            // First, load the current file to get all existing fields
-            try {
-                // Try to read the current YAML structure to preserve fields that aren't in the form
-                fetch(`${API_URL}/read-file?filename=../` + currentFilename)
-                    .then(response => response.text())
-                    .catch(() => ''); // Silently handle failures - we'll create a new structure if needed
-            } catch (e) {
-                // Silently ignore any errors
-                console.log('Could not load existing file, creating new structure');
-            }
             
             // Collect all form fields, including empty ones
             const allInputs = document.querySelectorAll('input[type="text"]:not(.default-value-input):not(.zone-code), input[type="number"], select, textarea');
@@ -1804,7 +1811,7 @@
                     // Convert numerical values to actual numbers
                     if (input.type === 'number' || 
                         ['dataTimeStep', 'simulationTimeStep', 'horizonLength', 'lookAhead', 
-                         'initialFinalReservoirLevel', 'allowCurtailment', 'optimalityGap'].includes(input.id)) {
+                         'initialFinalReservoirLevel', 'allowCurtailment', 'optimalityGap', 'hydroScheduling'].includes(input.id)) {
                         // Only convert non-empty values to numbers
                         if (input.value !== '') {
                             const numValue = parseFloat(input.value);
@@ -1962,11 +1969,11 @@
             
             // Ensure required fields have at least empty values
             const requiredFields = [
-                'GAMS_folder', 'FFRGainLimit', 'FFRLimit', 
-                'FrequencyStability', 'GridData', 'InertiaLimit', 'LoadShedding', 'PriceOfAmmonia',
+                'GAMS_folder', 'FFRDemand', 
+                'FrequencyStability', 'GridData', 'SystemInertiaDemand', 'LoadShedding', 'PriceOfAmmonia',
                 'PriceOfCO2', 'PriceOfLignite', 'PriceOfNuclear', 'PriceTransmission', 
-                'PrimaryReserveLimit', 'Reserve2D', 'Reserve2U', 'StorageAlertLevels', 
-                'StorageFloodControl', 'SystemGainLimit', 'TransmissionGridType'
+                'FCRDemand', 'Reserve2D', 'Reserve2U', 'StorageAlertLevels', 
+                'StorageFloodControl', 'TransmissionGridType'
             ];
             
             requiredFields.forEach(field => {
@@ -2169,4 +2176,4 @@
         }
     </script>
 </body>
-</html> 
+</html>

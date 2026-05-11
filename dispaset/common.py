@@ -40,7 +40,9 @@ commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF
 # List of VRES technologies:
 commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
 # List of Conventional technologies:
-commons['tech_conventional'] = ['HDAM', 'COMC', 'GTUR', 'STUR', 'BATS']#MARCO
+commons['tech_conventional'] = ['HDAM', 'HROR', 'HPHS', 
+                                'COMC', 'GTUR', 'ICEN', 'STUR'
+                                ]#MARCO
 # List of Batteries technologies:
 commons['tech_batteries'] = ['BATS']#MARCO
 # List of storage technologies:
@@ -58,6 +60,8 @@ commons['tech_bs2p'] = ['BSPG']
 commons['tech_boundary_sector'] = ['BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP', 'HOBOX', 'P2BS']#MARCO , 'HDAMC', 'HRORC'
 # List of CHP types:
 commons['types_CHP'] = ['extraction', 'back-pressure', 'p2h']
+# List of Reserve types:
+commons['types_Reserves'] = ['PFR', 'FFR', 'aFRRU', 'aFRRD', 'mFRRU', 'RR']
 # DispaSET fuels:
 commons['Fuels'] = ['AIR', 'AMO', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH',
                     'GEO', 'HYD', 'WHT', 'ELE', 'THE']
@@ -166,10 +170,6 @@ commons['PathParameters'] = {
     # 'PTDFMatrix': 145,
     # Inertia Limit data
     'InertiaLimit': 155,
-    # Gain Limit data
-    'SystemGainLimit': 156,
-    # FFR Gain Limit data
-    'FFRGainLimit': 157,
     # Hydrogen data
     'H2RigidDemand': 137, 'H2FlexibleDemand': 138, 'H2FlexibleCapacity': 139,
     # Storage data
@@ -203,10 +203,6 @@ commons['default'] = {
     'ValueOfLostLoad': 204, 'CostOfSpillage': 205, 'WaterValue': 206,
     # Inertia requirement default
     'InertiaLimit': 155,
-    # Gain requirement default
-    'SystemGainLimit': 156,
-    # FFR Gain requirement default
-    'FFRGainLimit': 157,
     # Inertia requirement default
     'FFRLimit': 158, 'PrimaryReserveLimit': 159
 }

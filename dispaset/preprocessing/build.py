@@ -11,7 +11,7 @@ import pandas as pd
 from .data_check import check_units, check_sto, check_AvailabilityFactors, \
     check_clustering, isStorage, check_chp, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves, check_p2bs, check_boundary_sector, \
-    check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_FFRLimit, check_PrimaryReserveLimit, check_CostXNotServed,\
+    check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_FFRDemand, check_FCRDemand, check_CostXNotServed,\
     check_grid_data
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable, load_config
@@ -154,30 +154,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             logging.error('No valid grid data file provided')
             GridData = pd.DataFrame()
 
-    # Inertia Limit:
-    if 'InertiaLimit' in config and os.path.isfile(config['InertiaLimit']):
-        InertiaLimit = load_time_series(config, config['InertiaLimit']).fillna(0)
+    # Inertia Demand:
+    if 'SystemInertiaDemand' in config and os.path.isfile(config['SystemInertiaDemand']):
+        InertiaDemand = load_time_series(config, config['SystemInertiaDemand']).fillna(0)
     else:
-        logging.warning('No Inertia Limit will be considered (no valid file provided)')
-        InertiaLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
-        # logging.warning('No Inertia Limit will be considered (no valid file provided)')
-        # InertiaLimit = pd.DataFrame(index=config['idx_long'])
-
-    # PFR Gain Limit:
-    if 'SystemGainLimit' in config and os.path.isfile(config['SystemGainLimit']):
-        SystemGainLimit = load_time_series(config, config['SystemGainLimit']).fillna(0)
-    else:
-        logging.warning('No Gain Limit will be considered (no valid file provided)')
-        SystemGainLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
-        # logging.warning('No Inertia Limit will be considered (no valid file provided)')
-        # InertiaLimit = pd.DataFrame(index=config['idx_long'])
-
-    # FFR Gain Limit:
-    if 'FFRGainLimit' in config and os.path.isfile(config['FFRGainLimit']):
-        FFRGainLimit = load_time_series(config, config['FFRGainLimit']).fillna(0)
-    else:
-        logging.warning('No FFR Gain Limit will be considered (no valid file provided)')
-        FFRGainLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
+        logging.warning('No Inertia Demand will be considered (no valid file provided)')
+        InertiaDemand = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
 
     # Boundary Sector Interconnections:
     if 'BoundarySectorInterconnections' in config and os.path.isfile(config['BoundarySectorInterconnections']):
@@ -203,24 +185,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     CostLoadShedding = NodeBasedTable('CostLoadShedding', config, default=config['default']['CostLoadShedding'])
     ShareOfFlexibleDemand = NodeBasedTable('ShareOfFlexibleDemand', config,
                                            default=config['default']['ShareOfFlexibleDemand'])
-    Reserve2D = NodeBasedTable('Reserve2D', config, default=None)
-    Reserve2U = NodeBasedTable('Reserve2U', config, default=None)
-    # aqui deberia inicializar los df de los resultados que no estan con timestamp
-
-    # FFR Required:
-    if 'FFRLimit' in config and os.path.isfile(config['FFRLimit']):
-        FFRLimit = load_time_series(config, config['FFRLimit']).fillna(0)
-    else:
-        logging.warning('No FFR requirement will be considered (no valid file provided)')
-        FFRLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
-
-    # Primary Reserve Required:
-    if 'PrimaryReserveLimit' in config and os.path.isfile(config['PrimaryReserveLimit']):
-        PrimaryReserveLimit = load_time_series(config, config['PrimaryReserveLimit']).fillna(0)
-    else:
-        logging.warning('No Primary Reserve requirement will be considered (no valid file provided)')
-        PrimaryReserveLimit = pd.DataFrame(index=config['idx_long'], data={'Value': 0})
-
+    
     # Curtailment:
     CostCurtailment = NodeBasedTable('CostCurtailment', config, default=config['default']['CostCurtailment'])
 
@@ -270,7 +235,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             plants[key] = 0
 
     # If not present, add the non-compulsory fields to the units table:
-    # MARCO CHANGE: AGREGAR COLUMNAS QUE SON NECESARIAS PARA LAS NUEVAS FUNCIONES
+    # Add necessary columns to support new functions
     for key in ['CHPPowerLossFactor', 'CHPPowerToHeat', 'CHPType', 'STOCapacity', 'STOSelfDischarge',
                 'STOMaxChargingPower', 'STOChargingEfficiency', 'CHPMaxHeat', 'WaterWithdrawal',
                 'WaterConsumption', 'InertiaConstant', 'STOHours', 'Droop']:
@@ -297,6 +262,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Defining the CHPs:
     plants_chp = plants[[str(x).lower() in commons['types_CHP'] for x in plants['CHPType']]]
     check_chp(config, plants_chp)
+    
+    # Defining the reserves:
+    # TODO: add list of VRE to the Reserve participation in config and remove from here
+    plants_res = plants[[u in config['ReserveParticipation'] or u in config['ReserveParticipation_CHP'] or u in commons['tech_renewables'] for u in plants['Technology']]]
+ 
 
     # Defining the P2BS units:
     plants_p2bs = plants[[u in commons['tech_p2bs'] for u in plants['Technology']]]
@@ -315,7 +285,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                      fallbacks=['Unit', 'Technology', 'Zone'],
                                      default=0)
 
-    if 'StorageAlertLevels' in config and os.path.isfile(config['StorageAlertLevels']):
+    if 'StorageAlertLevels' and len(config['StorageAlertLevels'])>0:
         StorageAlertLevels = UnitBasedTable(plants_sto, 'StorageAlertLevels', config,
                                             fallbacks=['Unit', 'Technology', 'Zone'],
                                             default=0)
@@ -323,7 +293,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         logging.warning('No Storage Alert Levels will be considered (no valid file provided)')
         StorageAlertLevels = pd.DataFrame(index=config['idx_long'])
 
-    if 'StorageFloodControl' in config and os.path.isfile(config['StorageFloodControl']):
+    if 'StorageFloodControl' and len(config['StorageFloodControl'])>0:
         StorageFloodControl = UnitBasedTable(plants_sto, 'StorageFloodControl', config,
                                              fallbacks=['Unit', 'Technology', 'Zone'],
                                              default=1)
@@ -331,21 +301,21 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         logging.warning('No Storage Flood Control will be considered (no valid file provided)')
         StorageFloodControl = pd.DataFrame(index=config['idx_long'])
 
-    if 'ReservoirScaledInflows' in config and os.path.isfile(config['ReservoirScaledInflows']):
+    if 'ReservoirScaledInflows' and len(config['ReservoirScaledInflows'])>0:
         ReservoirScaledInflows = UnitBasedTable(plants_sto, 'ReservoirScaledInflows', config,
                                                 fallbacks=['Unit', 'Technology', 'Zone'], default=0)
     else:
         logging.warning('No historical Reservoir Scaled Inflows will be considered (no valid file provided)')
         ReservoirScaledInflows = pd.DataFrame(index=config['idx_long'])
 
-    if 'ReservoirScaledOutflows' in config and os.path.isfile(config['ReservoirScaledOutflows']):
+    if 'ReservoirScaledOutflows' and len(config['ReservoirScaledOutflows'])>0:
         ReservoirScaledOutflows = UnitBasedTable(plants_sto, 'ReservoirScaledOutflows', config,
                                                  fallbacks=['Unit', 'Technology', 'Zone'], default=0)
     else:
         logging.warning('No historical outflows will be considered (no valid file provided)')
         ReservoirScaledOutflows = pd.DataFrame(index=config['idx_long'])
     # TODO: Check if plants_sto esta bien para asignar el CostOfSpillage
-    if 'CostOfSpillage' in config and os.path.isfile(config['CostOfSpillage']):
+    if 'CostOfSpillage' and len(config['CostOfSpillage'])>0:
         CostOfSpillage = UnitBasedTable(plants_sto, 'CostOfSpillage', config,
                                         fallbacks=['Unit', 'Technology', 'Zone'],
                                         default=0)
@@ -469,22 +439,45 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
     if profiles is not None:
+    
+        # Robust Function
+        def get_short_name(c):
+            return c.split(" - ")[-1].strip() if c.count(" - ") == 1 else c
+    
+        # Save original names
+        original_profile_names = profiles.columns.copy()
+    
+        # Create short names ONLY for matching
+        profiles_short = profiles.rename(columns=get_short_name)
+    
         plants_sto.set_index(plants_sto.loc[:, 'Unit'], inplace=True, drop=True)
-        for key in profiles.columns:
-            if key not in ReservoirLevels.columns:
-                logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the '
-                                                                  'ReservoirLevels table')
-            elif key in list(ReservoirLevels.loc[:, plants_sto['Technology'] == 'SCSP'].columns):
-                ReservoirLevels[key] = config['default']['ReservoirLevelInitial']
-                logging.info('The reservoir profile "' + key + '" can not be seleceted for MTS, instead, default value '
-                                                               'of: ' + str(
-                                                                   config['default']['ReservoirLevelInitial']) + ' will be used')
-            else:
-                ReservoirLevels.loc[:, key] = profiles[key]
-                logging.info(
-                    'The reservoir profile "' + key + '" provided by the MTS is used as target reservoir level')
-
+    
+        rename_map = {}
+    
+        for full_name in original_profile_names:
+    
+            short_name = get_short_name(full_name)
+    
+            if short_name not in ReservoirLevels.columns:
+                logging.warning(f'The reservoir profile "{full_name}" provided by the MTS is not found in the ReservoirLevels table')
+    
+            elif short_name in list(ReservoirLevels.loc[:, plants_sto['Technology'] == 'SCSP'].columns):   
+                ReservoirLevels[short_name] = config['default']['ReservoirLevelInitial']
+                logging.info(f'The reservoir profile "{full_name}" can not be selected for MTS, 'f'instead default value {config["default"]["ReservoirLevelInitial"]} will be used')
+                rename_map[short_name] = full_name
+    
+            else:   
+                ReservoirLevels.loc[:, short_name] = profiles_short[short_name]
+                logging.info(f'The reservoir profile "{full_name}" provided by the MTS is used as target reservoir level')
+                rename_map[short_name] = full_name
+    
+        # Final Column names
+        # ReservoirLevels.rename(columns=rename_map, inplace=True)
+        
     if profilesSectorX is not None:
+        # Keeping consistency in profiles columns names
+        profilesSectorX.columns = profilesSectorX.columns.str.split(" - ").str[-1].str.strip()
+
         for key in profilesSectorX.columns:
             if key not in SectorXReservoirLevels.columns:
                 logging.warning('The reservoir profile "' + key + '" provided by the MTS is not found in the '
@@ -515,9 +508,6 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # data checks:
     check_AvailabilityFactors(plants, AF)
     check_FlexibleDemand(ShareOfFlexibleDemand)
-    check_reserves(Reserve2D, Reserve2U, Load)
-    check_FFRLimit(FFRLimit, Load)
-    check_PrimaryReserveLimit(PrimaryReserveLimit, Load)
 
     # Fuel prices:
     fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2',
@@ -599,6 +589,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                    'STOMinSOC': 'SectorXStorageMinimum', 'STOHours': 'SectorXStorageHours'}, inplace=True)
 
     Plants_merged.rename(columns={'StartUpCost': 'CostStartUp',
+                                  'StartUpTime': 'TimeStartUp',
                                   'RampUpMax': 'RampUpMaximum',
                                   'RampDownMax': 'RampDownMaximum',
                                   'MinUpTime': 'TimeUpMinimum',
@@ -690,6 +681,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Filter batteries units
     Plants_batteries = Plants_merged[[u in commons['tech_batteries'] for u in Plants_merged['Technology']]].copy()
 
+    # Defining the reserves:
+    # TODO: add list of VRE to the Reserve participation in config and remove from here
+    Plants_res = Plants_merged[[u in config['ReserveParticipation'] or u in config['ReserveParticipation_CHP']  or u in commons['tech_renewables'] for u in Plants_merged['Technology']]]
+
     # Filter boundary sector only plants
     Plants_boundary_sector_only = Plants_merged[
         [u in commons['tech_boundary_sector'] for u in Plants_merged['Technology']]].copy()
@@ -709,40 +704,79 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Calculating the efficiency time series for each unit:
     Efficiencies = EfficiencyTimeSeries(config, Plants_merged)
-
+    
     # Calculating boundary sector efficiencies
     BoundarySectorEfficiencies = BoundarySectorEfficiencyTimeSeries(config, Plants_merged, zones_bs)
 
+    # New Reserves calculation
+    # Calculate the percentage that each zone represents of the total load in each hour
+    Load_shares = Load.div(Load.sum(axis=1), axis=0)  
+    
     # Reserve calculation
-    reserve_2U_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
-    reserve_2D_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
+    FFRDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
+    FCRDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
+    aFRRUDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
+    aFRRDDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     for z in Load.columns:
         if config['ReserveCalculation'] == 'Exogenous':
-            if z in Reserve2U and z in Reserve2D:
-                reserve_2U_tot[z] = Reserve2U[z]
-                reserve_2D_tot[z] = Reserve2D[z]
+            logging.info('Using exogenous reserve data')
+            # FFR Required:
+            if 'FFRDemand' in config and os.path.isfile(config['FFRDemand']):
+                FFRDemand = load_time_series(config, config['FFRDemand']).fillna(0)
             else:
-                logging.critical('Exogenous reserve requirements (2D and 2U) not found for zone ' + z)
-                raise DispaSETValidationError('Exogenous reserve requirements (2D and 2U) not found for zone ' + z)
+                logging.warning('No FFR requirement will be considered (no valid file provided)')
+                FFRDemand = pd.DataFrame(index=config['idx_long'], data={'FFRDemand': 0})
+
+            # Primary Reserve Required:
+            if 'FCRDemand' in config and os.path.isfile(config['FCRDemand']):
+                FCRDemand = load_time_series(config, config['FCRDemand']).fillna(0)
+            else:
+                logging.warning('No FCR requirement will be considered (no valid file provided)')
+                FCRDemand = pd.DataFrame(index=config['idx_long'], data={'FCRDemand': 0})
+
+            # aFRRU Required:
+            if 'aFRRUDemand' in config and os.path.isfile(config['aFRRUDemand']):
+                aFRRUDemand = load_time_series(config, config['aFRRUDemand']).fillna(0)
+            else:
+                logging.warning('No aFRRU requirement will be considered (no valid file provided)')
+                aFRRUDemand = pd.DataFrame(index=config['idx_long'], data={'aFRRUDemand': 0})
+                
+            # aFRRD Required:
+            if 'aFRRDDemand' in config and os.path.isfile(config['aFRRDDemand']):
+                aFRRDDemand = load_time_series(config, config['aFRRDDemand']).fillna(0)
+            else:
+                logging.warning('No aFRR requirement will be considered (no valid file provided)')
+                aFRRDDemand = pd.DataFrame(index=config['idx_long'], data={'aFRRDDemand': 0})  
+            
+
+            # Distribute the total FFR value proportionally based on each zone's percentage share.
+            FFRDemand_tot[z] = FFRDemand.iloc[:, 0] * Load_shares[z]
+            FCRDemand_tot[z] = FCRDemand.iloc[:, 0] * Load_shares[z]
+            aFRRUDemand_tot[z] = aFRRUDemand.iloc[:, 0] * Load_shares[z]
+            aFRRDDemand_tot[z] = aFRRDDemand.iloc[:, 0] * Load_shares[z]
+            check_FFRDemand(FFRDemand, Load)
+            check_FCRDemand(FCRDemand, Load)
+            check_reserves(aFRRDDemand, aFRRUDemand, Load)
         else:
-            if z in Reserve2U and z in Reserve2D:
-                logging.info('Using exogenous reserve data for zone ' + z)
-                reserve_2U_tot[z] = Reserve2U[z]
-                reserve_2D_tot[z] = Reserve2D[z]
-            elif config['ReserveCalculation'] == 'Percentage':
+            logging.warning('No FFR requirement will be considered (no valid file provided)')
+            FFRDemand_tot = FFRDemand_tot.fillna(0)
+            logging.warning('No FCR requirement will be considered (no valid file provided)')
+            FCRDemand_tot = FCRDemand_tot.fillna(0)
+            if config['ReserveCalculation'] == 'Percentage':
                 logging.info('Using percentage-based reserve sizing for zone ' + z)
-                reserve_2U_tot[z], reserve_2D_tot[z] = percentage_reserve(config, plants, Load, AF, z)
+                aFRRUDemand_tot[z], aFRRDDemand_tot[z] = percentage_reserve(config, plants, Load, AF, z)
             elif config['ReserveCalculation'] == 'Probabilistic':
                 logging.info('Using probabilistic reserve sizing for zone ' + z)
-                reserve_2U_tot[z], reserve_2D_tot[z] = probabilistic_reserve(config, plants, Load, AF, z)
+                aFRRUDemand_tot[z], aFRRDDemand_tot[z] = probabilistic_reserve(config, plants, Load, AF, z)
             else:
                 logging.info('Using generic reserve calculation for zone ' + z)
-                reserve_2U_tot[z], reserve_2D_tot[z] = generic_reserve(Load[z])
+                aFRRUDemand_tot[z], aFRRDDemand_tot[z] = generic_reserve(Load[z])                       
+
 
     # %% Store all times series and format
 
     # Formatting all time series (merging, resempling) and store in the FinalTS dict
-    finalTS = {'Load': Load, 'Reserve2D': reserve_2D_tot, 'Reserve2U': reserve_2U_tot,
+    finalTS = {'Load': Load, 'aFRRD': aFRRDDemand_tot, 'aFRRU': aFRRUDemand_tot, 'mFRRU': aFRRUDemand_tot,
                'Efficiencies': Efficiencies,
                'NTCs': NTCs, 'Inter_RoW': Inter_RoW,'PriceTransmission': PriceTransmission,
                'BS_NTCs': BS_NTCs, 'BS_Inter_RoW': BS_Inter_RoW,
@@ -757,7 +791,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel,
                'SectorXFloodControl': SectorXFloodControl,
                'CostOfSpillage': CostOfSpillage, 'CostXSpillage': CostXSpillage,
-               'InertiaLimit': InertiaLimit, 'SystemGainLimit': SystemGainLimit, 'FFRGainLimit': FFRGainLimit, 'FFRLimit': FFRLimit, 'PrimaryReserveLimit': PrimaryReserveLimit}
+               'InertiaDemand': InertiaDemand, 'FFRU': FFRDemand_tot, 'FFRD': FFRDemand_tot, 
+               'FCRU': FCRDemand_tot, 'FCRD': FCRDemand_tot}
 
     # Merge the following time series with weighted averages
     for key in ['ScaledInflows', 'ScaledOutflows', 'Outages', 'AvailabilityFactors']:
@@ -767,6 +802,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     for key in ['CostOfSpillage']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key)
 
+    # TODO: CHECK BUG WHEN MERGE KEYS BECOME 0
     # Merge the following time series by weighted average based on storage capacity
     for key in ['ReservoirLevels', 'StorageAlertLevels', 'StorageFloodControl']:
         finalTS[key] = merge_series(Plants_merged, plants, finalTS[key], tablename=key, method='StorageWeightedAverage')
@@ -805,7 +841,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets = {}
     sets['h'] = [str(x + 1) for x in range(Nsim)]
     sets['z'] = [str(x + 1) for x in range(int(Nsim - config['LookAhead'] * 24 / config['SimulationTimeStep']))]
-    sets['mk'] = ['DA', '2U', '2D', 'Flex']
+    sets['mk'] = ['DA', 'aFRRU', 'aFRRD', 'Flex']
     sets['n'] = config['zones']
     sets['nx'] = zones_bs
     sets['nx_CC'] = pd.Series(zones_bs)[pd.Series(zones_bs) != 'S_EC'].tolist()
@@ -839,7 +875,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                  Plants_merged['Technology']]].index.tolist()
     sets['cu'] = Plants_conventional.index.tolist()
     sets['ba'] = Plants_batteries.index.tolist()
-
+    sets['res_U'] = ['FFRU', 'FCRU', 'aFRRU', 'mFRRU']
+    sets['res_D'] = ['FFRD', 'FCRD', 'aFRRD']
+    sets['res'] = sets['res_U'] + sets['res_D']
+    
     ###################################################################################################################
     ############################################   Parameters    ######################################################
     ###################################################################################################################
@@ -871,6 +910,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['Curtailment'] = ['n']
     sets_param['CostCurtailment'] = ['n', 'h']
     sets_param['Demand'] = ['mk', 'n', 'h']
+    sets_param['ReserveDemand'] = ['res', 'n', 'h']      #new for reserves FCR
     sets_param['Efficiency'] = ['au', 'h']
     sets_param['X2PowerConversionMultiplier'] = ['nx', 'x2p', 'h']
     sets_param['Power2XConversionMultiplier'] = ['nx', 'p2x', 'h']
@@ -900,7 +940,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['RampDownMaximum'] = ['au']
     sets_param['RampStartUpMaximum'] = ['au']
     sets_param['RampShutDownMaximum'] = ['au']
-    sets_param['Reserve'] = ['au']  # changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
+    sets_param['ReserveParticipation'] = ['res', 'au', 'h']  # changed this also in the gams file(in the definition and in the equations satifying the reserve demand)
     sets_param['StorageCapacity'] = ['au']
     sets_param['StorageHours'] = ['au']
     sets_param['StorageChargingCapacity'] = ['au']
@@ -917,6 +957,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['Technology'] = ['au', 't']
     sets_param['TimeUpMinimum'] = ['au']
     sets_param['TimeDownMinimum'] = ['au']
+    sets_param['TimeStartUp'] = ['au']
     sets_param['SectorXFlexDemandInput'] = ['nx', 'h']
     sets_param['SectorXFlexDemandInputInitial'] = ['nx']
     sets_param['SectorXFlexMaxCapacity'] = ['nx']
@@ -932,15 +973,16 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['SectorXStorageProfile'] = ['nx', 'h']
     sets_param['SectorXAlertLevel'] = ['nx', 'h']
     sets_param['SectorXFloodControl'] = ['nx', 'h']
-    # if MTS == 0:
+    # New parameters
     sets_param['InertiaConstant'] = ['au']
-    sets_param['InertiaLimit'] = ['h']
+    sets_param['InertiaDemand'] = ['h']
     sets_param['Droop'] = ['au']
-    sets_param['SystemGainLimit'] = ['h']
-    sets_param['PrimaryReserveLimit'] = ['h']
-    sets_param['FFRGainLimit'] = ['h']
-    sets_param['FFRLimit'] = ['h']
     sets_param['PTDF'] = ['l_int', 'n']
+    sets_param['UFLS_Participation'] = ['res']
+    sets_param['OFDM_Participation'] = ['res']
+    sets_param['VirtualInertia_Participation'] = ['au']
+    
+    
 
     # Define all the parameters and set a default value of zero:
     for var in sets_param:
@@ -957,7 +999,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         parameters[var] = define_parameter(sets_param[var], sets, value=1e7)
 
     # Boolean parameters:
-    for var in ['Technology', 'Fuel', 'Reserve', 'Location', 'LocationX']:
+    for var in ['Technology', 'Fuel', 'ReserveParticipation', 'Location', 'LocationX']:
         parameters[var] = define_parameter(sets_param[var], sets, value='bool')
     # %%
         # List of parameters whose value is known and provided in the dataframe BoundarySector
@@ -966,12 +1008,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
     if MTS == 0:
-        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
+        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp', 'TimeStartUp',
                     'CostRampUp', 'StorageCapacity', 'StorageHours', 'StorageSelfDischarge', 'StorageChargingCapacity',
                     'InertiaConstant', 'Droop']:
             parameters[var]['val'] = Plants_merged[var].values
     else:
-        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp',
+        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp', 'TimeStartUp',
                     'CostRampUp', 'StorageCapacity', 'StorageHours', 'StorageSelfDischarge', 'StorageChargingCapacity']:
             parameters[var]['val'] = Plants_merged[var].values
 
@@ -1013,7 +1055,21 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # Storage profile and initial state:
     for i, s in enumerate(sets['asu']):
-        if s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(
+        # Determine the initial and final levels (fraction of capacity)
+        # Priority: 
+        # 1. MTS Level 2: use ReservoirLevelInitial/Final from config
+        # 2. MTS Level 1: cyclic (not used here, but we set a profile)
+        # 3. MTS Level 0: use ReservoirLevels file or default initial/final from config
+        
+        if MTS == 2:
+            # Fixed boundary conditions: force initial and final values from config
+            profile_val = np.linspace(config['default']['ReservoirLevelInitial'],
+                                    config['default']['ReservoirLevelFinal'],
+                                    len(idx_sim))
+            parameters['StorageProfile']['val'][i, :] = profile_val
+            logging.info(f'MTS level 2: Unit {s} forced to ReservoirLevelInitial={config["default"]["ReservoirLevelInitial"]} '
+                         f'and ReservoirLevelFinal={config["default"]["ReservoirLevelFinal"]}')
+        elif s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and all(
                 finalTS['ReservoirLevels'][s] - 1 <= 1e-11):
             # get the time series
             parameters['StorageProfile']['val'][i, :] = finalTS['ReservoirLevels'][s][idx_sim].values
@@ -1022,14 +1078,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
             raise DispaSETValidationError(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
         else:
-            logging.warning(
-                'Could not find reservoir level data for storage plant ' + s + '. Using the provided default initial '
-                                                                               'and final values')
-            parameters['StorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],
-                                                                    config['default']['ReservoirLevelFinal'],
-                                                                    len(idx_sim))
+            if MTS == 1:
+                logging.info(f'MTS level 1: Unit {s} will use cyclic boundary conditions. '
+                             f'Setting a flat profile at ReservoirLevelInitial={config["default"]["ReservoirLevelInitial"]}')
+                parameters['StorageProfile']['val'][i, :] = config['default']['ReservoirLevelInitial']
+            else:
+                logging.warning(
+                    'Could not find reservoir level data for storage plant ' + s + '. Using the provided default initial '
+                                                                                   'and final values')
+                parameters['StorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],
+                                                                        config['default']['ReservoirLevelFinal'],
+                                                                        len(idx_sim))
 
-            # Setting the storage alert levels
+        # Setting the storage alert levels
         if len(finalTS['StorageAlertLevels'].columns) != 0:
             if s in plants_sto.index:
                 parameters['StorageAlertLevels']['val'][i, :] = finalTS['StorageAlertLevels'][s][idx_sim].values
@@ -1048,6 +1109,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             else:
                 logging.warning('Cost Of Spillage not found for unit ' + s + '. Assuming no Cost Of Spillage')
 
+        # TODO: CHECK WHY THIS WAS COMMENTED
         # if s in plants_sto.index:
         #     parameters['StorageAlertLevels']['val'][i, :] = finalTS['StorageAlertLevels'][s][idx_sim].values
         #     parameters['StorageFloodControl']['val'][i, :] = finalTS['StorageFloodControl'][s][idx_sim].values
@@ -1059,9 +1121,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
                 Plants_sto.loc[s, 'StorageCapacity'] * Plants_sto.loc[s, 'Nunits']
 
-    if len(BoundarySector.index) >0:
+    if len(BoundarySector.index) > 0:
         for i, nx in enumerate(sets['nx']):
-            if nx in finalTS['SectorXReservoirLevels'] and any(finalTS['SectorXReservoirLevels'][nx] > 0) and all(
+            
+            if MTS == 2:
+                # Fixed boundary conditions: force initial and final values from config
+                profile_val = np.linspace(config['default']['ReservoirLevelInitial'],
+                                        config['default']['ReservoirLevelFinal'],
+                                        len(idx_sim))
+                parameters['SectorXStorageProfile']['val'][i, :] = profile_val
+                logging.info(f'MTS level 2: SectorX {nx} forced to ReservoirLevelInitial={config["default"]["ReservoirLevelInitial"]} '
+                             f'and ReservoirLevelFinal={config["default"]["ReservoirLevelFinal"]}')
+            elif nx in finalTS['SectorXReservoirLevels'] and any(finalTS['SectorXReservoirLevels'][nx] > 0) and all(
                     finalTS['SectorXReservoirLevels'][nx] - 1 <= 1e-11):
                 # get the time series
                 parameters['SectorXStorageProfile']['val'][i, :] = finalTS['SectorXReservoirLevels'][nx][idx_sim].values
@@ -1070,13 +1141,18 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 logging.critical(nx + ': The reservoir level is sometimes higher than its capacity (>1) !')
                 raise DispaSETValidationError(nx + ': The reservoir level is sometimes higher than its capacity (>1) !')
             else:
-                logging.warning(
-                    'Could not find reservoir level data for storage plant ' + nx + '. Using the provided default initial '
-                                                                                    'and final values')
-                parameters['SectorXStorageProfile']['val'][i, :] = np.where(
-                    BoundarySector.loc[nx, 'SectorXStorageCapacity'] == 0, 0,
-                    np.linspace(config['default']['ReservoirLevelInitial'], config['default']['ReservoirLevelFinal'],
-                                len(idx_sim)))
+                if MTS == 1:
+                    logging.info(f'MTS level 1: SectorX {nx} will use cyclic boundary conditions. '
+                                 f'Setting a flat profile at ReservoirLevelInitial={config["default"]["ReservoirLevelInitial"]}')
+                    parameters['SectorXStorageProfile']['val'][i, :] = config['default']['ReservoirLevelInitial']
+                else:
+                    logging.warning(
+                        'Could not find reservoir level data for storage plant ' + nx + '. Using the provided default initial '
+                                                                                        'and final values')
+                    parameters['SectorXStorageProfile']['val'][i, :] = np.where(
+                        BoundarySector.loc[nx, 'SectorXStorageCapacity'] == 0, 0,
+                        np.linspace(config['default']['ReservoirLevelInitial'], config['default']['ReservoirLevelFinal'],
+                                    len(idx_sim)))
 
             # Setting Storage Alert
             if nx in finalTS['SectorXAlertLevel'] and any(finalTS['SectorXAlertLevel'][nx] > 0) and all(
@@ -1168,10 +1244,22 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     values = np.ndarray([len(sets['mk']), len(sets['n']), len(sets['h'])])
     for i in range(len(sets['n'])):
         values[0, i, :] = finalTS['Load'][sets['n'][i]] * (1 - finalTS['ShareOfFlexibleDemand'][sets['n'][i]])
-        values[1, i, :] = finalTS['Reserve2U'][sets['n'][i]]
-        values[2, i, :] = finalTS['Reserve2D'][sets['n'][i]]
+        values[1, i, :] = finalTS['aFRRU'][sets['n'][i]]
+        values[2, i, :] = finalTS['aFRRD'][sets['n'][i]]
         values[3, i, :] = finalTS['Load'][sets['n'][i]] * finalTS['ShareOfFlexibleDemand'][sets['n'][i]]
     parameters['Demand'] = {'sets': sets_param['Demand'], 'val': values}
+
+    # Reserves Demand
+    values = np.ndarray([len(sets['res']), len(sets['n']), len(sets['h'])])
+    for i in range(len(sets['n'])):
+        values[0, i, :] = finalTS['FFRU'][sets['n'][i]]
+        values[1, i, :] = finalTS['FCRU'][sets['n'][i]]
+        values[2, i, :] = finalTS['aFRRU'][sets['n'][i]]
+        values[3, i, :] = finalTS['mFRRU'][sets['n'][i]]
+        values[4, i, :] = finalTS['FFRD'][sets['n'][i]]
+        values[5, i, :] = finalTS['FCRD'][sets['n'][i]]
+        values[6, i, :] = finalTS['aFRRD'][sets['n'][i]]
+    parameters['ReserveDemand'] = {'sets': sets_param['ReserveDemand'], 'val': values}
 
     # Emission Rate:
     parameters['EmissionRate']['val'][:, 0] = Plants_merged['EmissionRate'].values
@@ -1275,23 +1363,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             parameters['CostXFloodControl']['val'][unit, :] = 0
 
     # %%###############################################################################################################
-    # Inertia limit to parameters dict
-    # parameters['InertiaLimit']['val'] = InertiaLimit['InertiaLimit'].values
-    # if MTS == 0:
-    if len(finalTS['InertiaLimit'].columns) != 0:
-        parameters['InertiaLimit']['val'] = finalTS['InertiaLimit'].iloc[:, 0].values
-    # System Gain to parameters dict
-    if len(finalTS['SystemGainLimit'].columns) != 0:
-        parameters['SystemGainLimit']['val'] = finalTS['SystemGainLimit'].iloc[:, 0].values
-    # FFR Gain to parameters dict
-    if len(finalTS['FFRGainLimit'].columns) != 0:
-        parameters['FFRGainLimit']['val'] = finalTS['FFRGainLimit'].iloc[:, 0].values
-    # FFR to parameters dict
-    if len(finalTS['FFRLimit'].columns) != 0:
-        parameters['FFRLimit']['val'] = finalTS['FFRLimit'].iloc[:, 0].values
-    # Primary Reserve to parameters dict
-    if len(finalTS['PrimaryReserveLimit'].columns) != 0:
-        parameters['PrimaryReserveLimit']['val'] = finalTS['PrimaryReserveLimit'].iloc[:, 0].values
+    # InertiaDemand to parameters dict
+    if len(finalTS['InertiaDemand'].columns) != 0:
+        parameters['InertiaDemand']['val'] = finalTS['InertiaDemand'].iloc[:, 0].values
 
     # Maximum Line Capacity
     for i, l in enumerate(sets['l_int']):
@@ -1305,6 +1379,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         parameters['FlowMinimum']['val'][N+i, :] = finalTS['Inter_RoW'][l]
         if l in finalTS['PriceTransmission'].columns:
             parameters['PriceTransmission']['val'][N+i, :] = finalTS['PriceTransmission'][l]
+
+    # Avoid degenerate zero-cost loop flows in NTC mode by assigning a tiny
+    # transmission usage cost when all prices are zero.
+    if grid_flag == "NTC" and np.all(parameters['PriceTransmission']['val'] == 0):
+        parameters['PriceTransmission']['val'][:, :] = 1e-3
 
     # Check values:
     check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
@@ -1351,21 +1430,125 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             else:
                 logging.warning('Outages factors not found for unit ' + u + '. Assuming no outages')
 
+    # TODO: IMPROVE RESERVE, UFLS, OFDM TABLES FROM CONFING YAML AND CHECK PARTICIPATION OF CHP IN RESERVES
     # Participation to the reserve market
-    list_of_participating_units = []  # new list
-    for unit in Plants_merged.index:
-        tech = Plants_merged.loc[unit, 'Technology']
-        if tech in config['ReserveParticipation'] and Plants_merged.loc[unit, 'CHPType'] == '':
-            list_of_participating_units.append(
-                unit)  # if unit same technology as allowed without CHP and unit is no CHP then add to list
-        elif tech in config['ReserveParticipation_CHP'] and Plants_merged.loc[unit, 'CHPType'] != '':
-            list_of_participating_units.append(
-                unit)  # if unit same technology as allowed with CHP and unit is CHP then add to list
+    # list_of_participating_units = []  # new list
+    # for unit in Plants_merged.index:
+    #     tech = Plants_merged.loc[unit, 'Technology']
+    #     if tech in config['ReserveParticipation'] and Plants_merged.loc[unit, 'CHPType'] == '':
+    #         list_of_participating_units.append(
+    #             unit)  # if unit same technology as allowed without CHP and unit is no CHP then add to list
+    #     elif tech in config['ReserveParticipation_CHP'] and Plants_merged.loc[unit, 'CHPType'] != '':
+    #         list_of_participating_units.append(
+    #             unit)  # if unit same technology as allowed with CHP and unit is CHP then add to list
 
-    values = np.array([s in list_of_participating_units for s in sets['au']],
-                      dtype='bool')  # same as before but with new list
-    parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
+    # values = np.array([s in list_of_participating_units for s in sets['au']],
+    #                   dtype='bool')  # same as before but with new list
+    # parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
+    
+    # ReserveParticipation table for the reserves market
+    # TODO: suggestion is to create commons by type of reserve instead of technologies?
+    constants = {
+        'SystemFrequency': 50,
+        'DeltaFrequencyMax': 0.8,
+        'RoCoF_max': 0.5
+        }
+    values = np.zeros((len(sets['res']), len(sets['au']), len(sets['h'])))
+    
+    res_index = {r: idx for idx, r in enumerate(sets['res'])}
+    au_index = {u: idx for idx, u in enumerate(sets['au'])}
+    
+    for u in sets['au']:
+        if u not in Plants_res.index:
+            logging.warning('The following power plant is not providing any reserve: ' + u)
+            continue
+    
+        i = au_index[u]
+        tech = Plants_res.loc[u, 'Technology']
+        droop = Plants_merged.loc[u, 'Droop']
+        partloadmin = Plants_merged.loc[u, 'PartLoadMin']
+        rampuprate = Plants_merged.loc[u, 'RampUpRate']
+        rampdownrate = Plants_merged.loc[u, 'RampDownRate']
+    
+        for r in sets['res']:
+            j = res_index[r]
+            
+            eligible = False
 
+            # Fast Frequency Response: solo baterías
+            if r in ['FFRU', 'FFRD']:
+                if tech in commons['tech_batteries']:
+                    eligible = True
+
+            # Frequency Containment Reserve y Frequency Restoration Reserves
+            elif r in ['FCRU', 'FCRD', 'aFRRU', 'aFRRD', 'mFRRU', 'mFRRD']:
+                if (tech in commons['tech_batteries'] or
+                    tech in commons['tech_conventional'] or
+                    tech in commons['tech_renewables']):
+                    eligible = True
+    
+            # If eligible, calculate reserve participation based on physical limits (Droop, RampUpRate, RampDownRate)
+            if eligible:
+                if r in ['FFRU', 'FFRD', 'FCRU', 'FCRD'] and droop > 0:
+                    factor1 = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
+                    values[j, i, :] = factor1
+
+                else:
+                    values[j, i, :] = 1  # Participación binaria para otras reservas
+        
+    parameters['ReserveParticipation'] = {'sets': sets_param['ReserveParticipation'], 'val': values}
+
+    # VirtualInertia_Participation table
+    VI_values = np.zeros(len(sets['au']))
+    for u in sets['au']:
+        if u not in Plants_res.index:
+            logging.warning('The following power plant is not providing any virtual inertia: ' + u)
+            continue
+        
+        i = au_index[u]
+        tech = Plants_res.loc[u, 'Technology']
+        
+        # Solo IBR (no convencionales)
+        if tech in commons['tech_renewables'] or tech in commons['tech_batteries']:
+    
+            H = Plants_merged.loc[u, 'InertiaConstant']  # [s]
+    
+            factor_vi = (2 * H / constants['SystemFrequency']) * constants['RoCoF_max']
+            VI_values[i] = factor_vi
+        else:
+            VI_values[i] = 0
+        
+    parameters['VirtualInertia_Participation'] = {'sets': sets_param['VirtualInertia_Participation'], 'val': VI_values}
+                     
+    # UFLS_Participation table (emergency upward action)
+    UFLS_values = np.zeros(len(sets['res']))
+    
+    for r in sets['res']:
+        j = res_index[r]
+        if r == 'FFRU':
+            UFLS_values[j] = 0.1  
+        elif r =='FCRU':
+            UFLS_values[j] = 0.2
+        elif r =='aFRRU':
+            UFLS_values[j] = 0.2
+        elif r =='mFRRU':
+            UFLS_values[j] = 0.2
+    parameters['UFLS_Participation'] = {'sets': sets_param['UFLS_Participation'], 'val': UFLS_values}
+    
+    # OFDM_Participation table (emergency downward action)
+    OFDM_values = np.zeros(len(sets['res']))
+    
+    for r in sets['res']:
+        j = res_index[r]
+        if r == 'FFRD':
+            OFDM_values[j] = 0.1  
+        elif r =='FCRD':
+            OFDM_values[j] = 0.2
+        elif r =='aFRRD':
+            OFDM_values[j] = 0.2
+    parameters['OFDM_Participation'] = {'sets': sets_param['OFDM_Participation'], 'val': OFDM_values}
+        
+                      
     # Technologies
     for unit in range(Nunits):
         idx = sets['t'].index(Plants_merged['Technology'].iloc[unit])
@@ -1445,10 +1628,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             Plants_merged.update(tmp_units)
 
             if lack_of_power > 0:
-                logging.error('In zone: ' + z + ' there is insufficient conventional + renewable ' +
-                              'generation capacity of: ' + str(lack_of_power) +
-                              '. If NTC + storage is not sufficient ShedLoad in ' + z +
-                              ' is likely to occour. Check the inputs!')
+                logging.warning('In zone: ' + z + ' there is insufficient conventional + renewable ' +
+                                'generation capacity of: ' + str(lack_of_power) +
+                                '. If NTC + storage is not sufficient ShedLoad in ' + z +
+                                ' is likely to occur. Check the inputs!')
 
         Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_renewables']), 'InitialPower'] = 0
     Plants_merged.loc[Plants_merged['Technology'].isin(commons['tech_p2bs']), 'InitialPower'] = 0
@@ -1491,7 +1674,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'geo': geo, 'version': dispa_version}
 
     # Determine GDX and Pickle filenames based on MTS flag
-    if MTS:
+    if MTS > 0:
         gdx_in_filename = "Inputs_MTS.gdx" # Use capitalized 'I'
         gdx_out_filename = "Results_MTS.gdx"
         pickle_filename = "Inputs_MTS.p"
@@ -1512,7 +1695,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         os.makedirs(sim)
 
     # Determine target GAMS filename
-    if MTS:
+    if MTS > 0:
         target_gms_filename = 'UCM_MTS.gms'
     else:
         target_gms_filename = 'UCM_h.gms'
@@ -1527,13 +1710,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     gms_modifications[exec_unload_line] = f'EXECUTE_UNLOAD "{gdx_out_filename}"'
     
     # Add specific modifications based on MTS, LP, and grid_flag
-    if MTS:
+    if MTS > 0:
         # MTS requires LP
         if not LP:
-            logging.error('Simulation in MTS must be LP')
-            raise DispaSETValidationError('Simulation in MTS must be LP')
+            msg = f'Simulation in MTS level {MTS} must be LP'
+            logging.error(msg)
+            raise DispaSETValidationError(msg)
         gms_modifications['$setglobal LPFormulation 0'] = '$setglobal LPFormulation 1'
-        gms_modifications['$setglobal MTS 0'] = '$setglobal MTS 1'
+        gms_modifications['$setglobal MTS 0'] = f'$setglobal MTS {MTS}'
     else: # Detailed dispatch run (not MTS)
         if LP:
             gms_modifications['$setglobal LPFormulation 0'] = '$setglobal LPFormulation 1'
@@ -1579,41 +1763,42 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         logging.error(f"Error processing GAMS file: {e}")
         raise DispaSETValidationError(f"Error processing GAMS file: {e}") from e
 
-    # Create cplex option file
+    # Create solver option files (Cplex and Gurobi)
     if config['OptimalityGap'] == '':
-        cplex_options = {'epgap': 0.0005,
-                         # TODO: For the moment hardcoded, it has to be moved to a config file
-                         'numericalemphasis': 0,
-                         'mipdisplay': 4,
-                         'scaind': 1,
-                         'lpmethod': 0,
-                         'relaxfixedinfeas': 0,
-                         'mipstart': 1,
-                         'mircuts': 1,
-                         'quality': True,
-                         'bardisplay': 2,
-                         'epint': 0,
-                         'lbheur': 1,
-                         }
-        logging.info('Default Cplex setting used')
+        epgap = 0.0005
+        logging.info('Default solver settings used')
     else:
-        cplex_options = {'epgap': float(config['OptimalityGap']),  # TODO: For the moment hardcoded, it has to be moved to a config file
-                         'numericalemphasis': 0,
-                         'mipdisplay': 4,
-                         'scaind': 1,
-                         'lpmethod': 0,
-                         'relaxfixedinfeas': 0,
-                         'mipstart': 1,
-                         'mircuts': 1,
-                         'quality': True,
-                         'bardisplay': 2,
-                         'epint': 0,
-                         'lbheur': 1,
-                         }
+        epgap = float(config['OptimalityGap'])
 
-    lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
+    cplex_options = {'epgap': epgap,
+                     'numericalemphasis': 0,
+                     'mipdisplay': 4,
+                     'scaind': 1,
+                     'lpmethod': 0,
+                     'relaxfixedinfeas': 0,
+                     'mipstart': 1,
+                     'mircuts': 1,
+                     'quality': True,
+                     'bardisplay': 2,
+                     'epint': 0,
+                     'lbheur': 1,
+                     }
+    
+    gurobi_options = {'MipGap': epgap,
+                      'DisplayInterval': 5,
+                      'Method': 2,  # Barrier for LP
+                      }
+
+    # Write Cplex options
+    lines_to_write_cplex = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
     with open(os.path.join(sim, 'cplex.opt'), 'w') as f:
-        for line in lines_to_write:
+        for line in lines_to_write_cplex:
+            f.write(line + '\n')
+
+    # Write Gurobi options
+    lines_to_write_gurobi = ['{} {}'.format(k, v) for k, v in gurobi_options.items()]
+    with open(os.path.join(sim, 'gurobi.opt'), 'w') as f:
+        for line in lines_to_write_gurobi:
             f.write(line + '\n')
 
     logging.debug('Using gams file from ' + GMS_FOLDER)

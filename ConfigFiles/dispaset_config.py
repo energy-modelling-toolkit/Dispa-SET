@@ -66,36 +66,34 @@ def start_server(target_dir, port, max_attempts=20):
 def start_api_server(script_dir, config_dir):
     """Import and start the API server from api_server.py"""
     try:
-        # First, ensure we're in the correct directory
-        original_dir = os.getcwd()
-        os.chdir(script_dir)
-        
-        # Try to import the module using importlib
-        api_module = None
+        # Construct the path to api_server.py
         api_server_path = os.path.join(script_dir, config_dir, 'api_server.py')
         
-        if os.path.exists(api_server_path):
-            spec = importlib.util.spec_from_file_location("api_server", api_server_path)
-            api_module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(api_module)
-        else:
-            print(f"API server module not found at {api_server_path}")
+        if not os.path.exists(api_server_path):
+            print(f"Error: API server module not found at {api_server_path}")
             return None, None, None
         
-        # Change to the config directory where the API server will serve files from
-        os.chdir(os.path.join(script_dir, config_dir))
+        # Use importlib.util to load the module from its path
+        # This is standard in Python 3.4+
+        spec = importlib.util.spec_from_file_location("api_server", api_server_path)
+        if spec is None:
+            print(f"Error: Could not load spec for {api_server_path}")
+            return None, None, None
+            
+        api_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(api_module)
         
-        # Start the API server (it now returns used_port)
-        api_server, api_thread, used_api_port = api_module.start_api_server(API_PORT) # Capture used_api_port
+        # Start the API server
+        # We don't chdir here anymore as api_server.py now handles paths robustly
+        api_server, api_thread, used_api_port = api_module.start_api_server(API_PORT)
         
-        # Restore original directory
-        os.chdir(original_dir)
-        
-        return api_server, api_thread, used_api_port # Return used_api_port
+        return api_server, api_thread, used_api_port
     
     except Exception as e:
         print(f"Error starting API server: {e}")
-        return None, None, None # Return None for port as well
+        import traceback
+        traceback.print_exc()
+        return None, None, None
 
 
 if __name__ == "__main__":

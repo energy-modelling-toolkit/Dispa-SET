@@ -40,29 +40,32 @@ def build_simulation(config, mts_plot=None, MTSTimeStep=24):
     :return SimData:        Simulation data for unit-commitment module
     """
     # Check existance of hydro scheduling module in the config file
-    hydro_flag = config.get('HydroScheduling', "")  # If key does not exist it returns ""
+    hydro_flag = config.get('HydroScheduling', 0)
     
     # SectorCoupling is always 'On' in this version
 
-    if (hydro_flag == "") or (hydro_flag == "Off"):
-        logging.info('Simulation without mid therm scheduling')
-        SimData = build_single_run(config)
-    else:
+    if hydro_flag == 0:
+        logging.info('Simulation without mid-term scheduling (MTS=0)')
+        SimData = build_single_run(config, MTS=0)
+    elif hydro_flag in [1, 2]:
         # With mid-term scheduling
         [new_profiles, new_SectorXFlexDemand, new_SectorXFlexSupply, new_profilesSectorX] = mid_term_scheduling(
                 config, mts_plot=mts_plot, TimeStep=MTSTimeStep)
         logging.info('\n\nBuilding final simulation with the new profiles\n')
         if (config['SectorXFlexibleDemand'] != '') and (config['SectorXFlexibleSupply'] == ''):
             SimData = build_single_run(config, profiles=new_profiles, SectorXFlexDemand=new_SectorXFlexDemand,
-                                    profilesSectorX=new_profilesSectorX)
+                                    profilesSectorX=new_profilesSectorX, MTS=0)
         elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] == ''):
             SimData = build_single_run(config, profiles=new_profiles, SectorXFlexSupply=new_SectorXFlexSupply,
-                                    profilesSectorX=new_profilesSectorX)
+                                    profilesSectorX=new_profilesSectorX, MTS=0)
         elif (config['SectorXFlexibleSupply'] != '') and (config['SectorXFlexibleDemand'] != ''):
             SimData = build_single_run(config, profiles=new_profiles, SectorXFlexDemand=new_SectorXFlexDemand,
-                                    SectorXFlexSupply=new_SectorXFlexSupply, profilesSectorX=new_profilesSectorX)
+                                    SectorXFlexSupply=new_SectorXFlexSupply, profilesSectorX=new_profilesSectorX, MTS=0)
         else:
-            SimData = build_single_run(config, profiles=new_profiles, profilesSectorX=new_profilesSectorX)
+            SimData = build_single_run(config, profiles=new_profiles, profilesSectorX=new_profilesSectorX, MTS=0)
+    else:
+        logging.error(f'Invalid HydroScheduling level: {hydro_flag}')
+        sys.exit(1)
 
     # Copy the log to the simulation folder:
     if os.path.isfile(commons['logfile']):
@@ -116,14 +119,11 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     # New configuration dictionary, specific to MTS:
     temp_config = dict(config)
 
-    # Dates for the mid term scheduling
-    if config['HydroSchedulingHorizon'] == 'Annual':
-        temp_config['StartDate'] = (y_start, 1, 1, 00, 00, 00)  # updating start date to the beginning of the year
-        temp_config['StopDate'] = (y_start, 12, 31, 23, 59, 00)  # updating stopdate to the end of the year
-        logging.info('Hydro scheduling is performed for the period between 01.01.' + str(y_start) + ' and 12.31.' +
-                     str(y_start))
-    else:
-        logging.info('Hydro scheduling is performed between Start and Stop dates!')
+    # Dates for the mid term scheduling - Always annual as per requirements
+    y_start, m_start, d_start, __, __, __ = config['StartDate']
+    temp_config['StartDate'] = (y_start, 1, 1, 00, 00, 00)  # updating start date to the beginning of the year
+    temp_config['StopDate'] = (y_start, 12, 31, 23, 59, 00)  # updating stopdate to the end of the year
+    logging.info(f'Hydro scheduling is performed for a full year (Annual) as required: 01.01.{y_start} to 12.31.{y_start}')
 
     # Indexes with the original time step:
     idx_orig = pd.date_range(start=dt.datetime(*config['StartDate']),
@@ -168,7 +168,53 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         result_file_mts = 'Results_MTS.gdx'
 
     # Checking which type of hydro scheduling simulation is specified in the config file:
-    if config['HydroScheduling'] == 'Zonal':
+    mts_level = config.get('HydroScheduling', 0)
+    
+    # Initialize results
+    profiles = pd.DataFrame(index=idx)
+    profilesSectorX = pd.DataFrame(index=idx)
+    SectorXFlexDemand = pd.DataFrame(index=idx)
+    SectorXFlexSupply = pd.DataFrame(index=idx)
+    temp_results = {}
+
+    if mts_level in [1, 2, 'Regional']:
+        # Regional MTS (default for level 1 and 2)
+        logging.info(f'\n\nLaunching regional Mid-Term Scheduling (MTS level {temp_config["HydroScheduling"]})\n')
+        SimData = build_single_run(temp_config, MTS=temp_config['HydroScheduling'])
+        units = SimData['units']
+        solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
+                   gams_folder=temp_config['GAMS_folder'],
+                   gams_file=gams_file_mts,
+                   result_file=result_file_mts)
+        temp_results = gdx_to_dataframe(
+            gdx_to_list(config['GAMS_folder'], os.path.join(config['SimulationDirectory'], result_file_mts),
+                        varname='all', verbose=False), fixindex=True, verbose=False)
+        _check_results(temp_results)
+        
+        # Collect Storage Level profiles
+        if 'OutputStorageLevel' in temp_results:
+            res = temp_results['OutputStorageLevel']
+            profiles = res.reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx) if len(res) < len(idx) else res.set_index(idx)
+        else:
+            logging.critical('Storage levels in the selected region were not computed!')
+            sys.exit(0)
+
+        # Collect SectorX Storage Level profiles
+        if 'OutputSectorXStorageLevel' in temp_results:
+            resX = temp_results['OutputSectorXStorageLevel']
+            profilesSectorX = resX.reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx) if len(resX) < len(idx) else resX.set_index(idx)
+
+        # Collect SectorX Flex Demand
+        if 'OutputSectorXFlexDemand' in temp_results:
+            resD = temp_results['OutputSectorXFlexDemand']
+            SectorXFlexDemand = resD.reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx) if len(resD) < len(idx) else resD.set_index(idx)
+
+        # Collect SectorX Flex Supply
+        if 'OutputSectorXFlexSupply' in temp_results:
+            resS = temp_results['OutputSectorXFlexSupply']
+            SectorXFlexSupply = resS.reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx) if len(resS) < len(idx) else resS.set_index(idx)
+
+    elif mts_level == 'Zonal':
         no_of_zones = len(config['mts_zones'])
         temp_results = {}
         profiles = pd.DataFrame(index=idx)
@@ -180,7 +226,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                 '\n\nLaunching Mid-Term Scheduling for zone ' + c + ' (Number ' + str(i + 1) + ' out of ' + str(
                     no_of_zones) + ')\n')
             temp_config['zones'] = [c]  # Override zone that needs to be simulated
-            SimData = build_single_run(temp_config, MTS=1)  # Create temporary SimData
+            SimData = build_single_run(temp_config, MTS=temp_config['HydroScheduling'])  # Create temporary SimData
             units = SimData['units']
             r = solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
                            gams_folder=temp_config['GAMS_folder'],
@@ -211,7 +257,6 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                     raise DispaSETValidationError('Unit "' + u + '" from MTS results not in units table')
                 for u_old in units.loc[u, 'FormerUnits']:
                     profiles[u_old] = temp_results[c]['OutputStorageLevel'][u].values
-
             # for nx in temp_results[c]['OutputSectorXStorageLevel']:
             #     if nx not in units.index:
             #         logging.critical('Unit "' + u + '" is reported in the reservoir levels of the result file but '
@@ -398,6 +443,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     if mts_plot:
         if 'profiles' in locals():
             profiles.plot()
+        # TODO: the 2 lines below produce an error working with the excel config
         if 'profilesSectorX' in locals():
             profilesSectorX.plot()
 

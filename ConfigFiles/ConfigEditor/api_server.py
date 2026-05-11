@@ -3,11 +3,18 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
 import os
 import sys
-import yaml
 import urllib.parse
 import socketserver
 import threading
 import time
+
+# Try to import yaml, but allow the server to start without it for reading
+try:
+    import yaml
+    HAS_YAML = True
+except ImportError:
+    print("Warning: 'yaml' (PyYAML) library not found. Saving functionality will be limited.")
+    HAS_YAML = False
 
 # Default port for the API server
 API_PORT = 8084
@@ -26,24 +33,23 @@ class YAMLHandler(BaseHTTPRequestHandler):
         self._set_response_headers()
         
     def do_GET(self):
+        # Determine the directory containing the config files (parent of ConfigEditor)
+        # We use an absolute path for robustness
+        config_files_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
         # Handle requests to list YAML files in the ConfigFiles directory
         if self.path == '/list-yaml-files':
             try:
-                # List YAML files in parent directory (ConfigFiles)
                 yaml_files = []
-                parent_dir = '..' 
-                if os.path.exists(parent_dir):
+                if os.path.exists(config_files_dir):
                     # List only base filenames ending with .yml or .yaml
-                    yaml_files = [f for f in os.listdir(parent_dir) 
-                                     if os.path.isfile(os.path.join(parent_dir, f)) and f.endswith(('.yml', '.yaml'))]
-                else:
-                     # Handle case where parent dir might not be accessible (less likely here)
-                    print(f"Warning: Could not access parent directory '{parent_dir}'")
+                    yaml_files = [f for f in os.listdir(config_files_dir) 
+                                     if os.path.isfile(os.path.join(config_files_dir, f)) and f.endswith(('.yml', '.yaml'))]
                 
                 self._set_response_headers()
                 self.wfile.write(json.dumps({'files': yaml_files}).encode())
             except Exception as e:
-                print(f"Error listing YAML files: {e}") # Log error server-side
+                print(f"Error listing YAML files: {e}")
                 self._set_response_headers(status_code=500)
                 self.wfile.write(json.dumps({'error': 'Error listing configuration files'}).encode())
                 
@@ -58,12 +64,26 @@ class YAMLHandler(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps({'error': 'Filename parameter is required'}).encode())
                     return
                 
-                if not os.path.exists(filename):
+                # Resolve the file path relative to config_files_dir
+                # If filename starts with '../', we remove it as we are already at the parent
+                clean_filename = filename
+                if filename.startswith('../'):
+                    clean_filename = filename[3:]
+                
+                full_path = os.path.abspath(os.path.join(config_files_dir, clean_filename))
+                
+                # Security check: ensure the file is within config_files_dir
+                if not full_path.startswith(config_files_dir):
+                    self._set_response_headers(status_code=403)
+                    self.wfile.write(json.dumps({'error': 'Access denied: Path outside config directory'}).encode())
+                    return
+
+                if not os.path.exists(full_path):
                     self._set_response_headers(status_code=404)
                     self.wfile.write(json.dumps({'error': f'File {filename} not found'}).encode())
                     return
                 
-                with open(filename, 'r') as f:
+                with open(full_path, 'r') as f:
                     yaml_content = f.read()
                 
                 self._set_response_headers(content_type='text/yaml')
@@ -77,10 +97,25 @@ class YAMLHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({'error': 'Endpoint not found'}).encode())
     
     def do_POST(self):
+        # Determine the directory containing the config files
+        # We use the absolute path of the script's directory's parent
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        config_files_dir = os.path.abspath(os.path.join(script_dir, '..'))
+
         # Handle requests to save YAML content to a file
         if self.path == '/save-file':
             try:
-                content_length = int(self.headers['Content-Length'])
+                if not HAS_YAML:
+                    self._set_response_headers(status_code=500)
+                    self.wfile.write(json.dumps({'error': "The 'yaml' library is not installed on the server. Saving is disabled."}).encode())
+                    return
+
+                content_length = int(self.headers.get('Content-Length', 0))
+                if content_length == 0:
+                    self._set_response_headers(status_code=400)
+                    self.wfile.write(json.dumps({'error': 'Empty request body'}).encode())
+                    return
+
                 post_data = self.rfile.read(content_length).decode('utf-8')
                 data = json.loads(post_data)
                 
@@ -92,25 +127,34 @@ class YAMLHandler(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps({'error': 'Both filename and content are required'}).encode())
                     return
                 
-                # Ensure we only save YAML files within the current directory or parent ConfigFiles directory for security
-                if ('/..' in filename or filename.startswith('/') or '\\' in filename or filename.endswith('/..') or
-                    (filename.startswith('..') and not filename.startswith('../'))):
-                    self._set_response_headers(status_code=400)
-                    self.wfile.write(json.dumps({'error': 'Invalid filename'}).encode())
+                # Resolve the path safely
+                # Remove potential '../' or './' prefixes
+                clean_filename = filename
+                while clean_filename.startswith('../') or clean_filename.startswith('./'):
+                    clean_filename = clean_filename.split('/', 1)[-1]
+                
+                # We only allow saving into the ConfigFiles directory
+                full_path = os.path.abspath(os.path.join(config_files_dir, clean_filename))
+                
+                # Security check: ensure the resolved path is inside config_files_dir
+                # We use commonpath to be 100% sure
+                try:
+                    if os.path.commonpath([config_files_dir, full_path]) != config_files_dir:
+                        print(f"Path security violation: {full_path} is not in {config_files_dir}")
+                        self._set_response_headers(status_code=403)
+                        self.wfile.write(json.dumps({'error': f'Access denied: Path {clean_filename} is outside allowed directory'}).encode())
+                        return
+                except ValueError: # Paths on different drives or invalid
+                    self._set_response_headers(status_code=403)
+                    self.wfile.write(json.dumps({'error': 'Access denied: Invalid path'}).encode())
                     return
                 
-                # Resolve the path to make sure it's within ConfigFiles directory
-                abs_path = os.path.abspath(filename)
-                config_files_dir = os.path.abspath(os.path.join(os.getcwd(), '..'))
-                if not abs_path.startswith(config_files_dir):
-                    self._set_response_headers(status_code=400)
-                    self.wfile.write(json.dumps({'error': 'Path traversal not allowed'}).encode())
-                    return
+                # Add .yml extension if not present and no extension exists
+                if not os.path.splitext(full_path)[1]:
+                    full_path = f"{full_path}.yml"
                 
-                # Add .yml extension if not present
-                if not filename.endswith(('.yml', '.yaml')):
-                    filename = f"{filename}.yml"
-                
+                print(f"Attempting to save to: {full_path}")
+
                 # Parse and dump the YAML to ensure it's valid and properly formatted
                 try:
                     yaml_data = yaml.safe_load(content)
@@ -122,16 +166,22 @@ class YAMLHandler(BaseHTTPRequestHandler):
                     if 'StopDate' in yaml_data and isinstance(yaml_data['StopDate'], list):
                         yaml_data['StopDate'] = tuple(yaml_data['StopDate'])
                     
-                    with open(filename, 'w') as f:
+                    # Ensure the directory exists
+                    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+
+                    with open(full_path, 'w') as f:
                         yaml.dump(yaml_data, f, sort_keys=False)
                     
+                    print(f"Successfully saved {full_path}")
                     self._set_response_headers()
-                    self.wfile.write(json.dumps({'success': True, 'message': f'File {filename} saved successfully'}).encode())
+                    self.wfile.write(json.dumps({'success': True, 'message': f'File {os.path.basename(full_path)} saved successfully'}).encode())
                 except Exception as e:
+                    print(f"YAML dump error: {e}")
                     self._set_response_headers(status_code=400)
-                    self.wfile.write(json.dumps({'error': f'Invalid YAML: {str(e)}'}).encode())
+                    self.wfile.write(json.dumps({'error': f'Invalid YAML or write error: {str(e)}'}).encode())
                     
             except Exception as e:
+                print(f"General POST error: {e}")
                 self._set_response_headers(status_code=500)
                 self.wfile.write(json.dumps({'error': str(e)}).encode())
         else:

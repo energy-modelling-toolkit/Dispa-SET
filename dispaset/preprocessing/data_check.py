@@ -501,13 +501,13 @@ def check_units(config, plants):
             logging.critical(msg)
             raise DispaSETValidationError(msg)
 
-    # Checking che compatibility between the selected simulation time and the power plant constraints:
+    # Checking the compatibility between the selected simulation type and the power plant constraints:
     if config['SimulationType'] in ('LP', 'LP clustered'):
         for key in ['NoLoadCost', 'PartLoadMin', 'MinEfficiency', 'StartUpTime']:
-            if (plants[key] > 0).any():
-                logging.error('Non-null value(s) have been found for key ' + key + ' in the power plant list. '
-                              'This cannot be modelled with the ' + config['SimulationType'] + ' formulation and '
-                              'will therefore not be considered.')
+            if key in plants.columns and (plants[key] > 0).any():
+                logging.warning('Non-null value(s) have been found for key ' + key + ' in the power plant list. '
+                                'This cannot be modelled with the ' + config['SimulationType'] + ' formulation and '
+                                'will therefore not be considered.')
     return True
 
 
@@ -571,72 +571,72 @@ def check_heat_demand(plants, data, zones_th):
     return True
 
 
-def check_reserves(Reserve2D, Reserve2U, Load):
+def check_reserves(aFRRDDemand, aFRRUDemand, Load):
     """
     Function that checks the validity of the reserve requirement time series
-    :param Reserve2D:   DataFrame of reserves 2D
-    :param Reserve2U:   DataFrame of reserves 2U
+    :param aFRRDDemand:   DataFrame of reserves aFRRD
+    :param aFRRUDemand:   DataFrame of reserves aFRRU
     :param Load:        DataFrame of Loads
     """
     for z in Load.columns:
-        if z in Reserve2U:
-            if (Reserve2U[z] < 0).any():
-                msg = 'The reserve 2U table contains negative values for zone ' + z
+        if z in aFRRUDemand:
+            if (aFRRUDemand[z] < 0).any():
+                msg = 'The reserve aFRRU table contains negative values for zone ' + z
                 logging.critical(msg)
                 raise DispaSETValidationError(msg)
-            if (Load[z] - Reserve2U[z] < 0).any():
-                msg = 'The reserve 2U table contains negative values higher than demand for zone ' + z
+            if (Load[z] - aFRRUDemand[z] < 0).any():
+                msg = 'The reserve aFRRU table contains values higher than demand for zone ' + z
                 logging.critical(msg)
                 raise DispaSETValidationError(msg)
         else:
-            logging.warning('No 2U reserve requirement data has been found for zone ' + z +
+            logging.warning('No aFRRU reserve requirement data has been found for zone ' + z +
                             '. Using the standard formula')
-        if z in Reserve2D:
-            if (Reserve2D[z] < 0).any():
-                msg = 'The reserve 2D table contains negative values for zone ' + z
+        if z in aFRRDDemand:
+            if (aFRRDDemand[z] < 0).any():
+                msg = 'The reserve aFRRD table contains negative values for zone ' + z
                 logging.critical(msg)
                 raise DispaSETValidationError(msg)
-            if (Load[z] - Reserve2D[z] < 0).any():
-                msg = 'The reserve 2D table contains values higher than demand for zone ' + z
+            if (Load[z] - aFRRDDemand[z] < 0).any():
+                msg = 'The reserve aFRRD table contains values higher than demand for zone ' + z
                 logging.critical(msg)
                 raise DispaSETValidationError(msg)
         else:
-            logging.warning('No 2D reserve requirement data has been found for zone ' + z +
+            logging.warning('No aFRRD reserve requirement data has been found for zone ' + z +
                             '. Using the standard formula')
 
-def check_FFRLimit(FFRLimit, Load):
+def check_FFRDemand(FFRDemand, Load):
     """
     Function that checks the validity of the reserve requirement time series
-    :param FFR:   DataFrame of FFR Limit
+    :param FFR:   DataFrame of FFR Demand
     :param Load:        DataFrame of Loads
     """
-    if (FFRLimit.sum(axis=1) < 0).any():
-        msg = 'The FFR Limit table contains negative values'
+    if (FFRDemand.sum(axis=1) < 0).any():
+        msg = 'The FFR Demand table contains negative values'
         logging.critical(msg)
         raise DispaSETValidationError(msg)
-    if (Load.sum(axis=1) - FFRLimit.sum(axis=1) < 0).any():
-        msg = 'The FFR Limit table contains values higher than demand'
+    if (Load.sum(axis=1) - FFRDemand.sum(axis=1) < 0).any():
+        msg = 'The FFR Demand table contains values higher than demand'
         logging.critical(msg)
         raise DispaSETValidationError(msg)
     else:
-        logging.warning('No FFR Limit requirement data has been found')
+        logging.warning('No FFR Demand requirement data has been found')
         
-def check_PrimaryReserveLimit(PrimaryReserveLimit, Load):
+def check_FCRDemand(FCRDemand, Load):
     """
     Function that checks the validity of the reserve requirement time series
-    :param PrimaryReserve:   DataFrame of Primary Reserve Limit
+    :param FCR:   DataFrame of FCR Demand
     :param Load:        DataFrame of Loads
     """
-    if (PrimaryReserveLimit.sum(axis=1) < 0).any():
-        msg = 'The Primary Reserve Limit table contains negative values'
+    if (FCRDemand.sum(axis=1) < 0).any():
+        msg = 'The FCR Demand table contains negative values'
         logging.critical(msg)
         raise DispaSETValidationError(msg)
-    if (Load.sum(axis=1) - PrimaryReserveLimit.sum(axis=1) < 0).any():
-        msg = 'The Primary Reserve Limit table contains values higher than demand'
+    if (Load.sum(axis=1) - FCRDemand.sum(axis=1) < 0).any():
+        msg = 'The FCR Demand table contains values higher than demand'
         logging.critical(msg)
         raise DispaSETValidationError(msg)
     else:
-        logging.warning('No Primary Reserve Limit requirement data has been found')
+        logging.warning('No FCR Demand requirement data has been found')
 
 
 def check_df(df, StartDate=None, StopDate=None, name=''):
