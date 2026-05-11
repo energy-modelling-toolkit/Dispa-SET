@@ -1,0 +1,5 @@
+Unnamed: 0,Unit,PowerCapacity,Nunits,Zone,Zone_th,Zone_h2,Technology,Fuel,Efficiency,MinUpTime,MinDownTime,RampUpRate,RampDownRate,StartUpCost,NoLoadCost_pu,RampingCost,PartLoadMin,MinEfficiency,StartUpTime,CO2Intensity,CHPType,CHPPowerToHeat,CHPPowerLossFactor,CHPMaxHeat,COP,Tnominal,coef_COP_a,coef_COP_b,STOCapacity,STOSelfDischarge,STOMaxChargingPower,STOChargingEfficiency,STOHours,WaterWithdrawal,WaterConsumption,Sector1,EfficiencySector1,Sector2,EfficiencySector2
+0,Z1_GAS,1500,1,Z1,,,GTUR,GAS,0.4,0,0,1,1,0,0,0,0.3,0.4,0,0.5,,,,,,,,,,,,,,0,0,,,,
+1,Z1_HDAM,100,1,Z1,,,HDAM,WAT,1.0,0,0,1,1,0,0,0,0.0,1.0,0,0.0,,,,,,,,,50000,0,0,,500,0,0,,,,
+2,Z1_HPHS,80,1,Z1,,,HPHS,WAT,0.9,0,0,1,1,0,0,0,0.0,0.9,0,0.0,,,,,,,,,1600,0,80,0.9,20,0,0,,,,
+3,Z1_BATS,50,1,Z1,,,BATS,OTH,0.9,0,0,1,1,0,0,0,0.0,0.9,0,0.0,,,,,,,,,1000,0,50,0.9,20,0,0,,,,

@@ -24,7 +24,8 @@ tests/
 │   ├── tiny_2zones.yml   # 2 zones with NTC
 │   ├── tiny_milp.yml     # Integer clustering (unit commitment)
 │   ├── tiny_bs.yml       # H2 boundary sector + electrolyser/fuel-cell
-│   ├── tiny_mts.yml      # MTS preprocessing
+│   ├── tiny_mts.yml      # MTS preprocessing (original 2-zone config)
+│   ├── tiny_mts_variants.yml  # MTS variant tests (HDAM/HPHS/BATS, cyclic/imposed)
 │   ├── tiny_curtailment.yml  # over-sized VRE -> curtailment
 │   ├── tiny_dcpf.yml     # 3-zone triangle, DC-Power-Flow transmission
 │   ├── tiny_ntc_3zones.yml   # same topology with NTC (comparison partner)
@@ -33,6 +34,7 @@ tests/
 │   ├── Units_tiny.csv    # minimal plant set (no complex constraints)
 │   ├── Units_dcpf.csv    # single gas unit in Z1 (DC-PF / NTC-3zone tests)
 │   ├── Units_testcase.csv# fuller plant set (CHP, BS, hydro)
+│   ├── Units_mts.csv     # MTS test system (1500 MW gas + HDAM/HPHS/BATS, STOHours=20)
 │   ├── GridData_tiny.csv # 3-line triangle network for DC-PF tests
 │   ├── boundary_sector/  # BS_*.csv used by tiny_bs.yml & ultimate.yml
 │   ├── AvailabilityFactors/, Load_RealTime/, ...
@@ -98,7 +100,14 @@ coverage (the feature is exercised but not strictly asserted on).
 | Boundary sector (H2) solve           |     |    F       |         |    F     |
 | CHP via boundary sector              |     |    F       |         |    F     |
 | Curtailment of VRE                   |     |    F       |         |          |
-| Mid-Term Scheduling (MTS)            |     |    F       |         |          |
+| Mid-Term Scheduling (MTS) — regional | F   |    F       |         |          |
+| MTS cyclic boundary condition (MTS=1)|     |    F       |         |          |
+| MTS cyclic — dispatch annual (final≥initial) |  |  F  |     |          |
+| MTS imposed boundary cond. (MTS=2)   | F   |    F       |         |          |
+| MTS profile injection (build-only)   | F   |            |         |          |
+| MTS all storage types (HDAM/HPHS/BATS)|    |    F       |         |          |
+| MTS profiles respected in dispatch   |     |    F       |         |          |
+| MTS with boundary sector (H2)        |     |    F       |         |          |
 | `get_sim_results`                    |     |    F       |         |    F     |
 | `get_indicators_powerplant`          |  F  |    F       |         |    F     |
 | `get_result_analysis`                |  F  |    F       |         |    F     |
@@ -112,7 +121,7 @@ coverage (the feature is exercised but not strictly asserted on).
 
 ## 4. Step-by-step roadmap
 
-The current state is "all 132 tests pass under 60 s" (as of the latest run).
+The current state is "all 152 tests pass under 60 s" (as of the latest run).
 The roadmap below lists the next blocks in suggested execution order.
 
 ### 4.1 Short-term (low effort, high value) — COMPLETED
@@ -158,8 +167,35 @@ The roadmap below lists the next blocks in suggested execution order.
    New data: `tests/data/GridData_tiny.csv` (asymmetric-reactance triangle),
    `tests/data/Units_dcpf.csv` (single gas unit in Z1),
    `tests/configs/tiny_dcpf.yml`, `tests/configs/tiny_ntc_3zones.yml`.
-8. **Add multi-period MTS variants** (rolling vs. annual horizons,
-   regional vs. zonal scope).
+8. **[DONE] Add MTS variant tests** (cyclic, imposed, all storage types,
+   profile injection, dispatch adherence, boundary-sector MTS).
+   Six new tests live in `tests/integration/test_solve_mts.py`:
+   - `test_mts_profile_injection_build_only` — GAMS-free; injects a flat 0.8
+     profile for HDAM and verifies `StorageProfile['val']` mean > 0.7.
+   - `test_mts_cyclic_boundary_condition` — HydroScheduling=1; runs
+     `mid_term_scheduling` and checks the annual HDAM profile is valid (values
+     in [0,1], non-empty).
+   - `test_mts_imposed_boundary_condition` — HydroScheduling=2; verifies at
+     build level that `StorageProfile` is a linspace from ReservoirLevelInitial
+     (0.5) to ReservoirLevelFinal (0.3), monotonically non-increasing; also
+     checks that `mid_term_scheduling` runs and returns a valid profile.
+   - `test_mts_all_storage_types_full_pipeline` — full MTS + dispatch with
+     HDAM, HPHS, and long-duration BATS (STOHours=20 each); asserts all three
+     units appear in `asu`, `OutputStorageLevel` is present, BATS has a
+     non-zero `StorageProfile`.
+   - `test_mts_cyclic_dispatch_annual` — full-year rolling dispatch (monthly
+     windows, HorizonLength=30) after MTS=1; asserts
+     `OutputStorageLevel[-1] >= StorageInitial_normalised - 0.10`.  Completes
+     in ≈ 22 s (1 MTS solve + 12 monthly dispatch solves).
+   - `test_mts_profiles_respected_in_dispatch` — asserts that for each storage
+     type, `OutputStorageLevel[-1] >= StorageProfile[-1] - tol`.
+   - `test_mts_bs_regional` — runs `tiny_bs.yml` with HydroScheduling=1 and
+     checks that `OutputSectorXStorageLevel` is produced.
+   New test data: `tests/data/Units_mts.csv` (4-unit single-zone system with
+   1500 MW gas backup, HDAM 100 MW / 50 000 MWh (STOHours=500, seasonal),
+   HPHS and BATS with STOHours=20).
+   New config: `tests/configs/tiny_mts_variants.yml` (annual MTS, 7-day
+   dispatch, single zone Z1, LP clustered).
 9. **Add `solve_succeeded`-style assertions on solver KPIs**
    (objective value bounded, no spurious lost load on a feasible
    case).

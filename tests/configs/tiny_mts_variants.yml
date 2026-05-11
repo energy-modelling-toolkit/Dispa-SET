@@ -1,0 +1,134 @@
+# --------------------------------------------------------------------------- #
+# MTS variant tests configuration
+# ---------------------------------------------------------------------------
+# Single zone (Z1) with HDAM, HPHS, long-duration BATS and a gas backup.
+# MTS runs annually (full year 2015) with a 24h time step.
+# Dispatch covers only 7 days so the test suite stays fast.
+#
+# Variants produced in tests by overriding keys:
+#   - HydroScheduling: 1 (cyclic)  or  2 (imposed, linear profile)
+#   - InitialFinalReservoirLevel: 1 (cyclic) or 0 (non-cyclic)
+#   - ReservoirLevelFinal (in default): varied to test imposed final levels
+# --------------------------------------------------------------------------- #
+SimulationDirectory: 'output/sim_tiny_mts_variants'
+WriteExcel: 0
+WriteGDX: 1
+WritePickle: 1
+
+GAMS_folder: ''
+cplex_path: ''
+
+StartDate: !!python/tuple [2015, 1, 1, 0, 0, 0]
+StopDate:  !!python/tuple [2015, 1, 7, 0, 0, 0]   # 7-day dispatch (one window)
+HorizonLength: 7                                    # single rolling window → easy to check
+LookAhead: 0
+DataTimeStep: 1
+SimulationTimeStep: 1
+
+SimulationType: 'LP clustered'
+ReserveCalculation: 'Generic'
+AllowCurtailment: 1
+OptimalityGap: 0.01
+
+# ---- Time series ----
+Demand:                 'data/Load_RealTime/##/2015.csv'
+RenewablesAF:           'data/AvailabilityFactors/##/2015.csv'
+Outages:                ''
+ShareOfFlexibleDemand:  ''
+DemandFlexibility:      ''
+LoadShedding:           ''
+PowerPlantData:         'data/Units_mts.csv'
+NTC:                    ''
+Interconnections:       ''
+TransmissionGridType:   'NTC'
+GridData:               ''
+GeoData:                'data/Geo_Coordinates.csv'
+
+# ---- Hydro / storage ----
+HydroScheduling:            1           # Regional MTS with cyclic boundary conditions
+HydroSchedulingHorizon:     'Annual'
+InitialFinalReservoirLevel: 1           # cyclic (final = initial)
+ReservoirLevels:            'data/ReservoirLevels.csv'
+ReservoirLevelInitial:      ''
+ReservoirLevelFinal:        ''
+ReservoirScaledInflows:     'data/ScaledInflows.csv'
+StorageAlertLevels:         ''
+StorageFloodControl:        ''
+WaterValue:                 ''
+CostLoadShedding:           ''
+CostCurtailment:            ''
+CostOfSpillage:             ''
+ValueOfLostLoad:            ''
+PriceTransmission:          ''
+
+# ---- Fuel prices (use database values for realism) ----
+PriceOfGas:        '../Database/FuelPrices/Gas/2015.csv'
+PriceOfBlackCoal:  ''
+PriceOfLignite:    ''
+PriceOfCO2:        ''
+PriceOfBiomass:    ''
+PriceOfFuelOil:    ''
+PriceOfNuclear:    ''
+PriceOfPeat:       ''
+PriceOfAmmonia:    ''
+
+# ---- Reserve ----
+ShareOfQuickStartUnits: ''
+Reserve2U:              ''
+Reserve2D:              ''
+PrimaryReserveLimit:    ''
+InertiaLimit:           ''
+FFRLimit:               ''
+FFRGainLimit:           ''
+FrequencyStability:     ''
+SystemGainLimit:        ''
+
+# ---- Boundary sector (not used here) ----
+BoundarySectorData:             ''
+BoundarySectorNTC:              ''
+BoundarySectorInterconnections: ''
+SectorXDemand:                  ''
+SectorXFlexibleDemand:          ''
+SectorXFlexibleSupply:          ''
+SectorXReservoirLevels:         ''
+SectorXFloodControl:            ''
+BoundarySectorMaxSpillage:      ''
+
+zones:     ['Z1']
+mts_zones: ['Z1']
+all_zones: ['Z1']
+
+ReserveParticipation:
+  - GTUR
+  - HDAM
+  - HPHS
+  - BATS
+ReserveParticipation_CHP: []
+
+# Demand scaled to 0.1 so peak load (≈ 984 MW) stays well under firm capacity
+# (Z1_GAS=500 MW + HDAM=100 MW + HPHS=80 MW + BATS=50 MW = 730 MW total firm)
+# → multiply by 0.06 so that peak ≈ 60 MW, comfortably covered.
+modifiers: {Demand: 0.06, Solar: 1.0, Wind: 1.0, Storage: 1.0}
+
+default:
+  ShareOfFlexibleDemand: 0
+  DemandFlexibility:     0
+  LoadShedding:          0.05
+  ReservoirLevelInitial: 0.5
+  ReservoirLevelFinal:   0.5
+  WaterValue:            100
+  CostLoadShedding:      1500
+  CostCurtailment:       20
+  CostOfSpillage:        0
+  ValueOfLostLoad:       100000
+  PriceTransmission:     0
+  PriceOfGas:            44
+  PriceOfBlackCoal:      18
+  PriceOfLignite:        15
+  PriceOfCO2:            0
+  PriceOfFuelOil:        35
+  PriceOfNuclear:        3
+  PriceOfPeat:           0
+  PriceOfBiomass:        37
+  PriceOfAmmonia:        0
+  CostHeatSlack:         50
