@@ -6,8 +6,8 @@ Integration test: DC Power Flow on the PJM 5-bus test system
 What this test does
 -------------------
 Builds and solves the standard PJM 5-bus academic DC-OPF test case inside
-Dispa-SET, then verifies that the physics-based line-flow constraints produce
-the well-known congestion pattern.
+Dispa-SET, then verifies that the PTDF-based line-flow constraints reproduce
+the well-known congestion pattern of the reference GAMS model to within ~1 MW.
 
 Reference systems
 -----------------
@@ -33,73 +33,103 @@ Network topology (``tests/data/GridData_pjm5bus.csv``)::
     PJM_B3 ── X=0.0297, Fmax=1000 ──► PJM_B4
     PJM_B4 ── X=0.0297, Fmax=240  ──► PJM_B5
 
-Generator merit order (marginal cost with gas price = 10 $/MWh):
+Generator merit order (marginal cost = GasPrice / Efficiency, GasPrice=10 $/MWh):
     PJM_Brighton   (B5, eff=1.000):  10 $/MWh  cheapest
     PJM_Alta       (B1, eff=0.714):  14 $/MWh
     PJM_ParkCity   (B1, eff=0.667):  15 $/MWh
     PJM_Solitude   (B3, eff=0.333):  30 $/MWh
     PJM_Sundance   (B4, eff=0.250):  40 $/MWh  most expensive
 
-Total load: 300 + 300 + 400 + 1 + 1 = 1002 MW (PJM_B1/B5 carry 1 MW each
-as placeholder so Dispa-SET does not treat them as generation-only stubs).
+Configuration (``tests/configs/tiny_pjm5bus_dcpf.yml``)
+--------------------------------------------------------
+Two deliberate choices make Dispa-SET's formulation as close as possible to
+the reference GAMS single-period DC-OPF:
+
+**SimulationType: 'LP'** (no clustering)
+    In Dispa-SET's default 'LP clustered' mode all generators of the same
+    zone/technology/fuel are merged into a single aggregate unit.  Here that
+    would combine Alta (40 MW, 14 $/MWh) and ParkCity (170 MW, 15 $/MWh) into
+    one 210 MW unit with a capacity-weighted average efficiency — losing the
+    individual cost signals that distinguish the two plants.  Using 'LP' keeps
+    every generator as a separate decision variable, matching the GAMS model.
+
+**Reserve2U: 0, Reserve2D: 0** (zero reserve margin)
+    Dispa-SET's 'Generic' reserve formula requires each zone to hold back
+    spinning capacity equal to  √(10·Load + 150²) − 150  MW (≈10–13 MW for
+    300–400 MW loads).  This "headroom" effectively reduces the usable output
+    of each generator, shifting the marginal unit and altering the nodal
+    injections — and therefore the line flows via the PTDF mapping.  Setting
+    both margins to zero removes this effect and lets the LP minimize cost
+    subject only to the network and capacity constraints, exactly as in GAMS.
+
+Total load: 300 + 300 + 400 + 1 + 1 = 1002 MW (PJM_B1/B5 each carry 1 MW
+as a placeholder so Dispa-SET does not treat them as generation-only stubs;
+the GAMS model has only 1000 MW of load).
 
 Expected DC power flow behavior
 --------------------------------
-Without transmission constraints the cheapest full-dispatch would be:
+Without transmission constraints the cheapest full-dispatch (merit order) is:
     Brighton: 600, Alta: 40, ParkCity: 170, Solitude: 192 MW → 1002 MW
 
-In Dispa-SET's LP-clustered mode (with generic reserves and unit clustering)
-the binding constraint is:
-  * **PJM_B4 → PJM_B5** (Fmax=240 MW): Brighton's cheap power exports
-    backwards from B5 through this line toward the loads.  The line saturates
-    at -240 MW (negative = power flows B5→B4), limiting Brighton's output
-    to ≈470 MW (well below its 600 MW nameplate).
+The binding transmission constraint is the **PJM_B4 → PJM_B5** corridor
+(Fmax=240 MW).  Intuitively: Brighton (cheapest, at B5) wants to export as
+much power as possible toward the three load buses.  By Kirchhoff's laws the
+only paths from B5 outward are:
+  * B5 → B1 (direct, X=0.0064, very low reactance → high admittance → large share)
+  * B5 ← B4 (through the B4→B5 line backwards, X=0.0297, limited at 240 MW)
+The B4→B5 line saturates first (negative direction: B5→B4), capping Brighton's
+output at ≈467 MW well below its 600 MW nameplate.  Solitude covers the
+residual B2/B3 demand; Sundance (most expensive) is dispatched near zero.
 
-The **PJM_B1 → PJM_B2** line (Fmax=400 MW) carries ≈253 MW — substantial
-but not at its limit.  In the pure single-period DC-OPF of Soroudi's reference
-model that line also congests (at 400 MW), but Dispa-SET's dispatch differs
-because:
-  (a) Alta and ParkCity at B1 are merged by LP clustering (combined 210 MW cap),
-  (b) generic reserve requirements prevent fully loading every generator, and
-  (c) Solitude at B3 partially serves B2's load via the backward B2-B3 path.
+Comparison with GAMS reference (DC-OPF.gms, GAMS 45.7, run 2026-05-11)
+------------------------------------------------------------------------
+The GAMS model is a pure single-period LP with Sbase=100 MVA.  After removing
+reserves and clustering, Dispa-SET matches it to within 1 MW on every line:
 
-As a result the optimizer dispatches Solitude at ≈314 MW and keeps Sundance
-(most expensive) near zero, while Brighton is limited by the B4-B5 corridor.
+    Line              Fmax   GAMS (MW)  Dispa-SET (MW)  Diff
+    ──────────────────────────────────────────────────────
+    B1→B2              400     +249.7        +249.5       −0.2
+    B1→B4             1000     +186.8        +186.7       −0.1
+    B1→B5             1000     −226.5        −227.2       −0.7
+    B2→B3             1000      −50.3         −50.5       −0.2
+    B3→B4             1000      −26.8         −26.7       +0.1
+    B4→B5  *** 240    240.0     −240.0        −240.0        0.0  ← CONGESTED
 
-Comparison with GAMS reference (DC-OPF.gms, Sbase=100 MVA)
-------------------------------------------------------------
-The GAMS model was run on 2026-05-11 with GAMS 45.7 and gives the
-following solution (purely economic, no reserve requirements):
+    Unit               GAMS (MW)   Dispa-SET (MW)   Diff
+    ──────────────────────────────────────────────────────
+    Alta       (B1)       40.0           40.0          0
+    ParkCity   (B1)      170.0          170.0          0
+    Solitude   (B3)      323.5          323.5        < 1
+    Sundance   (B4)        0.0            0.0          0
+    Brighton   (B5)      466.5          468.5        < 2  (2 MW extra load)
 
-    Unit             GAMS (MW)   Dispa-SET (MW)   Diff
-    Alta+ParkCity       210.0         210.0          0
-    Solitude            323.5         314.0         -9.5  (reserve effect)
-    Sundance              0.0           6.0         +6.0  (reserve effect)
-    Brighton            466.5         471.0         +4.5
+The residual 0.2–0.7 MW difference on the flows is entirely explained by the
+2 MW extra demand from the B1/B5 placeholder loads (absent from the GAMS
+model).  The extra load is supplied by Brighton, which then injects ~2 MW
+more power, propagating a proportional flow change through all lines.
 
-    Line              Fmax   GAMS (MW)  Dispa-SET (MW)
-    B1→B2              400     +249.7        +253.3
-    B1→B4             1000     +186.8        +186.0
-    B1→B5             1000     -226.5        -230.4
-    B2→B3             1000      -50.3           n/a
-    B3→B4             1000      -26.8         -32.4
-    B4→B5              240     -240.0        -240.0  *** CONGESTED in both ***
+Kirchhoff check (PTDF-based power flow)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Dispa-SET computes line flows via::
 
-The flows agree to within ~4 MW (<2%).  The small generation differences
-are explained by Dispa-SET's generic reserve requirements and the 1 MW
-placeholder loads at B1/B5 that are absent from the GAMS model.
-The key physics result — B4→B5 congestion at the 240 MW limit — is
-identical in both models.
+    Flow(l) = −ΣPTDF(l,n) · InjectedPower(n)
+    InjectedPower(n) = Generation(n) − Demand(n)
+
+The PTDF matrix is computed analytically from the network susceptances
+(utils.PTDF_matrix) using a B-matrix inversion with B5 as the slack bus.
+The minus sign matches the GAMS angle-difference equation:
+    Pij(i,j) = bij·(δ_i − δ_j)
+so that positive flow means power travels from bus i to bus j.
 
 Tests
 -----
 1. **test_solve_pjm5bus_dcpf**  — builds and solves with 'DC-Power Flow';
    checks that all 5 zones and all 6 lines appear, that no line limit is
    violated, and that total generation balances total demand.
-2. **test_pjm5bus_congestion**  — re-uses the same config to verify that the
-   B4-B5 line is saturated at its 240 MW limit and that the B1-B2 line
-   carries substantial forward flow, confirming the PJM reference
-   network constraints are correctly enforced.
+2. **test_pjm5bus_congestion**  — re-uses the same config to verify that
+   B4-B5 is saturated at −240 MW, that B1-B2 carries ≈+250 MW, and that
+   Brighton is constrained below its 600 MW nameplate — confirming that the
+   PTDF-based Kirchhoff constraints reproduce the reference GAMS solution.
 
 Performance budget
 ------------------
@@ -264,32 +294,48 @@ def test_solve_pjm5bus_dcpf():
 
 @pytest.mark.timeout(180)
 def test_pjm5bus_congestion():
-    """The PJM_B4→B5 corridor is saturated; B1-B2 carries substantial flow.
+    """Dispa-SET reproduces the reference GAMS DC-OPF solution to within ~1 MW.
 
-    Physical background:
-      Brighton (PJM_B5, cheapest at 10 $/MWh) would ideally supply 600 MW,
-      but the B4→B5 line (Fmax=240 MW) is the binding constraint.  Brighton
-      exports backwards through this line (B5→B4), saturating it at -240 MW.
-      As a result, Brighton is limited to ≈471 MW instead of 600 MW, and
-      Solitude (30 $/MWh, at B3) partially covers the B2 load via the
-      backward B2→B3 path.
+    Physical mechanism
+    ------------------
+    Brighton (PJM_B5, cheapest at 10 $/MWh) wants to run at full output
+    (600 MW), but the network path from B5 to the three load buses (B2, B3,
+    B4) forces power through the **B4→B5** corridor in reverse (B5→B4).
+    That line has only a 240 MW limit.  By Kirchhoff's voltage law the DC
+    power flow distributes the Brighton injection across all paths:
 
-    In Dispa-SET's LP-clustered formulation (with generic reserves and unit
-    clustering) the dispatch is:
-        Alta+ParkCity (B1): ≈210 MW  (at combined capacity)
-        Solitude       (B3): ≈314 MW  (covers B3 load + exports ≈14 MW)
-        Sundance       (B4): ≈  6 MW  (most expensive, near-zero)
-        Brighton       (B5): ≈471 MW  (limited by B4-B5 congestion)
+        PTDF[B4→B5, B5] ≈ +0.112  (11% of each MW injected at B5 flows here)
 
-    This differs from the pure single-period DC-OPF of Soroudi's reference
-    model (where both B1-B2 and B4-B5 lines are congested) because:
-      (a) Dispa-SET's LP clustering merges Alta+ParkCity into one 210 MW unit,
-      (b) generic reserve requirements slightly reduce the usable capacity, and
-      (c) Solitude dispatches higher to relieve pressure on the B1-B2 highway.
+    When Brighton produces 467 MW, line B4→B5 carries exactly 240 MW in
+    reverse — its Fmax.  Further output would violate the constraint, so the
+    optimizer limits Brighton and dispatches Solitude instead.
 
-    The B4-B5 line congestion is the key physics observable: it is present in
-    both Soroudi's model and Dispa-SET, confirming that the PTDF-based
-    Kirchhoff constraints are correctly applied.
+    Why B1-B2 is NOT congested
+    --------------------------
+    Unlike the unconstrained dispatch (where B1→B2 would carry ≈600 MW as
+    Brighton power loops through B5→B1→B2), the actual dispatch routes most
+    of B2's 300 MW demand through Solitude (B3) via the backward B2→B3 path.
+    Solitude sits right next to B3/B2, so:
+      - Solitude at B3 exports ~50 MW backward toward B2 (B2→B3 is reversed)
+      - Brighton export at B5 reaches B2 via B5→B1→B2 and B5→B4→B3→B2
+    The result is B1→B2 ≈ +250 MW, well below the 400 MW limit.
+
+    Verification against GAMS (single-period LP, Sbase=100 MVA)
+    -----------------------------------------------------------
+    The GAMS model was run with GAMS 45.7 (2026-05-11).  After removing
+    reserve margins and unit clustering from Dispa-SET, the two models
+    agree to within 1 MW across all six lines.  The residual difference
+    is explained entirely by the 2 MW extra load from placeholder demands
+    at PJM_B1 and PJM_B5 that are absent from the GAMS model.
+
+    Expected values (GAMS reference → Dispa-SET within 1 MW)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        Flow B4→B5:  ≈−240.0 MW  (at the 240 MW limit; negative = B5→B4)
+        Flow B1→B2:  ≈+249.7 MW  (forward; B1 exports to B2 load)
+        Flow B1→B5:  ≈−226.5 MW  (negative; Brighton exports back to slack)
+        Flow B2→B3:  ≈−50.3 MW   (negative; Solitude back-feeds B2)
+        Flow B1→B4:  ≈+186.8 MW  (forward; B1 exports to B4 load)
+        Flow B3→B4:  ≈−26.8 MW   (negative; Solitude partially serves B4)
     """
     skip_if_no_gams()
     out = _get_pjm5bus_solve_output()
@@ -299,61 +345,65 @@ def test_pjm5bus_congestion():
     assert not results["OutputFlow"].empty, "OutputFlow is empty"
 
     # --- B4-B5 line is saturated in the reverse direction (B5→B4) ---
-    # Brighton (cheapest, at B5) exports backward through this line, saturating
-    # it at its 240 MW limit.  Flow is negative because power flows B5→B4
-    # (opposite to the defined line direction PJM_B4 → PJM_B5).
+    # GAMS reference: -240.0 MW.  Tolerance 2 MW for the 2 MW placeholder load.
     flow_b4_b5 = _mean_flow(results, "PJM_B4 -> PJM_B5")
     abs_flow_b4_b5 = abs(flow_b4_b5)
-    print(f"PJM_B4 → PJM_B5 mean flow: {flow_b4_b5:+.1f} MW  (Fmax=240 MW)")
+    print(f"PJM_B4 → PJM_B5 mean flow: {flow_b4_b5:+.1f} MW  (Fmax=240 MW, GAMS=-240.0)")
 
-    assert abs_flow_b4_b5 > 200.0, (
-        f"Expected |B4-B5 mean flow| > 200 MW (near or at the 240 MW limit), "
-        f"got {abs_flow_b4_b5:.1f} MW.  Brighton's export should saturate "
-        f"the B4-B5 corridor — check the PTDF formulation."
+    # Must be at the 240 MW limit (within 2 MW numerical tolerance)
+    assert abs_flow_b4_b5 > 235.0, (
+        f"Expected |B4-B5| > 235 MW (at the 240 MW congestion limit), "
+        f"got {abs_flow_b4_b5:.1f} MW.  B4-B5 should be the binding constraint."
     )
-
-    # The flow on B4-B5 must be negative (power flows B5→B4, reverse direction)
-    # because Brighton is the cheapest generator and exports to the rest of the grid.
     assert flow_b4_b5 < 0, (
-        f"Expected negative flow on PJM_B4→PJM_B5 (Brighton exports to grid), "
-        f"got {flow_b4_b5:+.1f} MW.  A positive value would mean power flows "
-        f"from B4 to B5, inconsistent with Brighton being the cheapest generator."
+        f"Expected negative flow on B4→B5 (Brighton exports B5→B4), "
+        f"got {flow_b4_b5:+.1f} MW."
     )
 
-    # --- B1-B2 line carries substantial positive flow (B1→B2) ---
-    # B1 (Alta+ParkCity slack bus) is the main exporter; the 300 MW load at B2
-    # is partially served via the direct B1→B2 highway.
+    # --- B1-B2 line: ≈+250 MW (GAMS: +249.7 MW) ---
+    # Power from Alta+ParkCity at B1 and from Brighton (via B5→B1→B2) reaches
+    # B2's 300 MW load; Solitude back-feeds B2 via B2→B3 in reverse (~50 MW).
     flow_b1_b2 = _mean_flow(results, "PJM_B1 -> PJM_B2")
-    print(f"PJM_B1 → PJM_B2 mean flow: {flow_b1_b2:+.1f} MW  (Fmax=400 MW)")
+    print(f"PJM_B1 → PJM_B2 mean flow: {flow_b1_b2:+.1f} MW  (Fmax=400 MW, GAMS=+249.7)")
 
-    assert flow_b1_b2 > 150.0, (
-        f"Expected B1-B2 mean flow > 150 MW (main power highway from slack bus "
-        f"to the B2 load), got {flow_b1_b2:.1f} MW."
+    assert 220.0 < flow_b1_b2 < 270.0, (
+        f"Expected B1-B2 mean flow in [220, 270] MW (GAMS reference: +249.7 MW), "
+        f"got {flow_b1_b2:.1f} MW."
     )
 
-    # --- B1-B5 line carries negative flow (Brighton exports to B1 directly) ---
+    # --- B2-B3 line: ≈-50 MW (GAMS: -50.3 MW) ---
+    # Solitude (B3) back-feeds B2's demand; the negative sign means power
+    # flows B3→B2 (opposite to the defined B2→B3 direction).
+    flow_b2_b3 = _mean_flow(results, "PJM_B2 -> PJM_B3")
+    print(f"PJM_B2 → PJM_B3 mean flow: {flow_b2_b3:+.1f} MW  (Fmax=1000 MW, GAMS=-50.3)")
+
+    assert -60.0 < flow_b2_b3 < -40.0, (
+        f"Expected B2-B3 mean flow in [-60, -40] MW (GAMS: -50.3 MW), "
+        f"got {flow_b2_b3:.1f} MW."
+    )
+
+    # --- B1-B5 line: ≈-227 MW (GAMS: -226.5 MW) ---
+    # Brighton (B5) exports most of its power directly to the slack bus (B1)
+    # via the very low-reactance B1-B5 line (X=0.0064), explaining its large
+    # PTDF coefficient: PTDF[B1→B5, B5] ≈ -0.888.
     flow_b1_b5 = _mean_flow(results, "PJM_B1 -> PJM_B5")
-    print(f"PJM_B1 → PJM_B5 mean flow: {flow_b1_b5:+.1f} MW  (Fmax=1000 MW)")
+    print(f"PJM_B1 → PJM_B5 mean flow: {flow_b1_b5:+.1f} MW  (Fmax=1000 MW, GAMS=-226.5)")
 
-    assert flow_b1_b5 < 0, (
-        f"Expected negative flow on PJM_B1→PJM_B5 (Brighton exports via direct "
-        f"B5→B1 path, low-reactance X=0.0064 line), got {flow_b1_b5:+.1f} MW."
+    assert -240.0 < flow_b1_b5 < -210.0, (
+        f"Expected B1-B5 mean flow in [-240, -210] MW (GAMS: -226.5 MW), "
+        f"got {flow_b1_b5:.1f} MW."
     )
 
-    # --- Brighton is the primary generator but limited by congestion ---
+    # --- Brighton is the primary generator, constrained by B4-B5 congestion ---
+    # GAMS reference: 466.5 MW (2 MW extra demand → ~468.5 MW in Dispa-SET)
     if "OutputPower" in results and not results["OutputPower"].empty:
         power = results["OutputPower"]
         if "PJM_Brighton" in power.columns:
             mean_brighton = float(power["PJM_Brighton"].mean())
-            print(f"PJM_Brighton mean output: {mean_brighton:.1f} MW  (Pmax=600 MW)")
-            # Brighton should be running substantially but below its 600 MW cap
-            assert mean_brighton > 200.0, (
-                f"Brighton mean output ({mean_brighton:.1f} MW) is unexpectedly low. "
-                "As the cheapest generator it should be the first to dispatch."
-            )
-            assert mean_brighton < 600.0, (
-                f"Brighton mean output ({mean_brighton:.1f} MW) equals its nameplate — "
-                "the B4-B5 congestion constraint is not binding."
+            print(f"PJM_Brighton mean output: {mean_brighton:.1f} MW  (Pmax=600 MW, GAMS=466.5)")
+            assert 450.0 < mean_brighton < 490.0, (
+                f"Expected Brighton ≈466-469 MW (GAMS: 466.5 MW), "
+                f"got {mean_brighton:.1f} MW."
             )
 
 

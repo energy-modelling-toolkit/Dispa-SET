@@ -29,12 +29,33 @@
 #   (Gas price = 10 $/MWh; eff calibrated so cost = GasPrice/eff)
 #
 # Key expected DC-OPF behavior:
-#   - Line PJM_B1→PJM_B2 congests at its 400 MW limit
-#   - Line PJM_B4→PJM_B5 congests at its 240 MW limit
-#   - Brighton (cheapest) is limited to ~518 MW instead of its 600 MW cap
-#   - More expensive Solitude and Sundance are committed to compensate
+#   - Line PJM_B4→PJM_B5 congests at its 240 MW limit (binding constraint)
+#   - Line PJM_B1→PJM_B2 carries ~250 MW forward (substantial but not at limit)
+#   - Brighton (cheapest) runs at ~467 MW; limited by the B4-B5 bottleneck
 #   Total demand: 1 + 300 + 300 + 400 + 1 = 1002 MW (PJM_B1 and PJM_B5 carry
 #   a 1 MW placeholder load; effective demand ≈ 1000 MW as in the reference)
+#
+# SimulationType: 'LP'
+#   Each generator is kept as an individual unit — Alta (40 MW) and ParkCity
+#   (170 MW) are NOT merged.  This matches the GAMS reference model which also
+#   treats every generator individually.  Using 'LP clustered' would merge
+#   both into a single 210 MW unit with a capacity-weighted average efficiency,
+#   losing the individual cost signals (14 vs 15 $/MWh).
+#
+# Reserve2U / Reserve2D: 0
+#   The GAMS DC-OPF reference model has no reserve requirements.  Setting both
+#   reserve margins to zero replicates this assumption.  Dispa-SET's default
+#   'Generic' reserve formula would add ~10 MW of spinning reserve per zone,
+#   forcing the optimizer to hold back capacity that the pure economic DC-OPF
+#   would fully dispatch.
+#
+# Remaining differences vs the GAMS single-period DC-OPF:
+#   1. Placeholder loads: 1 MW each at PJM_B1 and PJM_B5 (adds 2 MW not in
+#      the GAMS model, so total demand is 1002 MW instead of 1000 MW).
+#   2. Multi-period formulation: Dispa-SET solves 24 coupled hours; GAMS solves
+#      a single snapshot.  With constant load and unconstrained ramp rates this
+#      difference is negligible (each hour gets the same dispatch).
+#   3. LP relaxation of integrality: both models are LP so this is identical.
 #
 # TransmissionGridType: 'DC-Power Flow' → PTDF-based line-flow constraints
 # --------------------------------------------------------------------------- #
@@ -53,7 +74,7 @@ LookAhead: 0
 DataTimeStep: 1
 SimulationTimeStep: 1
 
-SimulationType: 'LP clustered'
+SimulationType: 'LP'
 ReserveCalculation: 'Generic'
 AllowCurtailment: 1
 OptimalityGap: 0.001
@@ -101,8 +122,10 @@ PriceOfPeat:       ''
 PriceOfAmmonia:    ''
 
 ShareOfQuickStartUnits: ''
-Reserve2U:              ''
-Reserve2D:              ''
+# Set both reserve margins to zero: the GAMS reference model has no reserve
+# requirements.  A numeric scalar here is applied to all zones via NodeBasedTable.
+Reserve2U:              0
+Reserve2D:              0
 PrimaryReserveLimit:    ''
 InertiaLimit:           ''
 FFRLimit:               ''
