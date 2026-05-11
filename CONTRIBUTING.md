@@ -40,9 +40,40 @@ For something that is bigger than a one or two line fix:
 3. If you like the change and think the project could use it:
     * Be sure you have followed the code style for the project.
     * Make sure that the code quality is of high standards
-    * Make sure that the unit tests pass
+    * **Run the full test suite and confirm all tests pass** (see [Running the Test Suite](#running-the-test-suite) below)
     * Update the relevant parts of the documentation
     * Send a pull request.
+
+
+# Running the Test Suite
+
+**Every code change must be followed by running the full test suite.** Pull requests that break existing tests will not be merged.
+
+Activate the `dispaset2` conda environment and run from the repository root:
+
+```bash
+conda activate dispaset2
+python tests/run_all.py
+```
+
+Alternatively, you can use `pytest` directly:
+
+```bash
+pytest tests/
+```
+
+The test runner produces a Markdown report at `tests/output/TEST_REPORT.md`. Please review it before submitting your pull request and fix any failures.
+
+The test suite is organised into the following groups:
+
+| Group | Description |
+|-------|-------------|
+| `unit` | Fast tests for individual functions (no external dependencies) |
+| `integration` | End-to-end build-and-solve tests using the Python solver |
+| `failure` | Tests that verify correct handling of invalid inputs |
+| `ultimate` | Heavy tests including the full MILP formulation |
+
+If you are adding a new feature or fixing a bug, please also add or update the relevant test(s).
 
 
 # How to report a bug

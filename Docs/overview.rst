@@ -17,20 +17,25 @@ Features
 --------
 
 - Minimum and maximum power for each unit
-- Power plant constraints: minimum power, ramping limits, Minimum up/down times, start-up, no-load costs
-- Outages (forced and planned) for each units
-- Reserves (spinning & non-spinning) up and down
-- Load Shedding
-- Curtailment
-- Pumped-hydro storage
+- Power plant constraints: minimum power, ramping limits, minimum up/down times, start-up and no-load costs
+- Outages (forced and planned) for each unit
+- Generalised reserve system with European reserve types (FFR, FCR, aFRR, mFRR) — both upward and downward
+- System inertia requirements: synchronous inertia from conventional units and virtual inertia from inverter-based resources
+- Under Frequency Load Shedding (UFLS) and Optional Downward Flexibility Management (OFDM) as emergency frequency services
+- Load shedding
+- Curtailment of variable renewable generation
+- Pumped-hydro storage, batteries, and generic storage with alert/flood-control bounds
 - Non-dispatchable units (e.g. wind turbines, run-of-river, etc.)
-- Multi-nodes with capacity constraints on the lines (congestion)
-- Constraints on the targets for renewables and/or CO2 emissions
+- Multi-node network with NTC or DC Power Flow (PTDF) constraints
+- Emission caps per zone and pollutant
 - CHP power plants and thermal storage
-- Power-to-heat (heat pump, electrical heater) and thermal storage
-- DSM-ready demand
-- Integrated mid-term scheduling and short-term optimal dispatch
-- Different model formulations and levels of clustering complexity generated from the same dataset.
+- Power-to-X and X-to-Power units for sector coupling (heat, hydrogen, Power-to-Liquid, etc.)
+- Boundary sector model for representing non-electric energy sectors with storage, flexible demand and supply
+- DSM-ready demand and flexible demand model
+- Integrated mid-term scheduling (MTS) and short-term optimal dispatch
+- Rolling horizon simulation with configurable horizon and look-ahead period
+- Multiple model formulations (LP, MIP, integer clustering) generated from the same dataset
+- Python-based solver using `linopy`_ as an alternative to the GAMS/Gurobi solver
 
 The demand is assumed to be inelastic to the price signal. The MILP objective function is therefore the total generation cost over the optimization period. 
 
@@ -38,12 +43,13 @@ The demand is assumed to be inelastic to the price signal. The MILP objective fu
 Libraries used and requirements
 -------------------------------
 
-* `Python 3.7`_
+* `Python 3.8+`_
 * `pandas`_ for input and result data handling
 * `matplotlib`_ for plotting
-* `GAMS_api`_ for the communication with GAMS
+* `linopy`_ for the Python-native LP/MILP solver interface
+* `GAMS_api`_ (optional) for the communication with GAMS/Gurobi
 
-the above are auto installed in a conda environment if you follow the instructions of the Quick start.
+The above are auto-installed in a conda environment if you follow the Quick Start instructions.
 
 Dispa-SET in the scientific literature
 --------------------------------------
@@ -67,12 +73,13 @@ In the past years, Dispa-SET has been used in various scientific works covering 
 
 Ongoing developments
 --------------------
-The Dispa-SET project is relatively recent, and a number of improvements will be brought to the project in a close future:
+The Dispa-SET project is under active development. Areas of ongoing work include:
 
-- Grid constraints (DC power-flow)
 - Stochastic scenarios
 - Modelling of investment and capacity expansion
-- Modeling of the ancillary markets
+- Modelling of ancillary markets and frequency services
+- Extended sector coupling (Power-to-Gas, Power-to-Liquid, district heating)
+- Improved Python-native solver (linopy) feature parity with the GAMS formulation
 
 
 Licence
@@ -113,7 +120,7 @@ References
 
 
 
-.. _Python 3.7: https://www.anaconda.com/distribution/
+.. _Python 3.8+: https://www.anaconda.com/distribution/
 .. _matplotlib: http://matplotlib.org
 .. _pandas: http://pandas.pydata.org
 .. _GAMS_api: https://github.com/kavvkon/gams-api
@@ -122,5 +129,6 @@ References
 .. _Sylvain Quoilin: http://squoilin.eu
 .. _Konstantinos Kavvadias: http://kavvadias.eu
 .. _Matija Pavičević: https://www.mpavicevic.com
+.. _linopy: https://linopy.readthedocs.io
 
 
