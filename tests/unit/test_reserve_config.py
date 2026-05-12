@@ -171,6 +171,20 @@ class TestLegacyDemandAliases:
         normalize_reserve_config(cfg)
         assert cfg['FCRDemand'] == 'path/to/fcr.csv'
 
+    def test_ffrlimit_maps_to_ffrdemand(self):
+        cfg = _base_config()
+        cfg['FFRLimit'] = 'path/to/ffr.csv'
+        cfg['FFRDemand'] = ''
+        normalize_reserve_config(cfg)
+        assert cfg['FFRDemand'] == 'path/to/ffr.csv'
+
+    def test_inertialimit_maps_to_systeminertia(self):
+        cfg = _base_config()
+        cfg['InertiaLimit'] = 'path/to/inertia.csv'
+        cfg['SystemInertiaDemand'] = ''
+        normalize_reserve_config(cfg)
+        assert cfg['SystemInertiaDemand'] == 'path/to/inertia.csv'
+
     def test_existing_new_key_takes_precedence(self, caplog):
         cfg = _base_config()
         cfg['aFRRUDemand'] = 'new_path.csv'

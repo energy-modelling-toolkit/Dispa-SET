@@ -76,6 +76,99 @@ def solve_succeeded(simdir: str | Path) -> bool:
     return (Path(simdir) / "Results.gdx").is_file()
 
 
+# Lost-load variables produced by the GAMS model.  These capture real
+# violations of physical constraints (load shedding, reserve shortfall,
+# ramp violations).  StorageLevelViolation is kept separate because it is
+# a soft numerical penalty, not a dispatch infeasibility.
+_LOSTLOAD_KEYS = [
+    'LostLoad_MaxPower',
+    'LostLoad_MinPower',
+    'LostLoad_RampUp',
+    'LostLoad_RampDown',
+    'LostLoad_aFRRU',
+    'LostLoad_aFRRD',
+    'LostLoad_mFRRU',
+    'LostLoad_Inertia',
+    'LostLoad_FFRU',
+    'LostLoad_FFRD',
+    'LostLoad_FCRU',
+    'LostLoad_FCRD',
+]
+
+
+def _sum_result(val) -> float:
+    """Return the scalar total of a results value (DataFrame, Series or scalar)."""
+    if val is None:
+        return 0.0
+    try:
+        return float(val.sum().sum())
+    except AttributeError:
+        try:
+            return float(val.sum())
+        except (AttributeError, TypeError):
+            return float(val)
+
+
+def get_solver_kpis(results: dict) -> dict:
+    """Return a compact dict of solution-quality KPIs.
+
+    Keys
+    ----
+    total_cost : float
+        Sum of OutputSystemCost (all hours × zones).
+    total_lostload_mwh : float
+        Sum of all LostLoad_* variables (excluding storage violation).
+    storage_violation_mwh : float
+        Sum of LostLoad_StorageLevelViolation.
+    """
+    kpis: dict = {}
+
+    sc = results.get("OutputSystemCost")
+    if sc is not None:
+        kpis["total_cost"] = _sum_result(sc)
+
+    kpis["total_lostload_mwh"] = sum(
+        max(0.0, _sum_result(results.get(k))) for k in _LOSTLOAD_KEYS
+    )
+
+    sv = results.get("LostLoad_StorageLevelViolation")
+    kpis["storage_violation_mwh"] = max(0.0, _sum_result(sv))
+
+    return kpis
+
+
+def assert_feasible(results: dict, max_lostload_mwh: float = 1.0) -> dict:
+    """Assert that a solved simulation has no significant load shedding.
+
+    Parameters
+    ----------
+    results : dict
+        As returned by ``ds.get_sim_results``.
+    max_lostload_mwh : float
+        Tolerance in MWh.  Use 0.0 for a strict no-lostload assertion.
+
+    Returns
+    -------
+    dict
+        The KPI dict from :func:`get_solver_kpis` for optional further checks.
+    """
+    import math
+
+    kpis = get_solver_kpis(results)
+
+    total_ll = kpis.get("total_lostload_mwh", 0.0)
+    assert total_ll <= max_lostload_mwh, (
+        f"Lost load {total_ll:.3f} MWh exceeds threshold {max_lostload_mwh:.3f} MWh"
+    )
+
+    cost = kpis.get("total_cost")
+    if cost is not None:
+        assert cost >= -1e-3, f"Negative total system cost: {cost:.2f}"
+        assert math.isfinite(cost), f"Non-finite total system cost: {cost}"
+
+    return kpis
+
+
 def build_solve(config: dict, *, mts: bool = False) -> dict:
     """
     Build the simulation environment, run GAMS, return the inputs and results.
@@ -118,5 +211,8 @@ def build_solve(config: dict, *, mts: bool = False) -> dict:
     # which will be caught by the fail_on_critical_log fixture in
     # tests/integration/ and tests/ultimate/.
     out["energy_balance"] = ds.check_energy_balance(inputs, results)
+
+    # Solver KPIs: objective value and lost-load totals.
+    out["kpis"] = get_solver_kpis(results)
 
     return out

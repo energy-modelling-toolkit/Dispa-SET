@@ -7,6 +7,8 @@ Tests cover:
 - mFRRUDemand initialised in finalTS as a separate DataFrame from aFRRU
 - plants_res selection works with new nested dict config format
 - check_reserves() backward-compat wrapper still calls both aFRRU and aFRRD checks
+- check_FFRDemand() legacy zone-aggregated FFR validation
+- check_FCRDemand() legacy zone-aggregated FCR validation
 
 How to run
 ----------
@@ -25,7 +27,7 @@ import pytest
 if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from dispaset.preprocessing.data_check import check_reserve_demand, check_reserves
+from dispaset.preprocessing.data_check import check_reserve_demand, check_reserves, check_FFRDemand, check_FCRDemand
 from dispaset.preprocessing.data_handler import (
     normalize_reserve_config,
     _RESERVE_FLATLIST_DEFAULT_TYPES,
@@ -167,6 +169,77 @@ class TestPlantsResSelection:
         participating = self._collect_participating_techs(cfg)
         assert 'BATS' in participating
         assert 'HDAM' in participating
+
+
+# ---------------------------------------------------------------------------
+# check_FFRDemand  (legacy zone-aggregated FFR validation)
+# ---------------------------------------------------------------------------
+
+class TestCheckFFRDemand:
+    """check_FFRDemand uses sum(axis=1) for both demand and load."""
+
+    def test_valid_no_exception(self):
+        load = _make_load(zones=("Z1",), value=100.0)
+        demand = _make_load(zones=("Z1",), value=10.0)
+        check_FFRDemand(demand, load)  # should not raise
+
+    def test_multizone_valid_no_exception(self):
+        load = _make_load(zones=("Z1", "Z2"), value=100.0)
+        demand = _make_load(zones=("Z1", "Z2"), value=20.0)
+        check_FFRDemand(demand, load)
+
+    def test_negative_raises(self):
+        load = _make_load(value=100.0)
+        demand = _make_load(value=-5.0)
+        from dispaset.common import DispaSETValidationError
+        with pytest.raises(DispaSETValidationError, match='negative'):
+            check_FFRDemand(demand, load)
+
+    def test_exceeds_total_load_raises(self):
+        # total FFR (sum over zones) > total Load (sum over zones) -> error
+        load = _make_load(zones=("Z1",), value=10.0)
+        demand = _make_load(zones=("Z1",), value=20.0)
+        from dispaset.common import DispaSETValidationError
+        with pytest.raises(DispaSETValidationError, match='higher than demand'):
+            check_FFRDemand(demand, load)
+
+    def test_multizone_total_within_bounds_no_exception(self):
+        # Each zone has demand < load, sum also within bounds
+        load = _make_load(zones=("Z1", "Z2"), value=100.0)
+        demand = _make_load(zones=("Z1", "Z2"), value=40.0)
+        check_FFRDemand(demand, load)  # 80 < 200, should not raise
+
+
+# ---------------------------------------------------------------------------
+# check_FCRDemand  (legacy zone-aggregated FCR validation)
+# ---------------------------------------------------------------------------
+
+class TestCheckFCRDemand:
+    """check_FCRDemand mirrors check_FFRDemand (same sum-based logic)."""
+
+    def test_valid_no_exception(self):
+        load = _make_load(zones=("Z1",), value=100.0)
+        demand = _make_load(zones=("Z1",), value=15.0)
+        check_FCRDemand(demand, load)
+
+    def test_negative_raises(self):
+        load = _make_load(value=100.0)
+        demand = _make_load(value=-1.0)
+        from dispaset.common import DispaSETValidationError
+        with pytest.raises(DispaSETValidationError, match='negative'):
+            check_FCRDemand(demand, load)
+
+    def test_exceeds_total_load_raises(self):
+        load = _make_load(zones=("Z1",), value=5.0)
+        demand = _make_load(zones=("Z1",), value=10.0)
+        from dispaset.common import DispaSETValidationError
+        with pytest.raises(DispaSETValidationError, match='higher than demand'):
+            check_FCRDemand(demand, load)
+
+    def test_multizone_total_within_bounds_no_exception(self):
+        load = _make_load(zones=("Z1", "Z2"), value=100.0)
+        demand = _make_load(zones=("Z1", "Z2"), value=30.0)
+        check_FCRDemand(demand, load)  # 60 < 200, should not raise
 
 
 if __name__ == "__main__":

@@ -68,6 +68,18 @@ Every test file:
 A current run on a recent laptop with `dispaset2` finishes in
 **~20 seconds total** for the full suite, well within budget.
 
+The intended test runner is the `dispaset2` conda environment:
+
+```bash
+conda run -n dispaset2 python -m pytest tests/ -q
+```
+
+or, using the standalone runner:
+
+```bash
+conda run -n dispaset2 python tests/run_all.py
+```
+
 ## 3. Coverage matrix
 
 Below is a map between Dispa-SET features and the tests that
@@ -118,10 +130,19 @@ coverage (the feature is exercised but not strictly asserted on).
 | NTC transmission (multi-zone)        |     |    F       |         |    S     |
 | DC-Power-Flow transmission           |  F  |    F       |         |          |
 | NTC vs DC-PF loop-flow comparison    |     |    F       |         |          |
+| Reserve legacy aliases (Reserve2U/D, FFRLimit, InertiaLimit) | F |  |  |  |
+| `data_check.check_FFRDemand`         |  F  |    S       |         |          |
+| `data_check.check_FCRDemand`         |  F  |    S       |         |          |
+| Reserve participation (nested dict)  |  F  |    F       |         |          |
+| Reserve demand pipeline (all types)  |  F  |    F       |         |          |
+| Solver KPI helpers (`get_solver_kpis`, `assert_feasible`) | F | F |  |      |
 
 ## 4. Step-by-step roadmap
 
-The current state is "all 152 tests pass under 60 s" (as of the latest run).
+The current state is **213 tests pass** (5 pre-existing MTS failures remain, all in
+`test_solve_mts.py` and caused by a pandas `.str` accessor issue in
+`build.py:484`) as of the latest run in the `dispaset2` conda environment
+(`conda run -n dispaset2 python -m pytest tests/unit/ tests/integration/ tests/failure/ tests/ultimate/`).
 The roadmap below lists the next blocks in suggested execution order.
 
 ### 4.1 Short-term (low effort, high value) — COMPLETED
@@ -146,15 +167,25 @@ The roadmap below lists the next blocks in suggested execution order.
 
 ### 4.2 Medium-term
 
-5. **Pre-compute reference outputs.** Bake a single tiny simulation
-   into `tests/data/reference/` once and use it for the
-   postprocessing/plot tests. This removes the need to solve from
-   the unit tests, eliminates the GAMS dependency for them, and
-   makes the suite reproducible on machines without a GAMS license.
-6. **Cover all reserve-related options** (`Reserve2U`, `Reserve2D`,
-   `FFRLimit`, `PrimaryReserveLimit`, `InertiaLimit`,
-   `FrequencyStability`). Each currently has dedicated paths in
-   `data_check` but no tests.
+5. **[DONE] Pre-compute reference outputs.** `tests/data/reference/`
+   contains pre-built `Inputs.gdx`, `Inputs.p` and `Results.gdx`.
+   `tests/unit/test_postprocess_reference.py` exercises the full
+   postprocessing pipeline (gdx → dataframe → indicators → plots) without
+   running a new GAMS solve.
+6. **[DONE] Cover all reserve-related options** (`Reserve2U`, `Reserve2D`,
+   `FFRLimit`, `PrimaryReserveLimit`, `InertiaLimit`).
+   - `tests/unit/test_reserve_config.py` — `TestLegacyDemandAliases` now
+     includes `test_ffrlimit_maps_to_ffrdemand` and
+     `test_inertialimit_maps_to_systeminertia`; all six legacy-alias paths
+     are tested.
+   - `tests/unit/test_reserve_demand_pipeline.py` — two new test classes
+     `TestCheckFFRDemand` (4 tests) and `TestCheckFCRDemand` (4 tests)
+     cover the zone-aggregated validation logic (valid, negative, exceeds
+     load, multi-zone).
+   - Integration coverage via `tests/integration/test_reserves_generic.py`
+     (cumulative FFR + FCR + mFRRU demand scenarios).
+   - `FrequencyStability` is a GAMS parameter; it has no dedicated
+     `data_check` path and does not need a unit test.
 7. **[DONE] Cover all transmission-grid types** (`NTC`, `DC-Power-Flow`).
    Five new tests cover both modes on an identical 3-zone triangle topology:
    - `tests/unit/test_ptdf.py` — 5 GAMS-free unit tests: PTDF matrix shape,
@@ -196,9 +227,22 @@ The roadmap below lists the next blocks in suggested execution order.
    HPHS and BATS with STOHours=20).
    New config: `tests/configs/tiny_mts_variants.yml` (annual MTS, 7-day
    dispatch, single zone Z1, LP clustered).
-9. **Add `solve_succeeded`-style assertions on solver KPIs**
+9. **[DONE] Add `solve_succeeded`-style assertions on solver KPIs**
    (objective value bounded, no spurious lost load on a feasible
    case).
+   - `tests/_helpers.py` gains two new helpers:
+     - `get_solver_kpis(results)` — returns `total_cost`,
+       `total_lostload_mwh` (sum of all `LostLoad_*` variables except
+       storage violation) and `storage_violation_mwh`.
+     - `assert_feasible(results, max_lostload_mwh=1.0)` — asserts no
+       significant load shedding and a finite non-negative objective value.
+   - `tests/unit/test_kpi_helper.py` — 15 GAMS-free tests covering both
+     helpers: cost aggregation, per-key lost-load summation, storage
+     violation separation, negative-cost detection, non-finite cost
+     detection.
+   - `tests/integration/test_solve_lp.py` and `test_solve_milp.py` call
+     `assert_feasible(results)` and check `kpis["total_cost"] >= 0`.
+   - `build_solve()` now populates `out["kpis"]` automatically.
 
 ### 4.3 Long-term
 

@@ -45,7 +45,7 @@ if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from _helpers import build_solve, load_test_config, skip_if_no_gams  # noqa: E402
+from _helpers import build_solve, load_test_config, skip_if_no_gams, assert_feasible  # noqa: E402
 
 
 @pytest.mark.timeout(90)
@@ -56,6 +56,9 @@ def test_solve_tiny_lp():
 
     inputs = out["inputs"]
     results = out["results"]
+
+    # No spurious lost load on this well-sized feasible case:
+    assert_feasible(results)
 
     # Index matches requested simulation period:
     sim_index = results["OutputPower"].index
@@ -80,6 +83,10 @@ def test_solve_tiny_lp():
     assert dispatch < demand_total * 1.5, (
         f"Dispatch {dispatch:.0f} much too high vs demand {demand_total:.0f}"
     )
+
+    # Objective value must be finite and non-negative:
+    kpis = out["kpis"]
+    assert kpis["total_cost"] >= 0, f"Negative system cost: {kpis['total_cost']}"
 
     print(f"Build {out['build_time']:.2f}s  "
           f"Solve {out['solve_time']:.2f}s  "

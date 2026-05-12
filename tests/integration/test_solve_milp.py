@@ -37,7 +37,7 @@ if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from _helpers import build_solve, load_test_config, skip_if_no_gams  # noqa: E402
+from _helpers import build_solve, load_test_config, skip_if_no_gams, assert_feasible  # noqa: E402
 
 
 @pytest.mark.timeout(120)
@@ -48,6 +48,9 @@ def test_solve_tiny_milp():
 
     inputs = out["inputs"]
     results = out["results"]
+
+    # No spurious lost load on this well-sized feasible case:
+    assert_feasible(results)
 
     # Commitment must be present and integer-valued (Integer clustering):
     assert "OutputCommitted" in results, "Missing OutputCommitted output"
