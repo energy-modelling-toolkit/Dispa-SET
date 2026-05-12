@@ -479,9 +479,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # Final Column names
         # ReservoirLevels.rename(columns=rename_map, inplace=True)
         
-    if profilesSectorX is not None:
+    if profilesSectorX is not None and not profilesSectorX.empty:
         # Keeping consistency in profiles columns names
-        profilesSectorX.columns = profilesSectorX.columns.str.split(" - ").str[-1].str.strip()
+        profilesSectorX.columns = profilesSectorX.columns.astype(str).str.split(" - ").str[-1].str.strip()
 
         for key in profilesSectorX.columns:
             if key not in SectorXReservoirLevels.columns:

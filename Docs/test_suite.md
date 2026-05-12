@@ -139,9 +139,8 @@ coverage (the feature is exercised but not strictly asserted on).
 
 ## 4. Step-by-step roadmap
 
-The current state is **213 tests pass** (5 pre-existing MTS failures remain, all in
-`test_solve_mts.py` and caused by a pandas `.str` accessor issue in
-`build.py:484`) as of the latest run in the `dispaset2` conda environment
+The current state is **218 tests pass** (0 failures) as of the latest run in the
+`dispaset2` conda environment
 (`conda run -n dispaset2 python -m pytest tests/unit/ tests/integration/ tests/failure/ tests/ultimate/`).
 The roadmap below lists the next blocks in suggested execution order.
 
