@@ -11,7 +11,7 @@ import pandas as pd
 from .data_check import check_units, check_sto, check_AvailabilityFactors, \
     check_clustering, isStorage, check_chp, check_df, check_MinMaxFlows, \
     check_FlexibleDemand, check_reserves, check_p2bs, check_boundary_sector, \
-    check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_FFRDemand, check_FCRDemand, check_CostXNotServed,\
+    check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_VIRDemand, check_FFRDemand, check_FCRDemand, check_CostXNotServed,\
     check_grid_data
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable
@@ -697,6 +697,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     Load_shares = Load.div(Load.sum(axis=1), axis=0)  
     
     # Reserve calculation
+    VIRDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     FFRDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     FCRDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
     aFRRUDemand_tot = pd.DataFrame(index=Load.index, columns=Load.columns)
@@ -704,6 +705,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     for z in Load.columns:
         if config['ReserveCalculation'] == 'Exogenous':
             logging.info('Using exogenous reserve data')
+            # VIR Required:
+            if 'VIRDemand' in config and os.path.isfile(config['VIRDemand']):
+                VIRDemand = load_time_series(config, config['VIRDemand']).fillna(0)
+            else:
+                logging.warning('No VIR requirement will be considered (no valid file provided)')
+                VIRDemand = pd.DataFrame(index=config['idx_long'], data={'VIRDemand': 0})
+
             # FFR Required:
             if 'FFRDemand' in config and os.path.isfile(config['FFRDemand']):
                 FFRDemand = load_time_series(config, config['FFRDemand']).fillna(0)
@@ -734,15 +742,19 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             
 
             # Distribute the total FFR value proportionally based on each zone's percentage share.
+            VIRDemand_tot[z] = VIRDemand.iloc[:, 0] * Load_shares[z]
             FFRDemand_tot[z] = FFRDemand.iloc[:, 0] * Load_shares[z]
             FCRDemand_tot[z] = FCRDemand.iloc[:, 0] * Load_shares[z]
             aFRRUDemand_tot[z] = aFRRUDemand.iloc[:, 0] * Load_shares[z]
             aFRRDDemand_tot[z] = aFRRDDemand.iloc[:, 0] * Load_shares[z]
+            check_VIRDemand(VIRDemand, Load)
             check_FFRDemand(FFRDemand, Load)
             check_FCRDemand(FCRDemand, Load)
             check_reserves(aFRRDDemand, aFRRUDemand, Load)
 
         else:
+            logging.warning('No VIR requirement will be considered (no valid file provided)')
+            VIRDemand_tot = VIRDemand_tot.fillna(0)
             logging.warning('No FFR requirement will be considered (no valid file provided)')
             FFRDemand_tot = FFRDemand_tot.fillna(0)
             logging.warning('No FCR requirement will be considered (no valid file provided)')
@@ -776,7 +788,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                'BSMaxSpillage': BS_Spillages, 'SectorXReservoirLevels': SectorXReservoirLevels, 'SectorXAlertLevel': SectorXAlertLevel,
                'SectorXFloodControl': SectorXFloodControl,
                'CostOfSpillage': CostOfSpillage, 'CostXSpillage': CostXSpillage,
-               'InertiaDemand': InertiaDemand, 'FFRU': FFRDemand_tot, 'FFRD': FFRDemand_tot, 
+               'InertiaDemand': InertiaDemand, 'VIRU': VIRDemand_tot, 'FFRU': FFRDemand_tot, 'FFRD': FFRDemand_tot, 
                'FCRU': FCRDemand_tot, 'FCRD': FCRDemand_tot}
 
     # Merge the following time series with weighted averages
@@ -860,7 +872,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                  Plants_merged['Technology']]].index.tolist()
     sets['cu'] = Plants_conventional.index.tolist()
     sets['ba'] = Plants_batteries.index.tolist()
-    sets['res_U'] = ['FFRU', 'FCRU', 'aFRRU', 'mFRRU']
+    sets['res_U'] = ['VIRU', 'FFRU', 'FCRU', 'aFRRU', 'mFRRU']
     sets['res_D'] = ['FFRD', 'FCRD', 'aFRRD']
     sets['res'] = sets['res_U'] + sets['res_D']
     
@@ -965,7 +977,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['PTDF'] = ['l_int', 'n']
     sets_param['UFLS_Participation'] = ['res']
     sets_param['OFDM_Participation'] = ['res']
-    sets_param['VirtualInertia_Participation'] = ['au']
+    # sets_param['VirtualInertia_Participation'] = ['au']
     
     
 
@@ -1238,13 +1250,14 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Reserves Demand
     values = np.ndarray([len(sets['res']), len(sets['n']), len(sets['h'])])
     for i in range(len(sets['n'])):
-        values[0, i, :] = finalTS['FFRU'][sets['n'][i]]
-        values[1, i, :] = finalTS['FCRU'][sets['n'][i]]
-        values[2, i, :] = finalTS['aFRRU'][sets['n'][i]]
-        values[3, i, :] = finalTS['mFRRU'][sets['n'][i]]
-        values[4, i, :] = finalTS['FFRD'][sets['n'][i]]
-        values[5, i, :] = finalTS['FCRD'][sets['n'][i]]
-        values[6, i, :] = finalTS['aFRRD'][sets['n'][i]]
+        values[0, i, :] = finalTS['VIRU'][sets['n'][i]]
+        values[1, i, :] = finalTS['FFRU'][sets['n'][i]]
+        values[2, i, :] = finalTS['FCRU'][sets['n'][i]]
+        values[3, i, :] = finalTS['aFRRU'][sets['n'][i]]
+        values[4, i, :] = finalTS['mFRRU'][sets['n'][i]]
+        values[5, i, :] = finalTS['FFRD'][sets['n'][i]]
+        values[6, i, :] = finalTS['FCRD'][sets['n'][i]]
+        values[7, i, :] = finalTS['aFRRD'][sets['n'][i]]
     parameters['ReserveDemand'] = {'sets': sets_param['ReserveDemand'], 'val': values}
 
     # Emission Rate:
@@ -1446,6 +1459,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
         i = au_index[u]
         tech = Plants_res.loc[u, 'Technology']
+        inertia = Plants_merged.loc[u, 'InertiaConstant']
         droop = Plants_merged.loc[u, 'Droop']
         partloadmin = Plants_merged.loc[u, 'PartLoadMin']
         rampuprate = Plants_merged.loc[u, 'RampUpRate']
@@ -1455,6 +1469,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             j = res_index[r]
             
             eligible = False
+            # Virtual Inertia response: solo baterías
+            if r in ['VIRU']:
+                if tech in commons['tech_batteries']:
+                    eligible = True
 
             # Fast Frequency Response: solo baterías
             if r in ['FFRU', 'FFRD']:
@@ -1470,6 +1488,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     
             # If eligible, calculate reserve participation based on physical limits (Droop, RampUpRate, RampDownRate)
             if eligible:
+                
+                if r in ['VIRU'] and inertia > 0:
+                    factor1 = (2*inertia / (constants['SystemFrequency'])) * constants['RoCoF_max']
+                    values[j, i, :] = factor1
+                    
                 if r in ['FFRU', 'FFRD', 'FCRU', 'FCRD'] and droop > 0:
                     factor1 = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
                     values[j, i, :] = factor1
@@ -1478,29 +1501,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     values[j, i, :] = 1  # Participación binaria para otras reservas
         
     parameters['ReserveParticipation'] = {'sets': sets_param['ReserveParticipation'], 'val': values}
-
-    # VirtualInertia_Participation table
-    VI_values = np.zeros(len(sets['au']))
-    for u in sets['au']:
-        if u not in Plants_res.index:
-            logging.warning('The following power plant is not providing any virtual inertia: ' + u)
-            continue
-        
-        i = au_index[u]
-        tech = Plants_res.loc[u, 'Technology']
-        
-        # Solo IBR (no convencionales)
-        if tech in commons['tech_renewables'] or tech in commons['tech_batteries']:
-    
-            H = Plants_merged.loc[u, 'InertiaConstant']  # [s]
-    
-            factor_vi = (2 * H / constants['SystemFrequency']) * constants['RoCoF_max']
-            VI_values[i] = factor_vi
-        else:
-            VI_values[i] = 0
-        
-    parameters['VirtualInertia_Participation'] = {'sets': sets_param['VirtualInertia_Participation'], 'val': VI_values}
-                     
+                  
     # UFLS_Participation table (emergency upward action)
     UFLS_values = np.zeros(len(sets['res']))
     

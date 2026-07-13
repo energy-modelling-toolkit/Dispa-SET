@@ -217,8 +217,6 @@ ReserveDemand(res,n,h)                      [MW]            Reserve Demand
 UFLS_Participation(res)                     [n.a.]          fraction of demand to cover UFLS per type of Reserve
 OFDM_Participation(res)                     [n.a.]          fraction of demand to cover OFDM per type of Reserve
 
-VirtualInertia_Participation(au)            [n.a.]          fraction of power to cover inertia needs per each non conventional power plant
-
 ;
 
 
@@ -241,8 +239,8 @@ scalar TimeStep;
 
 
 *New
-scalar ConversionFactor;
-ConversionFactor = 1000;
+scalar PowerBase;
+PowerBase = 1000;
 
 *Threshold values for p2h partecipation to reserve market as spinning/non-spinning reserves (TO BE IMPLEMENTED IN CONFIGFILE)
 srp = 1;
@@ -380,8 +378,6 @@ $LOAD ReserveDemand
 $LOAD UFLS_Participation
 $LOAD OFDM_Participation
 
-$LOAD VirtualInertia_Participation
-
 ;
 
 
@@ -461,13 +457,11 @@ SectorXFlexDemand(nx,h)                 [MW]    FLexible boundary sector demand 
 SectorXFlexSupply(nx,h)                 [MW]    FLexible boundary sector supply at each time step of each nx node
 
 *New
-SynchronousInertiaProvision(au,h)       [s]     Inertia Provision from conventional power plants
-VirtualInertiaProvision(au,h)           [s]     Inertia Provision from inverter based power plants
+InertiaProvision(au,h)                  [s]     Inertia Provision from conventional power plants
 UFLS(res,n,h)                           [MW]    Under Frequency Load Shedding
 OFDM(res,n,h)                           [MW]    Optional Downward Flexibility Management
 HeadRoom(au,h)                          [MW]    It is the power that a unit is not using and that can be used to raise the frequency (upward reserves)
 FootRoom(au,h)                          [MW]    It is the power that a unit has above the minimum operating level and that can be used to lower the frequency (downward reserves)
-InertiaPowerAllocation(au,h)            [MW]    It is the power that a IBR convert to virtual inertia
 ;
 
 free variable
@@ -604,9 +598,7 @@ EQ_DC_Power_Flow
 EQ_Total_Injected_Power
 
 *New
-EQ_Sync_Inertia_Delivery_Limit
-EQ_Max_Inertia_Power_Allocation
-EQ_Virt_Inertia_Delivery_Limit
+EQ_Inertia_Delivery_Limit
 EQ_Inertia_Balance
 
 EQ_Reserves_Up_Capability
@@ -651,8 +643,8 @@ EQ_SystemCost(i)..
 *new
          +0.9*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
          +0.9*Config("ValueOfLostLoad","val")*(LL_Inertia(i)*TimeStep)
-         +(sum((res,n), 0.9*CostLoadShedding(n,i)*(UFLS(res,n,i)) * TimeStep))
-         +(sum((res,n), 0.9*CostLoadShedding(n,i)*(OFDM(res,n,i)) * TimeStep))
+         +(sum((res,n), 0.1*CostLoadShedding(n,i)*(UFLS(res,n,i)) * TimeStep))
+         +(sum((res,n), 0.1*CostLoadShedding(n,i)*(OFDM(res,n,i)) * TimeStep))
          
          +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
          +0.7*Config("ValueOfLostLoad","val")*(sum(nx,(SectorXWaterNotWithdrawn(nx,i))*TimeStep))                                                                             
@@ -683,8 +675,8 @@ EQ_SystemCost(i)..
 *new
          +0.9*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
          +0.9*Config("ValueOfLostLoad","val")*(LL_Inertia(i)*TimeStep)
-         +(sum((res,n), 0.9*CostLoadShedding(n,i)*(UFLS(res,n,i)) * TimeStep))
-         +(sum((res,n), 0.9*CostLoadShedding(n,i)*(OFDM(res,n,i)) * TimeStep))
+         +(sum((res,n), 0.1*CostLoadShedding(n,i)*(UFLS(res,n,i)) * TimeStep))
+         +(sum((res,n), 0.1*CostLoadShedding(n,i)*(OFDM(res,n,i)) * TimeStep))
          
          +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
          +15*(sum(nx,(SectorXWaterNotWithdrawn(nx,i))*TimeStep))                                                                                                              
@@ -871,9 +863,9 @@ EQ_DownwardReserves_balance(res_D,n,i)..
 EQ_Curtailed_Power(n,i)..
          CurtailedPower(n,i)
          =E=
-         sum(au,(Nunits(au)*PowerCapacity(au)*LoadMaximum(au,i)- Power(au,i)
-         - InertiaPowerAllocation(au,i)
-         - sum(res_U, ReserveProvision(res_U,au,i)))$(sum(tr,Technology(au,tr))>=1) * Location(au,n))
+         sum(au,(Nunits(au)*PowerCapacity(au)*LoadMaximum(au,i)- Power(au,i))$(sum(tr,Technology(au,tr))>=1) * Location(au,n))
+*         + sum(res_U, ReserveProvision(res_U,au,i))
+        
 ;
 *---------------------------------------------------GENERAL UNIT-LEVEL RESERVES CAPABILITIES ------------------------------------------------
 *Capability for all reserves upward
@@ -958,7 +950,7 @@ EQ_Total_Delivery_Limit_Up(au,i)..
 EQ_HeadRoom_Limit(res_U,au,i)..
          HeadRoom(au,i)
          =G=
-         ReserveProvision(res_U,au,i) + (InertiaPowerAllocation(au,i))$(not cu(au))         
+         ReserveProvision(res_U,au,i)         
 ;
     
 *System-wide reserve limits downward
@@ -983,32 +975,16 @@ EQ_FootRoom_Limit(res_D,au,i)..
 ;
 
 *---------------------------------------SYSTEM INERTIA REQUIRED LIMITS---------------------------------------------------------------
-EQ_Sync_Inertia_Delivery_Limit(au,i)..
-         SynchronousInertiaProvision(au,i)
+EQ_Inertia_Delivery_Limit(au,i)..
+         InertiaProvision(au,i)
          =E=
-         (PowerCapacity(au)*Committed(au,i)*InertiaConstant(au)/ConversionFactor)$(cu(au))
+         (PowerCapacity(au)*Committed(au,i)*InertiaConstant(au)/PowerBase)$(cu(au))
 ;
 
-EQ_Max_Inertia_Power_Allocation(au,i)..
-         InertiaPowerAllocation(au,i)
-         =L=
-          // Part 1: All committed non-conventional units (except batteries)        
-        (VirtualInertia_Participation(au)* PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i))$(not cu(au) and not ba(au))
-        
-        + // Part 2: Committed Batteries only
-        (VirtualInertia_Participation(au)* PowerCapacity(au) * LoadMaximum(au,i) * Nunits(au))$ba(au)
-;
-
-EQ_Virt_Inertia_Delivery_Limit(au,i)..
-         VirtualInertiaProvision(au,i)
-         =E=
-         (InertiaPowerAllocation(au,i)*InertiaConstant(au)/ConversionFactor)$(not cu(au))
-;
-
-EQ_Inertia_Balance(i)$(InertiaDemand(i)>0)..
+EQ_Inertia_Balance(i)..
          InertiaDemand(i)
          =l=
-         sum(au,SynchronousInertiaProvision(au,i) + VirtualInertiaProvision(au,i)) + LL_Inertia(i)
+         sum(au,InertiaProvision(au,i)) + LL_Inertia(i)
 ;
 *---------------------------------------------------------------------------------------------------------------------------------
 
@@ -1016,13 +992,13 @@ EQ_Inertia_Balance(i)$(InertiaDemand(i)>0)..
 EQ_UFLS_Limit(res_U,n,i)..
          UFLS(res_U,n,i)
          =L=
-         UFLS_Participation(res_U) * (Demand("DA",n,i) - ShedLoad(n,i))
+         UFLS_Participation(res_U) * (Demand("DA",n,i))
 ;
 
 EQ_OFDM_Limit(res_D,n,i)..
          OFDM(res_D,n,i)
          =L=
-         OFDM_Participation(res_D) * (Demand("DA",n,i) - ShedLoad(n,i))
+         OFDM_Participation(res_D) * (Demand("DA",n,i))
 ;
 *---------------------------------------------------------------------------------------------------------------------------------
 
@@ -1162,7 +1138,6 @@ EQ_Storage_input(au,i)..
 EQ_Storage_MaxDischarge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep)..
          Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
          + sum(res_U, ReserveProvision(res_U,au,i)$(s(au)) * ReserveDuration(res_U) / max(StorageDischargeEfficiency(au)$(s(au)), 1e-6))
-         + (VirtualInertiaProvision(au,i)$ba(au) * ConversionFactor / (max(StorageDischargeEfficiency(au)$ba(au), 1e-6) * 3600))
          =L=
          StorageInitial(au)$(s(au))$(ord(i) = 1)
          + StorageLevel(au,i-1)$(s(au))$(ord(i) > 1)
@@ -1498,9 +1473,7 @@ EQ_DC_Power_Flow,
 EQ_Total_Injected_Power,
 
 *new
-EQ_Sync_Inertia_Delivery_Limit,
-EQ_Max_Inertia_Power_Allocation,
-EQ_Virt_Inertia_Delivery_Limit,
+EQ_Inertia_Delivery_Limit,
 EQ_Inertia_Balance,
 
 EQ_Reserves_Up_Capability,
@@ -1619,6 +1592,7 @@ Display ShedLoad.L,CurtailedPower.L,StorageLevel_all;
 *===============================================================================
 
 PARAMETER
+OutputDemand_VIRU(n,h)
 OutputDemand_FFRU(n,h)
 OutputDemand_FCRU(n,h)
 OutputDemand_aFRRU(n,h)
@@ -1691,6 +1665,7 @@ $If not %LPFormulation% == 1 OutputCostStartUpH(au,h)
 $If not %LPFormulation% == 1 OutputCostShutDownH(au,h)
 $If not %LPFormulation% == 1 OutputCostRampUpH(au,h)
 $If not %LPFormulation% == 1 OutputCostRampDownH(au,h)
+ShadowPrice_VIRU(n,h)
 ShadowPrice_FFRU(n,h)
 ShadowPrice_FCRU(n,h)
 ShadowPrice_aFRRU(n,h)
@@ -1713,6 +1688,7 @@ OutputOptimalityGap(h)
 OutputOptimizationError(h)
 OutputOptimizationCheck(h)
 UnitHourlyPowerRevenue(au,h)
+UnitHourlyVIRURevenue(au,h)
 UnitHourlyFFRURevenue(au,h)
 UnitHourlyFCRURevenue(au,h)
 UnitHourlyaFRRURevenue(au,h)
@@ -1731,20 +1707,21 @@ UnitHourlyProductionCost(au,h)
 UnitHourlyProfit(au,h)
 
 *New
-OutputSynchronousInertiaProvision(au,h)
-OutputVirtualInertiaProvision(au,h)
+OutputInertiaProvision(au,h)
 OutputTotalInertiaProvision(h)
-OutputInertiaPowerAllocation(au,h)
 
 OutputReserveProvision(res,au,h)
+OutputReserve_VIRU(au,h)
 OutputReserve_FFRU(au,h)
 OutputReserve_FFRD(au,h)
 OutputReserve_FCRU(au,h)
 OutputReserve_FCRD(au,h)
+LostLoad_VIRU(n,h)
 LostLoad_FFRU(n,h)
 LostLoad_FFRD(n,h)
 LostLoad_FCRU(n,h)
 LostLoad_FCRD(n,h)
+OutputCurtailmentReserve_VIRU(n,h)
 OutputCurtailmentReserve_FFRU(n,h)
 OutputCurtailmentReserve_FCRU(n,h)
 OutputContingencyPerZone(n,h)
@@ -1793,6 +1770,7 @@ OutputCurtailedPower(n,z)=CurtailedPower.L(n,z);
 OutputCurtailmentReserve(res_U,n,z) = sum(u,(ReserveProvision.L(res_U,u,z))$(sum(tr,Technology(u,tr))>=1)* Location(u,n));
 OutputCurtailmentReserve_aFRRU(n,z)=OutputCurtailmentReserve('aFRRU',n,z);
 OutputCurtailmentReserve_mFRRU(n,z)=OutputCurtailmentReserve('mFRRU',n,z);
+OutputCurtailmentReserve_VIRU(n,z)=OutputCurtailmentReserve('VIRU',n,z);
 OutputCurtailmentReserve_FFRU(n,z)=OutputCurtailmentReserve('FFRU',n,z);
 OutputCurtailmentReserve_FCRU(n,z)=OutputCurtailmentReserve('FCRU',n,z);
 
@@ -1806,6 +1784,7 @@ LostLoad_MinPower(n,z)  = LL_MinPower.L(n,z);
 LostLoad_aFRRD(n,z) = LL_Reserve.L('aFRRD',n,z);
 LostLoad_aFRRU(n,z) = LL_Reserve.L('aFRRU',n,z);
 LostLoad_mFRRU(n,z) = LL_Reserve.L('mFRRU',n,z);
+LostLoad_VIRU(n,z) = LL_Reserve.L('VIRU',n,z);
 LostLoad_FFRU(n,z) = LL_Reserve.L('FFRU',n,z);
 LostLoad_FFRD(n,z) = LL_Reserve.L('FFRD',n,z);
 LostLoad_FCRU(n,z) = LL_Reserve.L('FCRU',n,z);
@@ -1836,6 +1815,7 @@ $If not %LPFormulation% == 1 OutputCostShutDownH(au,z) = CostShutDownH.L(au,z);
 $If not %LPFormulation% == 1 OutputCostRampUpH(au,z) = CostRampUpH.L(au,z);
 $If not %LPFormulation% == 1 OutputCostRampDownH(au,z) = CostRampDownH.L(au,z);
 *new
+ShadowPrice_VIRU(n,z) =  EQ_UpwardReserves_balance.m('VIRU',n,z);
 ShadowPrice_FFRU(n,z) =  EQ_UpwardReserves_balance.m('FFRU',n,z);
 ShadowPrice_FCRU(n,z) =  EQ_UpwardReserves_balance.m('FCRU',n,z);
 ShadowPrice_aFRRU(n,z) =  EQ_UpwardReserves_balance.m('aFRRU',n,z);
@@ -1849,6 +1829,7 @@ ShadowPrice_aFRRD(n,z) =  EQ_DownwardReserves_balance.m('aFRRD',n,z);
 OutputReserve_aFRRU(au,z) = ReserveProvision.L('aFRRU',au,z);
 OutputReserve_aFRRD(au,z) = ReserveProvision.L('aFRRD',au,z);
 OutputReserve_mFRRU(au,z) = ReserveProvision.L('mFRRU',au,z);
+OutputDemand_VIRU(n,z)=ReserveDemand("VIRU",n,z);
 OutputDemand_FFRU(n,z)=ReserveDemand("FFRU",n,z);
 OutputDemand_FFRD(n,z)=ReserveDemand("FFRD",n,z);
 OutputDemand_FCRU(n,z)=ReserveDemand("FCRU",n,z);
@@ -1869,11 +1850,10 @@ OutputStartUp(au,z) = StartUp.L(au,z);
 OutputShutDown(au,z) = ShutDown.L(au,z);
 
 *New
-OutputSynchronousInertiaProvision(au,z) = SynchronousInertiaProvision.L(au,z);
-OutputVirtualInertiaProvision(au,z) = VirtualInertiaProvision.L(au,z);
-OutputTotalInertiaProvision(z) = sum(au, SynchronousInertiaProvision.L(au,z) + VirtualInertiaProvision.L(au,z));
-OutputInertiaPowerAllocation(au,z) = InertiaPowerAllocation.L(au,z);
+OutputInertiaProvision(au,z) = InertiaProvision.L(au,z);
+OutputTotalInertiaProvision(z) = sum(au, InertiaProvision.L(au,z));
 OutputReserveProvision(res,au,z) = ReserveProvision.L(res,au,z);
+OutputReserve_VIRU(au,z) = ReserveProvision.L('VIRU',au,z);
 OutputReserve_FFRU(au,z) = ReserveProvision.L('FFRU',au,z);
 OutputReserve_FFRD(au,z) = ReserveProvision.L('FFRD',au,z);
 OutputReserve_FCRU(au,z) = ReserveProvision.L('FCRU',au,z);
@@ -1901,6 +1881,7 @@ OutputOptimizationError(z) = OptimizationError.L(z);
 OutputOptimizationCheck(z) = OptimizationError.L(z) - OptimalityGap.L(z);
 UnitHourlyPowerRevenue(au,z) = sum(n, EQ_Demand_balance_DA.m(n,z) * Location(au,n) * Power.L(au,z));
 *new
+UnitHourlyVIRURevenue(au,z) = sum(n, OutputReserve_VIRU(au,z) * ShadowPrice_VIRU(n,z) * Location(au,n));
 UnitHourlyFFRURevenue(au,z) = sum(n, OutputReserve_FFRU(au,z) * ShadowPrice_FFRU(n,z) * Location(au,n));
 UnitHourlyFCRURevenue(au,z) = sum(n, OutputReserve_FCRU(au,z) * ShadowPrice_FCRU(n,z) * Location(au,n));
 UnitHourlyaFRRURevenue(au,z) = sum(n, OutputReserve_aFRRU(au,z) * ShadowPrice_aFRRU(n,z) * Location(au,n));
@@ -1909,7 +1890,7 @@ UnitHourlyFFRDRevenue(au,z) = sum(n, OutputReserve_FFRD(au,z) * ShadowPrice_FFRD
 UnitHourlyFCRDRevenue(au,z) = sum(n, OutputReserve_FCRD(au,z) * ShadowPrice_FCRD(n,z) * Location(au,n));
 UnitHourlyaFRRDRevenue(au,z) = sum(n, OutputReserve_aFRRD(au,z) * ShadowPrice_aFRRD(n,z) * Location(au,n));
 
-UnitHourlyRevenue(au,z) = UnitHourlyPowerRevenue(au,z) + UnitHourlyFFRURevenue(au,z) + UnitHourlyFCRURevenue(au,z) + UnitHourlyaFRRURevenue(au,z) + UnitHourlymFRRURevenue(au,z) + UnitHourlyFFRDRevenue(au,z) + UnitHourlyFCRDRevenue(au,z) + UnitHourlyaFRRDRevenue(au,z) ;
+UnitHourlyRevenue(au,z) = UnitHourlyPowerRevenue(au,z) + UnitHourlyVIRURevenue(au,z) + UnitHourlyFFRURevenue(au,z) + UnitHourlyFCRURevenue(au,z) + UnitHourlyaFRRURevenue(au,z) + UnitHourlymFRRURevenue(au,z) + UnitHourlyFFRDRevenue(au,z) + UnitHourlyFCRDRevenue(au,z) + UnitHourlyaFRRDRevenue(au,z) ;
 
 UnitHourlyFixedCost(u,z) = Committed.L(u,z) * CostFixed(u);
 UnitHourlyVariableCost(au,z) = Power.L(au,z) * CostVariable(au,z);
@@ -1987,6 +1968,7 @@ $If not %LPFormulation% == 1 OutputCostStartUpH,
 $If not %LPFormulation% == 1 OutputCostShutDownH,
 $If not %LPFormulation% == 1 OutputCostRampUpH,
 $If not %LPFormulation% == 1 OutputCostRampDownH,
+ShadowPrice_VIRU,
 ShadowPrice_FFRU,
 ShadowPrice_FCRU,
 ShadowPrice_aFRRU,
@@ -2020,24 +2002,26 @@ OutputDemand_mFRRU,
 OutputDemand_aFRRD,
 
 *New
-OutputSynchronousInertiaProvision,
-OutputVirtualInertiaProvision,
+OutputInertiaProvision,
 OutputTotalInertiaProvision,
-OutputInertiaPowerAllocation,
 
 OutputReserveProvision,
+OutputReserve_VIRU,
 OutputReserve_FFRU,
 OutputReserve_FFRD,
 OutputReserve_FCRU,
 OutputReserve_FCRD,
+OutputDemand_VIRU,
 OutputDemand_FFRU,
 OutputDemand_FFRD,
 OutputDemand_FCRU,
 OutputDemand_FCRD,
+LostLoad_VIRU,
 LostLoad_FFRU,
 LostLoad_FFRD,
 LostLoad_FCRU,
 LostLoad_FCRD,
+OutputCurtailmentReserve_VIRU,
 OutputCurtailmentReserve_FFRU,
 OutputCurtailmentReserve_FCRU,
 OutputContingencyPerZone,
@@ -2051,6 +2035,7 @@ OutputFootRoom,
 
 status,
 UnitHourlyPowerRevenue
+UnitHourlyVIRURevenue
 UnitHourlyFFRURevenue
 UnitHourlyFCRURevenue
 UnitHourlyaFRRURevenue

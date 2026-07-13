@@ -578,6 +578,21 @@ def check_reserves(aFRRDDemand, aFRRUDemand, Load):
             logging.warning('No aFRRD reserve requirement data has been found for zone ' + z +
                             '. Using the standard formula')
 
+def check_VIRDemand(VIRDemand, Load):
+    """
+    Function that checks the validity of the reserve requirement time series
+    :param VIR:   DataFrame of VIR Demand
+    :param Load:        DataFrame of Loads
+    """
+    if (VIRDemand.sum(axis=1) < 0).any():
+        logging.critical('The VIR Demand table contains negative values')
+        sys.exit(1)
+    if (Load.sum(axis=1) - VIRDemand.sum(axis=1) < 0).any():
+        logging.critical('The VIR Demand table contains values higher than demand')
+        sys.exit(1)
+    else:
+        logging.warning('No VIR Demand requirement data has been found')
+  
 def check_FFRDemand(FFRDemand, Load):
     """
     Function that checks the validity of the reserve requirement time series
