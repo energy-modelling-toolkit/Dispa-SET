@@ -455,6 +455,13 @@ def create_agg_dict(df_, method="Standard"):
     get_ramping_cost = lambda x: wm_pcap(
         (1 - df_.loc[x.index, "PartLoadMin"]) * x + df_.loc[x.index, "StartUpCost"] / df_.loc[x.index, "PowerCapacity"])
     min_load = lambda x: np.min(x * df_.loc[x.index, "PowerCapacity"]) / df_.loc[x.index, "PowerCapacity"].sum()
+    # weighted harmonic mean for Droop: weighted by PowerCapacity, only for non-zero values
+    wm_harmonic_droop = lambda x: (
+        df_.loc[x.index, "PowerCapacity"].sum() / 
+        (df_.loc[x.index[df_.loc[x.index, "Droop"] > 0], "PowerCapacity"] / 
+         x[df_.loc[x.index, "Droop"] > 0]).sum() 
+        if (df_.loc[x.index, "Droop"] > 0).any() else 0
+    )
 
     if method in ("Standard", "MILP"):
         sum_cols = ["PowerCapacity", "STOCapacity", "STOMaxChargingPower", "InitialPower", "CHPMaxHeat"]
@@ -478,14 +485,17 @@ def create_agg_dict(df_, method="Standard"):
                             'coef_COP_b',
                             'WaterConsumption',
                             'WaterWithdrawal',
-                            'RampingCost'
+                            'RampingCost',
+                            'InertiaConstant'
                             ]
+        harmonic_cols = ['Droop']
         min_cols = ["StartUpTime"]
         nunits = ["Nunits"]
 
         # Define aggregators
         agg_dict = _list2dict(sum_cols, 'sum')
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(weighted_avg_cols, wm_pcap))
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(harmonic_cols, wm_harmonic_droop))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(min_cols, 'min'))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(['PartLoadMin'], min_load))
         # agg_dict = _merge_two_dicts(agg_dict, _list2dict(ramping_cost, get_ramping_cost))
@@ -516,8 +526,10 @@ def create_agg_dict(df_, method="Standard"):
                             'coef_COP_b',
                             'WaterConsumption',
                             'WaterWithdrawal',
-                            'RampingCost'
+                            'RampingCost',
+                            'InertiaConstant'
                             ]
+        harmonic_cols = ['Droop']
         min_cols = ["StartUpTime"]
         # ramping_cost = ["RampingCost"]
         nunits = ["Nunits"]
@@ -525,6 +537,7 @@ def create_agg_dict(df_, method="Standard"):
         # Define aggregators
         agg_dict = _list2dict(sum_cols, 'sum')
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(weighted_avg_cols, wm_pcap))
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(harmonic_cols, wm_harmonic_droop))
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(min_cols, 'min'))
         #agg_dict = _merge_two_dicts(agg_dict, _list2dict(['PartLoadMin'], lambda x: 0))
         # agg_dict = _merge_two_dicts(agg_dict, _list2dict(ramping_cost, get_ramping_cost))
@@ -558,12 +571,15 @@ def create_agg_dict(df_, method="Standard"):
                              'coef_COP_a',
                              'coef_COP_b',
                              'WaterConsumption',
-                             'WaterWithdrawal'
+                             'WaterWithdrawal',
+                             'InertiaConstant'
                              ]
+        harmonic_cols = ['Droop']
 
         # Define aggregators
         agg_dict = _list2dict(sum_cols, 'sum')
         agg_dict = _merge_two_dicts(agg_dict, _list2dict(weighted_avg_cols, wm_nunit))
+        agg_dict = _merge_two_dicts(agg_dict, _list2dict(harmonic_cols, wm_harmonic_droop))
         agg_dict = dict((k, v) for k, v in agg_dict.items() if k in df_.columns)  # remove unnecesary columns
 
         return agg_dict
@@ -574,7 +590,7 @@ def create_agg_dict(df_, method="Standard"):
         sys.exit(1)
 
 
-def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=30):
+def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=-0.1, Pmax=25):
     """
     Merge excessively disaggregated power Units.
 
@@ -638,8 +654,8 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
 
             # helper_cols = ['flex', 'low_pmin', 'low_pmax', 'fingerprints']
             highly_flexible = (
-                    (plants["RampUpRate"] > 1 / 60)
-                    & (plants["RampDownRate"] > 1 / 60)
+                    (plants["RampUpRate"] > 1 / 0.5)
+                    & (plants["RampDownRate"] > 1 / 0.5)
                     & (plants["StartUpTime"] < 1)
                     & (plants["MinDownTime"] <= 1)
                     & (plants["MinUpTime"] <= 1)
@@ -782,6 +798,10 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=0.1, Pmax=3
     idx_orig = [plants_merged.loc[i, 'FormerIndexes'][0] for i in idx_merged]
     columns = plants_merged.columns.drop(['Unit', 'FormerIndexes', 'FormerUnits'])
     plants_merged.loc[idx_merged, columns] = plants.loc[idx_orig, columns].values
+    
+
+        
+        
     if method in ['LP','LP clustered']:
         # Transforming the min up/down times into ramping rates
         _linearize_ramping(plants_merged)
