@@ -63,6 +63,47 @@ To check that everything runs fine, you can build and run a test case by typing:
 dispaset -c ConfigFiles/ConfigTest.xlsx build simulate
 ```
 
+### Test suite
+
+A comprehensive automated test suite lives in the `tests/` folder. It
+covers low-level helpers (dictionary consistency, string handling,
+GDX I/O), the Dispa-SET preprocessing layer (data validation,
+configuration loading, boundary sectors), the full build+solve+read
+pipeline on tiny mock systems (LP, MILP, boundary sector, MTS, CHP,
+curtailment), the postprocessing/plot APIs, several failure paths
+(invalid configs, malformed power-plant data) and a 3-day end-to-end
+"ultimate" run mirroring the legacy `scripts/test_build_solve_display.py`.
+
+The whole suite is designed to run in **under one minute** with the
+`dispaset2` conda environment.
+
+**Running the full suite**:
+
+```bash
+conda activate dispaset2
+python tests/run_all.py
+```
+
+This produces a Markdown report at `tests/output/TEST_REPORT.md` and a
+machine-readable summary at `tests/output/test_report.json`.
+
+**Running individual groups or files**:
+
+```bash
+pytest tests/unit                         # fast, GAMS-free
+pytest tests/integration                  # build/solve mini cases
+pytest tests/failure                      # checks for clean error msgs
+pytest tests/ultimate                     # full pipeline (3 days)
+pytest tests/integration/test_solve_lp.py # a single test file
+python  tests/integration/test_solve_lp.py # standalone, no pytest
+```
+
+Every test file is documented with a docstring describing what it
+checks and how to run it. **Run the suite after every code change.**
+
+A complete description of the suite layout and a roadmap for further
+test additions live in [`Docs/test_suite.md`](Docs/test_suite.md).
+
 ### Documentation
 The documentation and the stable releases are available on the main Dispa-SET website: http://www.dispaset.eu
  

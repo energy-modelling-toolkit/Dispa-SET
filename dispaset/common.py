@@ -4,6 +4,15 @@ This file defines a dictionary with global variables to be used in Dispa-SET suc
 """
 import datetime
 
+
+class DispaSETValidationError(Exception):
+    """Raised when Dispa-SET input data or configuration fails validation.
+
+    Replaces the previous pattern of ``logging.critical(...); sys.exit(1)``
+    so that the error can be caught programmatically (e.g. in Jupyter or
+    in tests) rather than killing the interpreter.
+    """
+
 commons = {}
 # Timestep
 commons['TimeStep'] = '1h'
@@ -57,7 +66,7 @@ commons['types_Reserves'] = ['PFR', 'FFR', 'aFRRU', 'aFRRD', 'mFRRU', 'RR']
 commons['Fuels'] = ['AIR', 'AMO', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH',
                     'GEO', 'HYD', 'WHT', 'ELE', 'THE']
 # Ordered list of fuels for plotting (the first ones are negative):
-commons['MeritOrder'] = ['SCSP', 'BATS', 'BEVS', 'HDAM', 'HPHS', 'P2GS', 'FlowOut', 'GEO', 'NUC', 'LIG',
+commons['MeritOrder'] = ['SCSP', 'BATS', 'BEVS', 'HDAM', 'HPHS', 'P2X', 'FlowOut', 'GEO', 'NUC', 'LIG',
                          'HRD', 'BIO', 'AMO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT',
                          'HYD', 'AIR', 'WHT', 'ELE']
 commons['MeritOrderHeat'] = ['GEO', 'NUC', 'LIG', 'HRD', 'BIO', 'AMO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN',
@@ -100,12 +109,13 @@ commons['colors'] = {'LIG': '#af4b9180',
                      'WST': '#b9c337ff',
                      'HDAM': '#00a0e1ff',
                      'HDAMC': '#00a0e1ff',
-                     'HPHS': 'blue',
+                     'HPHS': '#00a0e1ff',
                      'THMS': '#C04000ff',
                      'BATS': '#41A317ff',
                      'BEVS': '#b9c33799',
                      'SCSP': '#e6a532ff',
-                     'P2GS': '#A0522D',
+                     'P2X': '#A0522D',
+                     'X2P': '#A0522D',
                      'ShedLoad': '#ffffffff',
                      'AIR': '#aed6f1ff',
                      'WHT': '#a93226ff',
@@ -120,8 +130,8 @@ commons['colors']['reserves'] = 'black'
 # Hatches associated with each fuel:
 commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '', 'GAS': '', 'NUC': '', 'SUN': '', 'WIN': '', 'WAT': '',
                       'BIO': '', 'AMO': '', 'GEO': '', 'Storage': '', 'WST': '', 'OTH': '', 'HYD': '',
-                      'FlowIn': '//', 'FlowOut': '//', 'HDAM': '/', 'HPHS': '/', 'SCSP': '/', 'THMS': '', 'BATS': '/',
-                      'BEVS': '/', 'P2GS': '/', 'AIR': '', 'WHT': '', 'HeatSlack': '/', 'ELE': '', 'THE': ''
+                      'FlowIn': '', 'FlowOut': '', 'HDAM': '', 'HPHS': '', 'SCSP': '', 'THMS': '', 'BATS': '',
+                      'BEVS': '', 'P2X': '', 'X2P': '','AIR': '', 'WHT': '', 'ELE': '', 'THE': ''
                       }
 
 commons['logfile'] = str(datetime.datetime.now()).replace(':', '-').replace(' ', '_') + '.dispa.log'

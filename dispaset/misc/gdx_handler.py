@@ -28,6 +28,7 @@ from datetime import datetime, timedelta
 import gams.core.gdx as gdxcc
 
 from .str_handler import shrink_to_64, force_str
+from ..common import DispaSETValidationError
 
 
 def package_exists(package_name):
@@ -91,14 +92,14 @@ def _insert_symbols(gdxHandle, sets, parameters):
         if len(shape) != dims:
             logging.error('Variable ' + p + ': The \'val\' data matrix has ' + str(
                 len(shape)) + ' dimensions and should have ' + str(dims))
-            sys.exit(1)
+            raise DispaSETValidationError('Variable ' + p + ': The \'val\' data matrix has ' + str(len(shape)) + ' dimensions and should have ' + str(dims))
         for i in range(dims):
             if shape[i] != len(sets[variable['sets'][i]]):
                 logging.error(
                     'Variable ' + p + ': The \'val\' data matrix has ' + str(shape[i]) + ' elements for dimention ' +
                     str(variable['sets'][i]) + ' while there are ' + str(
                         len(variable['sets'])) + ' set values')
-                sys.exit(1)
+                raise DispaSETValidationError('Variable ' + p + ': shape mismatch for dimension ' + str(variable['sets'][i]))
 
         for index, value in np.ndenumerate(variable['val']):
             # Write line by line if value is non null
@@ -137,7 +138,7 @@ def write_variables(config, gdx_out, list_vars):
     gams_dir = get_gams_path(config.get('GAMS_folder'))
     if not gams_dir:  # couldn't locate
         logging.critical('GDXCC: Could not find a valid GAMS installation. Please check your configuration and environment variables.')
-        sys.exit(1)
+        raise DispaSETValidationError('GDXCC: Could not find a valid GAMS installation. Please check your configuration and environment variables.')
     gams_dir = force_str(gams_dir)
     config['GAMS_folder'] = gams_dir  # updating the config dictionary
     gdx_out = force_str(gdx_out)
@@ -175,7 +176,7 @@ def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
         except ImportError:
             logging.critical("gdxcc module could not be imported. GDX cannot read"
                              'Please install the gams API"')
-            sys.exit(1)
+            raise DispaSETValidationError("gdxcc module could not be imported. Please install the GAMS API.")
 
 
     out = {}
@@ -192,7 +193,7 @@ def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
 
     if not os.path.isfile(filename):
         logging.critical('Gdx file "' + filename + '" does not exist')
-        sys.exit(1)
+        raise DispaSETValidationError('Gdx file "' + filename + '" does not exist')
 
     gdxOpenRead(gdxHandle, filename)
 

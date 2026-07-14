@@ -14,13 +14,13 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, \
     check_BSFlexMaxCapacity, check_BSFlexMaxSupply, check_VIRDemand, check_FFRDemand, check_FCRDemand, check_CostXNotServed,\
     check_grid_data
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
-    load_geo_data, GenericTable
+    load_geo_data, GenericTable, load_config
 from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, \
     BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep, PTDF_matrix, merge_lines
 from .boundary_sector import zone_to_bs_mapping
 from .. import __version__
-from ..common import commons
+from ..common import commons, DispaSETValidationError
 from ..misc.gdx_handler import write_variables
 from difflib import SequenceMatcher
 
@@ -48,25 +48,41 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # Checking the config first:
     if isinstance(config, str):
         config = load_config(config)
+        
+    # cheking a logical simularion time period:::::RAY
+    startdate = config['StartDate']
+    stopdate = config['StopDate']
+
+    if startdate > stopdate:
+        logging.critical("Illogical starting and ending dates in the simulation period. StartDate is later than StopDate. Please check the config file.")
+        raise DispaSETValidationError("Illogical starting and ending dates in the simulation period. StartDate is later than StopDate. Please check the config file.")
 
     # Boolean variable to check wether it is milp or lp:
     LP = config['SimulationType'] == 'LP' or config['SimulationType'] == 'LP clustered'
 
-    # Boolean variable to check wether it is NTC or DC-POWERFLOW:
+    _valid_simulation_types = ('Standard', 'MILP', 'LP', 'LP clustered', 'Integer clustering', 'No clustering')
+    if config['SimulationType'] not in _valid_simulation_types:
+        msg = (f"Unknown SimulationType '{config['SimulationType']}'. "
+               f"Valid values are: {', '.join(_valid_simulation_types)}")
+        logging.critical(msg)
+        raise DispaSETValidationError(msg)
+
+    # Boolean vvariable to check wether it is NTC or DC-POWERFLOW:
     grid_flag = config.get('TransmissionGridType', '')  # If key does not exist it returns ""
 
     # Remove SectorCoupling_flag declaration since it's always 'On' in the next version
 
     # check time steps:
     if config['DataTimeStep'] != 1:
-        logging.critical('The data time step can only be 1 hour in this version of Dispa-SET. A value of ' + str(
-            config['DataTimeStep']) + ' hours was provided')
-        sys.exit(1)
+        msg = 'The data time step can only be 1 hour in this version of Dispa-SET. A value of ' + str(
+            config['DataTimeStep']) + ' hours was provided'
+        logging.critical(msg)
+        raise DispaSETValidationError(msg)
     if config['SimulationTimeStep'] not in (1, 24):
-        logging.critical(
-            'The simulation time step can only be 1 or 24 hour in this version of Dispa-SET. A value of ' + str(
-                config['DataTimeStep']) + ' hours was provided')
-        sys.exit(1)
+        msg = 'The simulation time step can only be 1 or 24 hour in this version of Dispa-SET. A value of ' + str(
+            config['SimulationTimeStep']) + ' hours was provided'
+        logging.critical(msg)
+        raise DispaSETValidationError(msg)
     # Day/hour corresponding to the first and last days of the simulation:
     __, m_start, d_start, __, __, __ = config['StartDate']
     y_end, m_end, d_end, _, _, _ = config['StopDate']
@@ -269,7 +285,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                      fallbacks=['Unit', 'Technology', 'Zone'],
                                      default=0)
 
-    if 'StorageAlertLevels' and len(config['StorageAlertLevels'])>0:
+    if 'StorageAlertLevels' in config and os.path.isfile(config['StorageAlertLevels']):
         StorageAlertLevels = UnitBasedTable(plants_sto, 'StorageAlertLevels', config,
                                             fallbacks=['Unit', 'Technology', 'Zone'],
                                             default=0)
@@ -277,7 +293,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         logging.warning('No Storage Alert Levels will be considered (no valid file provided)')
         StorageAlertLevels = pd.DataFrame(index=config['idx_long'])
 
-    if 'StorageFloodControl' and len(config['StorageFloodControl'])>0:
+    if 'StorageFloodControl' in config and os.path.isfile(config['StorageFloodControl']):
         StorageFloodControl = UnitBasedTable(plants_sto, 'StorageFloodControl', config,
                                              fallbacks=['Unit', 'Technology', 'Zone'],
                                              default=1)
@@ -285,21 +301,21 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         logging.warning('No Storage Flood Control will be considered (no valid file provided)')
         StorageFloodControl = pd.DataFrame(index=config['idx_long'])
 
-    if 'ReservoirScaledInflows' and len(config['ReservoirScaledInflows'])>0:
+    if 'ReservoirScaledInflows' in config and os.path.isfile(config['ReservoirScaledInflows']):
         ReservoirScaledInflows = UnitBasedTable(plants_sto, 'ReservoirScaledInflows', config,
                                                 fallbacks=['Unit', 'Technology', 'Zone'], default=0)
     else:
         logging.warning('No historical Reservoir Scaled Inflows will be considered (no valid file provided)')
         ReservoirScaledInflows = pd.DataFrame(index=config['idx_long'])
 
-    if 'ReservoirScaledOutflows' and len(config['ReservoirScaledOutflows'])>0:
+    if 'ReservoirScaledOutflows' in config and os.path.isfile(config['ReservoirScaledOutflows']):
         ReservoirScaledOutflows = UnitBasedTable(plants_sto, 'ReservoirScaledOutflows', config,
                                                  fallbacks=['Unit', 'Technology', 'Zone'], default=0)
     else:
         logging.warning('No historical outflows will be considered (no valid file provided)')
         ReservoirScaledOutflows = pd.DataFrame(index=config['idx_long'])
     # TODO: Check if plants_sto esta bien para asignar el CostOfSpillage
-    if 'CostOfSpillage' and len(config['CostOfSpillage'])>0:
+    if 'CostOfSpillage' in config and os.path.isfile(config['CostOfSpillage']):
         CostOfSpillage = UnitBasedTable(plants_sto, 'CostOfSpillage', config,
                                         fallbacks=['Unit', 'Technology', 'Zone'],
                                         default=0)
@@ -352,7 +368,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     CostXNotServed[zone] = BoundarySector.loc[zone, 'CostXNotServed']
                 else:
                     logging.critical(f'CostXNotServed is not defined for boundary sector {zone} in the boundary sector data table')
-                    sys.exit(1)
+                    raise DispaSETValidationError(f'CostXNotServed is not defined for boundary sector {zone} in the boundary sector data table')
             check_CostXNotServed(config, CostXNotServed, zones_bs)
         BoundarySector = BoundarySector[BoundarySector.index.isin(zones_bs)]
         BoundarySector.fillna(0, inplace=True)
@@ -594,7 +610,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     if not len(Plants_merged.index.unique()) == len(Plants_merged):
         # Very unlikely case:
         logging.error('plant indexes not unique!')
-        sys.exit(1)
+        raise DispaSETValidationError('plant indexes not unique!')
 
     # Apply scaling factors:
     if config['modifiers']['Solar'] != 1:
@@ -1037,7 +1053,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 if u in BoundarySector.index:
                     parameters['SectorXFlexMaxCapacity']['val'][i] = BoundarySector.loc[u, 'MaxFlexDemand']
 
-        # Particular treatment of SectorXFlexMaxCapacity that is not a time-series and that is given from the BS Inputs database
+        # Particular treatment of SectorXFlexMaxSupply that is not a time-series and that is given from the BS Inputs database
         if 'SectorXFlexibleSupply' in config and config['SectorXFlexibleSupply'] != '':
             for i, u in enumerate(sets['nx']):
                 if u in BoundarySector.index:
@@ -1046,10 +1062,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         # Particular treatment of SectorXStorageMinimum:
         for i, u in enumerate(sets['nx']):
             if u in BoundarySector.index:
-                parameters['SectorXStorageMinimum']['val'][i] = BoundarySector.loc[
-                    u, 'SectorXStorageMinimum'] * \
-                    BoundarySector.loc[
-                                                                    u, 'SectorXStorageCapacity']
+                    parameters['SectorXStorageMinimum']['val'][i] = (
+                    BoundarySector.loc[u, 'SectorXStorageMinimum'] *
+                    BoundarySector.loc[u, 'SectorXStorageCapacity'])
 
     # Storage profile and initial state:
     for i, s in enumerate(sets['asu']):
@@ -1074,7 +1089,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         elif s in finalTS['ReservoirLevels'] and any(finalTS['ReservoirLevels'][s] > 0) and any(
                 finalTS['ReservoirLevels'][s] - 1 > 1e-11):
             logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
-            sys.exit(1)
+            raise DispaSETValidationError(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
         else:
             if MTS == 1:
                 logging.info(f'MTS level 1: Unit {s} will use cyclic boundary conditions. '
@@ -1137,7 +1152,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             elif nx in finalTS['SectorXReservoirLevels'] and any(finalTS['SectorXReservoirLevels'][nx] > 0) and any(
                     finalTS['SectorXReservoirLevels'][nx] - 1 > 1e-11):
                 logging.critical(nx + ': The reservoir level is sometimes higher than its capacity (>1) !')
-                sys.exit(1)
+                raise DispaSETValidationError(nx + ': The reservoir level is sometimes higher than its capacity (>1) !')
             else:
                 if MTS == 1:
                     logging.info(f'MTS level 1: SectorX {nx} will use cyclic boundary conditions. '
@@ -1569,7 +1584,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 parameters['CHPType']['val'][i, 2] = 1
             else:
                 logging.error('CHPType not valid for plant ' + u)
-                sys.exit(1)
+                raise DispaSETValidationError('CHPType not valid for plant ' + u)
 
     # Initial Power
     if 'InitialPower' in Plants_merged.columns and Plants_merged['InitialPower'].notna().any():
@@ -1671,7 +1686,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # if the sim variable was not defined:
     if 'sim' not in locals():
         logging.error('Please provide a path where to store the DispaSET inputs (in the "sim" variable)')
-        sys.exit(1)
+        raise DispaSETValidationError('Please provide a path where to store the DispaSET inputs (in the "sim" variable)')
 
     if not os.path.exists(sim):
         os.makedirs(sim)
@@ -1695,8 +1710,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     if MTS > 0:
         # MTS requires LP
         if not LP:
-            logging.error(f'Simulation in MTS level {MTS} must be LP')
-            sys.exit(1)
+            logging.error('Simulation in MTS must be LP')
+            raise DispaSETValidationError('Simulation in MTS must be LP')
         gms_modifications['$setglobal LPFormulation 0'] = '$setglobal LPFormulation 1'
         gms_modifications['$setglobal MTS 0'] = f'$setglobal MTS {MTS}'
     else: # Detailed dispatch run (not MTS)
@@ -1739,10 +1754,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                     fout.write(line)
     except FileNotFoundError:
         logging.error(f"Source GAMS file not found at {source_gms_path}")
-        sys.exit(1)
+        raise DispaSETValidationError(f"Source GAMS file not found at {source_gms_path}")
     except Exception as e:
         logging.error(f"Error processing GAMS file: {e}")
-        sys.exit(1)
+        raise DispaSETValidationError(f"Error processing GAMS file: {e}") from e
 
     # Create solver option files (Cplex and Gurobi)
     if config['OptimalityGap'] == '':

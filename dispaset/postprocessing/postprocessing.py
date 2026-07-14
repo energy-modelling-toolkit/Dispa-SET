@@ -17,7 +17,7 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
 
-from ..common import commons
+from ..common import commons, DispaSETValidationError
 
 import time
 import pickle
@@ -74,7 +74,7 @@ def aggregate_by_fuel(PowerOutput, Inputs, SpecifyFuels=None):
             fuels = Inputs['sets']['f']
         else:
             logging.error('Inputs variable no valid')
-            sys.exit(1)
+            raise DispaSETValidationError('Inputs variable not valid')
     else:
         fuels = SpecifyFuels
     PowerByFuel = pd.DataFrame(0, index=PowerOutput.index, columns=fuels)
@@ -213,27 +213,48 @@ def get_plot_data(inputs, results, z):
     :param z:               Zone to be considered (e.g. 'BE')
     :returns plotdata:      Dataframe with the dispatch data storage and outflows are negative
     """
+    # 1. Process Generation Data (by fuel)
     tmp = filter_by_zone(results['OutputPower'], inputs, z)
     plotdata = aggregate_by_fuel(tmp, inputs)
-
+    
+    # 2. Process Storage Data
     if 'OutputStorageInput' in results:
+        # Filter for storage units and zone
         # onnly take the columns that correspond to storage units (StorageInput is also used for CHP plants):
         cols = [col for col in results['OutputStorageInput'] if
                 inputs['units'].loc[col, 'Technology'] in commons['tech_storage']]
         tmp = filter_by_zone(results['OutputStorageInput'][cols], inputs, z)
+        
+        # Aggregate storage by technology
         bb = pd.DataFrame()
         for tech in commons['tech_storage']:
             aa = filter_by_tech(tmp, inputs, tech)
             aa = aa.sum(axis=1)
             aa = pd.DataFrame(aa, columns=[tech])
             bb = pd.concat([bb, aa], axis=1)
+            
+        # Invert storage values (charging as consumption)
         bb = -bb
+        
+        # Add to main plotdata
         plotdata = pd.concat([plotdata, bb], axis=1)
         # plotdata['Storage'] = -tmp.sum(axis=1)
+        
     else:
+        # Initialize Storage if no data
         plotdata['Storage'] = 0
+        
+    # 3. Process power consumption (p2x) data
+    if 'OutputPowerConsumption' in results:
+        # Filter by zone
+        tmp = filter_by_zone(results['OutputPowerConsumption'], inputs, z)
+        plotdata['P2X'] = -tmp.sum(axis=1)
+
+    
+    # 3. Fill missing values (NaNs)
     plotdata.fillna(value=0, inplace=True)
 
+    # 4. Process Network Flow Data (FlowIn, FlowOut)
     plotdata['FlowIn'] = 0
     plotdata['FlowOut'] = 0
     if 'OutputFlow' in results: # Check if OutputFlow exists
@@ -244,15 +265,23 @@ def get_plot_data(inputs, results, z):
             if from_node.strip() == z:
                 plotdata['FlowOut'] = plotdata['FlowOut'] - results['OutputFlow'][col]
     
-    # re-ordering columns:
+    # 5. Reorder Columns for Plotting (Merit Order)
     OrderedColumns = [col for col in commons['MeritOrder'] if col in plotdata.columns]
+    # check if there are some missing columns:
+    for col in plotdata.columns:
+        if col not in commons['MeritOrder']:
+            if plotdata[col].sum() < 0:
+                OrderedColumns.insert(0,col)
+            else:
+                OrderedColumns.append(col)
     plotdata = plotdata[OrderedColumns]
 
-    # remove empty columns:
+    # 6. Remove Empty Data Columns
     for col in plotdata.columns:
         if plotdata[col].max() == 0 and plotdata[col].min() == 0 and col not in ['FlowIn', 'FlowOut']:
             del plotdata[col]
 
+    # 7. Return Prepared Data
     return plotdata
 
 
@@ -271,6 +300,74 @@ def get_imports(flows, z):
         elif key[-len(z):] == z:
             NetImports += flows[key].sum()
     return NetImports
+
+
+def check_energy_balance(inputs, results, z=None, threshold=0.01):
+    """
+    Check the instantaneous power balance for all simulated zones (or a
+    specific zone) and log a CRITICAL message for each zone that exceeds
+    the relative imbalance threshold.
+
+    The GAMS power-balance constraint guarantees:
+        generation + net_imports + shed_load + demand_modulation
+        = demand + storage_charging + p2x_consumption
+
+    ``get_plot_data`` already incorporates *all* supply-side and
+    consumption-side terms (generation, storage charging as negative,
+    P2X as negative, FlowIn as positive, FlowOut as negative), so the
+    net sum ``plotdata.sum(axis=1)`` satisfies:
+
+        plotdata_sum + shed_load + demand_modulation == demand
+
+    :param inputs:      DispaSET inputs dict (output of get_sim_results)
+    :param results:     DispaSET results dict (output of get_sim_results)
+    :param z:           Zone to check; if None all zones in inputs['sets']['n']
+                        are checked.
+    :param threshold:   Relative imbalance threshold (fraction of peak demand).
+                        A CRITICAL message is logged for any zone above this.
+    :returns:           Dict mapping zone name -> max relative imbalance
+                        (0.01 means 1 %).
+    """
+    zones = [z] if z is not None else list(inputs['sets']['n'])
+    balance_errors = {}
+
+    for zone in zones:
+        plotdata = get_plot_data(inputs, results, zone) / 1000  # GW
+        sum_generation = plotdata.sum(axis=1)
+
+        demand = inputs['param_df']['Demand'][('DA', zone)] / 1000  # GW
+        if ('Flex', zone) in inputs['param_df']['Demand']:
+            demand = demand + inputs['param_df']['Demand'][('Flex', zone)] / 1000
+
+        if 'OutputShedLoad' in results and zone in results['OutputShedLoad']:
+            shed_load = results['OutputShedLoad'][zone] / 1000
+            shed_load = pd.Series(shed_load, index=demand.index).fillna(0)
+        else:
+            shed_load = pd.Series(0.0, index=demand.index)
+
+        if 'OutputDemandModulation' in results and zone in results['OutputDemandModulation']:
+            shifted_load = results['OutputDemandModulation'][zone] / 1000
+            shifted_load = pd.Series(shifted_load, index=demand.index).fillna(0)
+        else:
+            shifted_load = pd.Series(0.0, index=demand.index)
+
+        diff = (sum_generation + shed_load - shifted_load - demand).abs()
+        max_demand = demand.max()
+        rel_error = float(diff.max() / max_demand) if max_demand != 0 else 0.0
+        balance_errors[zone] = rel_error
+
+        if rel_error > threshold:
+            logging.critical(
+                'There is up to %.4f%% difference in the instantaneous '
+                'energy balance of zone %s' % (rel_error * 100, zone)
+            )
+        else:
+            logging.info(
+                'Energy balance OK for zone %s (max deviation %.4f%%)' %
+                (zone, rel_error * 100)
+            )
+
+    return balance_errors
 
 
 # %%

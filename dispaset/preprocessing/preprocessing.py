@@ -16,7 +16,7 @@ import pandas as pd
 
 from .build import build_single_run
 from .utils import pd_timestep
-from ..common import commons
+from ..common import commons, DispaSETValidationError
 from ..misc.gdx_handler import gdx_to_dataframe, gdx_to_list
 from ..postprocessing.data_handler import GAMSstatus
 from ..solve import solve_GAMS
@@ -87,7 +87,7 @@ def _check_results(results):
                              ', with the error message: "' + GAMSstatus('model', errors['model'].iloc[0]) + '"')
             for i in errors.index:
                 errors.loc[i, 'Error Message'] = GAMSstatus('model', errors['model'][i])
-            sys.exit(1)
+            raise DispaSETValidationError('Some simulation errors were encountered when running the regional MTS')
     return True
 
 
@@ -241,12 +241,12 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                 logging.critical('Storage levels in zone ' + c + ' were not computed, please check that storage units '
                                  'are present in the ' + c + ' power plant database! If not, unselect ' + c +
                                  ' form the zones in the MTS module')
-                sys.exit(0)
+                raise DispaSETValidationError('Storage levels in zone ' + c + ' were not computed')
             elif len(temp_results[c]['OutputStorageLevel']) > len(idx):
                 logging.critical('The number of time steps in the mid-term simulation results (' + str(
                     len(temp_results[c]['OutputStorageLevel'])) +
                                  ') does not match the length of the index (' + str(len(idx)) + ')')
-                sys.exit(0)
+                raise DispaSETValidationError('MTS result length mismatch for OutputStorageLevel in zone ' + c)
             elif len(temp_results[c]['OutputStorageLevel']) < len(idx):
                 temp_results[c]['OutputStorageLevel'] = temp_results[c]['OutputStorageLevel'].reindex(
                     range(1, len(idx) + 1)).fillna(0).values
@@ -254,7 +254,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                 if u not in units.index:
                     logging.critical('Unit "' + u + '" is reported in the reservoir levels of the result file but '
                                                     'does not appear in the units table')
-                    sys.exit(1)
+                    raise DispaSETValidationError('Unit "' + u + '" from MTS results not in units table')
                 for u_old in units.loc[u, 'FormerUnits']:
                     profiles[u_old] = temp_results[c]['OutputStorageLevel'][u].values
     
@@ -265,7 +265,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                 if u not in units.index:
                     logging.critical('Unit "' + u + '" is reported in the reservoir levels of the result file but '
                                                     'does not appear in the units table')
-                    sys.exit(1)
+                    raise DispaSETValidationError('Unit "' + u + '" from MTS results not in units table')
                 for u_old in units.loc[u, 'FormerUnits']:
                     profiles[u_old] = profiles[u]
                 profiles.drop(u, axis=1, inplace=True)
@@ -297,7 +297,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
             logging.critical('Storage levels in the selected region were not computed, please check that storage units '
                                 'are present in the power plant database! If not, unselect zones with no storage units '
                                 'form the zones in the MTS module')
-            sys.exit(0)
+            raise DispaSETValidationError('Storage levels in the selected region were not computed')
         # TODO: CHECK WHO COMMENTED THIS PART (MARCO) 
         # if 'SectorXReservoirLevels' in config and config['SectorXReservoirLevels'] != '':
         #     if len(temp_results['OutputSectorXStorageLevel']) < len(idx):
@@ -313,7 +313,7 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         if 'SectorXFlexibleDemand' in config and config['SectorXFlexibleDemand'] != '':
             if 'OutputSectorXFlexDemand' not in temp_results:
                 logging.critical('PtL Demand in the selected region was not computed')
-                sys.exit(0)
+                raise DispaSETValidationError('PtL Demand in the selected region was not computed')
             
             if len(temp_results['OutputSectorXFlexDemand']) < len(idx):
                 SectorXFlexDemand = temp_results['OutputSectorXFlexDemand'].reindex(range(1, len(idx) + 1)).fillna(
@@ -348,13 +348,13 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
                 if u not in units.index:
                     logging.critical('Unit "' + u + '" is reported in the reservoir levels of the result file but '
                                                     'does not appear in the units table')
-                    sys.exit(1)
+                    raise DispaSETValidationError('Unit "' + u + '" from MTS results not in units table')
                 for u_old in units.loc[u, 'FormerUnits']:
                     profiles[u_old] = profiles[u]
                 profiles.drop(u, axis=1, inplace=True)
     else:
         logging.error('HydroScheduling parameter should be either "Regional" or "Zonal" (case sensitive). ')
-        sys.exit()
+        raise DispaSETValidationError('HydroScheduling parameter should be either "Regional" or "Zonal" (case sensitive)')
 
     if config['HydroScheduling'] == 'Off':
         # replace all 1.000000e+300 values by nan since they correspond to undefined in GAMS:
