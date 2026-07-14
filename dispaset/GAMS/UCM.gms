@@ -1508,7 +1508,6 @@ EQ_RampDown_TC,
 EQ_Demand_balance_DA,
 $If not %LPFormulation% == 1 EQ_Power_must_run,
 EQ_P2X_Power_Balance,
-EQ_X2P_Power_Consumption
 EQ_Max_Power_Consumption,
 EQ_Power_Balance_of_P2X_units,
 EQ_Power_Balance_of_X2P_units,                                  
