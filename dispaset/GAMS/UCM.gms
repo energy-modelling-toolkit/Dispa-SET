@@ -1230,7 +1230,8 @@ EQ_Storage_MaxDischarge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(
          Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
          + sum(res_U, ReserveProvision(res_U,au,i)$(s(au)) * ReserveDuration(res_U) / max(StorageDischargeEfficiency(au)$(s(au)), 1e-6))
          =L=
-         StorageInitial(au)$(s(au))$(ord(i) = 1)
+           StorageInitial(au)$(ord(i)=1 and %MTS%<>1)
+         + (sum(i_last,StorageLevel(au,i_last)))$(ord(i)=1 and %MTS%=1)
          + StorageLevel(au,i-1)$(s(au))$(ord(i) > 1)
          + StorageInflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
 ;
@@ -1240,7 +1241,8 @@ EQ_Storage_MaxCharge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au)
          StorageInput(au,i)$(s(au))*StorageChargingEfficiency(au)$(s(au))*TimeStep
          + sum(res_D, ReserveProvision(res_D,au,i)$(s(au)) * ReserveDuration(res_D) * StorageChargingEfficiency(au)$(s(au)))
          =L=
-         (Nunits(au)$(s(au)) * StorageCapacity(au)$(s(au))-StorageInitial(au)$(s(au)))$(ord(i) = 1)
+           (Nunits(au)$(s(au))*StorageCapacity(au)$(s(au))- StorageInitial(au)$(s(au)))$(ord(i)=1 and %MTS%<>1)
+         + (Nunits(au)$(s(au))*StorageCapacity(au)$(s(au))- sum(i_last,StorageLevel(au,i_last)))$(ord(i)=1 and %MTS%=1)         
          + (Nunits(au)$(s(au)) * StorageCapacity(au)$(s(au))*AvailabilityFactor(au,i-1)$(s(au)) - StorageLevel(au,i-1))$(ord(i) > 1)
          + StorageOutflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
 ;
