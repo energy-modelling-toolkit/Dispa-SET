@@ -1919,8 +1919,8 @@ ShadowPrice_FCRU(n,z) =  EQ_UpwardReserves_balance.m('FCRU',n,z);
 ShadowPrice_aFRRU(n,z) =  EQ_UpwardReserves_balance.m('aFRRU',n,z);
 ShadowPrice_mFRRU(n,z) =  EQ_UpwardReserves_balance.m('mFRRU',n,z);
 
-ShadowPrice_FFRD(n,z) =  EQ_UpwardReserves_balance.m('FFRD',n,z);
-ShadowPrice_FCRD(n,z) =  EQ_UpwardReserves_balance.m('FCRD',n,z);
+ShadowPrice_FFRD(n,z) =  EQ_DownwardReserves_balance.m('FFRD',n,z);
+ShadowPrice_FCRD(n,z) =  EQ_DownwardReserves_balance.m('FCRD',n,z);
 ShadowPrice_aFRRD(n,z) =  EQ_DownwardReserves_balance.m('aFRRD',n,z);
 
 *new
