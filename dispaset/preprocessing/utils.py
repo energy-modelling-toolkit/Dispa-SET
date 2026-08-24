@@ -629,7 +629,8 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=-0.1, Pmax=
     string_keys = ['Zone', 'Technology', 'Fuel', 'CHPType', 'Sector1']
     for key in string_keys:
         plants[key] = plants[key].fillna("")
-    for key in ['PartLoadMin', 'StartUpTime', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost',
+
+    for key in ['PartLoadMin', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost',
                 'WaterWithdrawal', 'WaterConsumption']:
         plants[key] = plants[key].fillna(0)
     for key in ['RampUpRate', 'RampDownRate']:

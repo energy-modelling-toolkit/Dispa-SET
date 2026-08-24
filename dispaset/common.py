@@ -38,30 +38,153 @@ commons['Technologies'] = ['HDAM', 'HROR', 'HPHS', 'PHOT', 'WAVE', 'WHEN', 'WTOF
                            'HBBS'  # Haber-Bosch
                            ]
 # List of VRES technologies:
-commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SOTH']
-# List of Conventional technologies:
-commons['tech_conventional'] = ['HDAM', 'HROR', 'HPHS', 
-                                'COMC', 'GTUR', 'ICEN', 'STUR'
+# NOTE (2026-08-20): SOTH removed -- per Docs/data.rst it is "Solar thermal district heating"
+# (Heat only category, no electrical output), not a power-producing renewable; it was
+# misclassified here (it was also already correctly listed in tech_boundary_sector below,
+# so this was an inconsistent double-classification). SCSP added -- Docs/data.rst flags it
+# VRES=Y ("Concentrated Solar Power").
+commons['tech_renewables'] = ['HROR', 'PHOT', 'WAVE', 'WTOF', 'WTON', 'SCSP']
+# List of Conventional technologies (real synchronous/turbine-based generation):
+# NEW (2026-08-20): WHEN ("Waste heat engine", Power-only per Docs/data.rst), SCSP
+# (Concentrated Solar Power with storage -- steam turbine), CAES (traditional CAES uses a
+# real synchronous generator on discharge), and the CHP/boundary-sector variants of hydro/
+# thermal units (same electrical-side machine as their non-CHP counterparts -- these were
+# previously excluded from reserve eligibility purely because of this classification gap).
+commons['tech_conventional'] = ['HDAM', 'HROR', 'HPHS',
+                                'COMC', 'GTUR', 'ICEN', 'STUR',
+                                'WHEN', 'SCSP', 'CAES',
+                                'HDAMC', 'HRORC', 'HPHSC',
+                                'COMCX', 'GTURX', 'ICENX', 'STURX',
                                 ]#MARCO
 # List of Batteries technologies:
+# PENDING (not added, 2026-08-20): BEVS was considered for inclusion here (same underlying
+# battery/power-electronics technology as BATS), but deliberately left out. The real Bolivia
+# scenarios (S0-S5) have no BEVS units at all, so this has no effect on current results.
+# Reasons to hold off until a BEVS-containing study is actually built: (1) `ba(au)` (and every
+# reserve equation gated by it) is derived directly from this list, so adding BEVS here would
+# immediately credit it with full battery-like reserve capability; (2) that is only realistic
+# if the unit's AvailabilityFactor reflects actual vehicle plug-in patterns, not a flat 1 --
+# there is real precedent for this in this repo (Database/AvailabilityFactors/NL/1h/
+# 2015_withBEVS.csv, a hourly profile ranging 0.34-1.0), so the mechanism exists, it just
+# needs real data prepared alongside enabling it; (3) V2G participation in ancillary-service
+# markets is still regulatorily immature/pilot-stage in most jurisdictions, a scope question
+# for the specific study, not something code can decide. Revisit together, not separately, if
+# BEVS units are ever added to a study.
 commons['tech_batteries'] = ['BATS']#MARCO
 # List of storage technologies:
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
 # commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP', 'HDAMC']
 
 # List of power to boundary sector technologies
+# NEW (2026-08-20): HPHSC added -- it was previously unclassified anywhere in this file (not
+# even here), unlike its hydro siblings HDAMC/HRORC.
 commons['tech_p2bs'] = ['P2GS', 'ALKE', 'PEME', 'SOXE', 'P2BS', 'PEFC',
-                        'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 'HDAMC', 'HRORC', 'HDLZ',
+                        'DMFC', 'ALFC', 'PAFC', 'MCFC', 'SOFC', 'REFC', 'HDAMC', 'HRORC', 'HPHSC', 'HDLZ',
                         'COMCX', 'GTURX', 'ICENX', 'STURX',
                         'P2HT', 'ASHP', 'GSHP', 'HYHP', 'WSHP', 'REHE']
+# PENDING (not resolved, 2026-08-20): fuel cells (PEFC/DMFC/ALFC/PAFC/MCFC/SOFC/REFC),
+# electrolyzers (P2GS/ALKE/PEME/SOXE), bio-hydrolysis (HDLZ), and Haber-Bosch (HBBS, still
+# unclassified anywhere in this file) are custom additions to this project, not part of the
+# officially-documented Dispa-SET technology set (Docs/data.rst does not cover them), so no
+# literature backing specific to *this model's* representation of them was found this
+# session. Whether/how they should participate in frequency reserves (e.g. fuel cells as slow
+# X2P generation with limited FCR/mFRR capability; electrolyzers as demand-response-style
+# downward reserve) is an open question requiring the owner's domain input -- not decided.
 # List of boundary sector to power technologies
 commons['tech_bs2p'] = ['BSPG']
 # List of boundary sector only technologies:
 commons['tech_boundary_sector'] = ['BSPG', 'GETH', 'HOBO', 'SOTH', 'ABHP', 'HOBOX', 'P2BS']#MARCO , 'HDAMC', 'HRORC'
 # List of CHP types:
 commons['types_CHP'] = ['extraction', 'back-pressure', 'p2h']
-# List of Reserve types:
-commons['types_Reserves'] = ['PFR', 'FFR', 'aFRRU', 'aFRRD', 'mFRRU', 'RR']
+
+# Physical constants used to size droop-based reserve-participation factors. Centralized here
+# instead of a local dict in build.py -- same precedent as ReserveDuration/FullActivationTime/
+# default_StartUpTime below. SystemFrequency is region-specific (Bolivia = 50 Hz); move to
+# config instead if this is ever reused for a 60 Hz study. RoCoF_max is kept for reference/
+# possible future use -- it is not currently used since VIRU participation is binary, not
+# RoCoF-derated.
+commons['FrequencyResponseConstants'] = {
+    'SystemFrequency': 50,        # Hz
+    'DeltaFrequencyMax': 0.8,     # Hz -- reference frequency deviation for droop-based sizing
+    'RoCoF_max': 0.5,             # Hz/s -- reference RoCoF (see note above)
+}
+
+# Which technologies may provide each reserve product. Derived from the technology-class
+# lists above (single source of truth -- do not hardcode a separate flat technology list
+# here). VIRU/FFRU/FFRD: batteries only. Real rotating-mass inertia from synchronous machines
+# is handled separately via EQ_Inertia_Delivery_Limit/cu(au); VIRU specifically represents
+# *synthetic* inertia from non-synchronous resources. Wind (WTOF/
+# WTON) was considered and deliberately NOT added to VIRU/FFRU this round: grid-following wind
+# turbines have zero inertia by default (their power electronics decouple the rotor from grid
+# frequency), synthetic-inertia control is a non-standard add-on not universally installed,
+# and even where present it causes a "recovery dip" (temporary output reduction to re-
+# accelerate the rotor) that this model has no way to represent -- crediting it by default
+# would repeat the same class of overstatement this session's audit was about fixing.
+commons['ReserveEligibleTechnologies'] = {
+    'VIRU':  commons['tech_batteries'],
+    'FFRU':  commons['tech_batteries'],
+    'FFRD':  commons['tech_batteries'],
+    'FCRU':  commons['tech_batteries'] + commons['tech_conventional'] + commons['tech_renewables'],
+    'FCRD':  commons['tech_batteries'] + commons['tech_conventional'] + commons['tech_renewables'],
+    'aFRRU': commons['tech_batteries'] + commons['tech_conventional'] + commons['tech_renewables'],
+    'aFRRD': commons['tech_batteries'] + commons['tech_conventional'] + commons['tech_renewables'],
+    'mFRRU': commons['tech_batteries'] + commons['tech_conventional'] + commons['tech_renewables'],
+}
+
+# Fraction of zonal demand sheddable per reserve category for emergency UFLS (Under-Frequency
+# Load Shedding) / OFDM (downward emergency action). Centralized here instead of a hardcoded
+# loop in build.py. Values unchanged from before; still proposed/order-of-magnitude, not tied
+# to a specific relay-staging scheme -- these should also vary by zone eventually.
+commons['UFLS_Participation'] = {'FFRU': 0.1, 'FCRU': 0.2, 'aFRRU': 0.2, 'mFRRU': 0.2}
+commons['OFDM_Participation'] = {'FFRD': 0.1, 'FCRD': 0.2, 'aFRRD': 0.2}
+
+# Default StartUpTime [h], used ONLY when a unit's PowerPlantData value is missing (NaN) --
+# an explicitly-entered value (including 0) is real data and is never overridden. Proposed,
+# order-of-magnitude, technology-representative placeholders (not a substitute for real
+# per-unit data).
+# NOTE: deriving a missing value from RampUpRate/PartLoadMin instead was considered and
+# rejected -- that ramp-implied time is a lower bound under an unrealistically optimistic
+# assumption (no separate thermal/mechanical start-up delay), not an estimate.
+commons['default_StartUpTime'] = {
+    # Batteries / power-electronics-coupled storage: near-instantaneous
+    'BATS': 0, 'BEVS': 0, 'CAES': 0,
+    # Variable renewables: no thermal start-up process
+    'PHOT': 0, 'WTON': 0, 'WTOF': 0, 'WAVE': 0, 'HROR': 0,
+    # Hydro: mechanically fast to start
+    'HDAM': 0.083, 'HPHS': 0.083,
+    # Fast-start thermal
+    'GTUR': 0.17, 'ICEN': 0.083,
+    # Slower thermal (representative hot/warm start; cold start is materially longer)
+    'COMC': 2, 'STUR': 4,
+    # Boundary-sector prime movers: electrically driven, fast-responding
+    'ASHP': 0.083, 'GSHP': 0.083, 'HYHP': 0.083, 'WSHP': 0.083, 'ABHP': 0.083,
+    'REHE': 0.083, 'P2HT': 0.083,
+}
+# Conservative fallback for any technology not listed above (always paired with a logged
+# warning naming the unlisted technology, so the assumption is never silent).
+commons['default_StartUpTime_fallback'] = 0.17
+
+# Reserve-product duration and full-activation-time requirements [h], derived from
+# commons['ReserveTiming'] below (ramp/3600 = FullActivationTime; (deact-ramp)/3600 = ReserveDuration).
+commons['ReserveDuration'] = {
+    'VIRU': 0.0000833, 'FFRU': 0.008333, 'FCRU': 0.25, 'aFRRU': 0.125, 'mFRRU': 1.0,
+    'FFRD': 0.008333, 'FCRD': 0.25, 'aFRRD': 0.125,
+}
+commons['FullActivationTime'] = {
+    'FFRU': 0.000361, 'FCRU': 0.008333, 'aFRRU': 0.083333, 'mFRRU': 0.208333,
+    'FFRD': 0.000361, 'FCRD': 0.008333, 'aFRRD': 0.083333,
+}
+
+# Reserve-product activation timeline [s] from contingency onset (t=0): prep/ramp/delivery/deact,
+# per ENTSO-E FCR/aFRR/mFRR (box-car, delivery=deact); VIRU decays until FFRU's ramp instead, for
+# lack of a published duration. Override per-case via config['ReserveTiming'].
+commons['ReserveTiming'] = {
+    'VIRU':  dict(prep=0.50, ramp=1.00, delivery=1.00, deact=1.30),
+    'FFRU':  dict(prep=0.90, ramp=1.30, delivery=31.3, deact=31.3),
+    'FCRU':  dict(prep=1.10, ramp=30.00, delivery=930, deact=930),
+    'aFRRU': dict(prep=31.00, ramp=300.00, delivery=750, deact=750),
+    'mFRRU': dict(prep=300.00, ramp=750.00),
+}
 # DispaSET fuels:
 commons['Fuels'] = ['AIR', 'AMO', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH',
                     'GEO', 'HYD', 'WHT', 'ELE', 'THE']

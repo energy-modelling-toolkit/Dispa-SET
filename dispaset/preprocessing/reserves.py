@@ -7,6 +7,49 @@ Created on Tue Apr 14 12:02:10 2020
 
 import pandas as pd
 
+from ..common import commons
+
+
+def compute_fast_reserve_eligible(res, res_U, au, ba, time_startup, full_activation_time=None):
+    """
+    Compute the FastReserveEligible(res, au) table: whether a unit can deliver a given
+    upward reserve product while NOT committed (i.e. from an offline/cold state).
+
+    A unit is eligible for an upward reserve category ``r`` if its start-up time is either
+    0 (no data / instant-start) or does not exceed ``r``'s full-activation-time requirement.
+    Battery units (``ba``) are always eligible for every reserve category (including
+    downward ones), independent of start-up time.
+
+    :param res:                  Iterable of all reserve category names (e.g. sets['res']).
+    :param res_U:                Iterable of upward reserve category names (sets['res_U']).
+    :param au:                   Iterable of all unit names (sets['au']).
+    :param ba:                   Iterable of battery unit names (sets['ba']).
+    :param time_startup:         Mapping (dict or pandas Series) from unit name to
+                                 TimeStartUp [h]. A unit absent from the mapping is treated
+                                 as 0, matching the "no data" convention used upstream.
+    :param full_activation_time: Mapping {res: hours}; defaults to
+                                 commons['FullActivationTime']. Pass
+                                 config.get('FullActivationTime', commons['FullActivationTime'])
+                                 to respect a case-level override.
+    :return:                     dict {(r, u): 0 or 1} for every (r, u) in res x au.
+    """
+    if full_activation_time is None:
+        full_activation_time = commons['FullActivationTime']
+    ba_set = set(ba)
+    eligible = {}
+    for u in au:
+        time_startup_u = time_startup.get(u, 0)
+        for r in res:
+            eligible[(r, u)] = 0
+        for r in res_U:
+            fat = full_activation_time.get(r, 0)
+            if time_startup_u == 0 or (0 < time_startup_u <= fat):
+                eligible[(r, u)] = 1
+        if u in ba_set:
+            for r in res:
+                eligible[(r, u)] = 1
+    return eligible
+
 
 def percentage_reserve(config, allunits, load, AvailabilityFactors, zone):
     """

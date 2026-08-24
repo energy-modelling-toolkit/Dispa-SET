@@ -440,6 +440,30 @@ def check_units(config, plants):
                      'A value of one will be assumed by default')
         plants['Nunits'] = 1
 
+    # StartUpTime: a missing value (NaN) gets a technology-based default instead of silently
+    # becoming 0 later on -- 0 is not a neutral placeholder for StartUpTime downstream, it
+    # grants a unit full fast-reserve eligibility while offline. An explicitly-entered 0 is
+    # real data and is left untouched.
+    if 'StartUpTime' in plants:
+        missing_startup = plants['StartUpTime'].isna()
+        if missing_startup.any():
+            default_map = commons['default_StartUpTime']
+            fallback = commons['default_StartUpTime_fallback']
+            for idx in plants.index[missing_startup]:
+                tech = plants.loc[idx, 'Technology']
+                unit = plants.loc[idx, 'Unit'] if 'Unit' in plants.columns else idx
+                if tech in default_map:
+                    default_value = default_map[tech]
+                    logging.warning("Unit '%s' (technology '%s') has no StartUpTime specified; "
+                                     "using the technology default of %sh." % (unit, tech, default_value))
+                else:
+                    default_value = fallback
+                    logging.warning("Unit '%s' has no StartUpTime specified and technology '%s' has "
+                                     "no registered default; using the generic fallback of %sh. "
+                                     "Consider adding this technology to commons['default_StartUpTime']."
+                                     % (unit, tech, fallback))
+                plants.loc[idx, 'StartUpTime'] = default_value
+
     check_keys(plants, keys, 'all')
     check_NonNaNKeys(plants, NonNaNKeys)
     check_StrKeys(plants, StrKeys)

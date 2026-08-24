@@ -196,7 +196,8 @@ Nunits(au)                                  [n.a.]          Number of units insi
 K_QuickStart(n)                             [n.a.]          Part of the reserve that can be provided by offline quickstart units
 QuickStartPower(au,h)                       [MW\h\u]        Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
 StorageHours(au)                            [h]             Storage hours
-
+FastReserveEligible(res,au)                 [n.a.]          Unit can provide reserve within activation time if committed status is off
+ReserveDuration(res)                        [h]             Duration for which the reserve must be sustained once activated
 
 
 *---------------------------------------------------------------------
@@ -467,19 +468,12 @@ $LOAD ReserveDemand
 $LOAD UFLS_Participation
 $LOAD OFDM_Participation
 
-;
-
-
-*new
-Parameter
-
-    ReserveDuration(res)
-/  FFRU  0.0833, FCRU  0.25, aFRRU  0.5, mFRRU  1.0,
-   FFRD  0.0833, FCRD  0.25, aFRRD  0.5 /
-   
-    FullActivationTime(res)
-/  FFRU  0.000278, FCRU  0.004167, aFRRU  0.0833, mFRRU  0.25,
-   FFRD  0.000278, FCRD  0.004167, aFRRD  0.0833 /
+* Reserve-product timing assumptions and fast-reserve eligibility: computed in Python
+* preprocessing (build.py, sourced from commons.py) instead of being hardcoded here, so they
+* are a single source of truth, configurable in one place, and unit-testable without a GAMS
+* solve.
+$LOAD ReserveDuration
+$LOAD FastReserveEligible
 
 ;
 
@@ -596,6 +590,9 @@ AccumulatedOverSupply_inital(n) = 0;
 
 * Time step
 TimeStep = Config("SimulationTimeStep","val");
+
+* Fast Reserve Eligibility is computed in Python preprocessing (build.py) and loaded above
+* via $LOAD FastReserveEligible.
 
 * Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial;
 
@@ -959,33 +956,63 @@ EQ_Curtailed_Power(n,i)..
         
 ;
 *---------------------------------------------------GENERAL UNIT-LEVEL RESERVES CAPABILITIES ------------------------------------------------
-*Capability for all reserves upward
+**Capability for all reserves upward
+*EQ_Reserves_Up_Capability(res_U,au,i)..
+*         ReserveProvision(res_U,au,i)
+*         =L=
+*           // Part 1: All committed units (except batteries)
+*         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i) * ReserveParticipation(res_U,au,i))$(not ba(au))
+*        
+*         + // Part 2: Committed or non-committed Batteries only
+*         (PowerCapacity(au) * LoadMaximum(au,i) * Nunits(au) * ReserveParticipation(res_U,au,i))$ba(au)
+*
+*         + // Part 3: All non-committed units with StartUpTime <= FullActivationTime and StartUpTime > 0
+*         (PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)) * ReserveParticipation(res_U,au,i))$(not ba(au) and (TimeStartUp(au) = 0 or (TimeStartUp(au) > 0 and TimeStartUp(au) <= FullActivationTime(res_U)) ))
+*;
+
 EQ_Reserves_Up_Capability(res_U,au,i)..
          ReserveProvision(res_U,au,i)
          =L=
-           // Part 1: All committed units (except batteries)
-         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i) * ReserveParticipation(res_U,au,i))$(not ba(au))
-        
-         + // Part 2: Committed or non-committed Batteries only
-         (PowerCapacity(au) * LoadMaximum(au,i) * Nunits(au) * ReserveParticipation(res_U,au,i))$ba(au)
-
-         + // Part 3: All non-committed units with StartUpTime <= FullActivationTime and StartUpTime > 0
-         (PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)) * ReserveParticipation(res_U,au,i))$(not ba(au) and (TimeStartUp(au) = 0 or (TimeStartUp(au) > 0 and TimeStartUp(au) <= FullActivationTime(res_U)) ))
+         ReserveParticipation(res_U,au,i)*
+         (
+             // Online units:
+             // upward reserve limited by available capacity and ramp-up capability
+             Committed(au,i) * PowerCapacity(au) * LoadMaximum(au,i)
+             +
+             // Offline fast-start units:
+             // upward reserve allowed only if startup time is short enough
+             (Nunits(au) - Committed(au,i)) * FastReserveEligible(res_U,au)* PowerCapacity(au) * LoadMaximum(au,i)
+         )
 ;
 
-*Capability for all reserves downward
+**Capability for all reserves downward
+*EQ_Reserves_Down_Capability(res_D,au,i)..
+*         ReserveProvision(res_D,au,i)
+*         =L=
+*           // Part 1: All committed units (except batteries)
+*         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i) * ReserveParticipation(res_D,au,i))$(not ba(au))
+*         
+*         + // Part 2: Committed Batteries only
+*         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i) * ReserveParticipation(res_D,au,i))$ba(au)
+*
+*         + // Part 3: Non-committed batteries only
+*         (StorageChargingCapacity(au) * LoadMaximum(au,i) * (Nunits(au)-Committed(au,i)) * ReserveParticipation(res_D,au,i))$ba(au)
+*         
+*;
+
 EQ_Reserves_Down_Capability(res_D,au,i)..
          ReserveProvision(res_D,au,i)
          =L=
-           // Part 1: All committed units (except batteries)
-         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i) * ReserveParticipation(res_D,au,i))$(not ba(au))
-         
-         + // Part 2: Committed Batteries only
-         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i) * ReserveParticipation(res_D,au,i))$ba(au)
-
-         + // Part 3: Non-committed batteries only
-         (StorageChargingCapacity(au) * LoadMaximum(au,i) * (Nunits(au)-Committed(au,i)) * ReserveParticipation(res_D,au,i))$ba(au)
-         
+         ReserveParticipation(res_D,au,i) *
+         (
+             // Online units:
+             // downward reserve by reducing generation or reducing discharge
+             Committed(au,i) * PowerCapacity(au) * LoadMaximum(au,i)
+             +
+             // Offline batteries:
+             // downward reserve by increasing charging/consumption
+             ((Nunits(au) - Committed(au,i)) * StorageChargingCapacity(au) * LoadMaximum(au,i) * FastReserveEligible(res_D,au))$ba(au)
+         )
 ;
 
 *---------------------------------------TECHNOLOGY ESPECIFIC RESERVE LIMITS---------------------------------------------------------------
@@ -1023,18 +1050,40 @@ EQ_Reserves_Down_Capability(res_D,au,i)..
 *;
 
 *---------------------------------------CROSS-SERVICE AGGREGATED RESERVE LIMITS---------------------------------------------------------------
-*System-wide reserve limits upward
+**System-wide reserve limits upward
+*EQ_Total_Delivery_Limit_Up(au,i)..
+*         Power(au,i) + HeadRoom(au,i) 
+*         =L=
+*           // Part 1: All committed units (except batteries)
+*         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i))$(not ba(au))
+*         
+*         + // Part 2: Batteries only
+*         (PowerCapacity(au) * LoadMaximum(au,i) * Nunits(au))$ba(au)
+*         
+*         + // Part 3: All non-committed units with fast time start up
+*         (PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)))$(not ba(au) and (TimeStartUp(au) = 0 or (TimeStartUp(au) > 0 and TimeStartUp(au) <= smax(res_U, FullActivationTime(res_U)) )))
+*;
+
 EQ_Total_Delivery_Limit_Up(au,i)..
-         Power(au,i) + HeadRoom(au,i) 
+
+         Power(au,i) + HeadRoom(au,i)
+
          =L=
-           // Part 1: All committed units (except batteries)
-         (PowerCapacity(au) * LoadMaximum(au,i) * Committed(au,i))$(not ba(au))
-         
-         + // Part 2: Batteries only
-         (PowerCapacity(au) * LoadMaximum(au,i) * Nunits(au))$ba(au)
-         
-         + // Part 3: All non-committed units with fast time start up
-         (PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)))$(not ba(au) and (TimeStartUp(au) = 0 or (TimeStartUp(au) > 0 and TimeStartUp(au) <= smax(res_U, FullActivationTime(res_U)) )))
+
+         // Online capacity:
+         // committed units can provide upward movement up to available capacity
+         PowerCapacity(au)
+         * LoadMaximum(au,i)
+         * Committed(au,i)
+
+         +
+
+         // Offline fast-reserve capacity:
+         // non-committed units can contribute only if eligible for at least one upward reserve
+         PowerCapacity(au)
+         * LoadMaximum(au,i)
+         * (Nunits(au) - Committed(au,i))
+         * smax(res_U, FastReserveEligible(res_U,au))
 ;
 
 *HeadRoom limits 
@@ -1044,18 +1093,42 @@ EQ_HeadRoom_Limit(res_U,au,i)..
          ReserveProvision(res_U,au,i)         
 ;
     
-*System-wide reserve limits downward
+**System-wide reserve limits downward
+*EQ_Total_Delivery_Limit_Down(au,i)..
+*         Power(au,i) - FootRoom(au,i)
+*         =G=
+*           // Part 1: All committed units (except batteries)
+*         (PowerCapacity(au) * PartLoadMin(au) * Committed(au,i))$(not ba(au))
+*         
+*         + // Part 2: Committed Batteries only
+*         (PowerCapacity(au) * PartLoadMin(au) * Committed(au,i))$ba(au)
+*         
+*         + // Part 3: Non-committed batteries only (available storage charging capacity)
+*         (StorageChargingCapacity(au) * LoadMaximum(au,i) * (Committed(au,i)-Nunits(au)))$ba(au)
+*;
+
 EQ_Total_Delivery_Limit_Down(au,i)..
+
          Power(au,i) - FootRoom(au,i)
+
          =G=
-           // Part 1: All committed units (except batteries)
-         (PowerCapacity(au) * PartLoadMin(au) * Committed(au,i))$(not ba(au))
-         
-         + // Part 2: Committed Batteries only
-         (PowerCapacity(au) * PartLoadMin(au) * Committed(au,i))$ba(au)
-         
-         + // Part 3: Non-committed batteries only (available storage charging capacity)
-         (StorageChargingCapacity(au) * LoadMaximum(au,i) * (Committed(au,i)-Nunits(au)))$ba(au)
+
+         // Online units:
+         // after downward activation, output cannot go below minimum stable level
+         PowerCapacity(au)
+         * PartLoadMin(au)
+         * Committed(au,i)
+
+         -
+
+         // Offline batteries:
+         // downward reserve can be delivered by increasing charging/consumption
+         (
+           StorageChargingCapacity(au)
+           * LoadMaximum(au,i)
+           * (Nunits(au) - Committed(au,i))
+           * smax(res_D, FastReserveEligible(res_D,au))
+         )$ba(au)
 ;
 
 *FootRoom limits 

@@ -15,7 +15,7 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, \
     check_grid_data
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable, load_config
-from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve
+from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve, compute_fast_reserve_eligible
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, \
     BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep, PTDF_matrix, merge_lines
 from .boundary_sector import zone_to_bs_mapping
@@ -993,6 +993,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['PTDF'] = ['l_int', 'n']
     sets_param['UFLS_Participation'] = ['res']
     sets_param['OFDM_Participation'] = ['res']
+    sets_param['ReserveDuration'] = ['res']
+    sets_param['FastReserveEligible'] = ['res', 'au']
     # sets_param['VirtualInertia_Participation'] = ['au']
     
     
@@ -1439,113 +1441,82 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             else:
                 logging.warning('Outages factors not found for unit ' + u + '. Assuming no outages')
 
-    # TODO: IMPROVE RESERVE, UFLS, OFDM TABLES FROM CONFING YAML AND CHECK PARTICIPATION OF CHP IN RESERVES
-    # Participation to the reserve market
-    # list_of_participating_units = []  # new list
-    # for unit in Plants_merged.index:
-    #     tech = Plants_merged.loc[unit, 'Technology']
-    #     if tech in config['ReserveParticipation'] and Plants_merged.loc[unit, 'CHPType'] == '':
-    #         list_of_participating_units.append(
-    #             unit)  # if unit same technology as allowed without CHP and unit is no CHP then add to list
-    #     elif tech in config['ReserveParticipation_CHP'] and Plants_merged.loc[unit, 'CHPType'] != '':
-    #         list_of_participating_units.append(
-    #             unit)  # if unit same technology as allowed with CHP and unit is CHP then add to list
-
-    # values = np.array([s in list_of_participating_units for s in sets['au']],
-    #                   dtype='bool')  # same as before but with new list
-    # parameters['Reserve'] = {'sets': sets_param['Reserve'], 'val': values}
-    
     # ReserveParticipation table for the reserves market
-    # TODO: suggestion is to create commons by type of reserve instead of technologies?
-    constants = {
-        'SystemFrequency': 50,
-        'DeltaFrequencyMax': 0.8,
-        'RoCoF_max': 0.5
-        }
-    values = np.zeros((len(sets['res']), len(sets['au']), len(sets['h'])))
-    
+    #
+    # Eligibility (which technologies may provide which reserve product) and the physical
+    # constants used to size the droop-based contribution factor are centralized in
+    # commons.py (commons['ReserveEligibleTechnologies'], commons['FrequencyResponseConstants'])
+    # instead of being hardcoded here.
     res_index = {r: idx for idx, r in enumerate(sets['res'])}
     au_index = {u: idx for idx, u in enumerate(sets['au'])}
-    
-    for u in sets['au']:
-        if u not in Plants_res.index:
-            logging.warning('The following power plant is not providing any reserve: ' + u)
-            continue
-    
-        i = au_index[u]
-        tech = Plants_res.loc[u, 'Technology']
-        inertia = Plants_merged.loc[u, 'InertiaConstant']
-        droop = Plants_merged.loc[u, 'Droop']
-        partloadmin = Plants_merged.loc[u, 'PartLoadMin']
-        rampuprate = Plants_merged.loc[u, 'RampUpRate']
-        rampdownrate = Plants_merged.loc[u, 'RampDownRate']
-    
-        for r in sets['res']:
-            j = res_index[r]
-            
-            eligible = False
-            # Virtual Inertia response: solo baterías
-            if r in ['VIRU']:
-                if tech in commons['tech_batteries']:
-                    eligible = True
 
-            # Fast Frequency Response: solo baterías
-            if r in ['FFRU', 'FFRD']:
-                if tech in commons['tech_batteries']:
-                    eligible = True
+    freq_constants = commons['FrequencyResponseConstants']
+    system_frequency = freq_constants['SystemFrequency']
+    delta_frequency_max = freq_constants['DeltaFrequencyMax']
+    droop_based_categories = ['FFRU', 'FFRD', 'FCRU', 'FCRD']
 
-            # Frequency Containment Reserve y Frequency Restoration Reserves
-            elif r in ['FCRU', 'FCRD', 'aFRRU', 'aFRRD', 'mFRRU', 'mFRRD']:
-                if (tech in commons['tech_batteries'] or
-                    tech in commons['tech_conventional'] or
-                    tech in commons['tech_renewables']):
-                    eligible = True
-    
-            # If eligible, calculate reserve participation based on physical limits (Droop, RampUpRate, RampDownRate)
-            if eligible:
-                
-                if r in ['VIRU'] and inertia > 0:
-                    factor1 = (2*inertia / (constants['SystemFrequency'])) * constants['RoCoF_max']
-                    values[j, i, :] = factor1
-                    
-                if r in ['FFRU', 'FFRD', 'FCRU', 'FCRD'] and droop > 0:
-                    factor1 = (1 / (droop * constants['SystemFrequency'])) * constants['DeltaFrequencyMax']
-                    values[j, i, :] = factor1
+    tech = Plants_merged['Technology']
+    droop = Plants_merged['Droop']
 
-                else:
-                    values[j, i, :] = 1  # Participación binaria para otras reservas
-        
+    values = np.zeros((len(sets['res']), len(sets['au']), len(sets['h'])))
+    any_eligible = pd.Series(False, index=Plants_merged.index)
+
+    for r in sets['res']:
+        j = res_index[r]
+        eligible_mask = tech.isin(commons['ReserveEligibleTechnologies'].get(r, []))
+        any_eligible |= eligible_mask
+
+        if r in droop_based_categories:
+            # Droop-based participation factor; units with missing/invalid Droop data are
+            # correctly credited 0, not a permissive fallback.
+            safe_droop = droop.where(droop > 0)
+            droop_factor = (1 / (safe_droop * system_frequency)) * delta_frequency_max
+            participation = np.where(eligible_mask, droop_factor.fillna(0).values, 0.0)
+        else:
+            # VIRU, aFRRU, aFRRD, mFRRU: binary participation for eligible technologies.
+            participation = eligible_mask.astype(float).values
+
+        values[j, :, :] = participation[:, np.newaxis]
+
+    for u in Plants_merged.index[~any_eligible]:
+        logging.warning('The following power plant is not providing any reserve: ' + u)
+
     parameters['ReserveParticipation'] = {'sets': sets_param['ReserveParticipation'], 'val': values}
-                  
-    # UFLS_Participation table (emergency upward action)
+
+    # UFLS_Participation / OFDM_Participation: fraction of zonal demand sheddable per reserve
+    # category for emergency load-shedding/downward-flexibility actions. Values centralized in
+    # commons.py (commons['UFLS_Participation']/['OFDM_Participation']) instead of hardcoded here.
     UFLS_values = np.zeros(len(sets['res']))
-    
     for r in sets['res']:
         j = res_index[r]
-        if r == 'FFRU':
-            UFLS_values[j] = 0.1  
-        elif r =='FCRU':
-            UFLS_values[j] = 0.2
-        elif r =='aFRRU':
-            UFLS_values[j] = 0.2
-        elif r =='mFRRU':
-            UFLS_values[j] = 0.2
+        UFLS_values[j] = commons['UFLS_Participation'].get(r, 0)
     parameters['UFLS_Participation'] = {'sets': sets_param['UFLS_Participation'], 'val': UFLS_values}
-    
-    # OFDM_Participation table (emergency downward action)
+
     OFDM_values = np.zeros(len(sets['res']))
-    
     for r in sets['res']:
         j = res_index[r]
-        if r == 'FFRD':
-            OFDM_values[j] = 0.1  
-        elif r =='FCRD':
-            OFDM_values[j] = 0.2
-        elif r =='aFRRD':
-            OFDM_values[j] = 0.2
+        OFDM_values[j] = commons['OFDM_Participation'].get(r, 0)
     parameters['OFDM_Participation'] = {'sets': sets_param['OFDM_Participation'], 'val': OFDM_values}
-        
-                      
+
+    # ReserveDuration: sourced from commons.py by default; a case may override via
+    # config['ReserveDuration'].
+    reserve_duration = config.get('ReserveDuration', commons['ReserveDuration'])
+    ReserveDuration_values = np.zeros(len(sets['res']))
+    for r in sets['res']:
+        j = res_index[r]
+        ReserveDuration_values[j] = reserve_duration.get(r, 0)
+    parameters['ReserveDuration'] = {'sets': sets_param['ReserveDuration'], 'val': ReserveDuration_values}
+
+    # FastReserveEligible: whether a unit can deliver a given upward reserve while not committed.
+    full_activation_time = config.get('FullActivationTime', commons['FullActivationTime'])
+    fast_reserve_eligible = compute_fast_reserve_eligible(
+        res=sets['res'], res_U=sets['res_U'], au=sets['au'], ba=sets['ba'],
+        time_startup=Plants_merged['TimeStartUp'], full_activation_time=full_activation_time)
+    FastReserveEligible_values = np.zeros((len(sets['res']), len(sets['au'])))
+    for (r, u), value in fast_reserve_eligible.items():
+        FastReserveEligible_values[res_index[r], au_index[u]] = value
+    parameters['FastReserveEligible'] = {'sets': sets_param['FastReserveEligible'], 'val': FastReserveEligible_values}
+
     # Technologies
     for unit in range(Nunits):
         idx = sets['t'].index(Plants_merged['Technology'].iloc[unit])

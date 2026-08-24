@@ -13,6 +13,7 @@ no behavior change.
 See FRAM_ISSUES.md and FRAM_DECISIONS.md at the repository root for the full
 change history, known issues, and open decisions for this subsystem.
 """
+import logging
 import time
 
 import numpy as np
@@ -71,7 +72,7 @@ def frequency_response(sim_time, activation_times, Hs_cap, Hv_cap, FFR_cap, FCR_
     This function solves the power swing differential equation, for each combination
     of inertia and frequency reserves desired.
     param sim_time:             Time to evaluate the differential equation in seconds [s]
-    param activation_times:     Activation times for each reserve in absolut values from sim_time = 0
+    param activation_times:     Activation times for each reserve, measured from the contingency onset (t=0)
     param Hs_cap:                System Inertia value
     param FFR_cap:              Fast Frequency Reserve capacity
     param FCR_cap:              Frequency Containment Reserve capacity
@@ -109,7 +110,7 @@ def frequency_response(sim_time, activation_times, Hs_cap, Hv_cap, FFR_cap, FCR_
             'Damping [MW/Hz]', 'Contingency [MW]', 'deltap [MW]']})
         return (np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, results_df)
 
-    # definition of simulation horizon and time step
+    # Simulation horizon and time step; t=0 is the contingency onset itself.
     t = np.arange(0, sim_time, 0.1)
 
     # Precompute weights vector for plotting and for fixed deployment logic.
@@ -125,7 +126,6 @@ def frequency_response(sim_time, activation_times, Hs_cap, Hv_cap, FFR_cap, FCR_
 
     def state(y, tt):
         f = y[0]
-        contingency_local = contingency if tt >= 1.0 else 0.0
 
         # FRAM-CHANGE-003 (ISSUE-FRAM-002): interpolate the already-precomputed
         # weight vectors instead of recomputing compute_weights() from scratch
@@ -145,7 +145,7 @@ def frequency_response(sim_time, activation_times, Hs_cap, Hv_cap, FFR_cap, FCR_
 
         H_total = Hs_cap + Hv_cap
 
-        deltap = contingency_local - (ffr + fcr + afrr + mfrr) - D_local * f
+        deltap = contingency - (ffr + fcr + afrr + mfrr) - D_local * f
         dfdt = (deltap / (2 * H_total * S_base)) * f_0
 
         return [dfdt]
@@ -153,7 +153,7 @@ def frequency_response(sim_time, activation_times, Hs_cap, Hv_cap, FFR_cap, FCR_
     sol = odeint(state, [0.0], t)
     f = sol[:, 0]
 
-    contingency_vec = np.where(t >= 1.0, contingency, 0.0)
+    contingency_vec = np.full(t.shape, float(contingency))
 
     max_freq_dev = np.max(np.abs(f))
     rocof = np.gradient(f, t)
@@ -193,6 +193,26 @@ def frequency_response(sim_time, activation_times, Hs_cap, Hv_cap, FFR_cap, FCR_
         'deltap [MW]': -deltap
     })
 
+    # Cosmetic 1s pre-roll of nominal (pre-contingency) state, for plotting only.
+    preroll_t = np.arange(-1.0, 0, 0.1)
+    preroll_df = pd.DataFrame({
+        'Time [s]': preroll_t,
+        'Frequency Deviation [Hz]': 0.0,
+        'RoCoF [Hz/s]': 0.0,
+        'Synchronous Inertia Constant [s]': Hs_cap,
+        'Virtual Inertia Constant [s]': Hv_cap,
+        'SIR [MW]': 0.0,
+        'VIR [MW]': 0.0,
+        'FFR [MW]': 0.0,
+        'FCR [MW]': 0.0,
+        'aFRR [MW]': 0.0,
+        'mFRR [MW]': 0.0,
+        'Damping [MW/Hz]': D_local,
+        'Contingency [MW]': 0.0,
+        'deltap [MW]': 0.0,
+    })
+    results_df = pd.concat([preroll_df, results_df], ignore_index=True)
+
     if verbose:
         print(f"Sim finished: H={Hs_cap:.2f},H={Hv_cap:.2f},SIR={max_sir:.2f},VIR={max_vir:.2f},FFR={max_ffr:.2f},FCR={max_fcr:.2f},aFRR={max_afrr:.2f},mFRR={max_mfrr:.2f}")
         print(f" -> max_freq_dev={max_freq_dev:.4f} Hz, max_rocof={max_rocof:.4f} Hz/s")
@@ -225,6 +245,40 @@ def _bisect_collect_feasible(low, high, tol, is_feasible):
             low = mid
         first_iter = False
     return feasible
+
+
+_RESERVE_TIMING_TO_FRAM_KEY = {'VIRU': 'vir', 'FFRU': 'ffr', 'FCRU': 'fcr', 'aFRRU': 'afrr', 'mFRRU': 'mfrr'}
+
+
+def _as_fram_activation_times(reserve_timing):
+    """Translate commons['ReserveTiming'] keys (VIRU/FFRU/...) into FRAM's lowercase-key shape
+    (vir/ffr/...), backfilling any missing category from commons['ReserveTiming']."""
+    defaults = commons['ReserveTiming']
+    return {
+        fram_key: reserve_timing.get(res_key, defaults[res_key])
+        for res_key, fram_key in _RESERVE_TIMING_TO_FRAM_KEY.items()
+    }
+
+
+def resolve_activation_times(activation_times, config=None):
+    """Resolve activation_times to use and its source: 'explicit' (caller-provided, warns if
+    inconsistent with the case's own timing), 'config' (config['ReserveTiming']), or 'default'."""
+    case_reserve_timing = (config or {}).get('ReserveTiming', commons['ReserveTiming'])
+
+    if activation_times is not None:
+        if activation_times != _as_fram_activation_times(case_reserve_timing):
+            logging.warning(
+                "get_frequency_stability_reserves(): activation_times differs from this "
+                "case's own reserve-timing assumptions. Treat these results as a what-if "
+                "sensitivity, not a validation of the solved case's reserve procurement. To "
+                "make UCED consistent, set config['ReserveTiming'] and rebuild + resolve."
+            )
+        return activation_times, 'explicit'
+
+    if 'ReserveTiming' in (config or {}):
+        return _as_fram_activation_times(case_reserve_timing), 'config'
+
+    return _as_fram_activation_times(commons['ReserveTiming']), 'default'
 
 
 # %% frequency stability reserves
@@ -264,14 +318,9 @@ def get_frequency_stability_reserves(path, inputs, results, activation_times=Non
     S_base = 1000  # Base del sistema [MW]
 
     # Definition of default settings for the function
-    if activation_times is None:
-        activation_times = {
-                    "vir": dict(prep=1.1, ramp=1.15, delivery=1.5, deact=2),
-                    "ffr": dict(prep=1.5, ramp=2, delivery=7, deact=16),
-                    "fcr": dict(prep=1.1, ramp=13.1, delivery=181, deact=301),
-                    "afrr": dict(prep=31, ramp=301, delivery=901, deact=1801),
-                    "mfrr": dict(prep=901, ramp=1801)  # mfrr leght is considered for the whole timestep
-                }
+    activation_times, activation_times_source = resolve_activation_times(
+        activation_times, inputs.get('config'))
+    logging.info("get_frequency_stability_reserves(): activation_times source = '%s'" % activation_times_source)
 
     # Definition of Safe operational limits
     if limit_freq is None:
