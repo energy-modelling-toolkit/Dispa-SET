@@ -128,6 +128,13 @@ commons['FrequencyResponseConstants'] = {
 # Being positive, it also prevents charge-discharge cycles from acting as a free energy sink.
 commons['StorageVariableCost'] = {'BATS': 1.7, 'HPHS': 0.5}
 
+# Saturation of the droop response (FFR, FCR) per unit, as a share of rated power: the droop response
+# P/(R f0)*df saturates at this share. 10 % for every generating unit: upper end of the range of the EU
+# network code on requirements for generators (Reg. 2016/631, Art. 15(2)(d): 1.5-10 % of Pmax).
+# Batteries: limited by their rated (converter) power only.
+
+commons['DroopSaturation'] = {'default': 0.10, 'battery': 1.0}
+
 # Which technologies may provide each reserve product. Derived from the technology-class
 # lists above (single source of truth -- do not hardcode a separate flat technology list
 # here). VIRU/FFRU/FFRD: batteries only. Real rotating-mass inertia from synchronous machines

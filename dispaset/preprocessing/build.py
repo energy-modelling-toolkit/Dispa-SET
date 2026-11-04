@@ -1589,6 +1589,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             # correctly credited 0, not a permissive fallback.
             safe_droop = droop.where(droop > 0)
             droop_factor = (1 / (safe_droop * system_frequency)) * delta_frequency_max
+            # The droop response saturates at the unit's frequency-response capability (share of rated
+            # power, commons['DroopSaturation']; EU RfG Art. 15(2)(d) |dP1|/Pmax): min(droop line at df_ref, cap).
+            cap_tab = commons.get('DroopSaturation')
+            if cap_tab:
+                cap = np.array([cap_tab['battery'] if t in commons['tech_batteries'] else cap_tab.get(t, cap_tab['default'])
+                                for t in tech])
+                droop_factor = pd.Series(np.minimum(droop_factor.fillna(0).values, cap), index=droop_factor.index)
             participation = np.where(eligible_mask, droop_factor.fillna(0).values, 0.0)
         else:
             # VIRU, aFRRU, aFRRD, mFRRU: binary participation for eligible technologies.
