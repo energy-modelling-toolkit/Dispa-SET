@@ -697,6 +697,7 @@ EQ_Storage_MaxCharge
 EQ_Storage_balance
 *EQ_H2_demand
 EQ_Storage_boundaries
+EQ_Storage_final_max
 EQ_Boundary_Sector_Storage_MaxDischarge
 EQ_Boundary_Sector_Storage_MaxCharge
 EQ_Boundary_Sector_Storage_PowerMax
@@ -1468,6 +1469,14 @@ EQ_Storage_boundaries(au,i)$(i.val = LastKeptHour or ord(i)=card(i)) ..
          + WaterSlack(au)$(s(au))
 ;
 
+* MTS level 2 (fixed boundary conditions): the final storage level is also bounded from above, so that it
+* equals the final level of the profile (ReservoirLevelFinal) and not only exceeds it
+EQ_Storage_final_max(au,i)$(s(au) and ord(i) = card(i) and %MTS% = 2) ..
+         StorageLevel(au,i)
+         =L=
+         StorageFinalMin(au)
+;
+
 *Total emissions are capped
 EQ_Emission_limits(i,p,n)..
          sum(u,Power(u,i)*EmissionRate(u,p)*TimeStep*Location(u,n))
@@ -1730,6 +1739,7 @@ $If not %LPFormulation% == 1 EQ_Storage_PumpMode_Pump,
 $endif
 EQ_Storage_balance,
 $If not %MTS% == 1 EQ_Storage_boundaries,
+$If %MTS% == 2 EQ_Storage_final_max,
 *EQ_H2_demand,
 EQ_Boundary_Sector_Storage_MaxDischarge,
 EQ_Boundary_Sector_Storage_MaxCharge,
