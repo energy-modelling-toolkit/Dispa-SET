@@ -55,6 +55,14 @@ $setglobal ActivateFlexibleDemand 1
 * Activate advanced reserve demand
 $setglobal ActivateAdvancedReserves 0
 
+* Enforce pumped-storage mode exclusivity for multi-unit clusters: a plant with
+* Nunits > 1 reversible units must either generate or pump as a whole (no hydraulic
+* short-circuit between units of the same plant). Disabled by default: +25% solve time
+* and unresolved windows observed in a test case; with 0 the model is identical to the
+* formulation without it. EQ_Storage_input already prevents a single unit
+* from pumping and generating simultaneously regardless of this flag.
+$setglobal PumpModeExclusive 0
+
 *===============================================================================
 *Definition of   sets and parameters
 *===============================================================================
@@ -492,6 +500,11 @@ ShutDown(au,h)       [n.a.]  Unit shut down at hour h {1 0} or integer
 
 $If %LPFormulation% == 1 POSITIVE VARIABLES Committed (au,h); Committed.UP(au,h) = 1; Nunits(au) = 1 ; 
 $If not %LPFormulation% == 1 INTEGER VARIABLES Committed (au,h), StartUp(au,h), ShutDown(au,h); Committed.UP(au,h) = Nunits(au) ;StartUp.UP(au,h) = Nunits(au) ; ShutDown.UP(au,h) = Nunits(au) ; StartUp.UP(au,h)$(ord(h) = 1) = 0 ; ShutDown.UP(au,h)$(ord(h) = 1) = 0 ;
+$ifthen %PumpModeExclusive% == 1
+* Pumping-mode indicator of a multi-unit pumped-storage cluster (no simultaneous pumping and generating
+* in the same plant, i.e. no hydraulic short-circuit between units; see EQ_Storage_PumpMode_*)
+$If not %LPFormulation% == 1 BINARY VARIABLES PumpMode(au,h);
+$endif
 
 
 
@@ -672,6 +685,10 @@ EQ_Storage_alert
 EQ_Storage_flood_control
 EQ_Storage_level
 EQ_Storage_input
+$ifthen %PumpModeExclusive% == 1
+$If not %LPFormulation% == 1 EQ_Storage_PumpMode_Gen
+$If not %LPFormulation% == 1 EQ_Storage_PumpMode_Pump
+$endif
 EQ_Storage_MaxDischarge
 EQ_Storage_MaxCharge
 EQ_Storage_balance
@@ -1378,6 +1395,26 @@ EQ_Storage_input(au,i)..
          =L=
          StorageChargingCapacity(au)$(s(au))*(Nunits(au)$(s(au))-Committed(au,i)$(s(au)))
 ;
+$ifthen %PumpModeExclusive% == 1
+* Pumped-storage mode exclusivity (multi-unit clusters, MILP only). EQ_Storage_input only prevents a single
+* reversible unit from pumping and generating at once; with Nunits > 1 it still lets one unit pump while
+* another of the same plant generates (hydraulic short-circuit). Fixed-speed binary pump-turbines sharing
+* the waterway are modelled as one plant that is either generating (Committed > 0, no pumping) or pumping
+* (PumpMode = 1, Committed = 0). Single-unit clusters are already covered by EQ_Storage_input.
+$ifthen not %LPFormulation% == 1
+EQ_Storage_PumpMode_Gen(au,i)$(s(au) and not ba(au) and StorageChargingCapacity(au) > 0 and Nunits(au) > 1)..
+         Committed(au,i)
+         =L=
+         Nunits(au) * (1 - PumpMode(au,i))
+;
+
+EQ_Storage_PumpMode_Pump(au,i)$(s(au) and not ba(au) and StorageChargingCapacity(au) > 0 and Nunits(au) > 1)..
+         StorageInput(au,i)
+         =L=
+         StorageChargingCapacity(au) * Nunits(au) * PumpMode(au,i)
+;
+$endif
+$endif
 
 *Discharge is limited by the storage level
 EQ_Storage_MaxDischarge(au,i)$(StorageCapacity(au)$(s(au))>PowerCapacity(au)$(s(au))*TimeStep)..
@@ -1684,6 +1721,10 @@ EQ_Storage_alert,
 EQ_Storage_flood_control,
 EQ_Storage_level,
 EQ_Storage_input,
+$ifthen %PumpModeExclusive% == 1
+$If not %LPFormulation% == 1 EQ_Storage_PumpMode_Gen,
+$If not %LPFormulation% == 1 EQ_Storage_PumpMode_Pump,
+$endif
 EQ_Storage_balance,
 $If not %MTS% == 1 EQ_Storage_boundaries,
 *EQ_H2_demand,
