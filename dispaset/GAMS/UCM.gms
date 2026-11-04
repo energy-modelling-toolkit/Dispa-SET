@@ -198,6 +198,7 @@ QuickStartPower(au,h)                       [MW\h\u]        Available max capaci
 StorageHours(au)                            [h]             Storage hours
 FastReserveEligible(res,au)                 [n.a.]          Unit can provide reserve within activation time if committed status is off
 ReserveDuration(res)                        [h]             Duration for which the reserve must be sustained once activated
+StartUpSteps(au)                            [n.a.]          Time steps after a start-up during which the unit is committed but not yet synchronised
 
 
 *---------------------------------------------------------------------
@@ -591,6 +592,17 @@ AccumulatedOverSupply_inital(n) = 0;
 * Time step
 TimeStep = Config("SimulationTimeStep","val");
 
+* Start-up duration. A unit started at step t is committed (start-up cost, start-up/shut-down
+* logic) from t on, but it is not synchronised during its first StartUpSteps steps: it delivers no
+* power, inertia or reserve and carries no no-load cost in t .. t+StartUpSteps-1, and produces from
+* t+StartUpSteps, where the start-up ramp allowance applies. A unit started at the beginning of
+* step t synchronises at t + TimeStartUp, so StartUpSteps = floor(TimeStartUp/TimeStep) (exact for
+* whole multiples of the time step; +1e-6 guards against floating point). Units with
+* TimeStartUp < TimeStep are unchanged; TimeStartUp = TimeStep gives one non-producing step.
+* Not applied in the LP formulation (MTS), where StartUp is not a start-up count.
+StartUpSteps(au) = floor(TimeStartUp(au)/TimeStep + 1e-6);
+$If %LPFormulation% == 1 StartUpSteps(au) = 0;
+
 * Fast Reserve Eligibility is computed in Python preprocessing (build.py) and loaded above
 * via $LOAD FastReserveEligible.
 
@@ -598,7 +610,18 @@ TimeStep = Config("SimulationTimeStep","val");
 
 $offorder
 
-
+* StartingNow(au,i): units started in the last StartUpSteps steps (i included), i.e. committed but
+* not yet synchronised. Same window technique as EQ_MinUpTime, with the start-ups of the previous
+* rolling-horizon window (before FirstHour) taken from StartUp.L.
+* StartUpDelayed(au,i): units entering production at i (started StartUpSteps steps earlier); it
+* equals StartUp(au,i) when StartUpSteps = 0. In the LP formulation (MTS) both reduce to the original terms.
+$ifthen %LPFormulation% == 1
+$macro StartingNow(au,i) 0
+$macro StartUpDelayed(au,i) StartUp(au,i)
+$else
+$macro StartingNow(au,i) ((sum(ii$((ord(ii) >= ord(i) - StartUpSteps(au) + 1) and (ord(ii) <= ord(i))), StartUp(au,ii)) + sum(h$((ord(h) >= FirstHour + ord(i) - StartUpSteps(au)) and (ord(h) < FirstHour)), round(StartUp.L(au,h))))$StartUpSteps(au))
+$macro StartUpDelayed(au,i) (StartUp(au,i)$(StartUpSteps(au) = 0) + (sum(ii$(ord(ii) = ord(i) - StartUpSteps(au)), StartUp(au,ii)) + sum(h$((ord(h) = FirstHour + ord(i) - 1 - StartUpSteps(au)) and (ord(h) < FirstHour)), round(StartUp.L(au,h))))$StartUpSteps(au))
+$endif
 
 *===============================================================================
 *Declaration and definition of equations
@@ -614,6 +637,7 @@ EQ_CHP_max_heat
 EQ_Commitment
 EQ_MinUpTime
 EQ_MinDownTime
+EQ_StartUp_Duration
 EQ_RampUp_TC
 EQ_RampDown_TC
 EQ_CostStartUp
@@ -720,7 +744,7 @@ $ifthen %LPFormulation% == 1
 EQ_SystemCost(i)..
          SystemCost(i)
          =E=
-         sum(au,CostFixed(au)*TimeStep*Committed(au,i))
+         sum(au,CostFixed(au)*TimeStep*(Committed(au,i) - StartingNow(au,i)))
          +sum(au,CostRampUpH(au,i) + CostRampDownH(au,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
          +sum(l,PriceTransmission(l,i)*Flow(l,i)*TimeStep)
@@ -751,7 +775,9 @@ $else
 EQ_SystemCost(i)..
          SystemCost(i)
          =E=
-         sum(au,CostFixed(au)*TimeStep*Committed(au,i))
+* no-load (fixed) cost only for synchronised units: the fuel burnt during the start-up is part of
+* the start-up cost
+         sum(au,CostFixed(au)*TimeStep*(Committed(au,i) - StartingNow(au,i)))
          +sum(au,CostStartUpH(au,i) + CostShutDownH(au,i))
          +sum(au,CostRampUpH(au,i) + CostRampDownH(au,i))
          +sum(u,CostVariable(u,i) * Power(u,i)*TimeStep)
@@ -800,10 +826,12 @@ EQ_Commitment(au,i)$(not (ord(i) = 1 and FirstHour = 1))..
          StartUp(au,i) - ShutDown(au,i)
 ;
 
-* minimum up time
+* minimum up time, counted from synchronisation (after the StartUpSteps start-up steps), i.e. a unit
+* started at t stays committed until t + StartUpSteps + ceil(TimeUpMinimum/TimeStep) - 1. The window
+* also covers the start-up steps, so it includes EQ_StartUp_Duration. Unchanged if StartUpSteps = 0.
 EQ_MinUpTime(au,i)$(TimeStep <= TimeUpMinimum(au))..
-         sum(ii$( (ord(ii) >= ord(i) - ceil(TimeUpMinimum(au)/TimeStep)) and (ord(ii) <= ord(i)) ), StartUp(au,ii))
-         + sum(h$( (ord(h) >= FirstHour + ord(i) - ceil(TimeUpMinimum(au)/TimeStep) -1) and (ord(h) < FirstHour)),StartUp.L(au,h))
+         sum(ii$( (ord(ii) >= ord(i) - ceil(TimeUpMinimum(au)/TimeStep) - StartUpSteps(au) + 1) and (ord(ii) <= ord(i)) ), StartUp(au,ii))
+         + sum(h$( (ord(h) >= FirstHour + ord(i) - ceil(TimeUpMinimum(au)/TimeStep) - StartUpSteps(au)) and (ord(h) < FirstHour)),StartUp.L(au,h))
          =L=
          Committed(au,i)
 ;
@@ -816,12 +844,23 @@ EQ_MinDownTime(au,i)$(TimeStep <= TimeDownMinimum(au))..
          Nunits(au)-Committed(au,i)
 ;
 
+* start-up duration: a start-up cannot be interrupted, i.e. the units still starting stay committed
+* (keeps Committed - StartingNow >= 0). Implied by EQ_MinUpTime when that equation exists, so only
+* generated for units without minimum up time (TimeUpMinimum < TimeStep).
+EQ_StartUp_Duration(au,i)$(StartUpSteps(au) >= 1 and TimeUpMinimum(au) < TimeStep)..
+         StartingNow(au,i)
+         =L=
+         Committed(au,i)
+;
+
 * ramp up constraints
+* Units still starting (StartingNow) produce nothing; the start-up ramp allowance applies in the
+* first producing step (StartUpDelayed). Identical to the original form when StartUpSteps = 0.
 EQ_RampUp_TC(au,i)$(sum(tr,Technology(au,tr))=0 and not (ord(i) = 1 and FirstHour = 1))..
          Power(au,i) - Power(au,i-1)$(ord(i) > 1) - PowerInitial(au)$(ord(i) = 1)
          =L=
-         (Committed(au,i) - StartUp(au,i)) * RampUpMaximum(au) * TimeStep
-         + RampStartUpMaximumH(au,i) * TimeStep * StartUp(au,i)
+         (Committed(au,i) - StartingNow(au,i) - StartUpDelayed(au,i)) * RampUpMaximum(au) * TimeStep
+         + RampStartUpMaximumH(au,i) * TimeStep * StartUpDelayed(au,i)
          - PowerMustRun(au,i) * ShutDown(au,i)
          + LL_RampUp(au,i)
 ;
@@ -830,8 +869,8 @@ EQ_RampUp_TC(au,i)$(sum(tr,Technology(au,tr))=0 and not (ord(i) = 1 and FirstHou
 EQ_RampDown_TC(au,i)$(sum(tr,Technology(au,tr))=0 and not (ord(i) = 1 and FirstHour = 1))..
          Power(au,i-1)$(ord(i) > 1) + PowerInitial(au)$(ord(i) = 1) - Power(au,i)
          =L=
-         (Committed(au,i) - StartUp(au,i)) * RampDownMaximum(au) * TimeStep
-         - PowerMustRun(au,i) * StartUp(au,i)
+         (Committed(au,i) - StartingNow(au,i) - StartUpDelayed(au,i)) * RampDownMaximum(au) * TimeStep
+         - PowerMustRun(au,i) * StartUpDelayed(au,i)
          + RampShutDownMaximumH(au,i) * TimeStep * ShutDown(au,i)
          + LL_RampDown(au,i)
 ;
@@ -976,9 +1015,9 @@ EQ_Reserves_Up_Capability(res_U,au,i)..
          =L=
          ReserveParticipation(res_U,au,i)*
          (
-             // Online units:
+             // Online units (units still starting are not synchronised):
              // upward reserve limited by available capacity and ramp-up capability
-             Committed(au,i) * PowerCapacity(au) * LoadMaximum(au,i)
+             (Committed(au,i) - StartingNow(au,i)) * PowerCapacity(au) * LoadMaximum(au,i)
              +
              // Offline fast-start units:
              // upward reserve allowed only if startup time is short enough
@@ -1006,9 +1045,9 @@ EQ_Reserves_Down_Capability(res_D,au,i)..
          =L=
          ReserveParticipation(res_D,au,i) *
          (
-             // Online units:
+             // Online units (units still starting are not synchronised):
              // downward reserve by reducing generation or reducing discharge
-             Committed(au,i) * PowerCapacity(au) * LoadMaximum(au,i)
+             (Committed(au,i) - StartingNow(au,i)) * PowerCapacity(au) * LoadMaximum(au,i)
              +
              // Offline batteries:
              // downward reserve by increasing charging/consumption
@@ -1073,9 +1112,10 @@ EQ_Total_Delivery_Limit_Up(au,i)..
 
          // Online capacity:
          // committed units can provide upward movement up to available capacity
+         // (units still starting are not synchronised)
          PowerCapacity(au)
          * LoadMaximum(au,i)
-         * Committed(au,i)
+         * (Committed(au,i) - StartingNow(au,i))
 
          +
 
@@ -1116,9 +1156,10 @@ EQ_Total_Delivery_Limit_Down(au,i)..
 
          // Online units:
          // after downward activation, output cannot go below minimum stable level
+         // (units still starting produce nothing and provide no downward reserve)
          PowerCapacity(au)
          * PartLoadMin(au)
-         * Committed(au,i)
+         * (Committed(au,i) - StartingNow(au,i))
 
          -
 
@@ -1143,7 +1184,7 @@ EQ_FootRoom_Limit(res_D,au,i)..
 EQ_Inertia_Delivery_Limit(au,i)..
          InertiaProvision(au,i)
          =E=
-         (PowerCapacity(au)*Committed(au,i)*InertiaConstant(au)/PowerBase)$(cu(au))
+         (PowerCapacity(au)*(Committed(au,i) - StartingNow(au,i))*InertiaConstant(au)/PowerBase)$(cu(au))
 ;
 
 EQ_Inertia_Balance(i)..
@@ -1168,8 +1209,9 @@ EQ_OFDM_Limit(res_D,n,i)..
 *---------------------------------------------------------------------------------------------------------------------------------
 
 *Minimum power output is above the must-run output level for each unit in all periods
+* (units still starting are committed but not synchronised: no minimum output)
 EQ_Power_must_run(u,i)..
-         PowerMustRun(u,i) * Committed(u,i)
+         PowerMustRun(u,i) * (Committed(u,i) - StartingNow(u,i))
          - (StorageInput(u,i) * CHPPowerLossFactor(u) )$(chp(u) and (CHPType(u,'Extraction') or CHPType(u,'P2H')))
          - (Heat(u,i) * CHPPowerLossFactor(u) )$(chp(u) and (CHPType(u,'Extraction') or CHPType(u,'P2H')))                                                      
          =L=
@@ -1181,7 +1223,7 @@ EQ_Power_available(au,i)..
          Power(au,i)$(u(au))
          + Power(au,i)$(x2p(au))
          =L=
-         PowerCapacity(au)$(u(au))*LoadMaximum(au,i)$(u(au))*Committed(au,i)$(u(au))
+         (PowerCapacity(au)*LoadMaximum(au,i)*(Committed(au,i) - StartingNow(au,i)))$(u(au))
          + ((PowerCapacity(au))*LoadMaximum(au,i)*Nunits(au))$(x2p(au))
 *         - sum(res_U, ReserveProvision(res_U,au,i))
          + 0
@@ -1579,6 +1621,7 @@ $If not %LPFormulation% == 1 EQ_CostShutDown,
 EQ_Commitment,
 $If not %LPFormulation% == 1 EQ_MinUpTime,
 $If not %LPFormulation% == 1 EQ_MinDownTime,
+$If not %LPFormulation% == 1 EQ_StartUp_Duration,
 EQ_RampUp_TC,
 EQ_RampDown_TC,
 EQ_Demand_balance_DA,
@@ -1877,6 +1920,7 @@ UnitHourlyShutDownCost(au,h)
 UnitHourlyRampingCost(au,h)
 UnitHourlyProductionCost(au,h)
 UnitHourlyProfit(au,h)
+StartingNowL(au,h)
 
 *New
 OutputInertiaProvision(au,h)
@@ -2064,7 +2108,9 @@ UnitHourlyaFRRDRevenue(au,z) = sum(n, OutputReserve_aFRRD(au,z) * ShadowPrice_aF
 
 UnitHourlyRevenue(au,z) = UnitHourlyPowerRevenue(au,z) + UnitHourlyVIRURevenue(au,z) + UnitHourlyFFRURevenue(au,z) + UnitHourlyFCRURevenue(au,z) + UnitHourlyaFRRURevenue(au,z) + UnitHourlymFRRURevenue(au,z) + UnitHourlyFFRDRevenue(au,z) + UnitHourlyFCRDRevenue(au,z) + UnitHourlyaFRRDRevenue(au,z) ;
 
-UnitHourlyFixedCost(u,z) = Committed.L(u,z) * CostFixed(u);
+* no-load cost only for synchronised units (units still starting excluded, as in EQ_SystemCost)
+StartingNowL(au,h) = sum(hh$((ord(hh) >= ord(h) - StartUpSteps(au) + 1) and (ord(hh) <= ord(h))), round(StartUp.L(au,hh)));
+UnitHourlyFixedCost(u,z) = (Committed.L(u,z) - StartingNowL(u,z)) * CostFixed(u);
 UnitHourlyVariableCost(au,z) = Power.L(au,z) * CostVariable(au,z);
 UnitHourlyStartUpCost(u,z) = StartUp.L(u,z) * CostStartUp(u);
 UnitHourlyShutDownCost(u,z) = ShutDown.L(u,z) * CostShutDown(u);
