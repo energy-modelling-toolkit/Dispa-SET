@@ -10,9 +10,9 @@ import pandas as pd
 from ..common import commons
 
 
-def compute_fast_reserve_eligible(res, res_U, au, ba, time_startup, full_activation_time=None):
+def compute_quick_start_eligible(res, res_U, au, ba, time_startup, full_activation_time=None):
     """
-    Compute the FastReserveEligible(res, au) table: whether a unit can deliver a given
+    Compute the QuickStartEligible(res, au) table: whether a unit can deliver a given
     upward reserve product while NOT committed (i.e. from an offline/cold state).
 
     A unit is eligible for an upward reserve category ``r`` if its start-up time is either

@@ -196,7 +196,7 @@ Nunits(au)                                  [n.a.]          Number of units insi
 K_QuickStart(n)                             [n.a.]          Part of the reserve that can be provided by offline quickstart units
 QuickStartPower(au,h)                       [MW\h\u]        Available max capacity in tertiary regulation up from fast-starting power plants - TC formulation
 StorageHours(au)                            [h]             Storage hours
-FastReserveEligible(res,au)                 [n.a.]          Unit can provide reserve within activation time if committed status is off
+QuickStartEligible(res,au)                 [n.a.]          Unit can provide reserve within activation time if committed status is off
 ReserveDuration(res)                        [h]             Duration for which the reserve must be sustained once activated
 StartUpSteps(au)                            [n.a.]          Time steps after a start-up during which the unit is committed but not yet synchronised
 
@@ -474,7 +474,7 @@ $LOAD OFGS_Participation
 * are a single source of truth, configurable in one place, and unit-testable without a GAMS
 * solve.
 $LOAD ReserveDuration
-$LOAD FastReserveEligible
+$LOAD QuickStartEligible
 
 ;
 
@@ -604,7 +604,7 @@ StartUpSteps(au) = floor(TimeStartUp(au)/TimeStep + 1e-6);
 $If %LPFormulation% == 1 StartUpSteps(au) = 0;
 
 * Fast Reserve Eligibility is computed in Python preprocessing (build.py) and loaded above
-* via $LOAD FastReserveEligible.
+* via $LOAD QuickStartEligible.
 
 * Display RampStartUpMaximum, RampShutDownMaximum, CommittedInitial;
 
@@ -1043,7 +1043,7 @@ EQ_Reserves_Up_Capability(res_U,au,i)..
              +
              // Offline fast-start units:
              // upward reserve allowed only if startup time is short enough
-             (Nunits(au) - Committed(au,i)) * FastReserveEligible(res_U,au)* PowerCapacity(au) * LoadMaximum(au,i)
+             (Nunits(au) - Committed(au,i)) * QuickStartEligible(res_U,au)* PowerCapacity(au) * LoadMaximum(au,i)
          )
 ;
 
@@ -1073,7 +1073,7 @@ EQ_Reserves_Down_Capability(res_D,au,i)..
              +
              // Offline batteries:
              // downward reserve by increasing charging/consumption
-             ((Nunits(au) - Committed(au,i)) * StorageChargingCapacity(au) * LoadMaximum(au,i) * FastReserveEligible(res_D,au))$ba(au)
+             ((Nunits(au) - Committed(au,i)) * StorageChargingCapacity(au) * LoadMaximum(au,i) * QuickStartEligible(res_D,au))$ba(au)
          )
 ;
 
@@ -1146,7 +1146,7 @@ EQ_Total_Delivery_Limit_Up(au,i)..
          PowerCapacity(au)
          * LoadMaximum(au,i)
          * (Nunits(au) - Committed(au,i))
-         * smax(res_U, FastReserveEligible(res_U,au))
+         * smax(res_U, QuickStartEligible(res_U,au))
 ;
 
 *HeadRoom limits 
@@ -1191,7 +1191,7 @@ EQ_Total_Delivery_Limit_Down(au,i)..
            StorageChargingCapacity(au)
            * LoadMaximum(au,i)
            * (Nunits(au) - Committed(au,i))
-           * smax(res_D, FastReserveEligible(res_D,au))
+           * smax(res_D, QuickStartEligible(res_D,au))
          )$ba(au)
 ;
 

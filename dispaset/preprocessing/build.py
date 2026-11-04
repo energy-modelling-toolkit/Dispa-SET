@@ -15,7 +15,7 @@ from .data_check import check_units, check_sto, check_AvailabilityFactors, \
     check_grid_data
 from .data_handler import NodeBasedTable, load_time_series, UnitBasedTable, merge_series, define_parameter, \
     load_geo_data, GenericTable, load_config
-from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve, compute_fast_reserve_eligible
+from .reserves import percentage_reserve, probabilistic_reserve, generic_reserve, compute_quick_start_eligible
 from .utils import select_units, interconnections, clustering, EfficiencyTimeSeries, \
     BoundarySectorEfficiencyTimeSeries, incidence_matrix, pd_timestep, PTDF_matrix, merge_lines
 from .boundary_sector import zone_to_bs_mapping
@@ -998,7 +998,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['UFLS_Participation'] = ['res']
     sets_param['OFGS_Participation'] = ['res']
     sets_param['ReserveDuration'] = ['res']
-    sets_param['FastReserveEligible'] = ['res', 'au']
+    sets_param['QuickStartEligible'] = ['res', 'au']
     # sets_param['VirtualInertia_Participation'] = ['au']
     
     
@@ -1517,15 +1517,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         ReserveDuration_values[j] = reserve_duration.get(r, 0)
     parameters['ReserveDuration'] = {'sets': sets_param['ReserveDuration'], 'val': ReserveDuration_values}
 
-    # FastReserveEligible: whether a unit can deliver a given upward reserve while not committed.
+    # QuickStartEligible: whether a unit can deliver a given upward reserve while not committed.
     full_activation_time = config.get('FullActivationTime', commons['FullActivationTime'])
-    fast_reserve_eligible = compute_fast_reserve_eligible(
+    quick_start_eligible = compute_quick_start_eligible(
         res=sets['res'], res_U=sets['res_U'], au=sets['au'], ba=sets['ba'],
         time_startup=Plants_merged['TimeStartUp'], full_activation_time=full_activation_time)
-    FastReserveEligible_values = np.zeros((len(sets['res']), len(sets['au'])))
-    for (r, u), value in fast_reserve_eligible.items():
-        FastReserveEligible_values[res_index[r], au_index[u]] = value
-    parameters['FastReserveEligible'] = {'sets': sets_param['FastReserveEligible'], 'val': FastReserveEligible_values}
+    QuickStartEligible_values = np.zeros((len(sets['res']), len(sets['au'])))
+    for (r, u), value in quick_start_eligible.items():
+        QuickStartEligible_values[res_index[r], au_index[u]] = value
+    parameters['QuickStartEligible'] = {'sets': sets_param['QuickStartEligible'], 'val': QuickStartEligible_values}
 
     # Technologies
     for unit in range(Nunits):
