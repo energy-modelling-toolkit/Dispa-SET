@@ -27,6 +27,18 @@ from difflib import SequenceMatcher
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
 
+CONTINGENCY_MODES = ('plant', 'unit')
+
+
+def get_contingency_mode(config):
+    """Validated config option ContingencyMode ('plant' default, or 'unit'); see the N-1 block in build_single_run."""
+    mode = config.get('ContingencyMode', '')
+    mode = 'plant' if mode in ('', None) else str(mode).strip().lower()
+    if mode not in CONTINGENCY_MODES:
+        raise ValueError(f"ContingencyMode must be one of {CONTINGENCY_MODES}, got {config.get('ContingencyMode')!r}")
+    return mode
+
+
 def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=None, SectorXFlexSupply=None, MTS=0,
                      profilesSectorX=None):
     """
@@ -630,6 +642,22 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             for pc, members in zip(Plants_merged['PowerCapacity'], Plants_merged['FormerUnits'])]
     else:
         Plants_merged['ContingencyCapacity'] = Plants_merged['PowerCapacity'].astype(float)
+    # N-1 event of a multi-unit row, config option ContingencyMode:
+    #   'plant' (default): a row with Nunits > 1 is lost as a whole (all its committed units:
+    #           ContingencyCapacity = PowerCapacity x Nunits), e.g. hydro units on one busbar or radial
+    #           connection, or a combined-cycle block represented by its Nunits = 2 gas-turbine trains;
+    #   'unit': each unit is its own N-1 event (ContingencyCapacity = PowerCapacity, one train of a block).
+    # Batteries and other inverter-based modules (commons['tech_inverter']) always count per module, and an
+    # aggregate of several clustered units keeps its largest member (computed above) in both modes.
+    contingency_mode = get_contingency_mode(config)
+    if 'ContingencyGroup' in Plants_merged:
+        logging.warning('Column ContingencyGroup of the power plant data is ignored: the N-1 event of a '
+                        'multi-unit row is set by the config option ContingencyMode (now %r)', contingency_mode)
+    _single = (Plants_merged['FormerUnits'].apply(len) <= 1 if 'FormerUnits' in Plants_merged
+               else pd.Series(True, index=Plants_merged.index))
+    _plant = ((contingency_mode == 'plant') & (Plants_merged['Nunits'].astype(float) > 1)
+              & ~Plants_merged['Technology'].isin(commons['tech_inverter']) & _single)
+    logging.info('ContingencyMode %r: %d multi-unit rows are lost as a whole plant', contingency_mode, int(_plant.sum()))
     # Storage following an MTS level trajectory may end a window below it by at most what it can
     # turbine in one MTS time step (the resolution of the MTS); 0 for all other units.
     _mts_step = float(config.get('MTSMinStorageHours', 24) or 24)
@@ -637,6 +665,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
               else Plants_merged['Unit'])
     Plants_merged['StorageTolerance'] = [float(pc) * float(nu) * _mts_step if fu in set(mts_followed) else 0.0
                                          for pc, nu, fu in zip(Plants_merged['PowerCapacity'], Plants_merged['Nunits'], _first)]
+    Plants_merged.loc[_plant, 'ContingencyCapacity'] = (Plants_merged.loc[_plant, 'PowerCapacity'].astype(float)
+                                                        * Plants_merged.loc[_plant, 'Nunits'].astype(float))
 
     # Renaming the columns to ease the production of parameters:
     BoundarySector.rename(columns={'STOCapacity': 'SectorXStorageCapacity',

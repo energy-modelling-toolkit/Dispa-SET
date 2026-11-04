@@ -571,6 +571,14 @@ def check_config(config):
         logging.warning('HydroScheduling is active but horizon is not Annual. Forcing to Annual as per requirements.')
         config['HydroSchedulingHorizon'] = 'Annual'
 
+    # 4. ContingencyMode (N-1 event of a multi-unit row): 'plant' (default) or 'unit'
+    cmode = config.get('ContingencyMode', '')
+    cmode = 'plant' if cmode in ('', None) else str(cmode).strip().lower()
+    if cmode not in ('plant', 'unit'):
+        logging.error(f"Invalid ContingencyMode: {config.get('ContingencyMode')!r}. Must be 'plant' or 'unit'.")
+        sys.exit(1)
+    config['ContingencyMode'] = cmode
+
     logging.info('Configuration check completed successfully.')
     return config
 
