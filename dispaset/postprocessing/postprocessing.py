@@ -1167,9 +1167,9 @@ def curtailment(inputs,results):
 
     return curtailment
 
-# %% FRAM functions (trapezoid_weight, compute_weights, frequency_response,
+# %% ODE-SFR functions (trapezoid_weight, compute_weights, frequency_response,
 # _bisect_collect_feasible, get_frequency_stability_reserves) moved to
-# frequency_stability.py -- see FRAM_ISSUES.md / FRAM_DECISIONS.md at the
+# frequency_stability.py -- see ODESFR_ISSUES.md / ODESFR_DECISIONS.md at the
 # repository root for the full change history.
 
 #%% OPCION 1 GROUP

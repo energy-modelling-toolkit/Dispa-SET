@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Frequency Response Assessment Model (FRAM): sequential, ordered-backtracking
+Frequency Response Assessment Model (ODE-SFR): sequential, ordered-backtracking
 sizing of synchronous inertia, virtual inertia, and frequency reserves (FFR,
 FCR, aFRR, mFRR) against RoCoF, nadir, and steady-state frequency-deviation
 limits, per contingency.
@@ -10,7 +10,7 @@ reserves.py, boundary_sector.py, geoplot.py, and streamlit_functions.py are
 each split out of the larger preprocessing/postprocessing files. Pure move,
 no behavior change.
 
-See FRAM_ISSUES.md and FRAM_DECISIONS.md at the repository root for the full
+See ODESFR_ISSUES.md and ODESFR_DECISIONS.md at the repository root for the full
 change history, known issues, and open decisions for this subsystem.
 """
 import logging
@@ -96,7 +96,7 @@ def frequency_response(sim_time, activation_times, Hs_cap, Hv_cap, FFR_cap, FCR_
     """
     # If the value of Inertia is zero H=0
     if Hs_cap == 0:
-        # FRAM-CHANGE-001 (ISSUE-FRAM-003): this branch must return the same
+        # ODE-SFR-CHANGE-001 (ISSUE-ODESFR-003): this branch must return the same
         # 9-tuple shape as every other path below, since every call site
         # unpacks 9 values unconditionally (including the "no valid H found"
         # fallback in get_frequency_stability_reserves, which sets Hs_cap=0
@@ -116,7 +116,7 @@ def frequency_response(sim_time, activation_times, Hs_cap, Hv_cap, FFR_cap, FCR_
     # Precompute weights vector for plotting and for fixed deployment logic.
     # The "vir" weight (first return value) is intentionally discarded: it is
     # never used below either -- H_total combines Hs_cap+Hv_cap unweighted
-    # (see ISSUE-FRAM-004 / DECISION-FRAM-006 for the separate, unresolved
+    # (see ISSUE-ODESFR-004 / DECISION-ODESFR-006 for the separate, unresolved
     # question of whether Hv should be gated by its own activation profile;
     # this fix does not touch that).
     _, W_ffr_vec, W_fcr_vec, W_afrr_vec, W_mfrr_vec = compute_weights(t, activation_times)
@@ -127,12 +127,12 @@ def frequency_response(sim_time, activation_times, Hs_cap, Hv_cap, FFR_cap, FCR_
     def state(y, tt):
         f = y[0]
 
-        # FRAM-CHANGE-003 (ISSUE-FRAM-002): interpolate the already-precomputed
+        # ODE-SFR-CHANGE-003 (ISSUE-ODESFR-002): interpolate the already-precomputed
         # weight vectors instead of recomputing compute_weights() from scratch
         # at every internal ODE step (measured ~1,470 recomputations per call
         # before this fix; interpolation gives numerically equivalent output
         # -- max diff ~1e-8 to 1e-12 Hz across benchmarked cases -- at a
-        # measured 13-16x speedup, see FRAM_ISSUES.md ISSUE-FRAM-002).
+        # measured 13-16x speedup, see ODESFR_ISSUES.md ISSUE-ODESFR-002).
         w_ffr = np.interp(tt, t, W_ffr_vec)
         w_fcr = np.interp(tt, t, W_fcr_vec)
         w_afrr = np.interp(tt, t, W_afrr_vec)
@@ -226,10 +226,10 @@ def _bisect_collect_feasible(low, high, tol, is_feasible):
     Binary-search [low, high]; return every tested value that satisfied
     is_feasible, in the order they were found (which narrows toward the
     smallest feasible value, matching the "test the upper bound first" style
-    already used by FRAM's stage bisections).
+    already used by ODE-SFR's stage bisections).
 
-    Used by get_frequency_stability_reserves (FRAM-CHANGE-002, ISSUE-FRAM-001 /
-    DECISION-FRAM-002) to generate the ordered candidate list for each of the
+    Used by get_frequency_stability_reserves (ODE-SFR-CHANGE-002, ISSUE-ODESFR-001 /
+    DECISION-ODESFR-002) to generate the ordered candidate list for each of the
     four bisected stages (Hs, Hv, FFR, FCR), so the calling loop can try
     candidates smallest-first and backtrack to a larger one only if every
     downstream possibility for the smaller one is exhausted.
@@ -247,16 +247,16 @@ def _bisect_collect_feasible(low, high, tol, is_feasible):
     return feasible
 
 
-_RESERVE_TIMING_TO_FRAM_KEY = {'VIRU': 'vir', 'FFRU': 'ffr', 'FCRU': 'fcr', 'aFRRU': 'afrr', 'mFRRU': 'mfrr'}
+_RESERVE_TIMING_TO_ODESFR_KEY = {'VIRU': 'vir', 'FFRU': 'ffr', 'FCRU': 'fcr', 'aFRRU': 'afrr', 'mFRRU': 'mfrr'}
 
 
-def _as_fram_activation_times(reserve_timing):
-    """Translate commons['ReserveTiming'] keys (VIRU/FFRU/...) into FRAM's lowercase-key shape
+def _as_odesfr_activation_times(reserve_timing):
+    """Translate commons['ReserveTiming'] keys (VIRU/FFRU/...) into ODE-SFR's lowercase-key shape
     (vir/ffr/...), backfilling any missing category from commons['ReserveTiming']."""
     defaults = commons['ReserveTiming']
     return {
-        fram_key: reserve_timing.get(res_key, defaults[res_key])
-        for res_key, fram_key in _RESERVE_TIMING_TO_FRAM_KEY.items()
+        odesfr_key: reserve_timing.get(res_key, defaults[res_key])
+        for res_key, odesfr_key in _RESERVE_TIMING_TO_ODESFR_KEY.items()
     }
 
 
@@ -266,7 +266,7 @@ def resolve_activation_times(activation_times, config=None):
     case_reserve_timing = (config or {}).get('ReserveTiming', commons['ReserveTiming'])
 
     if activation_times is not None:
-        if activation_times != _as_fram_activation_times(case_reserve_timing):
+        if activation_times != _as_odesfr_activation_times(case_reserve_timing):
             logging.warning(
                 "get_frequency_stability_reserves(): activation_times differs from this "
                 "case's own reserve-timing assumptions. Treat these results as a what-if "
@@ -276,9 +276,9 @@ def resolve_activation_times(activation_times, config=None):
         return activation_times, 'explicit'
 
     if 'ReserveTiming' in (config or {}):
-        return _as_fram_activation_times(case_reserve_timing), 'config'
+        return _as_odesfr_activation_times(case_reserve_timing), 'config'
 
-    return _as_fram_activation_times(commons['ReserveTiming']), 'default'
+    return _as_odesfr_activation_times(commons['ReserveTiming']), 'default'
 
 
 # %% frequency stability reserves
