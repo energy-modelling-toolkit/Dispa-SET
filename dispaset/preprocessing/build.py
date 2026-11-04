@@ -1196,6 +1196,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             if s in finalTS['ScaledOutflows']:
                 parameters['StorageOutflow']['val'][i, :] = finalTS['ScaledOutflows'][s][idx_sim].values * \
                     plants_sto.loc[s, 'PowerCapacity']
+        # Storage technologies without natural inflow (batteries, EV batteries, compressed air) can neither
+        # receive inflow nor spill (spillage is only defined for storage with inflow, set sp in UCM.gms); an
+        # inflow picked up through the Technology/Zone fallback of the inflow table is a data error and is removed.
+        if s in plants_sto.index and plants_sto.loc[s, 'Technology'] in commons['tech_storage_no_inflow'] \
+                and np.any(parameters['StorageInflow']['val'][i, :] != 0):
+            logging.warning(s + ' (' + plants_sto.loc[s, 'Technology'] + ') has no natural inflow: the inflow found '
+                            'in the inflow table is ignored, so the unit cannot spill.')
+            parameters['StorageInflow']['val'][i, :] = 0
+            parameters['StorageOutflow']['val'][i, :] = 0
     if len(BoundarySector.index) >0:
     # Boundary sector demands:
         for i, u in enumerate(sets['nx']):

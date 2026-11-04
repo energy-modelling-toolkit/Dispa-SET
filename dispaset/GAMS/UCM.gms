@@ -69,6 +69,7 @@ p2x(au)          Power to X
 x2p(au)          X to Power
 xu(au)           Boundary sector only units
 s(au)            Storage Units (with reservoir)
+sp(au)           Storage units with natural inflow (can spill)
 th(au)           Units with thermal storage
 hu(au)           Heat only units
 *New
@@ -572,6 +573,10 @@ Flow(l,h)                           [MW]    Flow through lines
 CommittedInitial(au)=0;
 CommittedInitial(u)$(PowerInitial(u)>0)=1;
 
+* Spillage is only possible for storage units with natural inflow (hydro reservoirs). Units
+* without inflow (batteries, closed-loop pumped storage) only store energy taken from the grid.
+sp(au) = s(au)$(smax(h, StorageInflow(au,h)) > 0);
+
 * Definition of the minimum stable load:
 PowerMinStable(au) = PartLoadMin(au)*PowerCapacity(au);
 
@@ -768,7 +773,7 @@ EQ_SystemCost(i)..
 *         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep
          +sum(nx,CostXStorageAlert(nx,i)*SectorXStorageAlertViolation(nx,i)*TimeStep)
          +sum(nx,CostXFloodControl(nx,i)*SectorXFloodControlViolation(nx,i)*TimeStep)
-         +sum(au,CostOfSpillage(au,i)*spillage(au,i)*TimeStep)
+         +sum(sp,CostOfSpillage(sp,i)*spillage(sp,i)*TimeStep)
          +sum(slx,CostXSpillage(slx,i)*SectorXSpillage(slx,i)*TimeStep)
          +sum(slx,SectorXSpillage(slx,i)*TimeStep)
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
@@ -802,7 +807,7 @@ EQ_SystemCost(i)..
 *         +Config("CostOfSpillage","val")*(sum(au,spillage(au,i))*TimeStep
          +sum(nx,CostXStorageAlert(nx,i)*SectorXStorageAlertViolation(nx,i)*TimeStep)
          +sum(nx,CostXFloodControl(nx,i)*SectorXFloodControlViolation(nx,i)*TimeStep)
-         +sum(au,CostOfSpillage(au,i)*spillage(au,i)*TimeStep)
+         +sum(sp,CostOfSpillage(sp,i)*spillage(sp,i)*TimeStep)
          +sum(slx,CostXSpillage(slx,i)*SectorXSpillage(slx,i)*TimeStep)
          +sum(slx,SectorXSpillage(slx,i)*TimeStep)
          +sum(n,CurtailedPower(n,i) * CostCurtailment(n,i) * TimeStep)
@@ -1409,7 +1414,7 @@ EQ_Storage_balance(au,i)..
          =E=
          StorageLevel(au,i)$(s(au))
          +StorageOutflow(au,i)$(s(au))*Nunits(au)$(s(au))*TimeStep
-         +spillage(au,i)$(s(au) or wat(au))
+         +spillage(au,i)$sp(au)
          +Power(au,i)$(s(au))*TimeStep/(max(StorageDischargeEfficiency(au)$(s(au)),0.0001))
          +StorageSelfDischarge(au)$(s(au))*StorageLevel(au,i)$(s(au))*TimeStep
 ;

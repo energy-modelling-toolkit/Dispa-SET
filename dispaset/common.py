@@ -78,6 +78,9 @@ commons['tech_inverter'] = ['BATS', 'PHOT', 'WAVE', 'WTOF', 'WTON']
 commons['AutomaticReserves'] = ['VIRU', 'FFRU', 'FFRD', 'FCRU', 'FCRD', 'aFRRU', 'aFRRD']
 # List of storage technologies:
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
+# Storage technologies that physically have no natural inflow and therefore can never spill (build.py removes any
+# inflow assigned to them). HPHS is not listed: closed-loop plants get no inflow from the data, open-loop plants may.
+commons['tech_storage_no_inflow'] = ['BATS', 'BEVS', 'CAES']
 # commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP', 'HDAMC']
 
 # List of power to boundary sector technologies
