@@ -489,7 +489,7 @@ ShutDown(au,h)       [n.a.]  Unit shut down at hour h {1 0} or integer
 ;
 
 $If %LPFormulation% == 1 POSITIVE VARIABLES Committed (au,h); Committed.UP(au,h) = 1; Nunits(au) = 1 ; 
-$If not %LPFormulation% == 1 INTEGER VARIABLES Committed (au,h), StartUp(au,h), ShutDown(au,h); Committed.UP(au,h) = Nunits(au) ;StartUp.UP(au,h) = Nunits(au) ; ShutDown.UP(au,h) = Nunits(au) ;
+$If not %LPFormulation% == 1 INTEGER VARIABLES Committed (au,h), StartUp(au,h), ShutDown(au,h); Committed.UP(au,h) = Nunits(au) ;StartUp.UP(au,h) = Nunits(au) ; ShutDown.UP(au,h) = Nunits(au) ; StartUp.UP(au,h)$(ord(h) = 1) = 0 ; ShutDown.UP(au,h)$(ord(h) = 1) = 0 ;
 
 
 
@@ -793,7 +793,8 @@ EQ_Objective_function..
 ;
 
 * 3 binary commitment status
-EQ_Commitment(au,i)..
+* First hour of the simulation: the initial commitment is a decision (no start-up/shut-down from an assumed state)
+EQ_Commitment(au,i)$(not (ord(i) = 1 and FirstHour = 1))..
          Committed(au,i)-CommittedInitial(au)$(ord(i) = 1)-Committed(au,i-1)$(ord(i) > 1)
          =E=
          StartUp(au,i) - ShutDown(au,i)
@@ -816,7 +817,7 @@ EQ_MinDownTime(au,i)$(TimeStep <= TimeDownMinimum(au))..
 ;
 
 * ramp up constraints
-EQ_RampUp_TC(au,i)$(sum(tr,Technology(au,tr))=0)..
+EQ_RampUp_TC(au,i)$(sum(tr,Technology(au,tr))=0 and not (ord(i) = 1 and FirstHour = 1))..
          Power(au,i) - Power(au,i-1)$(ord(i) > 1) - PowerInitial(au)$(ord(i) = 1)
          =L=
          (Committed(au,i) - StartUp(au,i)) * RampUpMaximum(au) * TimeStep
@@ -826,7 +827,7 @@ EQ_RampUp_TC(au,i)$(sum(tr,Technology(au,tr))=0)..
 ;
 
 * ramp down constraints
-EQ_RampDown_TC(au,i)$(sum(tr,Technology(au,tr))=0)..
+EQ_RampDown_TC(au,i)$(sum(tr,Technology(au,tr))=0 and not (ord(i) = 1 and FirstHour = 1))..
          Power(au,i-1)$(ord(i) > 1) + PowerInitial(au)$(ord(i) = 1) - Power(au,i)
          =L=
          (Committed(au,i) - StartUp(au,i)) * RampDownMaximum(au) * TimeStep
@@ -849,13 +850,13 @@ EQ_CostShutDown(au,i)$(sum(tr,Technology(au,tr))=0)..
          CostShutDown(au)*ShutDown(au,i)
 ;
 
-EQ_CostRampUp(au,i)$(CostRampUp(au) <> 0)..
+EQ_CostRampUp(au,i)$(CostRampUp(au) <> 0 and not (ord(i) = 1 and FirstHour = 1))..
          CostRampUpH(au,i)
          =G=
          CostRampUp(au)*(Power(au,i)-PowerInitial(au)$(ord(i) = 1)-Power(au,i-1)$(ord(i) > 1))
 ;
 
-EQ_CostRampDown(au,i)$(CostRampDown(au) <> 0)..
+EQ_CostRampDown(au,i)$(CostRampDown(au) <> 0 and not (ord(i) = 1 and FirstHour = 1))..
          CostRampDownH(au,i)
          =G=
          CostRampDown(au)*(PowerInitial(au)$(ord(i) = 1)+Power(au,i-1)$(ord(i) > 1)-Power(au,i))
