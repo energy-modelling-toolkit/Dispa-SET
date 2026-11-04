@@ -10,7 +10,8 @@ import pandas as pd
 from ..common import commons
 
 
-def compute_quick_start_eligible(res, res_U, au, ba, time_startup, full_activation_time=None):
+def compute_quick_start_eligible(res, res_U, au, ba, time_startup, full_activation_time=None,
+                                 inverter=None, automatic=None):
     """
     Compute the QuickStartEligible(res, au) table: whether a unit can deliver a given
     upward reserve product while NOT committed (i.e. from an offline/cold state).
@@ -31,11 +32,17 @@ def compute_quick_start_eligible(res, res_U, au, ba, time_startup, full_activati
                                  commons['FullActivationTime']. Pass
                                  config.get('FullActivationTime', commons['FullActivationTime'])
                                  to respect a case-level override.
+    :param inverter:             Iterable of inverter-based unit names. If given together with
+                                 ``automatic``, an off-line unit qualifies for an automatically
+                                 activated product (reaction within 30 s) only if it is inverter-based.
+    :param automatic:            Iterable of automatically activated reserve categories.
     :return:                     dict {(r, u): 0 or 1} for every (r, u) in res x au.
     """
     if full_activation_time is None:
         full_activation_time = commons['FullActivationTime']
     ba_set = set(ba)
+    inverter_set = set(inverter or [])
+    automatic_set = set(automatic or [])
     eligible = {}
     for u in au:
         time_startup_u = time_startup.get(u, 0)
@@ -43,6 +50,8 @@ def compute_quick_start_eligible(res, res_U, au, ba, time_startup, full_activati
             eligible[(r, u)] = 0
         for r in res_U:
             fat = full_activation_time.get(r, 0)
+            if inverter is not None and automatic is not None and r in automatic_set and u not in inverter_set:
+                continue  # an off-line synchronous unit cannot react within 30 s
             if time_startup_u == 0 or (0 < time_startup_u <= fat):
                 eligible[(r, u)] = 1
         if u in ba_set:

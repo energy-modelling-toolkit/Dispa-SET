@@ -71,6 +71,11 @@ commons['tech_conventional'] = ['HDAM', 'HROR', 'HPHS',
 # for the specific study, not something code can decide. Revisit together, not separately, if
 # BEVS units are ever added to a study.
 commons['tech_batteries'] = ['BATS']#MARCO
+# Inverter-based technologies: can react to an automatic activation signal from an off-line state
+commons['tech_inverter'] = ['BATS', 'PHOT', 'WAVE', 'WTOF', 'WTON']
+# Automatically activated reserve products: the provider must react within 30 s (FCR: SOGL Art. 154(7);
+# aFRR: response within 30 s, TSO prequalification conditions), which an off-line synchronous unit cannot do.
+commons['AutomaticReserves'] = ['VIRU', 'FFRU', 'FFRD', 'FCRU', 'FCRD', 'aFRRU', 'aFRRD']
 # List of storage technologies:
 commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP']
 # commons['tech_storage'] = ['HDAM', 'HPHS', 'BATS', 'BEVS', 'CAES', 'SCSP', 'HDAMC']

@@ -1521,7 +1521,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     full_activation_time = config.get('FullActivationTime', commons['FullActivationTime'])
     quick_start_eligible = compute_quick_start_eligible(
         res=sets['res'], res_U=sets['res_U'], au=sets['au'], ba=sets['ba'],
-        time_startup=Plants_merged['TimeStartUp'], full_activation_time=full_activation_time)
+        time_startup=Plants_merged['TimeStartUp'], full_activation_time=full_activation_time,
+        inverter=[u for u in sets['au'] if Plants_merged.loc[u, 'Technology'] in commons['tech_inverter']],
+        automatic=commons['AutomaticReserves'])
     QuickStartEligible_values = np.zeros((len(sets['res']), len(sets['au'])))
     for (r, u), value in quick_start_eligible.items():
         QuickStartEligible_values[res_index[r], au_index[u]] = value
