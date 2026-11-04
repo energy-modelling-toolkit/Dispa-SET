@@ -2139,8 +2139,10 @@ UnitHourlyVariableCost(au,z) = Power.L(au,z) * CostVariable(au,z);
 UnitHourlyStartUpCost(u,z) = StartUp.L(u,z) * CostStartUp(u);
 UnitHourlyShutDownCost(u,z) = ShutDown.L(u,z) * CostShutDown(u);
 UnitHourlyRampingCost(au,z) = CostRampUpH.L(au,z) + CostRampDownH.L(au,z);
-UnitHourlyProductionCost(au,z) = sum(u, UnitHourlyFixedCost(u,z) + UnitHourlyStartUpCost(u,z) + UnitHourlyShutDownCost(u,z) + UnitHourlyRampingCost(u,z))
-                                + UnitHourlyVariableCost(au,z);
+* Per-unit cost (previously sum(u, ...) added every unit's fixed/start-up/
+* shut-down/ramping cost to each unit au, overstating the total).
+UnitHourlyProductionCost(au,z) = (UnitHourlyFixedCost(au,z) + UnitHourlyStartUpCost(au,z) + UnitHourlyShutDownCost(au,z))$u(au)
+                                + UnitHourlyRampingCost(au,z) + UnitHourlyVariableCost(au,z);
 UnitHourlyProfit(au,z) = UnitHourlyRevenue(au,z) - UnitHourlyProductionCost(au,z);
 
 

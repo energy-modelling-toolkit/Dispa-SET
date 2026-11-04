@@ -650,7 +650,7 @@ def CostExPost(inputs, results):
     costs['FixedCosts'] = 0
     for u in results['OutputCommitted']:
         if u in dfin['CostFixed'].index:
-            costs['FixedCosts'] = + dfin['CostFixed'].loc[u, 'CostFixed'] * results['OutputCommitted'][u]
+            costs['FixedCosts'] += dfin['CostFixed'].loc[u, 'CostFixed'] * results['OutputCommitted'][u]
 
     # %% Ramping and startup costs:
     indexinitial = timeindex[0] - datetime.timedelta(hours=1)
