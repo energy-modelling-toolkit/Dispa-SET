@@ -153,6 +153,14 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     # New configuration dictionary, specific to MTS:
     temp_config = dict(config)
 
+    # The MTS (daily LP) schedules energy only: no reserve or inertia requirement, so that the
+    # runs with and without frequency-security constraints share the same storage trajectory.
+    # Inertia and reserve constraints are hourly, commitment-based quantities that a daily LP with
+    # relaxed commitment cannot represent (and the MTS has no unit inertia constants).
+    for key in ('SystemInertiaDemand', 'VIRDemand', 'FFRDemand', 'FCRDemand', 'aFRRUDemand', 'aFRRDDemand'):
+        if key in temp_config:
+            temp_config[key] = ''
+
     # Dates for the mid term scheduling - Always annual as per requirements
     y_start, m_start, d_start, __, __, __ = config['StartDate']
     temp_config['StartDate'] = (y_start, 1, 1, 00, 00, 00)  # updating start date to the beginning of the year
