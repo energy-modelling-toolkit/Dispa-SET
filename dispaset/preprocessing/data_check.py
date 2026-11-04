@@ -645,8 +645,8 @@ def check_VIRDemand(VIRDemand, Load):
         msg = 'The VIR Demand table contains values higher than demand'
         logging.critical(msg)
         raise DispaSETValidationError(msg)
-    else:
-        logging.warning('No VIR Demand requirement data has been found')
+    if not ((VIRDemand.sum(axis=1)) > 0).any():
+        logging.warning('No VIR Demand requirement data has been found (all values are zero)')
   
 def check_FFRDemand(FFRDemand, Load):
     """
@@ -662,8 +662,8 @@ def check_FFRDemand(FFRDemand, Load):
         msg = 'The FFR Demand table contains values higher than demand'
         logging.critical(msg)
         raise DispaSETValidationError(msg)
-    else:
-        logging.warning('No FFR Demand requirement data has been found')
+    if not ((FFRDemand.sum(axis=1)) > 0).any():
+        logging.warning('No FFR Demand requirement data has been found (all values are zero)')
         
 def check_FCRDemand(FCRDemand, Load):
     """
@@ -679,8 +679,8 @@ def check_FCRDemand(FCRDemand, Load):
         msg = 'The FCR Demand table contains values higher than demand'
         logging.critical(msg)
         raise DispaSETValidationError(msg)
-    else:
-        logging.warning('No FCR Demand requirement data has been found')
+    if not ((FCRDemand.sum(axis=1)) > 0).any():
+        logging.warning('No FCR Demand requirement data has been found (all values are zero)')
 
 
 def check_df(df, StartDate=None, StopDate=None, name=''):
