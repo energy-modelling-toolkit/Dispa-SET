@@ -1990,6 +1990,7 @@ $If not %LPFormulation% == 1 OutputCostRampUpH(au,h)
 $If not %LPFormulation% == 1 OutputCostRampDownH(au,h)
 ShadowPrice_VIRU(n,h)
 ShadowPrice_FFRU(n,h)
+ShadowPrice_Inertia(h)
 ShadowPrice_FCRU(n,h)
 ShadowPrice_aFRRU(n,h)
 ShadowPrice_mFRRU(n,h)
@@ -2141,6 +2142,7 @@ $If not %LPFormulation% == 1 OutputCostRampDownH(au,z) = CostRampDownH.L(au,z);
 *new
 ShadowPrice_VIRU(n,z) =  EQ_UpwardReserves_balance.m('VIRU',n,z);
 ShadowPrice_FFRU(n,z) =  EQ_UpwardReserves_balance.m('FFRU',n,z);
+ShadowPrice_Inertia(z) =  EQ_Inertia_Balance.m(z);
 ShadowPrice_FCRU(n,z) =  EQ_UpwardReserves_balance.m('FCRU',n,z);
 ShadowPrice_aFRRU(n,z) =  EQ_UpwardReserves_balance.m('aFRRU',n,z);
 ShadowPrice_mFRRU(n,z) =  EQ_UpwardReserves_balance.m('mFRRU',n,z);
@@ -2298,6 +2300,8 @@ $If not %LPFormulation% == 1 OutputCostRampUpH,
 $If not %LPFormulation% == 1 OutputCostRampDownH,
 ShadowPrice_VIRU,
 ShadowPrice_FFRU,
+ShadowPrice_Inertia,
+LostLoad_Inertia,
 ShadowPrice_FCRU,
 ShadowPrice_aFRRU,
 ShadowPrice_mFRRU,
