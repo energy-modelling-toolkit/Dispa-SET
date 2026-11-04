@@ -629,8 +629,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         BS_Spillages = pd.DataFrame(index=config['idx_long'])
     BS_Spillage_RoW = BSSpillage_RoW.reindex(config['idx_long'])
 
-    # Clustering of the plants:
-    Plants_merged, mapping = clustering(plants, method=config['SimulationType'])
+    # Clustering of the plants. ClusteringPmax [MW] (optional config entry, default 25 MW as in
+    # utils.clustering) is the largest unit capacity that may be merged into an aggregate unit.
+    clustering_pmax = config.get('ClusteringPmax', '')
+    clustering_pmax = 25 if clustering_pmax in ('', None) else float(clustering_pmax)
+    Plants_merged, mapping = clustering(plants, method=config['SimulationType'], Pmax=clustering_pmax)
     # Check clustering:
     check_clustering(plants, Plants_merged)
     # Largest single unit inside each (aggregate) unit [MW]: the credible N-1 loss of an aggregate

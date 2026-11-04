@@ -647,7 +647,15 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=-0.1, Pmax=
 
     OnlyOnes = (plants["Nunits"] == 1).all()
     if method in ["Standard", "MILP"]:
-        if OnlyOnes:
+        # Rows with Nunits > 1 already describe a set of identical units (e.g. a plant represented by
+        # its individual generators): they are kept as they are, and only the single-unit rows are
+        # candidates for merging. The original indexes are kept so that FormerIndexes refer to plants.
+        all_plants = plants
+        multi_units = plants[plants["Nunits"] != 1].copy()
+        plants = plants[plants["Nunits"] == 1].copy()
+        if not multi_units.empty:
+            logging.info("Standard clustering: %d multi-unit rows (Nunits > 1) are kept unmerged", len(multi_units))
+        if True:
             ####### Three cluster groups in the standard MILP formulation
             ###### 1) Highly flexible
             ###### 2) Low Pmin
@@ -671,8 +679,8 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=-0.1, Pmax=
             low_pmax = plants["PowerCapacity"] <= Pmax
             plants["flex"] = highly_flexible
             plants["low_pmax"] = low_pmax
-            plants["FormerIndexes"] = pd.Series(plants.index.values).apply(lambda x: [x])
-            plants["FormerUnits"] = pd.Series(plants['Unit'].values).apply(lambda x: [x])
+            plants["FormerIndexes"] = pd.Series(plants.index.values, index=plants.index).apply(lambda x: [x])
+            plants["FormerUnits"] = pd.Series(plants['Unit'].values, index=plants.index).apply(lambda x: [x])
 
             condition = (plants["low_pmax"]) | (plants["flex"])
             first_cluster = plants[condition]  # all data without other clustering
@@ -727,6 +735,11 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=-0.1, Pmax=
 
             plants = plants.drop(["flex", "low_pmax", "FormerIndexes"], axis=1)
             plants_merged = plants_merged.drop(["index", "fingerprints", "flex", "low_pmax"], axis=1)
+            if not multi_units.empty:
+                multi_units["FormerIndexes"] = multi_units["index"].apply(lambda x: [x])
+                multi_units["FormerUnits"] = multi_units["Unit"].apply(lambda x: [x])
+                plants_merged = pd.concat([plants_merged, multi_units.drop(columns=["index"])], ignore_index=True)
+            plants = all_plants
         else:  # not all only ones
             logging.warning("The standard (or MILP) clustering method is only applicable if all values of the "
                             "Nunits column in the power plant data are set to one. At least one different value has "
