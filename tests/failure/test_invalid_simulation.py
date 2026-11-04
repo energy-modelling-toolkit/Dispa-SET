@@ -104,9 +104,10 @@ def test_invalid_data_time_step_raises():
 
 
 def test_invalid_simulation_time_step_raises():
-    """SimulationTimeStep not in (1, 24) must raise DispaSETValidationError."""
+    """SimulationTimeStep that does not divide 24 h (e.g. 5) must raise DispaSETValidationError
+    (6 is valid)."""
     cfg = load_test_config("tiny.yml", "fail_simtimestep")
-    cfg["SimulationTimeStep"] = 6
+    cfg["SimulationTimeStep"] = 5
     with pytest.raises(DispaSETValidationError):
         ds.build_simulation(cfg)
 

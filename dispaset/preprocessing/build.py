@@ -90,8 +90,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             config['DataTimeStep']) + ' hours was provided'
         logging.critical(msg)
         raise DispaSETValidationError(msg)
-    if config['SimulationTimeStep'] not in (1, 24):
-        msg = 'The simulation time step can only be 1 or 24 hour in this version of Dispa-SET. A value of ' + str(
+    if config['SimulationTimeStep'] not in (1, 2, 3, 4, 6, 8, 12, 24):
+        msg = 'The simulation time step must divide 24 h (1, 2, 3, 4, 6, 8, 12 or 24 h) in this version of Dispa-SET. A value of ' + str(
             config['SimulationTimeStep']) + ' hours was provided'
         logging.critical(msg)
         raise DispaSETValidationError(msg)

@@ -32,6 +32,10 @@ def pd_timestep(hours):
         return '15min'
     elif hours == 24:
         return '24h'
+    elif float(hours).is_integer() and hours > 0:
+        return f'{int(hours)}h'
+    elif hours > 0 and float(hours * 60).is_integer():
+        return f'{int(round(hours * 60))}min'
     else:
         return ''
 
