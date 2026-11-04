@@ -638,6 +638,8 @@ EQ_Commitment
 EQ_MinUpTime
 EQ_MinDownTime
 EQ_StartUp_Duration
+EQ_StartUp_Bound
+EQ_ShutDown_Bound
 EQ_RampUp_TC
 EQ_RampDown_TC
 EQ_CostStartUp
@@ -851,6 +853,26 @@ EQ_StartUp_Duration(au,i)$(StartUpSteps(au) >= 1 and TimeUpMinimum(au) < TimeSte
          StartingNow(au,i)
          =L=
          Committed(au,i)
+;
+
+* Start-up and shut-down bounds (MILP only). Valid inequalities: with EQ_Commitment, a unit started at
+* i is committed at i (also while it is still starting, see StartingNow) and a unit shut down at i is not
+* committed at i, so they never cut a physically meaningful schedule. They remove the degenerate
+* same-step start-up + shut-down pairs (StartUp = ShutDown > 0 with Committed unchanged) that cost
+* nothing for units with zero start-up and shut-down cost. For rows with Nunits > 1 the pairs are only
+* limited to min(Committed, Nunits - Committed). In the first step of the simulation StartUp and
+* ShutDown are fixed to 0 (StartUp.UP/ShutDown.UP at ord(h) = 1); both bounds only involve step i, so
+* they need no data from the previous rolling-horizon window.
+EQ_StartUp_Bound(au,i)..
+         StartUp(au,i)
+         =L=
+         Committed(au,i)
+;
+
+EQ_ShutDown_Bound(au,i)..
+         ShutDown(au,i)
+         =L=
+         Nunits(au) - Committed(au,i)
 ;
 
 * ramp up constraints
@@ -1622,6 +1644,8 @@ EQ_Commitment,
 $If not %LPFormulation% == 1 EQ_MinUpTime,
 $If not %LPFormulation% == 1 EQ_MinDownTime,
 $If not %LPFormulation% == 1 EQ_StartUp_Duration,
+$If not %LPFormulation% == 1 EQ_StartUp_Bound,
+$If not %LPFormulation% == 1 EQ_ShutDown_Bound,
 EQ_RampUp_TC,
 EQ_RampDown_TC,
 EQ_Demand_balance_DA,
