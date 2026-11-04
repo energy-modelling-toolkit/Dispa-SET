@@ -1864,7 +1864,16 @@ $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCo
          status("model",i) = UCM_SIMPLE.Modelstat;
          status("solver",i) = UCM_SIMPLE.Solvestat;
 
-         CommittedInitial(au) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(au,i));
+* Carry the state to the next window only if this window returned a solution
+* (1 optimal, 2 locally optimal, 7 feasible, 8 integer solution). After an
+* infeasible window the levels are zero, and carrying them over empties every
+* reservoir for months; keeping the previous state limits the damage to the
+* failed window itself (flagged in status).
+* CommittedInitial is rounded: an integer-tolerance value such as 0.999992
+* made the next window's EQ_Commitment (integer - 0.999992 = integer)
+* infeasible in presolve.
+         if((UCM_SIMPLE.Modelstat = 1 or UCM_SIMPLE.Modelstat = 2 or UCM_SIMPLE.Modelstat = 7 or UCM_SIMPLE.Modelstat = 8),
+         CommittedInitial(au) = round(sum(i$(ord(i)=LastKeptHour-FirstHour+1),Committed.L(au,i)));
          PowerInitial(u) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),Power.L(u,i));
          StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
          StorageInitial(chp) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(chp,i));
@@ -1872,6 +1881,7 @@ $If not %LPFormulation% == 1      SOLVE UCM_SIMPLE USING MIP MINIMIZING SystemCo
          SectorXFlexDemandInputInitial(nx) = sum(i$(ord(i)<LastKeptHour+1), SectorXFlexDemandInput(nx,i) - SectorXFlexDemand.L(nx,i));
          SectorXFlexSupplyInputInitial(nx) = sum(i$(ord(i)<LastKeptHour+1), SectorXFlexSupplyInput(nx,i) - SectorXFlexSupply.L(nx,i));
 $If %ActivateFlexibleDemand% == 1 AccumulatedOverSupply_inital(n) = sum(i$(ord(i)=LastKeptHour-FirstHour+1),AccumulatedOverSupply.L(n,i));
+         );
 
 * Assigning StorageLevelViolation (one value per optimization horizon) to the last element of StorageLevelViolation_H
 StorageSlack.L(au,i)$(ord(i)=LastKeptHour-FirstHour+1) = Waterslack.L(au);
