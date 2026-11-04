@@ -457,6 +457,8 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         SectorXFlexibleSupply = pd.DataFrame(index=config['idx_long'])
 
     # Update reservoir levels with newly computed ones from the mid-term scheduling
+    mts_followed = []
+    mts_initial = {}
     if profiles is not None:
     
         # Robust Function
@@ -504,6 +506,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         for short_name in not_mts:
             if short_name in ReservoirLevels.columns:
                 ReservoirLevels[short_name] = config['default']['ReservoirLevelInitial']
+        mts_followed = [c for c in ReservoirLevels.columns if c not in not_mts and c in set(profiles_short.columns)]
+        # Level before the first simulated step (first row of the MTS profiles), used as initial level
+        t_before = idx_sim[0] - pd.Timedelta(hours=float(config['SimulationTimeStep']))
+        if t_before in profiles_short.index:
+            mts_initial = {c: float(profiles_short.loc[t_before, c]) for c in mts_followed}
+
         # Final Column names
         # ReservoirLevels.rename(columns=rename_map, inplace=True)
         
@@ -1170,9 +1178,12 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         #     parameters['StorageFloodControl']['val'][i, :] = finalTS['StorageFloodControl'][s][idx_sim].values
         #     parameters['CostOfSpillage']['val'][i, :] = finalTS['CostOfSpillage'][s][idx_sim].values
 
-        # The initial level is the same as the first value of the profile:
+        # The initial level is the level of the MTS before the first simulated step for units following
+        # the MTS, and the first value of the profile otherwise:
         if s in Plants_sto.index:
-            parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
+            level0 = mts_initial.get(s, mts_initial.get(s.split(' - ')[-1].strip(),
+                                                        parameters['StorageProfile']['val'][i, 0]))
+            parameters['StorageInitial']['val'][i] = level0 * \
                 finalTS['AvailabilityFactors'][s][idx_sim[0]] * \
                 Plants_sto.loc[s, 'StorageCapacity'] * Plants_sto.loc[s, 'Nunits']
 

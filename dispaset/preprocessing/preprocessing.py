@@ -91,6 +91,40 @@ def _check_results(results):
     return True
 
 
+def mts_levels_to_simulation_steps(profiles, idx_long, mts_hours, sim_hours, initial_level):
+    """
+    Map the storage levels of the mid-term scheduling (MTS) to the time steps of the simulation.
+
+    In the GAMS model, StorageLevel(i) is the level at the END of time step i, and StorageProfile(h)
+    is the target level at the end of step h. The MTS levels are labelled with the START of their time
+    step: each value is moved to the last simulation step of its MTS step, the level before the first
+    MTS step (initial_level) is added, and the levels are interpolated in time. Steps beyond the MTS
+    horizon (final look-ahead) keep the last MTS value.
+
+    :param profiles:        DataFrame of MTS levels (fraction of capacity), indexed by the start of each MTS step
+    :param idx_long:        Simulation time index, including the last look-ahead period
+    :param mts_hours:       MTS time step [h]
+    :param sim_hours:       Simulation time step [h]
+    :param initial_level:   Level before the first MTS step (scalar, or Series indexed by unit)
+    :returns:               DataFrame indexed by the step before idx_long[0] followed by idx_long. The first
+                            row is the level before the first simulated step (initial level of the simulation).
+    """
+    mts_step = pd.Timedelta(hours=float(mts_hours))
+    sim_step = pd.Timedelta(hours=float(sim_hours))
+    mts_start = profiles.index[0]
+    levels = profiles.copy()
+    levels.index = levels.index + mts_step - sim_step
+    if np.isscalar(initial_level):
+        initial = pd.DataFrame(initial_level, columns=levels.columns, index=[mts_start - sim_step])
+    else:
+        initial = pd.DataFrame([pd.Series(initial_level).reindex(levels.columns).values],
+                               columns=levels.columns, index=[mts_start - sim_step])
+    levels = pd.concat([initial, levels])
+    target_idx = pd.DatetimeIndex([idx_long[0] - sim_step]).append(pd.DatetimeIndex(idx_long))
+    levels = levels.reindex(levels.index.union(target_idx)).interpolate(method='time').ffill()
+    return levels.reindex(target_idx)
+
+
 def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
     """
     This function reads the DispaSET config file, searches for active zones,
@@ -391,7 +425,15 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
 
     # Re-index to the main simulation time step:
     if config['SimulationTimeStep'] != temp_config['SimulationTimeStep']:
-        profiles = profiles.reindex(idx_long, method='nearest')
+        # The MTS levels are end-of-step values labelled with the start of the step (see
+        # mts_levels_to_simulation_steps). Level before the first MTS step: ReservoirLevelInitial, or the
+        # final level with cyclic boundary conditions (HydroScheduling = 1).
+        if mts_level == 1:
+            mts_initial = profiles.iloc[-1]
+        else:
+            mts_initial = config['default']['ReservoirLevelInitial']
+        profiles = mts_levels_to_simulation_steps(profiles, idx_long, temp_config['SimulationTimeStep'],
+                                                  config['SimulationTimeStep'], mts_initial)
     
         temp_config['StartDate'] = (y_start, 1, 1, 00, 00, 00)  # updating start date to the beginning of the year
         temp_config['StopDate'] = (y_start + 1, 1, 2, 00, 59, 00)
