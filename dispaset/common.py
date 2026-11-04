@@ -186,8 +186,8 @@ commons['default_StartUpTime_fallback'] = 0.17
 # Reserve-product duration and full-activation-time requirements [h], derived from
 # commons['ReserveTiming'] below (ramp/3600 = FullActivationTime; (deact-ramp)/3600 = ReserveDuration).
 commons['ReserveDuration'] = {
-    'VIRU': 0.0000833, 'FFRU': 0.008333, 'FCRU': 0.25, 'aFRRU': 0.125, 'mFRRU': 1.0,
-    'FFRD': 0.008333, 'FCRD': 0.25, 'aFRRD': 0.125,
+    'VIRU': 0.0000833, 'FFRU': 0.082972, 'FCRU': 0.25, 'aFRRU': 0.125, 'mFRRU': 1.0,
+    'FFRD': 0.082972, 'FCRD': 0.25, 'aFRRD': 0.125,
 }
 commons['FullActivationTime'] = {
     'FFRU': 0.000361, 'FCRU': 0.008333, 'aFRRU': 0.083333, 'mFRRU': 0.208333,
@@ -197,12 +197,23 @@ commons['FullActivationTime'] = {
 # Reserve-product activation timeline [s] from contingency onset (t=0): prep/ramp/delivery/deact,
 # per ENTSO-E FCR/aFRR/mFRR (box-car, delivery=deact); VIRU decays until FFRU's ramp instead, for
 # lack of a published duration. Override per-case via config['ReserveTiming'].
+# Activation (prep/ramp) and minimum sustain times follow the standard products: FFR, Nordic
+# long-support FFR (full activation <= 1.3 s, sustained >= 30 s); FCR, SOGL (EU 2017/1485) full
+# activation 30 s and 15 min availability; aFRR and mFRR, ACER standard products (full activation
+# 5 min and 12.5 min; ACER aFRR/mFRR implementation frameworks, 24 Jan 2020). These are minimum requirements, not switch-off times: each product is
+# withdrawn only as the product that replaces it is deployed (SOGL restoration principle):
+#   FFR  is sustained to 31.3 s and released 31.3 s -> 300 s while aFRR ramps in (31 s -> 300 s);
+#   aFRR is released 450 s -> 750 s exactly as mFRR ramps in (450 s -> 750 s), so that the aFRR
+#   deactivation period (300 s) does not exceed its full activation time (ACER aFRR IF, Art. 7(1)(b)).
+# aFRR/mFRR are open-loop MW injections in ODE-SFR, so a box-car aFRR to 750 s would inject up to
+# 2x CTG, and a step FFR withdrawal at 31.3 s, before aFRR has ramped in, causes a second
+# frequency dip that FCR can only absorb through a larger deviation.
 commons['ReserveTiming'] = {
     'VIRU':  dict(prep=0.50, ramp=1.00, delivery=1.00, deact=1.30),
-    'FFRU':  dict(prep=0.90, ramp=1.30, delivery=31.3, deact=31.3),
+    'FFRU':  dict(prep=0.90, ramp=1.30, delivery=31.3, deact=300.0),
     'FCRU':  dict(prep=1.10, ramp=30.00, delivery=930, deact=930),
-    'aFRRU': dict(prep=31.00, ramp=300.00, delivery=750, deact=750),
-    'mFRRU': dict(prep=300.00, ramp=750.00),
+    'aFRRU': dict(prep=31.00, ramp=300.00, delivery=450, deact=750),
+    'mFRRU': dict(prep=450.00, ramp=750.00),
 }
 # DispaSET fuels:
 commons['Fuels'] = ['AIR', 'AMO', 'BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH',
