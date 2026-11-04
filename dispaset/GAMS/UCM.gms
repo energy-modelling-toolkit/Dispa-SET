@@ -278,6 +278,8 @@ CostLoadShedding(n,h)                       [EUR\MW]        Value of lost load
 LoadMaximum(au,h)                           [%]             Maximum load given AF and OF
 PowerMustRun(au,h)                          [MW\u]          Minimum power output
 StorageFinalMin(au)                         [MWh]           Minimum storage level at the end of the optimization horizon
+StorageKeptMin(au)                          [MWh]           Minimum storage level at the last kept hour of the optimization horizon
+StorageTolerance(au)                        [MWh]           Allowed shortfall below the MTS level target (one MTS step at full power)
 SectorXStorageFinalMin(nx)  				[MWh]           Minimum boundary sector storage level at the end of the optimization horizon
 
 
@@ -402,6 +404,7 @@ $LOAD LocationX
 $LOAD Nunits
 $LOAD OutageFactor
 $LOAD PowerCapacity
+$LOAD StorageTolerance
 $LOAD PowerInitial
 $LOAD PartLoadMin
 $LOAD PriceTransmission
@@ -1458,7 +1461,7 @@ EQ_Storage_balance(au,i)..
 
 * Minimum level at the end of the optimization horizon:
 EQ_Storage_boundaries(au,i)$(i.val = LastKeptHour or ord(i)=card(i)) ..
-         StorageFinalMin(au)$(s(au))
+         (StorageFinalMin(au)$(ord(i)=card(i)) + StorageKeptMin(au)$(ord(i)<card(i)))$(s(au))
          =L=
          StorageLevel(au,i)$(s(au))
          + StorageLevelViolation(au)$(s(au))
@@ -1823,17 +1826,20 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          display day,FirstHour,LastHour,LastKeptHour,i_last;
 
 *        Defining the minimum level at the end of the horizon (not-MTS case):
-$If      %MTS% == 0          StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
+$If      %MTS% == 0          StorageFinalMin(s) =  max(0, sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i)) - StorageTolerance(s));
+$If      %MTS% == 0          StorageKeptMin(s) =  max(0, sum(i$(i.val = LastKeptHour),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i)) - StorageTolerance(s));
 $If      %MTS% == 0          StorageFinalMin(chp) =  sum(i$(ord(i)=card(i)),StorageProfile(chp,i)*StorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,i));
 $If      %MTS% == 0          SectorXStorageFinalMin(nx) = sum(i$(ord(i)=card(i)),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 
 *        Defining the minimum level at the end of the horizon (cyclic MTS case):
 $If      %MTS% == 1          StorageFinalMin(s) =  0;
+$If      %MTS% == 1          StorageKeptMin(s) =  0;
 $If      %MTS% == 1          StorageFinalMin(chp) =  0;
 $If      %MTS% == 1          SectorXStorageFinalMin(nx) = 0;
 
 *        Defining the minimum level at the end of the horizon (MTS with non-cyclic boundary conditions):
-$If      %MTS% == 2          StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i));
+$If      %MTS% == 2          StorageFinalMin(s) =  max(0, sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i)) - StorageTolerance(s));
+$If      %MTS% == 2          StorageKeptMin(s) =  max(0, sum(i$(i.val = LastKeptHour),StorageProfile(s,i)*StorageCapacity(s)*Nunits(s)*AvailabilityFactor(s,i)) - StorageTolerance(s));
 $If      %MTS% == 2          StorageFinalMin(chp) =  sum(i$(ord(i)=card(i)),StorageProfile(chp,i)*StorageCapacity(chp)*Nunits(chp)*AvailabilityFactor(chp,i));
 $If      %MTS% == 2          SectorXStorageFinalMin(nx) = sum(i$(ord(i)=card(i)),SectorXStorageProfile(nx,i)*SectorXStorageCapacity(nx));
 

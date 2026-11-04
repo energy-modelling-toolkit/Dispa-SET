@@ -621,6 +621,13 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     Plants_merged, mapping = clustering(plants, method=config['SimulationType'])
     # Check clustering:
     check_clustering(plants, Plants_merged)
+    # Storage following an MTS level trajectory may end a window below it by at most what it can
+    # turbine in one MTS time step (the resolution of the MTS); 0 for all other units.
+    _mts_step = float(config.get('MTSMinStorageHours', 24) or 24)
+    _first = (Plants_merged['FormerUnits'].apply(lambda x: x[0]) if 'FormerUnits' in Plants_merged
+              else Plants_merged['Unit'])
+    Plants_merged['StorageTolerance'] = [float(pc) * float(nu) * _mts_step if fu in set(mts_followed) else 0.0
+                                         for pc, nu, fu in zip(Plants_merged['PowerCapacity'], Plants_merged['Nunits'], _first)]
 
     # Renaming the columns to ease the production of parameters:
     BoundarySector.rename(columns={'STOCapacity': 'SectorXStorageCapacity',
@@ -988,6 +995,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['OutageFactor'] = ['au', 'h']
     sets_param['PartLoadMin'] = ['au']
     sets_param['PowerCapacity'] = ['au']
+    sets_param['StorageTolerance'] = ['au']
     sets_param['PowerCapacityBoundarySector'] = ['au', 'nx']
     sets_param['PowerInitial'] = ['au']
     sets_param['PriceTransmission'] = ['l', 'h']
@@ -1079,6 +1087,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     if not LP:
         parameters['CostFixed']['val'] = Plants_merged['NoLoadCost'].values
 
+    parameters['StorageTolerance']['val'] = Plants_merged['StorageTolerance'].values
 
     # List of parameters whose value is not necessarily specified in the dataframe Plants_merged
     for var in ['Nunits']:
