@@ -182,22 +182,27 @@ def mid_term_scheduling(config, TimeStep=None, mts_plot=None):
         logging.info(f'\n\nLaunching regional Mid-Term Scheduling (MTS level {temp_config["HydroScheduling"]})\n')
         SimData = build_single_run(temp_config, MTS=temp_config['HydroScheduling'])
         units = SimData['units']
-        solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
-                   gams_folder=temp_config['GAMS_folder'],
-                   gams_file=gams_file_mts,
-                   result_file=result_file_mts)
-        temp_results = gdx_to_dataframe(
-            gdx_to_list(config['GAMS_folder'], os.path.join(config['SimulationDirectory'], result_file_mts),
-                        varname='all', verbose=False), fixindex=True, verbose=False)
-        _check_results(temp_results)
-        
+        if len(SimData['sets'].get('s', [])) == 0 and len(SimData['sets'].get('nx', [])) == 0:
+            # e.g. a fleet whose only storage is short-duration storage, left out of the MTS (MTSMinStorageHours)
+            logging.warning('MTS: no storage unit left in the mid-term scheduling problem (short-duration storage '
+                            'is excluded); the MTS is skipped and the detailed run has no MTS level targets')
+        else:
+            solve_GAMS(sim_folder=temp_config['SimulationDirectory'],
+                       gams_folder=temp_config['GAMS_folder'],
+                       gams_file=gams_file_mts,
+                       result_file=result_file_mts)
+            temp_results = gdx_to_dataframe(
+                gdx_to_list(config['GAMS_folder'], os.path.join(config['SimulationDirectory'], result_file_mts),
+                            varname='all', verbose=False), fixindex=True, verbose=False)
+            _check_results(temp_results)
+
         # Collect Storage Level profiles
         if 'OutputStorageLevel' in temp_results:
             res = temp_results['OutputStorageLevel']
             profiles = res.reindex(range(1, len(idx) + 1)).fillna(0).set_index(idx) if len(res) < len(idx) else res.set_index(idx)
         else:
-            logging.critical('Storage levels in the selected region were not computed!')
-            sys.exit(0)
+            logging.warning('MTS: storage levels were not computed (no storage unit in the MTS problem); '
+                            'continuing without MTS level targets')
 
         # Collect SectorX Storage Level profiles
         if 'OutputSectorXStorageLevel' in temp_results:

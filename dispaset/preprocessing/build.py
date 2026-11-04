@@ -220,6 +220,22 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     # remove invalid power plants:
     plants = select_units(plants, config)
 
+    # Mid-term scheduling: storage without natural inflow whose storage hours are shorter than the MTS
+    # time step (batteries, daily pumped storage) cycles within one MTS step and cannot be scheduled by
+    # the MTS; it is left out of the MTS problem (it keeps a fixed level target in the detailed run).
+    if MTS > 0:
+        _min_h = float(config.get('MTSMinStorageHours', 24) or 24)
+        _infl = []
+        if config.get('ReservoirScaledInflows') and os.path.isfile(config['ReservoirScaledInflows']):
+            _infl = pd.read_csv(config['ReservoirScaledInflows'], nrows=0).columns.tolist()
+        _is_sto = plants['Technology'].isin(commons['tech_storage'])
+        _hours = plants['STOCapacity'].astype(float) / plants['PowerCapacity'].astype(float)
+        _drop = _is_sto & (_hours < _min_h) & ~plants['Unit'].isin(_infl)
+        if _drop.any():
+            logging.info('MTS: %d short-duration storage units without inflow left out of the mid-term scheduling: %s',
+                         int(_drop.sum()), ', '.join(plants.loc[_drop, 'Unit'].astype(str)))
+        plants = plants[~_drop].reset_index(drop=True)
+
     filter_col = [col for col in plants if col.startswith('Sector') and not col.startswith('SectorX')]
     plants[filter_col] = plants[filter_col].astype(str)
 
@@ -454,7 +470,16 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
         profiles_short = profiles.rename(columns=get_short_name)
     
         plants_sto.set_index(plants_sto.loc[:, 'Unit'], inplace=True, drop=True)
-    
+
+        # Storage that cannot hold one MTS time step of full-power output (storage hours shorter than the
+        # MTS time step, 24 h by default) cycles within the MTS step: its MTS level trajectory is
+        # undetermined and the daily LP returns an arbitrary empty/full profile. Such units (e.g.
+        # batteries, daily pumped storage, small pondage hydro) keep the default level as target,
+        # like SCSP.
+        mts_min_hours = float(config.get('MTSMinStorageHours', 24) or 24)
+        sto_hours = plants_sto['STOCapacity'].astype(float) / plants_sto['PowerCapacity'].astype(float)
+        not_mts = set(plants_sto.index[(plants_sto['Technology'] == 'SCSP') | (sto_hours < mts_min_hours)])
+
         rename_map = {}
     
         for full_name in original_profile_names:
@@ -464,9 +489,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             if short_name not in ReservoirLevels.columns:
                 logging.warning(f'The reservoir profile "{full_name}" provided by the MTS is not found in the ReservoirLevels table')
     
-            elif short_name in list(ReservoirLevels.loc[:, plants_sto['Technology'] == 'SCSP'].columns):   
+            elif short_name in not_mts:
                 ReservoirLevels[short_name] = config['default']['ReservoirLevelInitial']
-                logging.info(f'The reservoir profile "{full_name}" can not be selected for MTS, 'f'instead default value {config["default"]["ReservoirLevelInitial"]} will be used')
+                logging.info(f'The reservoir profile "{full_name}" is not used (SCSP or storage shorter than '
+                             f'{mts_min_hours:g} h); default level {config["default"]["ReservoirLevelInitial"]} used instead')
                 rename_map[short_name] = full_name
     
             else:   
@@ -474,6 +500,10 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                 logging.info(f'The reservoir profile "{full_name}" provided by the MTS is used as target reservoir level')
                 rename_map[short_name] = full_name
     
+        # Short storage left out of (or not followed from) the MTS keeps the default level as target
+        for short_name in not_mts:
+            if short_name in ReservoirLevels.columns:
+                ReservoirLevels[short_name] = config['default']['ReservoirLevelInitial']
         # Final Column names
         # ReservoirLevels.rename(columns=rename_map, inplace=True)
         
