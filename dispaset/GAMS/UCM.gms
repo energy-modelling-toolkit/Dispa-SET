@@ -180,6 +180,7 @@ LocationX(au,nx)                            [n.a.]          Location {1 0}
 OutageFactor(au,h)                          [%]             Outage Factor (100% = full outage)
 PartLoadMin(au)                             [%]             Minimum part load
 PowerCapacity(au)                           [MW\u]          Installed capacity
+ContingencyCapacity(au)                     [MW]            Output lost in one N-1 event: one module or the whole unit (P*Nunits)
 PowerInitial(au)                            [MW\u]          Power output before initial period
 PowerMinStable(au)                          [MW\u]          Minimum power output
 PriceTransmission(l,h)                      [EUR\MWh]       Transmission price
@@ -404,6 +405,7 @@ $LOAD LocationX
 $LOAD Nunits
 $LOAD OutageFactor
 $LOAD PowerCapacity
+$LOAD ContingencyCapacity
 $LOAD StorageTolerance
 $LOAD PowerInitial
 $LOAD PartLoadMin
@@ -2186,10 +2188,11 @@ OutputReserve_FCRU(au,z) = ReserveProvision.L('FCRU',au,z);
 OutputReserve_FCRD(au,z) = ReserveProvision.L('FCRD',au,z);
 
 loop((n,z),
-OutputContingencyPerZone(n,z) = smax(au,(min(PowerCapacity(au), Power.L(au,z)))$(Location(au,n) and Committed.L(au,z) > 0));
+OutputContingencyPerZone(n,z) = smax(au,(min(ContingencyCapacity(au), Power.L(au,z)))$(Location(au,n) and Committed.L(au,z) > 0));
 );
 loop(z,
-OutputContingency(z) = smax(au,(min(PowerCapacity(au),Power.L(au,z)))$(Committed.L(au,z) > 0));
+* N-1: an aggregate unit can lose at most its largest member (ContingencyCapacity = PowerCapacity if not merged)
+OutputContingency(z) = smax(au,(min(ContingencyCapacity(au),Power.L(au,z)))$(Committed.L(au,z) > 0));
 );
 
 OutputUFLS(res_U,n,z) = UFLS.L(res_U,n,z);

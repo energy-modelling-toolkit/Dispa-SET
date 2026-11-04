@@ -621,6 +621,15 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     Plants_merged, mapping = clustering(plants, method=config['SimulationType'])
     # Check clustering:
     check_clustering(plants, Plants_merged)
+    # Largest single unit inside each (aggregate) unit [MW]: the credible N-1 loss of an aggregate
+    # unit is one of its members, not the whole aggregate. Equals PowerCapacity for unmerged units.
+    _unit_capacity = plants.set_index('Unit')['PowerCapacity'].astype(float)
+    if 'FormerUnits' in Plants_merged:
+        Plants_merged['ContingencyCapacity'] = [
+            min(float(pc), float(_unit_capacity.reindex(list(members)).max())) if len(members) > 1 else float(pc)
+            for pc, members in zip(Plants_merged['PowerCapacity'], Plants_merged['FormerUnits'])]
+    else:
+        Plants_merged['ContingencyCapacity'] = Plants_merged['PowerCapacity'].astype(float)
     # Storage following an MTS level trajectory may end a window below it by at most what it can
     # turbine in one MTS time step (the resolution of the MTS); 0 for all other units.
     _mts_step = float(config.get('MTSMinStorageHours', 24) or 24)
@@ -995,6 +1004,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['OutageFactor'] = ['au', 'h']
     sets_param['PartLoadMin'] = ['au']
     sets_param['PowerCapacity'] = ['au']
+    sets_param['ContingencyCapacity'] = ['au']
     sets_param['StorageTolerance'] = ['au']
     sets_param['PowerCapacityBoundarySector'] = ['au', 'nx']
     sets_param['PowerInitial'] = ['au']
@@ -1087,6 +1097,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     if not LP:
         parameters['CostFixed']['val'] = Plants_merged['NoLoadCost'].values
 
+    parameters['ContingencyCapacity']['val'] = Plants_merged['ContingencyCapacity'].values
     parameters['StorageTolerance']['val'] = Plants_merged['StorageTolerance'].values
 
     # List of parameters whose value is not necessarily specified in the dataframe Plants_merged
