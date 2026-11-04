@@ -727,6 +727,7 @@ EQ_UFLS_Limit
 EQ_OFGS_Limit
 
 EQ_HeadRoom_Limit
+EQ_Delivery_Limit_Up_Product
 EQ_FootRoom_Limit
 
 ;
@@ -1147,6 +1148,16 @@ EQ_Total_Delivery_Limit_Up(au,i)..
          * LoadMaximum(au,i)
          * (Nunits(au) - Committed(au,i))
          * smax(res_U, QuickStartEligible(res_U,au))
+;
+
+* Product-specific upward deliverability: the off-line capacity counted for product res_U is only that of
+* units eligible for res_U, so that off-line capacity eligible only for a slower product (e.g. mFRR) is not
+* used for a faster one (e.g. aFRR).
+EQ_Delivery_Limit_Up_Product(res_U,au,i)..
+         Power(au,i) + ReserveProvision(res_U,au,i)
+         =L=
+         PowerCapacity(au) * LoadMaximum(au,i) * (Committed(au,i) - StartingNow(au,i))
+         + PowerCapacity(au) * LoadMaximum(au,i) * (Nunits(au) - Committed(au,i)) * QuickStartEligible(res_U,au)
 ;
 
 *HeadRoom limits 
@@ -1723,6 +1734,7 @@ EQ_UFLS_Limit,
 EQ_OFGS_Limit,
 
 EQ_HeadRoom_Limit,
+EQ_Delivery_Limit_Up_Product,
 EQ_FootRoom_Limit,
 
 /
