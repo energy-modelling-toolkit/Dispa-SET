@@ -991,3 +991,192 @@ def patch_degenerate_reserves(summary_reserves, activation_times=None, config=No
                          "(a real adequacy gap, not a search artifact).",
                          n_fixed, n_degenerate, n_degenerate - n_fixed)
     return patched, patch_log
+
+
+# %% plotting -- single-contingency frequency-response curve
+#
+# Dual-axis plot: frequency deviation and RoCoF on the left axis, the individual
+# reserve/inertia contributions (stacked as filled traces) plus the contingency
+# and power-balance mismatch on the right axis. The functions below let any one
+# hour -- or several -- be selected directly from a solved
+# get_frequency_stability_reserves() call's own outputs, with no results
+# recomputed.
+
+def _resolve_contingency_key(hour, index, results_frequency_response):
+    """
+    Translates a requested "hour" into (label, key) for looking up its
+    DataFrame in results_frequency_response, where key is one of the
+    "Contingency1", "Contingency2", ... labels get_frequency_stability_
+    reserves() assigns in the same order as `index` (data.index /
+    summary_reserves.index from the same call -- summary_reserves.index is
+    set equal to data.index, so either can be passed as `index`).
+
+    :param hour:  One of:
+                  - a literal "ContingencyN" key already in results_frequency_response
+                  - an integer position (0-based) into `index`
+                  - a label present in `index` (e.g. an hourly Timestamp)
+    """
+    if isinstance(hour, str) and hour in results_frequency_response:
+        return hour, hour  # key given directly
+    if isinstance(hour, (int, np.integer)) and not isinstance(hour, bool):
+        pos = int(hour)
+        label = index[pos]
+    else:
+        pos = index.get_loc(hour)
+        label = hour
+    key = f"Contingency{pos + 1}"
+    if key not in results_frequency_response:
+        raise KeyError(
+            f"Resolved hour {hour!r} to key {key!r}, which is not in results_frequency_response "
+            f"(has {len(results_frequency_response)} entries) -- check that `index` is the same "
+            f"data/summary_reserves index returned alongside results_frequency_response by the "
+            f"same get_frequency_stability_reserves() call."
+        )
+    return label, key
+
+
+def _draw_reserve_service_traces(ax2, df, vir_fill_alpha=1.0):
+    """Draws SIR/VIR/FFR/FCR/aFRR/mFRR (line + fill-where-positive), Contingency,
+    deltap, and the resulting total frequency service (RFS) onto `ax2` -- the
+    shared right-axis content of both the full-range and zoomed plots below,
+    exactly reproducing the original script's colors/styles."""
+    ax2.plot(df['Time [s]'], df['SIR [MW]'], label='SIR')
+    ax2.fill_between(df['Time [s]'], df['SIR [MW]'], 0, where=df['SIR [MW]'] > 0, color='black', alpha=0.3)
+
+    ax2.plot(df['Time [s]'], df['VIR [MW]'], label='VIR')
+    ax2.fill_between(df['Time [s]'], df['VIR [MW]'], 0, where=df['VIR [MW]'] > 0, color='yellow', alpha=vir_fill_alpha)
+
+    ax2.plot(df['Time [s]'], df['FFR [MW]'], label='FFR', color='#00B050', lw=1)
+    ax2.fill_between(df['Time [s]'], df['FFR [MW]'], 0, where=df['FFR [MW]'] > 0, color='#E9F6E5', alpha=1)
+
+    ax2.plot(df['Time [s]'], df['FCR [MW]'], label='FCR', color='#23717B', lw=1)
+    ax2.fill_between(df['Time [s]'], df['FCR [MW]'], 0, where=df['FCR [MW]'] > 0, color='#CCEDF0', alpha=1)
+
+    ax2.plot(df['Time [s]'], df['aFRR [MW]'], label='aFRR', color='#FF0000', lw=1)
+    ax2.fill_between(df['Time [s]'], df['aFRR [MW]'], 0, where=df['aFRR [MW]'] > 0, color='#91F4FF', alpha=0.3)
+
+    ax2.plot(df['Time [s]'], df['mFRR [MW]'], label='mFRR', color='#002060', lw=1)
+    ax2.fill_between(df['Time [s]'], df['mFRR [MW]'], 0, where=df['mFRR [MW]'] > 0, color='#7030A0', alpha=0.2)
+
+    ax2.plot(df['Time [s]'], df['Contingency [MW]'], '--', label='Contingency', color='darkorange')
+    ax2.plot(df['Time [s]'], df['deltap [MW]'], '-.', label=r'$\Delta Power$', color='black')
+
+    rfs = df['SIR [MW]'] + df['VIR [MW]'] + df['FFR [MW]'] + df['FCR [MW]'] + df['aFRR [MW]'] + df['mFRR [MW]']
+    ax2.plot(df['Time [s]'], rfs, '-.', label='$RFS$', color='black')
+
+
+def plot_frequency_response_curve(df, title='Frequency and Power Response', xlim=None,
+                                   freq_ylim=(-1.3, 1.3), power_ylim=(-300, 300),
+                                   vir_fill_alpha=1.0, figsize=(10, 5)):
+    """
+    One dual-axis frequency-response figure for a single contingency's
+    results_df (as found in results_frequency_response, or any DataFrame
+    with the same columns as returned by `frequency_response`).
+
+    :param df:      A results_df: 'Time [s]', 'Frequency Deviation [Hz]',
+                     'RoCoF [Hz/s]', 'SIR [MW]', 'VIR [MW]', 'FFR [MW]',
+                     'FCR [MW]', 'aFRR [MW]', 'mFRR [MW]', 'Contingency [MW]',
+                     'deltap [MW]'.
+    :param xlim:    Optional (min, max) seconds to restrict the x-axis to
+                     (e.g. (0, 60) for the zoomed-in initial-response view).
+    :param vir_fill_alpha: Fill opacity for the VIR trace -- the original
+                     script used 1.0 for its full-range plot and 0.3 for its
+                     zoomed one; both are reproduced here as defaults callers
+                     can override, not silently unified.
+    :return: (fig, (ax1, ax2))
+    """
+    import matplotlib.pyplot as plt
+
+    fig, ax1 = plt.subplots(figsize=figsize)
+
+    ax1.plot(df['Time [s]'], df['Frequency Deviation [Hz]'], lw=2, label='Frequency deviation [Hz]', color='blue')
+    ax1.plot(df['Time [s]'], df['RoCoF [Hz/s]'], label='RoCoF [Hz/s]', color='magenta')
+    ax1.set_xlabel('Time [s]', fontsize=18)
+    ax1.set_ylabel('Frequency deviation [Hz]', fontsize=18)
+
+    ax2 = ax1.twinx()
+    _draw_reserve_service_traces(ax2, df, vir_fill_alpha=vir_fill_alpha)
+
+    ax1.set_ylim(*freq_ylim)
+    ax2.set_ylim(*power_ylim)
+
+    plt.xlabel('Time [s]', fontsize=18)
+    plt.ylabel('Power [MW]', fontsize=18)
+    plt.title(title, fontsize=18)
+    ax1.tick_params(axis='both', labelsize=16)
+    ax2.tick_params(axis='both', labelsize=16)
+    ax1.legend(loc='upper left', fontsize=14)
+    ax2.legend(loc='upper right', fontsize=14)
+    plt.grid(True)
+    ax1.set_xmargin(0)
+    ax1.set_ymargin(0)
+    ax2.set_xmargin(0)
+    if xlim is not None:
+        ax1.set_xlim(*xlim)
+
+    return fig, (ax1, ax2)
+
+
+def plot_frequency_response_for_hours(results_frequency_response, index, hours,
+                                       include_zoom=True, zoom_xlim=(0, 60),
+                                       freq_ylim=(-1.3, 1.3), power_ylim=(-300, 300),
+                                       figsize=(10, 5), show=True):
+    """
+    The frequency-response plot, for one or several specific
+    hours picked directly from an already-solved get_frequency_stability_
+    reserves() call -- no resimulation.
+
+    Example
+    -------
+    >>> results_frequency_response, summary_reserves, data = ds.get_frequency_stability_reserves(
+    ...     path, inputs, results)
+    >>> from dispaset.postprocessing.frequency_stability import plot_frequency_response_for_hours
+    >>> figs = plot_frequency_response_for_hours(
+    ...     results_frequency_response, summary_reserves.index,
+    ...     hours=['2030-07-15 19:00:00+00:00', '2030-01-03 04:00:00+00:00'])
+    >>> figs['2030-07-15 19:00:00+00:00']['full'][0].savefig('peak_hour.png')
+
+    :param results_frequency_response: dict returned by get_frequency_stability_reserves.
+    :param index:      The `data`/`summary_reserves` index from that SAME call
+                        (summary_reserves.index == data.index; either works).
+    :param hours:      A single hour or a list of hours. Each may be a
+                        "ContingencyN" key, an integer position, or a label
+                        present in `index` (e.g. an hourly Timestamp or its
+                        string form).
+    :param include_zoom: Also produce a second figure per hour, x-limited to
+                        `zoom_xlim` (the original script's second, zoomed-in
+                        plot; VIR fill alpha 0.3 there vs. 1.0 in the full
+                        view, matching the original exactly).
+    :param show:       Call plt.show() after building each figure (set False
+                        when only saving figures programmatically, e.g. in a
+                        batch/non-interactive script).
+    :return: {hour_label: {'full': (fig, (ax1, ax2)), 'zoom': (fig, (ax1, ax2)) or None}}
+    """
+    import matplotlib.pyplot as plt
+
+    if not isinstance(hours, (list, tuple, pd.Index, np.ndarray)):
+        hours = [hours]
+
+    out = {}
+    for hour in hours:
+        label, key = _resolve_contingency_key(hour, index, results_frequency_response)
+        df = results_frequency_response[key]
+
+        fig_full, axes_full = plot_frequency_response_curve(
+            df, title=f'Frequency and Power Response -- {label}', xlim=None,
+            freq_ylim=freq_ylim, power_ylim=power_ylim, vir_fill_alpha=1.0, figsize=figsize)
+        if show:
+            plt.show()
+
+        zoom_result = None
+        if include_zoom:
+            fig_zoom, axes_zoom = plot_frequency_response_curve(
+                df, title=f'Frequency and Power Response -- {label}', xlim=zoom_xlim,
+                freq_ylim=freq_ylim, power_ylim=power_ylim, vir_fill_alpha=0.3, figsize=figsize)
+            if show:
+                plt.show()
+            zoom_result = (fig_zoom, axes_zoom)
+
+        out[label] = {'full': (fig_full, axes_full), 'zoom': zoom_result}
+
+    return out
