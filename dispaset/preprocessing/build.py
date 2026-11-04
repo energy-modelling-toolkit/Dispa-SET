@@ -1341,6 +1341,11 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             logging.warning('No fuel price value has been found for fuel ' + Plants_merged['Fuel'][unit] +
                             ' in unit ' + Plants_merged['Unit'][unit] + '. A null variable cost has been assigned')
 
+    # Variable cost of storage discharge (commons['StorageVariableCost'], EUR/MWh)
+    for unit in range(Nunits):
+        parameters['CostVariable']['val'][unit, :] += commons.get('StorageVariableCost', {}).get(
+            Plants_merged['Technology'][unit], 0.0)
+
     # Calculate MaxCostVariable for each zone
     MaxCostVariable = pd.DataFrame(index=sets['n'])
     for zone in sets['n']:

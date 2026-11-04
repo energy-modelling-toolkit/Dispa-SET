@@ -117,6 +117,13 @@ commons['FrequencyResponseConstants'] = {
     'RoCoF_max': 0.5,             # Hz/s -- reference RoCoF (see note above)
 }
 
+# Variable O&M cost of storage discharge [EUR/MWh] for storage without natural inflow, whose energy
+# is otherwise free (no fuel cost): Li-ion batteries 1.7 EUR/MWh (Danish Energy Agency, Technology
+# Data - Energy Storage, 2019: variable O&M 2.0/1.7/1.6 EUR/MWh in 2020/2040/2050) and pumped storage
+# 0.5 EUR/MWh (PNNL 2020 Grid Energy Storage Technology Cost and Performance Assessment: 0.5125 USD/MWh).
+# Being positive, it also prevents charge-discharge cycles from acting as a free energy sink.
+commons['StorageVariableCost'] = {'BATS': 1.7, 'HPHS': 0.5}
+
 # Which technologies may provide each reserve product. Derived from the technology-class
 # lists above (single source of truth -- do not hardcode a separate flat technology list
 # here). VIRU/FFRU/FFRD: batteries only. Real rotating-mass inertia from synchronous machines
