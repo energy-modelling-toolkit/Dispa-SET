@@ -103,6 +103,9 @@ from .postprocessing.postprocessing import get_result_analysis, get_indicators_p
 
 from .postprocessing.frequency_stability import get_frequency_stability_reserves
 
+from .postprocessing.reserve_link import write_odesfr_exogenous_csvs, compute_static_worst_case, \
+    clone_config_for_mode, extract_contingency, compare_contingency, run_uced_odesfr_link, run_uced_sc
+
 from .postprocessing.plot import plot_energy_zone_fuel, plot_zone_capacities, plot_zone, storage_levels, \
     plot_storage_levels, plot_EFOH, plot_tech_cap, \
     plot_power_flow_tracing_matrix, plot_co2, plot_dispatch, plot_dispatchX

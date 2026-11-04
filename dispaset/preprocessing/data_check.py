@@ -605,6 +605,16 @@ def check_reserves(aFRRDDemand, aFRRUDemand, Load):
     :param aFRRUDemand:   DataFrame of reserves aFRRU
     :param Load:        DataFrame of Loads
     """
+    # Exogenous requirements are system-level (one column, allocated to zones by load share in build.py)
+    if len(aFRRUDemand.columns) == 1 and len(aFRRDDemand.columns) == 1 and not set(Load.columns) & set(aFRRUDemand.columns):
+        for name, df in (('aFRRU', aFRRUDemand), ('aFRRD', aFRRDDemand)):
+            if (df.iloc[:, 0] < 0).any():
+                msg = 'The reserve ' + name + ' table contains negative values'
+                logging.critical(msg)
+                raise DispaSETValidationError(msg)
+            if not (df.iloc[:, 0] > 0).any():
+                logging.warning('No ' + name + ' reserve requirement data has been found (all values are zero)')
+        return
     for z in Load.columns:
         if z in aFRRUDemand:
             if (aFRRUDemand[z] < 0).any():

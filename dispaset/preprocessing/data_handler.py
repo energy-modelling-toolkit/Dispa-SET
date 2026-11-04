@@ -455,8 +455,16 @@ def load_time_series(config, path, header='infer'):
     if data.index.inferred_type == 'datetime64':
         data.index = data.index.tz_localize(None)  # removing locational data
         main_year = data.groupby(data.index.year).size()
-        year = int(main_year[main_year >= 8759].index.values)
-        data = data[data.index.year == year]
+        full_years = main_year[main_year >= 8759]
+        if len(full_years) > 0:
+            year = int(full_years.index.values[0])
+            data = data[data.index.year == year]
+        elif len(data.index.intersection(config['idx'])) < len(config['idx']) - 1:
+            # Partial-year data is accepted only if it covers the simulation horizon itself (e.g. the exogenous
+            # reserve/inertia CSVs written on the simulation index by reserve_link.write_odesfr_exogenous_csvs)
+            logging.critical('File ' + path + ': no complete year of data and the simulation horizon (from ' +
+                             str(config['idx'][0]) + ' to ' + str(config['idx'][-1]) + ') is not covered')
+            sys.exit(1)
         # Checking if the required index entries are in the data:
         common = data.index.intersection(config['idx'])
         if len(common) == 0:
