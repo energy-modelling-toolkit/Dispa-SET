@@ -66,7 +66,7 @@ col_keys = {'OutputCommitted': ('u', 'h'),
             'LostLoad_FCRD': ('n', 'h'),
             'LostLoad_Inertia': ('h'),
             'OutputUFLS': ('res_U','n','h'),
-            'OutputOFDM': ('res_U','n','h'),
+            'OutputOFGS': ('res_D','n','h'),
             'OutputContingencyPerZone': ('n', 'h'),
             'OutputContingency': ('h'),
             'status': tuple(),
@@ -225,7 +225,7 @@ def get_sim_results(path, cache=None, temp_path=None, return_xarray=False, retur
                    'OutputDemand_VIRU', 'OutputDemand_FFRU', 'OutputDemand_FFRD', 'OutputDemand_FCRU', 'OutputDemand_FCRD',
                    'OutputCurtailmentReserve_VIRU', 'OutputCurtailmentReserve_FFRU', 'OutputCurtailmentReserve_FFRD', 'OutputCurtailmentReserve_FCRU', 'OutputCurtailmentReserve_FCRD',
                    'OutputContingencyPerZone', 'OutputContingency',
-                   'OutputHeadRoom', 'OutputHeadRoomZone', 'OutputFootRoom', 'OutputUFLS','OutputOFDM']
+                   'OutputHeadRoom', 'OutputHeadRoomZone', 'OutputFootRoom', 'OutputUFLS','OutputOFGS']
 
     # Section 6: Include Water Slack in Results
     # Setting the proper index to the result dataframes:

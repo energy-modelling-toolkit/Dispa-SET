@@ -132,11 +132,11 @@ commons['ReserveEligibleTechnologies'] = {
 }
 
 # Fraction of zonal demand sheddable per reserve category for emergency UFLS (Under-Frequency
-# Load Shedding) / OFDM (downward emergency action). Centralized here instead of a hardcoded
+# Load Shedding) / OFGS (downward emergency action). Centralized here instead of a hardcoded
 # loop in build.py. Values unchanged from before; still proposed/order-of-magnitude, not tied
 # to a specific relay-staging scheme -- these should also vary by zone eventually.
 commons['UFLS_Participation'] = {'FFRU': 0.1, 'FCRU': 0.2, 'aFRRU': 0.2, 'mFRRU': 0.2}
-commons['OFDM_Participation'] = {'FFRD': 0.1, 'FCRD': 0.2, 'aFRRD': 0.2}
+commons['OFGS_Participation'] = {'FFRD': 0.1, 'FCRD': 0.2, 'aFRRD': 0.2}
 
 # Default StartUpTime [h], used ONLY when a unit's PowerPlantData value is missing (NaN) --
 # an explicitly-entered value (including 0) is real data and is never overridden. Proposed,

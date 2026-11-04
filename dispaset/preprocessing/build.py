@@ -996,7 +996,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     sets_param['Droop'] = ['au']
     sets_param['PTDF'] = ['l_int', 'n']
     sets_param['UFLS_Participation'] = ['res']
-    sets_param['OFDM_Participation'] = ['res']
+    sets_param['OFGS_Participation'] = ['res']
     sets_param['ReserveDuration'] = ['res']
     sets_param['FastReserveEligible'] = ['res', 'au']
     # sets_param['VirtualInertia_Participation'] = ['au']
@@ -1493,20 +1493,20 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     parameters['ReserveParticipation'] = {'sets': sets_param['ReserveParticipation'], 'val': values}
 
-    # UFLS_Participation / OFDM_Participation: fraction of zonal demand sheddable per reserve
+    # UFLS_Participation / OFGS_Participation: fraction of zonal demand sheddable per reserve
     # category for emergency load-shedding/downward-flexibility actions. Values centralized in
-    # commons.py (commons['UFLS_Participation']/['OFDM_Participation']) instead of hardcoded here.
+    # commons.py (commons['UFLS_Participation']/['OFGS_Participation']) instead of hardcoded here.
     UFLS_values = np.zeros(len(sets['res']))
     for r in sets['res']:
         j = res_index[r]
         UFLS_values[j] = commons['UFLS_Participation'].get(r, 0)
     parameters['UFLS_Participation'] = {'sets': sets_param['UFLS_Participation'], 'val': UFLS_values}
 
-    OFDM_values = np.zeros(len(sets['res']))
+    OFGS_values = np.zeros(len(sets['res']))
     for r in sets['res']:
         j = res_index[r]
-        OFDM_values[j] = commons['OFDM_Participation'].get(r, 0)
-    parameters['OFDM_Participation'] = {'sets': sets_param['OFDM_Participation'], 'val': OFDM_values}
+        OFGS_values[j] = commons['OFGS_Participation'].get(r, 0)
+    parameters['OFGS_Participation'] = {'sets': sets_param['OFGS_Participation'], 'val': OFGS_values}
 
     # ReserveDuration: sourced from commons.py by default; a case may override via
     # config['ReserveDuration'].

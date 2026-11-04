@@ -632,7 +632,7 @@ def CostExPost(inputs, results):
              +0.8*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
              +0.8*Config("ValueOfLostLoad","val")*(LL_Inertia(i)*TimeStep)
              +0.8*Config("ValueOfLostLoad","val")*(sum(res,n, UFLS(res,n,i) * TimeStep))
-             +0.8*Config("ValueOfLostLoad","val")*(sum(res,n, OFDM(res,n,i) * TimeStep))
+             +0.8*Config("ValueOfLostLoad","val")*(sum(res,n, OFGS(res,n,i) * TimeStep))
              +0.7*Config("ValueOfLostLoad","val")*sum(u,LL_RampUp(u,i)+LL_RampDown(u,i))
              +Config("CostOfSpillage","val")*sum(s,spillage(s,i));
 

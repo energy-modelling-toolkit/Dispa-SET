@@ -249,7 +249,7 @@ Droop(au)                                   [%]             Droop
 ReserveDemand(res,n,h)                      [MW]            Reserve Demand
 
 UFLS_Participation(res)                     [n.a.]          fraction of demand to cover UFLS per type of Reserve
-OFDM_Participation(res)                     [n.a.]          fraction of demand to cover OFDM per type of Reserve
+OFGS_Participation(res)                     [n.a.]          fraction of demand to cover OFGS per type of Reserve
 
 
 
@@ -467,7 +467,7 @@ $LOAD Droop
 $LOAD ReserveDemand
 
 $LOAD UFLS_Participation
-$LOAD OFDM_Participation
+$LOAD OFGS_Participation
 
 * Reserve-product timing assumptions and fast-reserve eligibility: computed in Python
 * preprocessing (build.py, sourced from commons.py) instead of being hardcoded here, so they
@@ -545,7 +545,7 @@ SectorXFlexSupply(nx,h)                 [MW]    FLexible boundary sector supply 
 *New
 InertiaProvision(au,h)                  [s]     Inertia Provision from conventional power plants
 UFLS(res,n,h)                           [MW]    Under Frequency Load Shedding
-OFDM(res,n,h)                           [MW]    Optional Downward Flexibility Management
+OFGS(res,n,h)                           [MW]    Over-Frequency Generation Shedding
 HeadRoom(au,h)                          [MW]    It is the power that a unit is not using and that can be used to raise the frequency (upward reserves)
 FootRoom(au,h)                          [MW]    It is the power that a unit has above the minimum operating level and that can be used to lower the frequency (downward reserves)
 ;
@@ -724,7 +724,7 @@ EQ_Total_Delivery_Limit_Down
 
 
 EQ_UFLS_Limit
-EQ_OFDM_Limit
+EQ_OFGS_Limit
 
 EQ_HeadRoom_Limit
 EQ_FootRoom_Limit
@@ -758,7 +758,7 @@ EQ_SystemCost(i)..
          +0.9*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
          +0.9*Config("ValueOfLostLoad","val")*(LL_Inertia(i)*TimeStep)
          +(sum((res,n), 0.1*CostLoadShedding(n,i)*(UFLS(res,n,i)) * TimeStep))
-         +(sum((res,n), 0.1*CostLoadShedding(n,i)*(OFDM(res,n,i)) * TimeStep))
+         +(sum((res,n), 0.1*CostLoadShedding(n,i)*(OFGS(res,n,i)) * TimeStep))
          
          +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
          +0.7*Config("ValueOfLostLoad","val")*(sum(nx,(SectorXWaterNotWithdrawn(nx,i))*TimeStep))                                                                             
@@ -792,7 +792,7 @@ EQ_SystemCost(i)..
          +0.9*Config("ValueOfLostLoad","val")*(sum((res,n),(LL_Reserve(res,n,i))*TimeStep))
          +0.9*Config("ValueOfLostLoad","val")*(LL_Inertia(i)*TimeStep)
          +(sum((res,n), 0.1*CostLoadShedding(n,i)*(UFLS(res,n,i)) * TimeStep))
-         +(sum((res,n), 0.1*CostLoadShedding(n,i)*(OFDM(res,n,i)) * TimeStep))
+         +(sum((res,n), 0.1*CostLoadShedding(n,i)*(OFGS(res,n,i)) * TimeStep))
          
          +0.7*Config("ValueOfLostLoad","val")*sum(au,(LL_RampUp(au,i)+LL_RampDown(au,i))*TimeStep)
          +15*(sum(nx,(SectorXWaterNotWithdrawn(nx,i))*TimeStep))                                                                                                              
@@ -1003,7 +1003,7 @@ EQ_UpwardReserves_balance(res_U,n,i)..
 *General formulation for hourly demand balance in the Downward Reserve Services for each node
 EQ_DownwardReserves_balance(res_D,n,i)..
          sum((au),ReserveProvision(res_D,au,i)*Location(au,n))
-         + OFDM (res_D,n,i)
+         + OFGS (res_D,n,i)
          + LL_Reserve(res_D,n,i)
          =E=
          ReserveDemand(res_D,n,i)
@@ -1223,10 +1223,10 @@ EQ_UFLS_Limit(res_U,n,i)..
          UFLS_Participation(res_U) * (Demand("DA",n,i))
 ;
 
-EQ_OFDM_Limit(res_D,n,i)..
-         OFDM(res_D,n,i)
+EQ_OFGS_Limit(res_D,n,i)..
+         OFGS(res_D,n,i)
          =L=
-         OFDM_Participation(res_D) * (Demand("DA",n,i))
+         OFGS_Participation(res_D) * (Demand("DA",n,i))
 ;
 *---------------------------------------------------------------------------------------------------------------------------------
 
@@ -1720,7 +1720,7 @@ EQ_Total_Delivery_Limit_Up,
 EQ_Total_Delivery_Limit_Down,
 
 EQ_UFLS_Limit,
-EQ_OFDM_Limit,
+EQ_OFGS_Limit,
 
 EQ_HeadRoom_Limit,
 EQ_FootRoom_Limit,
@@ -1972,7 +1972,7 @@ ShadowPrice_DeliveryUp(au,h)
 ShadowPrice_DeliveryDown(au,h)
 
 OutputUFLS(res_U,n,h)
-OutputOFDM(res_D,n,h)
+OutputOFGS(res_D,n,h)
 
 OutputHeadRoom(au,h)
 OutputFootRoom(au,h)
@@ -2107,7 +2107,7 @@ OutputContingency(z) = smax(au,(min(PowerCapacity(au),Power.L(au,z)))$(Committed
 );
 
 OutputUFLS(res_U,n,z) = UFLS.L(res_U,n,z);
-OutputOFDM(res_D,n,z) = OFDM.L(res_D,n,z);
+OutputOFGS(res_D,n,z) = OFGS.L(res_D,n,z);
 
 OutputHeadRoom(au,z) = HeadRoom.L(au,z);
 OutputFootRoom(au,z) = FootRoom.L(au,z);
@@ -2272,7 +2272,7 @@ OutputContingencyPerZone,
 OutputContingency,
 
 OutputUFLS,
-OutputOFDM,
+OutputOFGS,
 
 OutputHeadRoom,
 OutputFootRoom,
