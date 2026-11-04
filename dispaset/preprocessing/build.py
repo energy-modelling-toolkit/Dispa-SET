@@ -224,7 +224,9 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
     plants[filter_col] = plants[filter_col].astype(str)
 
     # Some columns can be in two format (absolute or per unit). If not specified, they are set to zero:
-    for key in ['StartUpCost', 'NoLoadCost']:
+    # StartUpCost and ShutDownCost [EUR per start / shut-down of one unit], NoLoadCost [EUR/h of one
+    # committed unit]; the _pu variants are per MW of PowerCapacity. Empty values count as zero.
+    for key in ['StartUpCost', 'NoLoadCost', 'ShutDownCost']:
         if key in plants:
             if key + '_pu' in plants:
                 logging.warning(
@@ -233,6 +235,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
             plants[key] = plants[key + '_pu'] * plants['PowerCapacity']
         else:
             plants[key] = 0
+        plants[key] = plants[key].fillna(0)
 
     # If not present, add the non-compulsory fields to the units table:
     # Add necessary columns to support new functions
@@ -589,6 +592,7 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
                                    'STOMinSOC': 'SectorXStorageMinimum', 'STOHours': 'SectorXStorageHours'}, inplace=True)
 
     Plants_merged.rename(columns={'StartUpCost': 'CostStartUp',
+                                  'ShutDownCost': 'CostShutDown',
                                   'StartUpTime': 'TimeStartUp',
                                   'RampUpMax': 'RampUpMaximum',
                                   'RampDownMax': 'RampDownMaximum',
@@ -1023,14 +1027,20 @@ def build_single_run(config, profiles=None, PtLDemand=None, SectorXFlexDemand=No
 
     # List of parameters whose value is known, and provided in the dataframe Plants_merged.
     if MTS == 0:
-        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp', 'TimeStartUp',
-                    'CostRampUp', 'StorageCapacity', 'StorageHours', 'StorageSelfDischarge', 'StorageChargingCapacity',
-                    'InertiaConstant', 'Droop']:
+        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp', 'CostShutDown',
+                    'TimeStartUp', 'CostRampUp', 'StorageCapacity', 'StorageHours', 'StorageSelfDischarge',
+                    'StorageChargingCapacity', 'InertiaConstant', 'Droop']:
             parameters[var]['val'] = Plants_merged[var].values
     else:
-        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp', 'TimeStartUp',
-                    'CostRampUp', 'StorageCapacity', 'StorageHours', 'StorageSelfDischarge', 'StorageChargingCapacity']:
+        for var in ['PowerCapacity', 'PartLoadMin', 'TimeUpMinimum', 'TimeDownMinimum', 'CostStartUp', 'CostShutDown',
+                    'TimeStartUp', 'CostRampUp', 'StorageCapacity', 'StorageHours', 'StorageSelfDischarge',
+                    'StorageChargingCapacity']:
             parameters[var]['val'] = Plants_merged[var].values
+    # No-load cost [EUR/h per committed unit] -> CostFixed. Not used in the LP formulations (MTS included),
+    # where commitment is relaxed (see check_units); the start-up cost is turned into a ramping cost there.
+    if not LP:
+        parameters['CostFixed']['val'] = Plants_merged['NoLoadCost'].values
+
 
     # List of parameters whose value is not necessarily specified in the dataframe Plants_merged
     for var in ['Nunits']:

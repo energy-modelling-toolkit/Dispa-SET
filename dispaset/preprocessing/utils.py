@@ -425,6 +425,8 @@ def group_plants(plants, method, df_grouped=False, group_list=None):
     if method == "Integer clustering":
         plants_merged['StartUpCost'] = plants_merged['StartUpCost'] / plants_merged['Nunits']
         plants_merged['NoLoadCost'] = plants_merged['NoLoadCost'] / plants_merged['Nunits']
+        if 'ShutDownCost' in plants_merged:
+            plants_merged['ShutDownCost'] = plants_merged['ShutDownCost'] / plants_merged['Nunits']
     idx = [list(i.values) for i in list(grouped.groups.values())]
     if not df_grouped:
         plants_merged['FormerIndexes'] = [list(plants.loc[i]['index'].values) for i in idx]
@@ -471,6 +473,7 @@ def create_agg_dict(df_, method="Standard"):
                             "MinUpTime",
                             "MinDownTime",
                             "StartUpCost",
+                            "ShutDownCost",
                             "NoLoadCost",
                             "Efficiency",
                             "MinEfficiency",
@@ -511,6 +514,7 @@ def create_agg_dict(df_, method="Standard"):
                             "MinUpTime",
                             "MinDownTime",
                             "StartUpCost",
+                            "ShutDownCost",
                             "NoLoadCost",
                             "Efficiency",
                             "MinEfficiency",
@@ -546,7 +550,7 @@ def create_agg_dict(df_, method="Standard"):
         return agg_dict
 
     elif method == "Integer clustering":
-        sum_cols = ["Nunits", "StartUpCost",'NoLoadCost',]
+        sum_cols = ["Nunits", "StartUpCost", "ShutDownCost", 'NoLoadCost',]
 
         weighted_avg_cols = ['PowerCapacity',
                              'RampUpRate',
@@ -633,6 +637,8 @@ def clustering(plants_in, method="Standard", Nslices=20, PartLoadMax=-0.1, Pmax=
     for key in ['PartLoadMin', 'MinUpTime', 'MinDownTime', 'NoLoadCost', 'StartUpCost',
                 'WaterWithdrawal', 'WaterConsumption']:
         plants[key] = plants[key].fillna(0)
+    if 'ShutDownCost' in plants:
+        plants['ShutDownCost'] = plants['ShutDownCost'].fillna(0)
     for key in ['RampUpRate', 'RampDownRate']:
         plants[key] = plants[key].fillna(1e9)
 
@@ -1041,9 +1047,10 @@ def adjust_unit_capacity(SimData, u_idx, scaling=1, value=None, singleunit=False
         SimData['parameters']['Nunits']['val'][idx[u]] = Nunits_new[u]
         SimData['units'].loc[u, 'PowerCapacity'] = Cap_new[u]
         SimData['units'].loc[u, 'Nunits'] = Nunits_new[u]
-        for col in ['CostStartUp', 'NoLoadCost', 'StorageCapacity', 'StorageChargingCapacity']:
-            SimData['units'].loc[u, col] = SimData['units'].loc[u, col] * factor
-        for param in ['CostShutDown', 'CostStartUp', 'PowerInitial', 'RampDownMaximum', 'RampShutDownMaximum',
+        for col in ['CostStartUp', 'CostShutDown', 'NoLoadCost', 'StorageCapacity', 'StorageChargingCapacity']:
+            if col in SimData['units']:
+                SimData['units'].loc[u, col] = SimData['units'].loc[u, col] * factor
+        for param in ['CostShutDown', 'CostStartUp', 'CostFixed', 'PowerInitial', 'RampDownMaximum', 'RampShutDownMaximum',
                       'RampStartUpMaximum', 'RampUpMaximum', 'StorageCapacity']:
             SimData['parameters'][param]['val'][idx[u]] = SimData['parameters'][param]['val'][idx[u]] * factor
 

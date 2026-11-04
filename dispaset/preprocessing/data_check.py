@@ -470,6 +470,8 @@ def check_units(config, plants):
 
     lower = {'PowerCapacity': 0, 'PartLoadMin': 0, 'StartUpTime': 0, 'MinUpTime': 0, 'MinDownTime': 0, 'NoLoadCost': 0,
              'StartUpCost': 0, 'WaterWithdrawal': 0, 'WaterConsumption': 0}
+    if 'ShutDownCost' in plants:  # optional column (set to 0 by build_single_run when absent)
+        lower['ShutDownCost'] = 0
     strictly_lower = {'RampUpRate': 0, 'RampDownRate': 0, 'Efficiency': 0}
     higher = {'PartLoadMin': 1, 'Efficiency': 1}
     higher_time = {'MinUpTime': 0, 'MinDownTime': 0}  # 'StartUpTime':0,
@@ -527,7 +529,8 @@ def check_units(config, plants):
 
     # Checking the compatibility between the selected simulation type and the power plant constraints:
     if config['SimulationType'] in ('LP', 'LP clustered'):
-        for key in ['NoLoadCost', 'PartLoadMin', 'MinEfficiency', 'StartUpTime']:
+        for key in (['NoLoadCost', 'PartLoadMin', 'MinEfficiency', 'StartUpTime']
+                    + (['ShutDownCost'] if 'ShutDownCost' in plants else [])):
             if (plants[key] > 0).any():
                 logging.error('Non-null value(s) have been found for key ' + key + ' in the power plant list. '
                               'This cannot be modelled with the ' + config['SimulationType'] + ' formulation and '
