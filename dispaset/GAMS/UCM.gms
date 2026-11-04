@@ -809,8 +809,8 @@ EQ_MinUpTime(au,i)$(TimeStep <= TimeUpMinimum(au))..
 
 * minimum down time
 EQ_MinDownTime(au,i)$(TimeStep <= TimeDownMinimum(au))..
-         sum(ii$( (ord(ii) >= ord(i) - ceil(TimeDownMinimum(au)/TimeStep)) and (ord(ii) <= ord(i)) ), ShutDown(au,ii))
-         + sum(h$( (ord(h) >= FirstHour + ord(i) - ceil(TimeDownMinimum(au)/TimeStep) -1) and (ord(h) < FirstHour)),ShutDown.L(au,h))
+         sum(ii$( (ord(ii) >= ord(i) - ceil(TimeDownMinimum(au)/TimeStep) + 1) and (ord(ii) <= ord(i)) ), ShutDown(au,ii))
+         + sum(h$( (ord(h) >= FirstHour + ord(i) - ceil(TimeDownMinimum(au)/TimeStep)) and (ord(h) < FirstHour)),ShutDown.L(au,h))
          =L=
          Nunits(au)-Committed(au,i)
 ;
