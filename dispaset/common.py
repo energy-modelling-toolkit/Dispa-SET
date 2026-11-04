@@ -113,8 +113,12 @@ commons['types_CHP'] = ['extraction', 'back-pressure', 'p2h']
 # RoCoF-derated.
 commons['FrequencyResponseConstants'] = {
     'SystemFrequency': 50,        # Hz
-    'DeltaFrequencyMax': 0.8,     # Hz -- reference frequency deviation for droop-based sizing
-    'RoCoF_max': 0.5,             # Hz/s -- reference RoCoF (see note above)
+    'DeltaFrequencyMax': 0.9,     # Hz -- maximum transient deviation, CNDC NOp 00 (Res. AETN 337/2026, Table 1)
+    'RoCoF_max': 0.5,             # Hz/s -- reference RoCoF (not set by NOp 00)
+    'SteadyStateDeviationMax': 0.5,  # Hz -- quasi-steady deviation after full primary control, NOp 00
+    'SteadyStateStart': 30.0,        # s  -- primary (FCR) full activation / containment time, NOp 00 and NOp 30
+    'RecoveryDeviationMax': 0.25,    # Hz -- normal operating band 49.75-50.25 Hz, NOp 00
+    'RecoveryTime': 900.0,           # s  -- frequency recovery time 15 min, NOp 00
 }
 
 # Variable O&M cost of storage discharge [EUR/MWh] for storage without natural inflow, whose energy
