@@ -1292,6 +1292,22 @@
             'loadshedding': 'LoadShedding'
         };
 
+        // Single source of truth for element-id <-> YAML-key mapping, used by BOTH
+        // collectFormData (save) and populateForm (load). Previously each direction
+        // guessed independently: saving used this specialCapitalization table correctly,
+        // but loading guessed an id by lowercasing only the YAML key's first letter, which
+        // is wrong whenever the real element id isn't a trivial first-letter-lowercased
+        // version of the YAML key (true for the large majority of ids in this form, e.g.
+        // "fcrdemand"/"FCRDemand", "systeminertiademand"/"SystemInertiaDemand",
+        // "afrrdemandU"/"aFRRUDemand") -- causing those fields to silently load blank.
+        function getYamlKeyForElementId(id) {
+            const lowercaseId = id.toLowerCase();
+            if (specialCapitalization[lowercaseId] || specialCapitalization[id]) {
+                return specialCapitalization[lowercaseId] || specialCapitalization[id];
+            }
+            return id.charAt(0).toUpperCase() + id.slice(1);
+        }
+
         // Reserve participation options
         const reserveOptions = [
             'COMC', 'GTUR', 'HDAM', 'HPHS', 'ICEN', 'CAES', 'BATS', 'BEVS', 
@@ -1680,18 +1696,34 @@
         function populateForm(yamlData) {
             // Clear form first
             document.getElementById('configForm').reset();
-            
-            // Populate text fields, numbers, and selects for simple values
-            for (const [key, value] of Object.entries(yamlData)) {
-                const element = document.getElementById(key.charAt(0).toLowerCase() + key.slice(1));
-                if (element && typeof value !== 'object') {
-                    if (element.type === 'checkbox') {
-                        element.checked = Boolean(value);
-                    } else {
-                        element.value = value;
-                    }
+
+            // Populate text fields, numbers, and selects for simple values.
+            // BUGFIX: iterate over the actual form elements (mirroring collectFormData's
+            // own selector) and compute each one's YAML key via the SAME
+            // getYamlKeyForElementId() helper collectFormData uses, instead of guessing an
+            // element id from the YAML key by lowercasing only its first letter. That guess
+            // is wrong for every key whose real element id isn't a simple
+            // first-letter-lowercased version of the YAML key -- e.g. YAML "FCRDemand"'s
+            // real element id is "fcrdemand", not "fCRDemand"; "SystemInertiaDemand" is
+            // "systeminertiademand", not "systemInertiaDemand"; "aFRRUDemand" is
+            // "afrrdemandU", not "aFRRUDemand". Previously this silently failed to populate
+            // the element (left it blank) for the vast majority of fields -- including every
+            // one of the 5 reserve/inertia exogenous-demand file paths -- any time a
+            // template/config was loaded into the editor.
+            const allInputsForLoad = document.querySelectorAll(
+                'input[type="text"]:not(.default-value-input):not(.zone-code), input[type="number"], select, textarea');
+            allInputsForLoad.forEach(element => {
+                if (!element.id || element.id.startsWith('modifiers.')) return;
+                const key = getYamlKeyForElementId(element.id);
+                if (!(key in yamlData)) return;
+                const value = yamlData[key];
+                if (typeof value === 'object') return;
+                if (element.type === 'checkbox') {
+                    element.checked = Boolean(value);
+                } else {
+                    element.value = value;
                 }
-            }
+            });
             
             // Handle description
             if (yamlData.Description) {
@@ -1802,17 +1834,10 @@
                         return;
                     }
                     
-                    // Get the key with proper capitalization
-                    let key;
-                    // Case-insensitive lookup in the specialCapitalization mapping
-                    const lowercaseId = input.id.toLowerCase();
-                    if (specialCapitalization[lowercaseId] || specialCapitalization[input.id]) {
-                        // Use special capitalization for acronyms and specific terms
-                        key = specialCapitalization[lowercaseId] || specialCapitalization[input.id];
-                    } else {
-                        // Default: Convert first letter to uppercase for consistency
-                        key = input.id.charAt(0).toUpperCase() + input.id.slice(1);
-                    }
+                    // Get the key with proper capitalization (shared with populateForm's
+                    // load path via getYamlKeyForElementId, so the two directions cannot
+                    // drift apart the way they previously did).
+                    const key = getYamlKeyForElementId(input.id);
                     
                     // Convert numerical values to actual numbers
                     if (input.type === 'number' || 
